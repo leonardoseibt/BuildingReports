@@ -3,14 +3,13 @@ import { Strategy, type VerifyFunction } from "openid-client/passport";
 
 import passport from "passport";
 import session from "express-session";
-import type { Express, RequestHandler } from "express";
+import express, { type Express, type RequestHandler } from "express";
 import memoize from "memoizee";
 import connectPg from "connect-pg-simple";
 import { storage } from "./storage";
 
-if (!process.env.REPLIT_DOMAINS) {
-  throw new Error("Environment variable REPLIT_DOMAINS not provided");
-}
+// Allow local development without Replit OIDC by falling back to a simple dev auth
+const isDev = process.env.NODE_ENV !== "production";
 
 const getOidcConfig = memoize(
   async () => {
@@ -27,7 +26,7 @@ export function getSession() {
   const pgStore = connectPg(session);
   const sessionStore = new pgStore({
     conString: process.env.DATABASE_URL,
-    createTableIfMissing: false,
+  createTableIfMissing: isDev,
     ttl: sessionTtl,
     tableName: "sessions",
   });
@@ -38,7 +37,8 @@ export function getSession() {
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      secure: true,
+  secure: process.env.NODE_ENV === "production",
+  sameSite: "lax",
       maxAge: sessionTtl,
     },
   });
@@ -72,6 +72,72 @@ export async function setupAuth(app: Express) {
   app.use(passport.initialize());
   app.use(passport.session());
 
+  // Ensure (de)serializers are always registered, including in dev fallback
+  passport.serializeUser((user: Express.User, cb) => cb(null, user));
+  passport.deserializeUser((user: Express.User, cb) => cb(null, user));
+  
+  // If missing REPLIT_DOMAINS or REPL_ID in dev, use a simple local auth stub
+  if (
+    isDev && (!process.env.REPLIT_DOMAINS || !process.env.REPL_ID)
+  ) {
+    // Very basic username login stored in session for local testing only
+    app.post("/api/dev/login", express.json(), async (req, res) => {
+      const { email = "dev@example.com", id = "dev-user" } = req.body ?? {};
+      const exp = Math.floor(Date.now() / 1000) + 60 * 60; // 1h
+      const user = {
+        claims: {
+          sub: id,
+          email,
+          first_name: "Dev",
+          last_name: "User",
+          profile_image_url: "",
+          exp,
+        },
+        expires_at: exp,
+      } as any;
+      await storage.upsertUser({
+        id,
+        email,
+        firstName: "Dev",
+        lastName: "User",
+        profileImageUrl: "",
+      });
+      // Regenerate session to avoid fixation and ensure persistence
+      req.session.regenerate((regenErr) => {
+        if (regenErr) {
+          console.error("Dev login session regenerate failed:", regenErr);
+          return res.status(500).json({ message: "Login failed" });
+        }
+        (req as any).login(user, (err: any) => {
+          if (err) {
+            console.error("Dev login failed:", err);
+            return res.status(500).json({ message: "Login failed" });
+          }
+          req.session.save((saveErr) => {
+            if (saveErr) {
+              console.error("Dev login session save failed:", saveErr);
+              return res.status(500).json({ message: "Login failed" });
+            }
+            res.json({ ok: true });
+          });
+        });
+      });
+    });
+
+    app.post("/api/dev/logout", (_req, res) => {
+      _req.logout(() => res.json({ ok: true }));
+    });
+
+    // Map expected routes to dev ones
+    app.get("/api/login", (_req, res) => res.redirect("/"));
+    app.get("/api/callback", (_req, res) => res.redirect("/"));
+    app.get("/api/logout", (req, res) => {
+      req.logout(() => res.redirect("/"));
+    });
+
+  return; // Skip real OIDC setup
+  }
+
   const config = await getOidcConfig();
 
   const verify: VerifyFunction = async (
@@ -98,8 +164,6 @@ export async function setupAuth(app: Express) {
     passport.use(strategy);
   }
 
-  passport.serializeUser((user: Express.User, cb) => cb(null, user));
-  passport.deserializeUser((user: Express.User, cb) => cb(null, user));
 
   app.get("/api/login", (req, res, next) => {
     passport.authenticate(`replitauth:${req.hostname}`, {
@@ -129,6 +193,15 @@ export async function setupAuth(app: Express) {
 
 export const isAuthenticated: RequestHandler = async (req, res, next) => {
   const user = req.user as any;
+
+  // In development, accept a session user even if Passport doesn't mark as authenticated yet
+  if (isDev) {
+    const sessionUser = (req as any).session?.passport?.user;
+    if (sessionUser) {
+      (req as any).user = sessionUser;
+      return next();
+    }
+  }
 
   if (!req.isAuthenticated() || !user.expires_at) {
     return res.status(401).json({ message: "Unauthorized" });

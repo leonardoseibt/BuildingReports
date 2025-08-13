@@ -54,6 +54,17 @@ export default function Landing() {
               size="lg" 
               className="text-lg px-8 py-6"
               data-testid="button-learn-more"
+              onClick={async () => {
+                try {
+                  // Convenience dev-login: only available when server runs in dev mode without OIDC
+                  await fetch('/api/dev/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: 'dev@example.com', id: 'local-user' })
+                  });
+                  window.location.href = '/';
+                } catch {}
+              }}
             >
               Saiba Mais
             </Button>

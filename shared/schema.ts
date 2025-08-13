@@ -15,6 +15,12 @@ import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+// Helpers to accept number or string for decimal DB fields and coerce integers
+const decimalInput = z.union([z.string(), z.number()]).transform((v) =>
+  typeof v === "number" ? String(v) : v
+);
+const intInput = z.coerce.number().int();
+
 // Session storage table for Replit Auth
 export const sessions = pgTable(
   "sessions",
@@ -204,32 +210,57 @@ export const reportsRelations = relations(reports, ({ one }) => ({
 }));
 
 // Insert Schemas
-export const insertBuildingSchema = createInsertSchema(buildings).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
+export const insertBuildingSchema = createInsertSchema(buildings)
+  .omit({
+    id: true,
+    createdAt: true,
+    updatedAt: true,
+  })
+  .extend({
+    totalArea: decimalInput,
+    floors: intInput,
+    units: intInput.optional(),
+  });
 
-export const insertStructuralSystemSchema = createInsertSchema(structuralSystems).omit({
-  id: true,
-  createdAt: true,
-});
+export const insertStructuralSystemSchema = createInsertSchema(structuralSystems)
+  .omit({
+    id: true,
+    createdAt: true,
+  })
+  .extend({
+    materialResistance: decimalInput.optional(),
+    designLife: intInput,
+    designLoads: decimalInput.optional(),
+  });
 
 export const insertSealingSystemSchema = createInsertSchema(sealingSystems).omit({
   id: true,
   createdAt: true,
 });
 
-export const insertRoofingSystemSchema = createInsertSchema(roofingSystems).omit({
-  id: true,
-  createdAt: true,
-});
+export const insertRoofingSystemSchema = createInsertSchema(roofingSystems)
+  .omit({
+    id: true,
+    createdAt: true,
+  })
+  .extend({
+    slope: decimalInput.optional(),
+  });
 
-export const insertPerformanceEvaluationSchema = createInsertSchema(performanceEvaluations).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
+export const insertPerformanceEvaluationSchema = createInsertSchema(performanceEvaluations)
+  .omit({
+    id: true,
+    createdAt: true,
+    updatedAt: true,
+  })
+  .partial({
+    structuralSafety: true,
+    thermalPerformance: true,
+    acousticPerformance: true,
+    waterTightness: true,
+    fireSafety: true,
+    evaluationData: true,
+  });
 
 export const insertReportSchema = createInsertSchema(reports).omit({
   id: true,
