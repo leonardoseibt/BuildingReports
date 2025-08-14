@@ -239,6 +239,13 @@ export const techniciansRelations = relations(technicians, ({ one }) => ({
 }));
 
 // Insert Schemas
+export const insertUserSchema = z.object({
+  firstName: z.string().min(1),
+  lastName: z.string().min(1),
+  email: z.string().email(),
+  profileImageUrl: z.string().url().optional(),
+});
+
 export const insertBuildingSchema = createInsertSchema(buildings)
   .extend({
     totalArea: decimalInput,
@@ -291,6 +298,7 @@ export const insertTechnicianSchema = createInsertSchema(technicians)
 // Types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
+export type InsertUser = z.infer<typeof insertUserSchema>;
 export type InsertBuilding = z.infer<typeof insertBuildingSchema>;
 export type Building = typeof buildings.$inferSelect;
 export type InsertStructuralSystem = z.infer<typeof insertStructuralSystemSchema>;

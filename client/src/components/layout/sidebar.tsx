@@ -6,6 +6,7 @@ import {
   LayoutDashboard,
   FileText,
   User,
+  Users,
   LogOut,
   Cog,
   IdCard
@@ -20,6 +21,7 @@ const navigation = [
 ];
 
 const bottomNavigation = [
+  { name: 'Usuários', href: '/users', icon: Users },
   { name: 'Configurações', href: '/settings', icon: Cog },
 ];
 
