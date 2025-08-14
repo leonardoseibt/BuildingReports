@@ -32,6 +32,7 @@ export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
   ensureUserByEmail(email: string, firstName?: string, lastName?: string, profileImageUrl?: string): Promise<User>;
+  listUsers(): Promise<User[]>;
   
   // Building operations
   createBuilding(building: InsertBuilding): Promise<Building>;
@@ -104,6 +105,10 @@ export class DatabaseStorage implements IStorage {
       })
       .returning();
     return user;
+  }
+
+  async listUsers(): Promise<User[]> {
+    return await db.select().from(users).orderBy(desc(users.createdAt));
   }
 
   // Building operations
