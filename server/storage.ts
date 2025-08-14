@@ -31,7 +31,7 @@ export interface IStorage {
   // User operations
   getUser(id: number): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
-  ensureUserByEmail(email: string, firstName?: string, lastName?: string, profileImageUrl?: string): Promise<User>;
+  ensureUserByEmail(email: string, firstName?: string, lastName?: string, profileImageUrl?: string, phone?: string): Promise<User>;
   listUsers(): Promise<User[]>;
   
   // Building operations
@@ -95,13 +95,19 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
-  async ensureUserByEmail(email: string, firstName = "Dev", lastName = "User", profileImageUrl = ""): Promise<User> {
+  async ensureUserByEmail(
+    email: string,
+    firstName = "Dev",
+    lastName = "User",
+    profileImageUrl = "",
+    phone = "",
+  ): Promise<User> {
     const [user] = await db
       .insert(users)
-      .values({ email, firstName, lastName, profileImageUrl })
+      .values({ email, firstName, lastName, profileImageUrl, phone })
       .onConflictDoUpdate({
         target: users.email!,
-        set: { firstName, lastName, profileImageUrl, updatedAt: new Date() },
+        set: { firstName, lastName, profileImageUrl, phone, updatedAt: new Date() },
       })
       .returning();
     return user;

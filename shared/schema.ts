@@ -39,6 +39,7 @@ export const users = pgTable("users", {
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
+  phone: varchar("phone", { length: 32 }),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -244,6 +245,7 @@ export const insertUserSchema = z.object({
   lastName: z.string().min(1),
   email: z.string().email(),
   profileImageUrl: z.string().url().optional(),
+  phone: z.string().optional(),
 });
 
 export const insertBuildingSchema = createInsertSchema(buildings)
