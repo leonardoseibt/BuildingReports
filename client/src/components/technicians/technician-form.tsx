@@ -27,7 +27,6 @@ import { IdCard, MapPin } from "lucide-react";
 const schema = z.object({
   fullName: z.string().min(3),
   creaCau: z.string().min(3),
-  registrationType: z.string().optional(),
   licenseState: z.string().length(2).optional(),
   cpfCnpj: z.string().optional(),
   email: z.string().email().optional(),
@@ -129,6 +128,19 @@ export default function TechnicianForm({ onSuccess }: TechnicianFormProps = {}) 
                 )}
               />
               <FormField
+                name="cpfCnpj"
+                control={form.control}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>CPF/CNPJ</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="Opcional" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
                 name="creaCau"
                 control={form.control}
                 render={({ field }) => (
@@ -136,19 +148,6 @@ export default function TechnicianForm({ onSuccess }: TechnicianFormProps = {}) 
                     <FormLabel>CREA/CAU *</FormLabel>
                     <FormControl>
                       <Input {...field} placeholder="Número do registro" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                name="registrationType"
-                control={form.control}
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Tipo do Registro</FormLabel>
-                    <FormControl>
-                      <Input {...field} placeholder="CREA ou CAU" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -168,23 +167,10 @@ export default function TechnicianForm({ onSuccess }: TechnicianFormProps = {}) 
                 )}
               />
               <FormField
-                name="cpfCnpj"
-                control={form.control}
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>CPF/CNPJ</FormLabel>
-                    <FormControl>
-                      <Input {...field} placeholder="Opcional" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
                 name="company"
                 control={form.control}
                 render={({ field }) => (
-                  <FormItem>
+                  <FormItem className="md:col-span-2">
                     <FormLabel>Empresa</FormLabel>
                     <FormControl>
                       <Input {...field} placeholder="Opcional" />
