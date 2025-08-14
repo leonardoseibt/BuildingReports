@@ -77,7 +77,7 @@ export default function RecentProjects() {
           <div className="text-center py-8">
             <Building2 className="w-12 h-12 text-slate-300 mx-auto mb-3" />
             <p className="text-slate-500 mb-4">Nenhum projeto encontrado</p>
-            <Link href="/buildings/new">
+            <Link href="/buildings">
               <Button size="sm" data-testid="button-create-first-project">
                 Criar Primeiro Projeto
               </Button>

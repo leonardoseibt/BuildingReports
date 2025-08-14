@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
-import { insertBuildingSchema, type InsertBuilding } from "@shared/schema";
+import { insertBuildingSchema } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
@@ -36,7 +36,11 @@ const buildingFormSchema = insertBuildingSchema.omit({ userId: true }).extend({
 
 type BuildingFormData = z.infer<typeof buildingFormSchema>;
 
-export default function BuildingForm() {
+interface BuildingFormProps {
+  onSuccess?: () => void;
+}
+
+export default function BuildingForm({ onSuccess }: BuildingFormProps = {}) {
   const [, navigate] = useLocation();
   const [isLookingUpCep, setIsLookingUpCep] = useState(false);
   const { toast } = useToast();
@@ -72,6 +76,7 @@ export default function BuildingForm() {
       });
       queryClient.invalidateQueries({ queryKey: ['/api/buildings'] });
       queryClient.invalidateQueries({ queryKey: ['/api/dashboard/stats'] });
+      onSuccess?.();
       navigate(`/buildings`);
     },
     onError: (error) => {

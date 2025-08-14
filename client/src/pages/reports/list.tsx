@@ -110,7 +110,7 @@ export default function ReportList() {
               <p className="text-slate-500 mb-6">
                 Cadastre uma edificação e execute a avaliação de desempenho para gerar seu primeiro relatório.
               </p>
-              <Link href="/buildings/new">
+              <Link href="/buildings">
                 <Button size="lg" data-testid="button-create-first-report">
                   <Building2 className="w-4 h-4 mr-2" />
                   Cadastrar Edificação
