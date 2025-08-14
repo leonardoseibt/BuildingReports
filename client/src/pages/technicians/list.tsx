@@ -109,7 +109,7 @@ export default function TechniciansList() {
         </main>
       </div>
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-3xl max-h-screen overflow-y-auto">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Novo Responsável Técnico</DialogTitle>
           </DialogHeader>

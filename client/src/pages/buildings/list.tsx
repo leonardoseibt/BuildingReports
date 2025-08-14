@@ -210,7 +210,7 @@ export default function BuildingList() {
         </main>
       </div>
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-4xl max-h-screen overflow-y-auto">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Nova Edificação</DialogTitle>
           </DialogHeader>
