@@ -5,9 +5,10 @@ import Header from "@/components/layout/header";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import UserForm from "@/components/users/user-form";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Users, Plus } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
 import {
   Table,
   TableBody,
@@ -82,12 +83,26 @@ export default function UsersList() {
         </main>
       </div>
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh] p-0 overflow-hidden">
-          <div className="max-h-[calc(90vh-1rem)] overflow-y-auto my-2 px-6">
-            <DialogHeader className="mb-4">
-              <DialogTitle>Novo Usuário</DialogTitle>
+        <DialogContent className="max-w-4xl p-0 overflow-hidden">
+          {/* Modal Header */}
+          <div className="px-6 py-5 border-b bg-gradient-to-r from-primary/10 to-transparent">
+            <DialogHeader className="mb-0">
+              <DialogTitle className="text-xl">Novo Usuário</DialogTitle>
+              <DialogDescription className="text-slate-600">
+                Cadastre um novo usuário com nome e e-mail para acesso ao sistema.
+              </DialogDescription>
             </DialogHeader>
+          </div>
+          {/* Modal Body */}
+          <div className="max-h-[70vh] overflow-y-auto px-6 py-5">
             <UserForm onSuccess={() => setOpen(false)} />
+          </div>
+          <Separator />
+          {/* Modal Footer */}
+          <div className="px-6 py-4 flex items-center justify-end gap-3 bg-white">
+            <Button variant="outline" onClick={() => setOpen(false)}>
+              Cancelar
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
