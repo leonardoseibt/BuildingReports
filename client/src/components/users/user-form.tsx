@@ -1,5 +1,4 @@
 import { useForm } from "react-hook-form";
-import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -20,15 +19,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Mail, User } from "lucide-react";
-
-const schema = z.object({
-  firstName: z.string().min(1),
-  lastName: z.string().min(1),
-  email: z.string().email(),
-});
-
-export type UserFormData = z.infer<typeof schema>;
+import { Mail, User, Phone } from "lucide-react";
+import { insertUserSchema, type InsertUser } from "@shared/schema";
 
 interface UserFormProps {
   onSuccess?: () => void;
@@ -36,14 +28,20 @@ interface UserFormProps {
 
 export default function UserForm({ onSuccess }: UserFormProps = {}) {
   const { toast } = useToast();
-  const form = useForm<UserFormData>({
-    resolver: zodResolver(schema),
-    defaultValues: {} as any,
+  const form = useForm<InsertUser>({
+    resolver: zodResolver(insertUserSchema),
+    defaultValues: {
+      firstName: "",
+      lastName: "",
+      email: "",
+      profileImageUrl: "",
+      phone: "",
+    },
   });
 
-  const onSubmit = async (data: UserFormData) => {
+  const onSubmit = async (data: InsertUser) => {
     try {
-  const res = await apiRequest("POST", "/api/users", data);
+      const res = await apiRequest("POST", "/api/users", data);
       await res.json();
       toast({ title: "Sucesso", description: "Usuário cadastrado." });
       onSuccess?.();
@@ -96,6 +94,22 @@ export default function UserForm({ onSuccess }: UserFormProps = {}) {
                 )}
               />
               <FormField
+                name="phone"
+                control={form.control}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Telefone</FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <Phone className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                        <Input {...field} placeholder="(00) 00000-0000" className="pl-9 bg-slate-50 focus:bg-white" />
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
                 name="email"
                 control={form.control}
                 render={({ field }) => (
@@ -106,6 +120,19 @@ export default function UserForm({ onSuccess }: UserFormProps = {}) {
                         <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                         <Input type="email" {...field} placeholder="nome@exemplo.com" className="pl-9 bg-slate-50 focus:bg-white" />
                       </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                name="profileImageUrl"
+                control={form.control}
+                render={({ field }) => (
+                  <FormItem className="md:col-span-2">
+                    <FormLabel>URL da Imagem</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="https://exemplo.com/foto.jpg" className="bg-slate-50 focus:bg-white" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

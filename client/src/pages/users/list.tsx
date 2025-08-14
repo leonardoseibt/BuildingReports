@@ -65,6 +65,7 @@ export default function UsersList() {
                   <TableRow>
                     <TableHead>Nome</TableHead>
                     <TableHead>Email</TableHead>
+                    <TableHead>Telefone</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -74,6 +75,7 @@ export default function UsersList() {
                         {u.firstName} {u.lastName}
                       </TableCell>
                       <TableCell>{u.email}</TableCell>
+                      <TableCell>{u.phone || "-"}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
