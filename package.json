@@ -8,7 +8,10 @@
     "build": "vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist",
     "start": "cross-env NODE_ENV=production node dist/index.js",
     "check": "tsc",
-    "db:push": "drizzle-kit push"
+  "db:push": "drizzle-kit push",
+  "db:migrate:ids": "tsx scripts/run-sql.ts scripts/sql/20250814_ids_to_int.sql",
+  "db:migrate:identity": "tsx scripts/run-sql.ts scripts/sql/20250814_convert_defaults_to_identity.sql"
+  ,"db:check:ids": "tsx scripts/run-sql.ts scripts/sql/check_ids.sql"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

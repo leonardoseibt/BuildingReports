@@ -1,0 +1,64 @@
+-- Convert integer PK defaults/sequences to identity columns if needed
+-- Users
+ALTER TABLE IF EXISTS users ALTER COLUMN id DROP DEFAULT;
+DO $$ BEGIN
+  BEGIN
+    ALTER TABLE users ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY;
+  EXCEPTION WHEN duplicate_object THEN NULL; END;
+END $$;
+
+-- Buildings
+ALTER TABLE IF EXISTS buildings ALTER COLUMN id DROP DEFAULT;
+DO $$ BEGIN
+  BEGIN
+    ALTER TABLE buildings ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY;
+  EXCEPTION WHEN duplicate_object THEN NULL; END;
+END $$;
+
+-- Structural systems
+ALTER TABLE IF EXISTS structural_systems ALTER COLUMN id DROP DEFAULT;
+DO $$ BEGIN
+  BEGIN
+    ALTER TABLE structural_systems ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY;
+  EXCEPTION WHEN duplicate_object THEN NULL; END;
+END $$;
+
+-- Sealing systems
+ALTER TABLE IF EXISTS sealing_systems ALTER COLUMN id DROP DEFAULT;
+DO $$ BEGIN
+  BEGIN
+    ALTER TABLE sealing_systems ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY;
+  EXCEPTION WHEN duplicate_object THEN NULL; END;
+END $$;
+
+-- Roofing systems
+ALTER TABLE IF EXISTS roofing_systems ALTER COLUMN id DROP DEFAULT;
+DO $$ BEGIN
+  BEGIN
+    ALTER TABLE roofing_systems ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY;
+  EXCEPTION WHEN duplicate_object THEN NULL; END;
+END $$;
+
+-- Performance evaluations
+ALTER TABLE IF EXISTS performance_evaluations ALTER COLUMN id DROP DEFAULT;
+DO $$ BEGIN
+  BEGIN
+    ALTER TABLE performance_evaluations ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY;
+  EXCEPTION WHEN duplicate_object THEN NULL; END;
+END $$;
+
+-- Reports
+ALTER TABLE IF EXISTS reports ALTER COLUMN id DROP DEFAULT;
+DO $$ BEGIN
+  BEGIN
+    ALTER TABLE reports ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY;
+  EXCEPTION WHEN duplicate_object THEN NULL; END;
+END $$;
+
+-- Technicians
+ALTER TABLE IF EXISTS technicians ALTER COLUMN id DROP DEFAULT;
+DO $$ BEGIN
+  BEGIN
+    ALTER TABLE technicians ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY;
+  EXCEPTION WHEN duplicate_object THEN NULL; END;
+END $$;
