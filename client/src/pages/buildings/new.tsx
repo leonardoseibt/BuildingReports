@@ -40,16 +40,16 @@ export default function NewBuilding() {
   }
 
   return (
-    <div className="flex h-screen bg-slate-50" data-testid="new-building-container">
+    <div className="flex h-screen bg-slate-50 overflow-hidden" data-testid="new-building-container">
       <Sidebar />
       
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col overflow-hidden min-h-0">
         <Header 
           title="Nova Edificação"
           description="Complete os dados para iniciar a avaliação de desempenho"
         />
         
-        <main className="flex-1 overflow-y-auto p-6">
+        <main className="flex-1 overflow-y-auto overscroll-contain p-6 min-h-0">
           <BuildingForm />
         </main>
       </div>

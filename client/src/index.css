@@ -100,6 +100,11 @@
 }
 
 @layer base {
+  html, body, #root {
+    height: 100%;
+    overflow: hidden; /* prevent window scroll; pages manage their own scroll areas */
+  }
+
   * {
     @apply border-border;
   }

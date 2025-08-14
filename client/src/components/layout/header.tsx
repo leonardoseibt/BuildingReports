@@ -11,8 +11,8 @@ interface HeaderProps {
 
 export default function Header({ title, description, action }: HeaderProps) {
   return (
-    <header className="bg-white border-b border-slate-200 px-6 py-4" data-testid="header">
-      <div className="flex items-center justify-between">
+    <header className="bg-white border-b border-slate-200 px-6 h-20 flex items-center" data-testid="header">
+      <div className="w-full flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-slate-900" data-testid="text-header-title">
             {title}

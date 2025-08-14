@@ -35,15 +35,15 @@ export default function Sidebar() {
   };
 
   return (
-    <div className="w-72 bg-white shadow-lg border-r border-slate-200 flex flex-col" data-testid="sidebar">
+  <div className="w-72 bg-white shadow-lg border-r border-slate-200 flex flex-col overflow-y-hidden overscroll-none" data-testid="sidebar">
       {/* Logo Section */}
-      <div className="p-6 border-b border-slate-200">
+  <div className="h-20 px-6 flex items-center border-b border-slate-200 bg-white">
         <div className="flex items-center space-x-3">
           <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
             <Building2 className="text-primary-foreground text-xl" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-slate-900" data-testid="text-logo">PDEReports</h1>
+            <h1 className="text-xl font-bold text-slate-900" data-testid="text-logo">PDE Reports</h1>
             <p className="text-sm text-slate-500">v1.0 MVP</p>
           </div>
         </div>
