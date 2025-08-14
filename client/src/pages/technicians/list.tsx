@@ -6,8 +6,21 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { IdCard, Plus } from "lucide-react";
+import { IdCard, Plus, MoreHorizontal } from "lucide-react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import type { Technician } from "@shared/schema";
 
 export default function TechniciansList() {
@@ -53,42 +66,46 @@ export default function TechniciansList() {
               </Link>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {technicians.map((t) => (
-                <Card key={t.id} className="hover:shadow-lg transition-shadow">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
-                        <IdCard className="w-5 h-5 text-primary" />
-                      </div>
-                      <div>
-                        <CardTitle className="text-lg">{t.fullName}</CardTitle>
-                        <CardDescription>
-                          {t.registrationType ? `${t.registrationType} ` : ""}{t.creaCau}
-                          {t.licenseState ? ` / ${t.licenseState}` : ""}
-                        </CardDescription>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="text-sm space-y-1">
-                    {t.email && (
-                      <div>
-                        <span className="text-slate-500">Email:</span> <span className="font-medium">{t.email}</span>
-                      </div>
-                    )}
-                    {t.phone && (
-                      <div>
-                        <span className="text-slate-500">Telefone:</span> <span className="font-medium">{t.phone}</span>
-                      </div>
-                    )}
-                    {t.company && (
-                      <div>
-                        <span className="text-slate-500">Empresa:</span> <span className="font-medium">{t.company}</span>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              ))}
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Nome</TableHead>
+                    <TableHead>Registro</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Telefone</TableHead>
+                    <TableHead>Empresa</TableHead>
+                    <TableHead className="w-[50px]"></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {technicians.map((t) => (
+                    <TableRow key={t.id} data-testid={`row-technician-${t.id}`}>
+                      <TableCell className="font-medium">{t.fullName}</TableCell>
+                      <TableCell>
+                        {t.registrationType ? `${t.registrationType} ` : ""}
+                        {t.creaCau}
+                        {t.licenseState ? ` / ${t.licenseState}` : ""}
+                      </TableCell>
+                      <TableCell>{t.email || "-"}</TableCell>
+                      <TableCell>{t.phone || "-"}</TableCell>
+                      <TableCell>{t.company || "-"}</TableCell>
+                      <TableCell className="text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                              <MoreHorizontal className="w-4 h-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem>Editar</DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </div>
           )}
         </main>
