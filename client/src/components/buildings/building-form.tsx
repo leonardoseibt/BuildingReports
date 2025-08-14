@@ -151,6 +151,7 @@ export default function BuildingForm() {
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Nome do Empreendimento (unchanged position 1) */}
                 <FormField
                   control={form.control}
                   name="name"
@@ -158,8 +159,8 @@ export default function BuildingForm() {
                     <FormItem>
                       <FormLabel>Nome do Empreendimento *</FormLabel>
                       <FormControl>
-                        <Input 
-                          placeholder="Ex: Residencial Vista Verde" 
+                        <Input
+                          placeholder="Ex: Residencial Vista Verde"
                           {...field}
                           data-testid="input-building-name"
                         />
@@ -168,43 +169,8 @@ export default function BuildingForm() {
                     </FormItem>
                   )}
                 />
-                
-                <FormField
-                  control={form.control}
-                  name="technicalResponsible"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Responsável Técnico *</FormLabel>
-                      <FormControl>
-                        <Input 
-                          placeholder="Nome do engenheiro responsável" 
-                          {...field}
-                          data-testid="input-technical-responsible"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={form.control}
-                  name="creaCau"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>CREA/CAU *</FormLabel>
-                      <FormControl>
-                        <Input 
-                          placeholder="Número do registro profissional" 
-                          {...field}
-                          data-testid="input-crea-cau"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
+
+                {/* Tipologia Habitacional moves to position 2 */}
                 <FormField
                   control={form.control}
                   name="typology"
@@ -224,6 +190,44 @@ export default function BuildingForm() {
                           <SelectItem value="institucional">Institucional</SelectItem>
                         </SelectContent>
                       </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Responsável Técnico moves to position 3 */}
+                <FormField
+                  control={form.control}
+                  name="technicalResponsible"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Responsável Técnico *</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Nome do engenheiro responsável"
+                          {...field}
+                          data-testid="input-technical-responsible"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* CREA/CAU moves to position 4 */}
+                <FormField
+                  control={form.control}
+                  name="creaCau"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>CREA/CAU *</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Número do registro profissional"
+                          {...field}
+                          data-testid="input-crea-cau"
+                        />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}

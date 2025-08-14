@@ -1,8 +1,8 @@
-import type { Express } from "express";
+import express, { type Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./auth";
-import { insertBuildingSchema, insertStructuralSystemSchema, insertSealingSystemSchema, insertRoofingSystemSchema, insertPerformanceEvaluationSchema, insertReportSchema } from "@shared/schema";
+import { insertBuildingSchema, insertStructuralSystemSchema, insertSealingSystemSchema, insertRoofingSystemSchema, insertPerformanceEvaluationSchema, insertReportSchema, insertTechnicianSchema } from "@shared/schema";
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -290,6 +290,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error looking up CEP:", error);
       res.status(500).json({ message: "Failed to lookup CEP" });
+    }
+  });
+
+  // Technicians routes
+  app.get('/api/technicians', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const list = await storage.listTechnicians(userId);
+      res.json(list);
+    } catch (error) {
+      console.error('Error fetching technicians', error);
+      res.status(500).json({ message: 'Failed to fetch technicians' });
+    }
+  });
+
+  app.post('/api/technicians', isAuthenticated, express.json(), async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const payload = insertTechnicianSchema.parse({ ...req.body, userId });
+      const created = await storage.createTechnician(payload);
+      res.json(created);
+    } catch (error) {
+      console.error('Error creating technician', error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: 'Validation error', errors: error.errors });
+      }
+      res.status(500).json({ message: 'Failed to create technician' });
     }
   });
 

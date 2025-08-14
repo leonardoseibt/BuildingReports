@@ -10,6 +10,8 @@ import Dashboard from "@/pages/dashboard";
 import BuildingList from "@/pages/buildings/list";
 import NewBuilding from "@/pages/buildings/new";
 import ReportList from "@/pages/reports/list";
+import TechniciansList from "@/pages/technicians/list";
+import NewTechnician from "@/pages/technicians/new";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -24,6 +26,8 @@ function Router() {
           <Route path="/buildings" component={BuildingList} />
           <Route path="/buildings/new" component={NewBuilding} />
           <Route path="/reports" component={ReportList} />
+          <Route path="/technicians" component={TechniciansList} />
+          <Route path="/technicians/new" component={NewTechnician} />
         </>
       )}
       <Route component={NotFound} />

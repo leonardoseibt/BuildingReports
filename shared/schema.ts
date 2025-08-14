@@ -152,9 +152,31 @@ export const reports = pgTable("reports", {
   generatedAt: timestamp("generated_at").defaultNow(),
 });
 
+// Technicians (Responsáveis Técnicos)
+export const technicians = pgTable("technicians", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id).notNull(), // owner
+  fullName: text("full_name").notNull(),
+  creaCau: varchar("crea_cau", { length: 50 }).notNull(),
+  registrationType: varchar("registration_type", { length: 10 }), // CREA or CAU
+  licenseState: varchar("license_state", { length: 2 }), // UF
+  cpfCnpj: varchar("cpf_cnpj", { length: 18 }),
+  email: varchar("email", { length: 255 }),
+  phone: varchar("phone", { length: 32 }),
+  company: varchar("company", { length: 255 }),
+  address: text("address"),
+  city: varchar("city", { length: 128 }),
+  state: varchar("state", { length: 2 }),
+  cep: varchar("cep", { length: 9 }),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   buildings: many(buildings),
+  technicians: many(technicians),
 }));
 
 export const buildingsRelations = relations(buildings, ({ one, many }) => ({
@@ -206,6 +228,13 @@ export const reportsRelations = relations(reports, ({ one }) => ({
   evaluation: one(performanceEvaluations, {
     fields: [reports.evaluationId],
     references: [performanceEvaluations.id],
+  }),
+}));
+
+export const techniciansRelations = relations(technicians, ({ one }) => ({
+  user: one(users, {
+    fields: [technicians.userId],
+    references: [users.id],
   }),
 }));
 
@@ -267,6 +296,23 @@ export const insertReportSchema = createInsertSchema(reports).omit({
   generatedAt: true,
 });
 
+export const insertTechnicianSchema = createInsertSchema(technicians)
+  .omit({ id: true, createdAt: true, updatedAt: true })
+  .extend({
+    // normalize optional strings
+    cpfCnpj: z.string().optional().nullable().transform((v) => (v ? v : undefined)),
+    email: z.string().email().optional().nullable().transform((v) => (v ? v : undefined)),
+    phone: z.string().optional().nullable().transform((v) => (v ? v : undefined)),
+    company: z.string().optional().nullable().transform((v) => (v ? v : undefined)),
+    address: z.string().optional().nullable().transform((v) => (v ? v : undefined)),
+    city: z.string().optional().nullable().transform((v) => (v ? v : undefined)),
+    state: z.string().optional().nullable().transform((v) => (v ? v : undefined)),
+    cep: z.string().optional().nullable().transform((v) => (v ? v : undefined)),
+    notes: z.string().optional().nullable().transform((v) => (v ? v : undefined)),
+    registrationType: z.string().optional().nullable().transform((v) => (v ? v : undefined)),
+    licenseState: z.string().optional().nullable().transform((v) => (v ? v : undefined)),
+  });
+
 // Types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -282,3 +328,5 @@ export type InsertPerformanceEvaluation = z.infer<typeof insertPerformanceEvalua
 export type PerformanceEvaluation = typeof performanceEvaluations.$inferSelect;
 export type InsertReport = z.infer<typeof insertReportSchema>;
 export type Report = typeof reports.$inferSelect;
+export type InsertTechnician = z.infer<typeof insertTechnicianSchema>;
+export type Technician = typeof technicians.$inferSelect;

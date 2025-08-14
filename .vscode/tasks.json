@@ -41,6 +41,16 @@
 			"problemMatcher": [
 				"$tsc"
 			]
+		},
+		{
+			"label": "db push",
+			"type": "shell",
+			"command": "npm run db:push",
+			"args": [],
+			"problemMatcher": [
+				"$tsc"
+			],
+			"group": "build"
 		}
 	]
 }

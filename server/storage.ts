@@ -20,6 +20,9 @@ import {
   type InsertPerformanceEvaluation,
   type Report,
   type InsertReport,
+  type Technician,
+  type InsertTechnician,
+  technicians,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and } from "drizzle-orm";
@@ -62,6 +65,10 @@ export interface IStorage {
     pendingEvaluations: number;
     recentBuildings: Building[];
   }>;
+
+  // Technicians
+  createTechnician(tech: InsertTechnician): Promise<Technician>;
+  listTechnicians(userId: string): Promise<Technician[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -271,6 +278,16 @@ export class DatabaseStorage implements IStorage {
       pendingEvaluations,
       recentBuildings,
     };
+  }
+
+  // Technicians
+  async createTechnician(tech: InsertTechnician): Promise<Technician> {
+    const [row] = await db.insert(technicians).values(tech).returning();
+    return row;
+  }
+
+  async listTechnicians(userId: string): Promise<Technician[]> {
+    return await db.select().from(technicians).where(eq(technicians.userId, userId)).orderBy(desc(technicians.createdAt));
   }
 }
 

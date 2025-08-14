@@ -9,7 +9,8 @@ import {
   Calculator,
   User,
   LogOut,
-  Cog
+  Cog,
+  IdCard
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -17,6 +18,7 @@ const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Edificações', href: '/buildings', icon: Building2 },
   { name: 'Relatórios', href: '/reports', icon: FileText },
+  { name: 'Responsáveis Técnicos', href: '/technicians', icon: IdCard },
   { name: 'Sistemas Construtivos', href: '/systems', icon: Settings },
   { name: 'Avaliações', href: '/evaluations', icon: Calculator },
 ];
