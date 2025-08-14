@@ -84,7 +84,7 @@ export default function UsersList() {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-3xl max-h-[90vh] p-0 overflow-hidden">
           <div className="max-h-[calc(90vh-1rem)] overflow-y-auto my-2 px-6">
-            <DialogHeader>
+            <DialogHeader className="mb-4">
               <DialogTitle>Novo Usuário</DialogTitle>
             </DialogHeader>
             <UserForm onSuccess={() => setOpen(false)} />
