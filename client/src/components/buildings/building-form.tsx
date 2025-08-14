@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
-import { insertBuildingSchema } from "@shared/schema";
+import { insertBuildingSchema, type Technician } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
@@ -13,7 +13,10 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { MapPin, Building2, User, Home } from "lucide-react";
+import { MapPin, Building2, User, Home, Check, ChevronsUpDown } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { cn } from "@/lib/utils";
 import { z } from "zod";
 
 const buildingFormSchema = z.object({
@@ -53,6 +56,8 @@ export default function BuildingForm({ onSuccess }: BuildingFormProps = {}) {
   const [isLookingUpCep, setIsLookingUpCep] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { data: technicians } = useQuery<Technician[]>({ queryKey: ['/api/technicians'] });
+  const [openTech, setOpenTech] = useState(false);
 
   const form = useForm<BuildingFormData>({
     resolver: zodResolver(buildingFormSchema),
@@ -208,39 +213,59 @@ export default function BuildingForm({ onSuccess }: BuildingFormProps = {}) {
                   )}
                 />
 
-                {/* Responsável Técnico moves to position 3 */}
+                {/* Responsável Técnico */}
                 <FormField
                   control={form.control}
                   name="technicalResponsible"
                   render={({ field }) => (
-                    <FormItem>
+                    <FormItem className="md:col-span-2">
                       <FormLabel>Responsável Técnico *</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="Nome do engenheiro responsável"
-                          {...field}
-                          data-testid="input-technical-responsible"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                {/* CREA/CAU moves to position 4 */}
-                <FormField
-                  control={form.control}
-                  name="creaCau"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>CREA/CAU *</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="Número do registro profissional"
-                          {...field}
-                          data-testid="input-crea-cau"
-                        />
-                      </FormControl>
+                      <Popover open={openTech} onOpenChange={setOpenTech}>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant="outline"
+                              role="combobox"
+                              className="w-full justify-between"
+                              data-testid="input-technical-responsible"
+                            >
+                              {field.value
+                                ? technicians?.find((t) => t.fullName === field.value)?.fullName
+                                : "Selecione o responsável"}
+                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-full p-0">
+                          <Command>
+                            <CommandInput placeholder="Procurar..." />
+                            <CommandList>
+                              <CommandEmpty>Nenhum responsável encontrado.</CommandEmpty>
+                              <CommandGroup>
+                                {technicians?.map((tech) => (
+                                  <CommandItem
+                                    key={tech.id}
+                                    value={tech.fullName}
+                                    onSelect={() => {
+                                      form.setValue('technicalResponsible', tech.fullName);
+                                      form.setValue('creaCau', tech.creaCau);
+                                      setOpenTech(false);
+                                    }}
+                                  >
+                                    {tech.fullName}
+                                    <Check
+                                      className={cn(
+                                        'ml-auto h-4 w-4',
+                                        field.value === tech.fullName ? 'opacity-100' : 'opacity-0'
+                                      )}
+                                    />
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
                       <FormMessage />
                     </FormItem>
                   )}
