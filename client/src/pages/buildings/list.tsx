@@ -212,7 +212,7 @@ export default function BuildingList() {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-4xl max-h-[90vh] p-0 overflow-hidden">
           <div className="max-h-[calc(90vh-1rem)] overflow-y-auto my-2 px-6">
-            <DialogHeader>
+            <DialogHeader className="mb-4">
               <DialogTitle>Nova Edificação</DialogTitle>
             </DialogHeader>
             <BuildingForm onSuccess={() => setOpen(false)} />
