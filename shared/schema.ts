@@ -21,7 +21,7 @@ const decimalInput = z.union([z.string(), z.number()]).transform((v) =>
 );
 const intInput = z.coerce.number().int();
 
-// Session storage table for Replit Auth
+// Session storage table for express-session (connect-pg-simple)
 export const sessions = pgTable(
   "sessions",
   {
@@ -32,7 +32,7 @@ export const sessions = pgTable(
   (table) => [index("IDX_session_expire").on(table.expire)],
 );
 
-// User storage table for Replit Auth
+// User storage table for application users
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   email: varchar("email").unique(),

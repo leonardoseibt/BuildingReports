@@ -13,22 +13,25 @@ export default function RecentProjects() {
     queryKey: ['/api/buildings'],
   });
 
-  const getStatusColor = (createdAt: string) => {
-    const daysSinceCreated = Math.floor((Date.now() - new Date(createdAt).getTime()) / (1000 * 60 * 60 * 24));
+  const getStatusColor = (createdAt: string | Date) => {
+    const ts = typeof createdAt === 'string' ? new Date(createdAt).getTime() : createdAt.getTime();
+    const daysSinceCreated = Math.floor((Date.now() - ts) / (1000 * 60 * 60 * 24));
     if (daysSinceCreated < 7) return "bg-green-100 text-green-700";
     if (daysSinceCreated < 30) return "bg-yellow-100 text-yellow-700";
     return "bg-blue-100 text-blue-700";
   };
 
-  const getStatusText = (createdAt: string) => {
-    const daysSinceCreated = Math.floor((Date.now() - new Date(createdAt).getTime()) / (1000 * 60 * 60 * 24));
+  const getStatusText = (createdAt: string | Date) => {
+    const ts = typeof createdAt === 'string' ? new Date(createdAt).getTime() : createdAt.getTime();
+    const daysSinceCreated = Math.floor((Date.now() - ts) / (1000 * 60 * 60 * 24));
     if (daysSinceCreated < 7) return "Completo";
     if (daysSinceCreated < 30) return "Em análise";
     return "Cadastro";
   };
 
-  const getRelativeTime = (createdAt: string) => {
-    const daysSinceCreated = Math.floor((Date.now() - new Date(createdAt).getTime()) / (1000 * 60 * 60 * 24));
+  const getRelativeTime = (createdAt: string | Date) => {
+    const ts = typeof createdAt === 'string' ? new Date(createdAt).getTime() : createdAt.getTime();
+    const daysSinceCreated = Math.floor((Date.now() - ts) / (1000 * 60 * 60 * 24));
     if (daysSinceCreated === 0) return "Hoje";
     if (daysSinceCreated === 1) return "Ontem";
     if (daysSinceCreated < 7) return `${daysSinceCreated} dias atrás`;

@@ -9,8 +9,7 @@ In dev, the Express server runs Vite in middleware mode and serves the React app
 
 ## Configure env
 1. Copy `.env.example` to `.env` and fill `DATABASE_URL` and `SESSION_SECRET`.
-2. For local dev, you can omit `REPL_ID` and `REPLIT_DOMAINS`.
-   The server will enable a simple dev auth at `POST /api/dev/login`.
+2. For local dev, only `DATABASE_URL` and `SESSION_SECRET` are required.
 
 ## Install
 ```powershell
@@ -31,11 +30,10 @@ npm run dev
 - Server listens on http://localhost:5000
 - Vite runs in middleware; the UI is available at `/`.
 
-### Dev auth (local only)
-- Log in: `POST http://localhost:5000/api/dev/login` with JSON body, e.g.
-  `{ "email": "you@example.com", "id": "local-user" }`
-- Or use a small script or REST client; the session cookie will be stored by your browser if you POST from it.
-- Log out: `POST http://localhost:5000/api/dev/logout`
+### Local authentication (no Replit)
+- Login automático (GET): `http://localhost:5000/api/login`
+- Login via POST: `POST http://localhost:5000/api/login` com body JSON (ex.): `{ "email": "you@example.com", "id": "local-user" }`
+- Logout: `GET http://localhost:5000/api/logout`
 
 ## Build and run (production-like)
 ```powershell
@@ -45,4 +43,4 @@ npm start
 
 ## Notes
 - All API routes are under `/api/*`.
-- If you configure Replit OIDC for production, set `REPL_ID`, `REPLIT_DOMAINS`, and `ISSUER_URL`.
+- Replit removido: não é necessário configurar OIDC.

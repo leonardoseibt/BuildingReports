@@ -275,7 +275,7 @@ export function calculateWaterTightness(
   }
   
   // Evaluate slope for drainage
-  const slope = roofingSystem?.slope || 0;
+  const slope = Number((roofingSystem as any)?.slope ?? 0);
   if (slope >= 5) {
     drainageScore += 50;
     recommendations.push(`Inclinação adequada para drenagem (${slope}%)`);

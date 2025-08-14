@@ -65,22 +65,25 @@ export default function BuildingList() {
     return null;
   }
 
-  const getStatusColor = (createdAt: string) => {
-    const daysSinceCreated = Math.floor((Date.now() - new Date(createdAt).getTime()) / (1000 * 60 * 60 * 24));
+  const getStatusColor = (createdAt: string | Date) => {
+    const ts = typeof createdAt === 'string' ? new Date(createdAt).getTime() : createdAt.getTime();
+    const daysSinceCreated = Math.floor((Date.now() - ts) / (1000 * 60 * 60 * 24));
     if (daysSinceCreated < 7) return "bg-green-100 text-green-700";
     if (daysSinceCreated < 30) return "bg-yellow-100 text-yellow-700";
     return "bg-blue-100 text-blue-700";
   };
 
-  const getStatusText = (createdAt: string) => {
-    const daysSinceCreated = Math.floor((Date.now() - new Date(createdAt).getTime()) / (1000 * 60 * 60 * 24));
+  const getStatusText = (createdAt: string | Date) => {
+    const ts = typeof createdAt === 'string' ? new Date(createdAt).getTime() : createdAt.getTime();
+    const daysSinceCreated = Math.floor((Date.now() - ts) / (1000 * 60 * 60 * 24));
     if (daysSinceCreated < 7) return "Recente";
     if (daysSinceCreated < 30) return "Em andamento";
     return "Cadastrado";
   };
 
-  const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString('pt-BR');
+  const formatDate = (dateStr: string | Date) => {
+    const d = typeof dateStr === 'string' ? new Date(dateStr) : dateStr;
+    return d.toLocaleDateString('pt-BR');
   };
 
   return (

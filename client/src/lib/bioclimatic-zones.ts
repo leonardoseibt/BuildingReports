@@ -299,7 +299,6 @@ export const CITY_TO_ZONE: Record<string, string> = {
   'Campos dos Goytacazes': 'ZB8',
   'São José dos Campos': 'ZB3',
   'Ribeirão Preto': 'ZB4',
-  'Salvador': 'ZB8',
   'Vitória': 'ZB8',
   'Pelotas': 'ZB2',
   'Canoas': 'ZB2',

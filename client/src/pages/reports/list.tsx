@@ -64,8 +64,9 @@ export default function ReportList() {
     return null;
   }
 
-  const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString('pt-BR', {
+  const formatDate = (dateStr: string | Date) => {
+    const d = typeof dateStr === 'string' ? new Date(dateStr) : dateStr;
+    return d.toLocaleDateString('pt-BR', {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',

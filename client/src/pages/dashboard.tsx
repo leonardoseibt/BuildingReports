@@ -53,14 +53,15 @@ export default function Dashboard() {
         
         <main className="flex-1 overflow-y-auto p-6">
           <StatsCards />
-          
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-8">
-            <div className="lg:col-span-2">
-              <RecentProjects />
-            </div>
-            <div>
-              <PerformanceOverview />
-            </div>
+
+          {/* Quick Actions below stats */}
+          <div className="mt-6">
+            <PerformanceOverview />
+          </div>
+
+          {/* Recent Projects as the last card */}
+          <div className="mt-8">
+            <RecentProjects />
           </div>
         </main>
       </div>

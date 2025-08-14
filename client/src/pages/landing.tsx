@@ -57,7 +57,7 @@ export default function Landing() {
               onClick={async () => {
                 try {
                   // Convenience dev-login: only available when server runs in dev mode without OIDC
-                  await fetch('/api/dev/login', {
+                  await fetch('/api/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email: 'dev@example.com', id: 'local-user' })
