@@ -1,12 +1,10 @@
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { 
-  Building2, 
-  LayoutDashboard, 
-  FileText, 
-  Settings, 
-  Calculator,
+import {
+  Building2,
+  LayoutDashboard,
+  FileText,
   User,
   LogOut,
   Cog,
@@ -19,12 +17,9 @@ const navigation = [
   { name: 'Edificações', href: '/buildings', icon: Building2 },
   { name: 'Relatórios', href: '/reports', icon: FileText },
   { name: 'Responsáveis Técnicos', href: '/technicians', icon: IdCard },
-  { name: 'Sistemas Construtivos', href: '/systems', icon: Settings },
-  { name: 'Avaliações', href: '/evaluations', icon: Calculator },
 ];
 
 const bottomNavigation = [
-  { name: 'Perfil', href: '/profile', icon: User },
   { name: 'Configurações', href: '/settings', icon: Cog },
 ];
 
