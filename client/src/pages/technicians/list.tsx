@@ -109,11 +109,13 @@ export default function TechniciansList() {
         </main>
       </div>
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Novo Responsável Técnico</DialogTitle>
-          </DialogHeader>
-          <TechnicianForm onSuccess={() => setOpen(false)} />
+        <DialogContent className="max-w-3xl max-h-[90vh] p-0 overflow-hidden">
+          <div className="max-h-[calc(90vh-1rem)] overflow-y-auto my-2 px-6">
+            <DialogHeader>
+              <DialogTitle>Novo Responsável Técnico</DialogTitle>
+            </DialogHeader>
+            <TechnicianForm onSuccess={() => setOpen(false)} />
+          </div>
         </DialogContent>
       </Dialog>
     </div>
