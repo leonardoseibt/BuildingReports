@@ -6,11 +6,23 @@ import { isUnauthorizedError } from "@/lib/authUtils";
 import { Link } from "wouter";
 import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Building2, Plus, Calendar, MapPin, MoreHorizontal } from "lucide-react";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import type { Building } from "@shared/schema";
 
 export default function BuildingList() {
@@ -129,74 +141,68 @@ export default function BuildingList() {
               </Link>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {buildings.map((building) => (
-                <Card key={building.id} className="hover:shadow-lg transition-shadow" data-testid={`card-building-${building.id}`}>
-                  <CardHeader className="pb-3">
-                    <div className="flex items-center justify-between">
-                      <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
-                        <Building2 className="w-5 h-5 text-primary" />
-                      </div>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm" data-testid={`button-menu-${building.id}`}>
-                            <MoreHorizontal className="w-4 h-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem>Ver Detalhes</DropdownMenuItem>
-                          <DropdownMenuItem>Editar</DropdownMenuItem>
-                          <DropdownMenuItem>Gerar Relatório</DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                    <CardTitle className="text-lg" data-testid={`text-building-name-${building.id}`}>
-                      {building.name}
-                    </CardTitle>
-                    <CardDescription className="flex items-center space-x-2">
-                      <MapPin className="w-3 h-3" />
-                      <span data-testid={`text-building-location-${building.id}`}>
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Nome</TableHead>
+                    <TableHead>Localização</TableHead>
+                    <TableHead className="text-right">Área</TableHead>
+                    <TableHead className="text-right">Pav.</TableHead>
+                    <TableHead>Responsável</TableHead>
+                    <TableHead>Data</TableHead>
+                    <TableHead className="w-[50px]"></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {buildings.map((building) => (
+                    <TableRow key={building.id} data-testid={`row-building-${building.id}`}>
+                      <TableCell className="font-medium" data-testid={`text-building-name-${building.id}`}>
+                        {building.name}
+                      </TableCell>
+                      <TableCell className="flex items-center gap-1" data-testid={`text-building-location-${building.id}`}>
+                        <MapPin className="w-3 h-3" />
                         {building.bioclimaticZone} • {building.typology}
-                      </span>
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-slate-500">Área Total:</span>
-                      <span className="font-medium" data-testid={`text-building-area-${building.id}`}>
+                      </TableCell>
+                      <TableCell className="text-right" data-testid={`text-building-area-${building.id}`}>
                         {building.totalArea}m²
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-slate-500">Pavimentos:</span>
-                      <span className="font-medium" data-testid={`text-building-floors-${building.id}`}>
+                      </TableCell>
+                      <TableCell className="text-right" data-testid={`text-building-floors-${building.id}`}>
                         {building.floors}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-slate-500">Responsável:</span>
-                      <span className="font-medium truncate ml-2" data-testid={`text-building-responsible-${building.id}`}>
+                      </TableCell>
+                      <TableCell className="truncate" data-testid={`text-building-responsible-${building.id}`}>
                         {building.technicalResponsible}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between pt-2">
-                      <div className="flex items-center text-xs text-slate-500">
-                        <Calendar className="w-3 h-3 mr-1" />
-                        <span data-testid={`text-building-date-${building.id}`}>
-                          {formatDate(building.createdAt!)}
-                        </span>
-                      </div>
-                      <Badge 
-                        variant="secondary" 
-                        className={getStatusColor(building.createdAt!)}
-                        data-testid={`badge-building-status-${building.id}`}
-                      >
-                        {getStatusText(building.createdAt!)}
-                      </Badge>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2" data-testid={`text-building-date-${building.id}`}>
+                          <Calendar className="w-3 h-3" /> {formatDate(building.createdAt!)}
+                          <Badge
+                            variant="secondary"
+                            className={getStatusColor(building.createdAt!)}
+                            data-testid={`badge-building-status-${building.id}`}
+                          >
+                            {getStatusText(building.createdAt!)}
+                          </Badge>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" data-testid={`button-menu-${building.id}`}>
+                              <MoreHorizontal className="w-4 h-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem>Ver Detalhes</DropdownMenuItem>
+                            <DropdownMenuItem>Editar</DropdownMenuItem>
+                            <DropdownMenuItem>Gerar Relatório</DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </div>
           )}
         </main>
