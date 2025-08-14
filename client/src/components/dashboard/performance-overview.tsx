@@ -15,9 +15,9 @@ export default function PerformanceOverview() {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            <Link href="/buildings/new">
-              <Button 
-                variant="ghost" 
+            <Link href="/buildings">
+              <Button
+                variant="ghost"
                 className="w-full justify-start space-x-3 h-auto p-3 hover:bg-slate-50 border border-slate-200"
                 data-testid="button-new-building"
               >

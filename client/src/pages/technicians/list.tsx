@@ -1,10 +1,11 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
-import { Link } from "wouter";
+import TechnicianForm from "@/components/technicians/technician-form";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { IdCard, Plus, MoreHorizontal } from "lucide-react";
 import {
@@ -26,6 +27,7 @@ import type { Technician } from "@shared/schema";
 export default function TechniciansList() {
   const { isAuthenticated, isLoading } = useAuth();
   const { toast } = useToast();
+  const [open, setOpen] = useState(false);
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -46,11 +48,9 @@ export default function TechniciansList() {
           title="Responsáveis Técnicos"
           description="Cadastre e gerencie os profissionais"
           action={
-            <Link href="/technicians/new">
-              <Button>
-                <Plus className="w-4 h-4 mr-2" /> Novo Responsável Técnico
-              </Button>
-            </Link>
+            <Button onClick={() => setOpen(true)}>
+              <Plus className="w-4 h-4 mr-2" /> Novo Responsável Técnico
+            </Button>
           }
         />
         <main className="flex-1 overflow-y-auto p-6">
@@ -59,11 +59,9 @@ export default function TechniciansList() {
               <IdCard className="w-16 h-16 text-slate-300 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-slate-900 mb-2">Nenhum responsável técnico cadastrado</h3>
               <p className="text-slate-500 mb-6">Cadastre o primeiro para utilizá-lo nos relatórios.</p>
-              <Link href="/technicians/new">
-                <Button size="lg">
-                  <Plus className="w-4 h-4 mr-2" /> Cadastrar Responsável Técnico
-                </Button>
-              </Link>
+              <Button size="lg" onClick={() => setOpen(true)}>
+                <Plus className="w-4 h-4 mr-2" /> Cadastrar Responsável Técnico
+              </Button>
             </div>
           ) : (
             <div className="rounded-md border">
@@ -110,6 +108,14 @@ export default function TechniciansList() {
           )}
         </main>
       </div>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-3xl max-h-screen overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Novo Responsável Técnico</DialogTitle>
+          </DialogHeader>
+          <TechnicianForm onSuccess={() => setOpen(false)} />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

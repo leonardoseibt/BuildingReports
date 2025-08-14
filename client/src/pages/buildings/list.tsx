@@ -1,9 +1,10 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
-import { Link } from "wouter";
+import BuildingForm from "@/components/buildings/building-form";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
 import { Button } from "@/components/ui/button";
@@ -28,6 +29,7 @@ import type { Building } from "@shared/schema";
 export default function BuildingList() {
   const { toast } = useToast();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const [open, setOpen] = useState(false);
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -101,18 +103,16 @@ export default function BuildingList() {
   return (
     <div className="flex h-screen bg-slate-50" data-testid="building-list-container">
       <Sidebar />
-      
+
       <div className="flex-1 flex flex-col overflow-hidden">
-        <Header 
+        <Header
           title="Edificações"
           description="Gerencie suas edificações cadastradas"
           action={
-            <Link href="/buildings/new">
-              <Button data-testid="button-new-building">
-                <Plus className="w-4 h-4 mr-2" />
-                Nova Edificação
-              </Button>
-            </Link>
+            <Button data-testid="button-new-building" onClick={() => setOpen(true)}>
+              <Plus className="w-4 h-4 mr-2" />
+              Nova Edificação
+            </Button>
           }
         />
         
@@ -133,12 +133,14 @@ export default function BuildingList() {
               <p className="text-slate-500 mb-6">
                 Comece cadastrando sua primeira edificação para gerar relatórios de desempenho.
               </p>
-              <Link href="/buildings/new">
-                <Button size="lg" data-testid="button-create-first-building">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Criar Primeira Edificação
-                </Button>
-              </Link>
+              <Button
+                size="lg"
+                data-testid="button-create-first-building"
+                onClick={() => setOpen(true)}
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Criar Primeira Edificação
+              </Button>
             </div>
           ) : (
             <div className="rounded-md border">
@@ -207,6 +209,14 @@ export default function BuildingList() {
           )}
         </main>
       </div>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-4xl max-h-screen overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Nova Edificação</DialogTitle>
+          </DialogHeader>
+          <BuildingForm onSuccess={() => setOpen(false)} />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
