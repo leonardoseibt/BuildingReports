@@ -12,7 +12,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Auth routes
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId: number = Number(req.user.claims.sub);
       const user = await storage.getUser(userId);
       res.json(user);
     } catch (error) {
@@ -24,7 +24,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Dashboard routes
   app.get('/api/dashboard/stats', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId: number = Number(req.user.claims.sub);
       const stats = await storage.getUserStats(userId);
       res.json(stats);
     } catch (error) {
@@ -36,7 +36,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Building routes
   app.post('/api/buildings', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId: number = Number(req.user.claims.sub);
       const buildingData = insertBuildingSchema.parse({
         ...req.body,
         userId,
@@ -55,7 +55,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/buildings', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId: number = Number(req.user.claims.sub);
       const buildings = await storage.getBuildingsByUser(userId);
       res.json(buildings);
     } catch (error) {
@@ -66,13 +66,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/buildings/:id', isAuthenticated, async (req: any, res) => {
     try {
-      const building = await storage.getBuilding(req.params.id);
+      const id = Number(req.params.id);
+      const building = await storage.getBuilding(id);
       if (!building) {
         return res.status(404).json({ message: "Building not found" });
       }
       
       // Check if building belongs to user
-      if (building.userId !== req.user.claims.sub) {
+      if (building.userId !== Number(req.user.claims.sub)) {
         return res.status(403).json({ message: "Access denied" });
       }
       
@@ -86,10 +87,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Building systems routes
   app.post('/api/buildings/:id/structural-system', isAuthenticated, async (req: any, res) => {
     try {
-      const buildingId = req.params.id;
+      const buildingId = Number(req.params.id);
       const building = await storage.getBuilding(buildingId);
       
-      if (!building || building.userId !== req.user.claims.sub) {
+  if (!building || building.userId !== Number(req.user.claims.sub)) {
         return res.status(403).json({ message: "Access denied" });
       }
       
@@ -111,10 +112,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/buildings/:id/sealing-system', isAuthenticated, async (req: any, res) => {
     try {
-      const buildingId = req.params.id;
+      const buildingId = Number(req.params.id);
       const building = await storage.getBuilding(buildingId);
       
-      if (!building || building.userId !== req.user.claims.sub) {
+  if (!building || building.userId !== Number(req.user.claims.sub)) {
         return res.status(403).json({ message: "Access denied" });
       }
       
@@ -136,10 +137,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/buildings/:id/roofing-system', isAuthenticated, async (req: any, res) => {
     try {
-      const buildingId = req.params.id;
+      const buildingId = Number(req.params.id);
       const building = await storage.getBuilding(buildingId);
       
-      if (!building || building.userId !== req.user.claims.sub) {
+  if (!building || building.userId !== Number(req.user.claims.sub)) {
         return res.status(403).json({ message: "Access denied" });
       }
       
@@ -162,10 +163,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Performance evaluation routes
   app.post('/api/buildings/:id/evaluation', isAuthenticated, async (req: any, res) => {
     try {
-      const buildingId = req.params.id;
+      const buildingId = Number(req.params.id);
       const building = await storage.getBuilding(buildingId);
       
-      if (!building || building.userId !== req.user.claims.sub) {
+  if (!building || building.userId !== Number(req.user.claims.sub)) {
         return res.status(403).json({ message: "Access denied" });
       }
       
@@ -187,10 +188,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/buildings/:id/evaluation', isAuthenticated, async (req: any, res) => {
     try {
-      const buildingId = req.params.id;
+      const buildingId = Number(req.params.id);
       const building = await storage.getBuilding(buildingId);
       
-      if (!building || building.userId !== req.user.claims.sub) {
+  if (!building || building.userId !== Number(req.user.claims.sub)) {
         return res.status(403).json({ message: "Access denied" });
       }
       
@@ -209,7 +210,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Verify user owns the building
       const building = await storage.getBuilding(reportData.buildingId);
-      if (!building || building.userId !== req.user.claims.sub) {
+      if (!building || building.userId !== Number(req.user.claims.sub)) {
         return res.status(403).json({ message: "Access denied" });
       }
       
@@ -226,7 +227,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/reports', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId: number = Number(req.user.claims.sub);
       const reports = await storage.getReportsByUser(userId);
       res.json(reports);
     } catch (error) {
@@ -237,14 +238,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/reports/:id', isAuthenticated, async (req: any, res) => {
     try {
-      const report = await storage.getReport(req.params.id);
+      const id = Number(req.params.id);
+      const report = await storage.getReport(id);
       if (!report) {
         return res.status(404).json({ message: "Report not found" });
       }
       
       // Check if report belongs to user
-      const building = await storage.getBuilding(report.buildingId);
-      if (!building || building.userId !== req.user.claims.sub) {
+  const building = await storage.getBuilding(report.buildingId);
+  if (!building || building.userId !== Number(req.user.claims.sub)) {
         return res.status(403).json({ message: "Access denied" });
       }
       
@@ -296,7 +298,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Technicians routes
   app.get('/api/technicians', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId: number = Number(req.user.claims.sub);
       const list = await storage.listTechnicians(userId);
       res.json(list);
     } catch (error) {
@@ -307,7 +309,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/technicians', isAuthenticated, express.json(), async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId: number = Number(req.user.claims.sub);
       const payload = insertTechnicianSchema.parse({ ...req.body, userId });
       const created = await storage.createTechnician(payload);
       res.json(created);

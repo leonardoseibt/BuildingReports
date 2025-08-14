@@ -16,11 +16,17 @@ import { Separator } from "@/components/ui/separator";
 import { MapPin, Building2, User, Home } from "lucide-react";
 import { z } from "zod";
 
-const buildingFormSchema = insertBuildingSchema.omit({ userId: true }).extend({
+const buildingFormSchema = z.object({
+  name: z.string().min(1, "Nome é obrigatório"),
+  technicalResponsible: z.string().min(1, "Responsável é obrigatório"),
+  creaCau: z.string().min(1, "CREA/CAU é obrigatório"),
+  typology: z.enum(["unifamiliar","multifamiliar","comercial","institucional"], { required_error: "Tipologia é obrigatória" }),
   cep: z.string()
     .min(8, "CEP deve ter 8 dígitos")
     .max(9, "CEP deve ter 8 dígitos")
     .regex(/^\d{5}-?\d{3}$/, "CEP deve estar no formato 00000-000"),
+  address: z.string().min(1, "Endereço é obrigatório"),
+  bioclimaticZone: z.enum(["ZB1","ZB2","ZB3","ZB4","ZB5","ZB6","ZB7","ZB8"]).optional(),
   totalArea: z.string()
     .min(1, "Área total é obrigatória")
     .transform((val) => parseFloat(val))
@@ -32,6 +38,8 @@ const buildingFormSchema = insertBuildingSchema.omit({ userId: true }).extend({
   units: z.string()
     .optional()
     .transform((val) => val ? parseInt(val, 10) : 1),
+  noiseClass: z.enum(["classe1","classe2","classe3","classe4"]).optional(),
+  aggressivenessClass: z.enum(["caa1","caa2","caa3","caa4"]).optional(),
 });
 
 type BuildingFormData = z.infer<typeof buildingFormSchema>;
@@ -52,15 +60,15 @@ export default function BuildingForm({ onSuccess }: BuildingFormProps = {}) {
       name: '',
       technicalResponsible: '',
       creaCau: '',
-      typology: undefined,
+      typology: undefined as any,
       cep: '',
       address: '',
-      bioclimaticZone: undefined,
-  totalArea: 0,
-  floors: 0,
-  units: 1,
-      noiseClass: undefined,
-      aggressivenessClass: undefined,
+      bioclimaticZone: undefined as any,
+      totalArea: 0 as any,
+      floors: 0 as any,
+      units: 1 as any,
+      noiseClass: undefined as any,
+      aggressivenessClass: undefined as any,
     },
   });
 

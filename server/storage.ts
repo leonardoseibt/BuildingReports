@@ -29,37 +29,38 @@ import { eq, desc, and } from "drizzle-orm";
 
 export interface IStorage {
   // User operations
-  getUser(id: string): Promise<User | undefined>;
+  getUser(id: number): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
+  ensureUserByEmail(email: string, firstName?: string, lastName?: string, profileImageUrl?: string): Promise<User>;
   
   // Building operations
   createBuilding(building: InsertBuilding): Promise<Building>;
-  getBuildingsByUser(userId: string): Promise<Building[]>;
-  getBuilding(id: string): Promise<Building | undefined>;
-  updateBuilding(id: string, building: Partial<InsertBuilding>): Promise<Building>;
+  getBuildingsByUser(userId: number): Promise<Building[]>;
+  getBuilding(id: number): Promise<Building | undefined>;
+  updateBuilding(id: number, building: Partial<InsertBuilding>): Promise<Building>;
   
   // Building systems operations
   createStructuralSystem(system: InsertStructuralSystem): Promise<StructuralSystem>;
   createSealingSystem(system: InsertSealingSystem): Promise<SealingSystem>;
   createRoofingSystem(system: InsertRoofingSystem): Promise<RoofingSystem>;
   
-  getStructuralSystem(buildingId: string): Promise<StructuralSystem | undefined>;
-  getSealingSystem(buildingId: string): Promise<SealingSystem | undefined>;
-  getRoofingSystem(buildingId: string): Promise<RoofingSystem | undefined>;
+  getStructuralSystem(buildingId: number): Promise<StructuralSystem | undefined>;
+  getSealingSystem(buildingId: number): Promise<SealingSystem | undefined>;
+  getRoofingSystem(buildingId: number): Promise<RoofingSystem | undefined>;
   
   // Performance evaluation operations
   createPerformanceEvaluation(evaluation: InsertPerformanceEvaluation): Promise<PerformanceEvaluation>;
-  getPerformanceEvaluation(buildingId: string): Promise<PerformanceEvaluation | undefined>;
-  updatePerformanceEvaluation(id: string, evaluation: Partial<InsertPerformanceEvaluation>): Promise<PerformanceEvaluation>;
+  getPerformanceEvaluation(buildingId: number): Promise<PerformanceEvaluation | undefined>;
+  updatePerformanceEvaluation(id: number, evaluation: Partial<InsertPerformanceEvaluation>): Promise<PerformanceEvaluation>;
   
   // Report operations
   createReport(report: InsertReport): Promise<Report>;
-  getReportsByBuilding(buildingId: string): Promise<Report[]>;
-  getReportsByUser(userId: string): Promise<Report[]>;
-  getReport(id: string): Promise<Report | undefined>;
+  getReportsByBuilding(buildingId: number): Promise<Report[]>;
+  getReportsByUser(userId: number): Promise<Report[]>;
+  getReport(id: number): Promise<Report | undefined>;
   
   // Dashboard statistics
-  getUserStats(userId: string): Promise<{
+  getUserStats(userId: number): Promise<{
     totalBuildings: number;
     totalReports: number;
     pendingEvaluations: number;
@@ -68,12 +69,12 @@ export interface IStorage {
 
   // Technicians
   createTechnician(tech: InsertTechnician): Promise<Technician>;
-  listTechnicians(userId: string): Promise<Technician[]>;
+  listTechnicians(userId: number): Promise<Technician[]>;
 }
 
 export class DatabaseStorage implements IStorage {
   // User operations
-  async getUser(id: string): Promise<User | undefined> {
+  async getUser(id: number): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
     return user;
   }
@@ -93,16 +94,39 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
+  async ensureUserByEmail(email: string, firstName = "Dev", lastName = "User", profileImageUrl = ""): Promise<User> {
+    const [user] = await db
+      .insert(users)
+      .values({ email, firstName, lastName, profileImageUrl })
+      .onConflictDoUpdate({
+        target: users.email!,
+        set: { firstName, lastName, profileImageUrl, updatedAt: new Date() },
+      })
+      .returning();
+    return user;
+  }
+
   // Building operations
   async createBuilding(building: InsertBuilding): Promise<Building> {
-    const [newBuilding] = await db
-      .insert(buildings)
-      .values(building)
-      .returning();
+    const [newBuilding] = await db.insert(buildings).values({
+      name: building.name,
+      userId: building.userId,
+      technicalResponsible: building.technicalResponsible,
+      creaCau: building.creaCau,
+      typology: building.typology,
+      cep: building.cep,
+      address: building.address,
+      bioclimaticZone: building.bioclimaticZone,
+      totalArea: building.totalArea,
+      floors: building.floors,
+      units: building.units,
+      noiseClass: building.noiseClass,
+      aggressivenessClass: building.aggressivenessClass,
+    }).returning();
     return newBuilding;
   }
 
-  async getBuildingsByUser(userId: string): Promise<Building[]> {
+  async getBuildingsByUser(userId: number): Promise<Building[]> {
     return await db
       .select()
       .from(buildings)
@@ -110,7 +134,7 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(buildings.createdAt));
   }
 
-  async getBuilding(id: string): Promise<Building | undefined> {
+  async getBuilding(id: number): Promise<Building | undefined> {
     const [building] = await db
       .select()
       .from(buildings)
@@ -118,7 +142,7 @@ export class DatabaseStorage implements IStorage {
     return building;
   }
 
-  async updateBuilding(id: string, building: Partial<InsertBuilding>): Promise<Building> {
+  async updateBuilding(id: number, building: Partial<InsertBuilding>): Promise<Building> {
     const [updatedBuilding] = await db
       .update(buildings)
       .set({ ...building, updatedAt: new Date() })
@@ -129,30 +153,40 @@ export class DatabaseStorage implements IStorage {
 
   // Building systems operations
   async createStructuralSystem(system: InsertStructuralSystem): Promise<StructuralSystem> {
-    const [newSystem] = await db
-      .insert(structuralSystems)
-      .values(system)
-      .returning();
+    const [newSystem] = await db.insert(structuralSystems).values({
+      buildingId: system.buildingId,
+      systemType: system.systemType,
+      materialResistance: system.materialResistance,
+      designLife: system.designLife,
+      designLoads: system.designLoads,
+    }).returning();
     return newSystem;
   }
 
   async createSealingSystem(system: InsertSealingSystem): Promise<SealingSystem> {
-    const [newSystem] = await db
-      .insert(sealingSystems)
-      .values(system)
-      .returning();
+    const [newSystem] = await db.insert(sealingSystems).values({
+      buildingId: system.buildingId,
+      externalWalls: system.externalWalls,
+      internalWalls: system.internalWalls,
+      acousticProperties: system.acousticProperties,
+      thermalProperties: system.thermalProperties,
+    }).returning();
     return newSystem;
   }
 
   async createRoofingSystem(system: InsertRoofingSystem): Promise<RoofingSystem> {
-    const [newSystem] = await db
-      .insert(roofingSystems)
-      .values(system)
-      .returning();
+    const [newSystem] = await db.insert(roofingSystems).values({
+      buildingId: system.buildingId,
+      roofingType: system.roofingType,
+      thermalProperties: system.thermalProperties,
+      waterproofing: system.waterproofing,
+      slope: system.slope,
+      thermalInsulation: system.thermalInsulation,
+    }).returning();
     return newSystem;
   }
 
-  async getStructuralSystem(buildingId: string): Promise<StructuralSystem | undefined> {
+  async getStructuralSystem(buildingId: number): Promise<StructuralSystem | undefined> {
     const [system] = await db
       .select()
       .from(structuralSystems)
@@ -160,7 +194,7 @@ export class DatabaseStorage implements IStorage {
     return system;
   }
 
-  async getSealingSystem(buildingId: string): Promise<SealingSystem | undefined> {
+  async getSealingSystem(buildingId: number): Promise<SealingSystem | undefined> {
     const [system] = await db
       .select()
       .from(sealingSystems)
@@ -168,7 +202,7 @@ export class DatabaseStorage implements IStorage {
     return system;
   }
 
-  async getRoofingSystem(buildingId: string): Promise<RoofingSystem | undefined> {
+  async getRoofingSystem(buildingId: number): Promise<RoofingSystem | undefined> {
     const [system] = await db
       .select()
       .from(roofingSystems)
@@ -178,14 +212,20 @@ export class DatabaseStorage implements IStorage {
 
   // Performance evaluation operations
   async createPerformanceEvaluation(evaluation: InsertPerformanceEvaluation): Promise<PerformanceEvaluation> {
-    const [newEvaluation] = await db
-      .insert(performanceEvaluations)
-      .values(evaluation)
-      .returning();
+    const [newEvaluation] = await db.insert(performanceEvaluations).values({
+      buildingId: evaluation.buildingId,
+      structuralSafety: evaluation.structuralSafety,
+      thermalPerformance: evaluation.thermalPerformance,
+      acousticPerformance: evaluation.acousticPerformance,
+      waterTightness: evaluation.waterTightness,
+      fireSafety: evaluation.fireSafety,
+      evaluationData: evaluation.evaluationData,
+      status: evaluation.status,
+    }).returning();
     return newEvaluation;
   }
 
-  async getPerformanceEvaluation(buildingId: string): Promise<PerformanceEvaluation | undefined> {
+  async getPerformanceEvaluation(buildingId: number): Promise<PerformanceEvaluation | undefined> {
     const [evaluation] = await db
       .select()
       .from(performanceEvaluations)
@@ -194,7 +234,7 @@ export class DatabaseStorage implements IStorage {
     return evaluation;
   }
 
-  async updatePerformanceEvaluation(id: string, evaluation: Partial<InsertPerformanceEvaluation>): Promise<PerformanceEvaluation> {
+  async updatePerformanceEvaluation(id: number, evaluation: Partial<InsertPerformanceEvaluation>): Promise<PerformanceEvaluation> {
     const [updatedEvaluation] = await db
       .update(performanceEvaluations)
       .set({ ...evaluation, updatedAt: new Date() })
@@ -205,14 +245,17 @@ export class DatabaseStorage implements IStorage {
 
   // Report operations
   async createReport(report: InsertReport): Promise<Report> {
-    const [newReport] = await db
-      .insert(reports)
-      .values(report)
-      .returning();
+    const [newReport] = await db.insert(reports).values({
+      buildingId: report.buildingId,
+      evaluationId: report.evaluationId,
+      reportData: report.reportData,
+      version: report.version,
+      isActive: report.isActive,
+    }).returning();
     return newReport;
   }
 
-  async getReportsByBuilding(buildingId: string): Promise<Report[]> {
+  async getReportsByBuilding(buildingId: number): Promise<Report[]> {
     return await db
       .select()
       .from(reports)
@@ -220,7 +263,7 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(reports.generatedAt));
   }
 
-  async getReportsByUser(userId: string): Promise<Report[]> {
+  async getReportsByUser(userId: number): Promise<Report[]> {
     return await db
       .select({
         id: reports.id,
@@ -241,7 +284,7 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(reports.generatedAt));
   }
 
-  async getReport(id: string): Promise<Report | undefined> {
+  async getReport(id: number): Promise<Report | undefined> {
     const [report] = await db
       .select()
       .from(reports)
@@ -250,7 +293,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Dashboard statistics
-  async getUserStats(userId: string): Promise<{
+  async getUserStats(userId: number): Promise<{
     totalBuildings: number;
     totalReports: number;
     pendingEvaluations: number;
@@ -260,7 +303,7 @@ export class DatabaseStorage implements IStorage {
     const userReports = await this.getReportsByUser(userId);
     
     // Get pending evaluations count
-    const buildingIds = userBuildings.map(b => b.id);
+  const buildingIds = userBuildings.map(b => b.id);
     let pendingEvaluations = 0;
     
     for (const buildingId of buildingIds) {
@@ -282,11 +325,26 @@ export class DatabaseStorage implements IStorage {
 
   // Technicians
   async createTechnician(tech: InsertTechnician): Promise<Technician> {
-    const [row] = await db.insert(technicians).values(tech).returning();
+    const [row] = await db.insert(technicians).values({
+      userId: tech.userId,
+      fullName: tech.fullName,
+      creaCau: tech.creaCau,
+      registrationType: tech.registrationType,
+      licenseState: tech.licenseState,
+      cpfCnpj: tech.cpfCnpj,
+      email: tech.email,
+      phone: tech.phone,
+      company: tech.company,
+      address: tech.address,
+      city: tech.city,
+      state: tech.state,
+      cep: tech.cep,
+      notes: tech.notes,
+    }).returning();
     return row;
   }
 
-  async listTechnicians(userId: string): Promise<Technician[]> {
+  async listTechnicians(userId: number): Promise<Technician[]> {
     return await db.select().from(technicians).where(eq(technicians.userId, userId)).orderBy(desc(technicians.createdAt));
   }
 }

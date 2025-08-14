@@ -34,7 +34,7 @@ export const sessions = pgTable(
 
 // User storage table for application users
 export const users = pgTable("users", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  id: integer("id").generatedAlwaysAsIdentity().primaryKey(),
   email: varchar("email").unique(),
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
@@ -74,8 +74,8 @@ export const evaluationStatusEnum = pgEnum('evaluation_status', [
 
 // Buildings table
 export const buildings = pgTable("buildings", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").references(() => users.id).notNull(),
+  id: integer("id").generatedAlwaysAsIdentity().primaryKey(),
+  userId: integer("user_id").references(() => users.id).notNull(),
   name: text("name").notNull(),
   technicalResponsible: text("technical_responsible").notNull(),
   creaCau: text("crea_cau").notNull(),
@@ -94,8 +94,8 @@ export const buildings = pgTable("buildings", {
 
 // Structural Systems
 export const structuralSystems = pgTable("structural_systems", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  buildingId: varchar("building_id").references(() => buildings.id).notNull(),
+  id: integer("id").generatedAlwaysAsIdentity().primaryKey(),
+  buildingId: integer("building_id").references(() => buildings.id).notNull(),
   systemType: structuralSystemEnum("system_type").notNull(),
   materialResistance: decimal("material_resistance", { precision: 8, scale: 2 }),
   designLife: integer("design_life").notNull(), // VUP in years
@@ -105,8 +105,8 @@ export const structuralSystems = pgTable("structural_systems", {
 
 // Sealing Systems (Vedações)
 export const sealingSystems = pgTable("sealing_systems", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  buildingId: varchar("building_id").references(() => buildings.id).notNull(),
+  id: integer("id").generatedAlwaysAsIdentity().primaryKey(),
+  buildingId: integer("building_id").references(() => buildings.id).notNull(),
   externalWalls: jsonb("external_walls"), // {materials: [], thickness: number, thermalTransmittance: number}
   internalWalls: jsonb("internal_walls"),
   acousticProperties: jsonb("acoustic_properties"), // {isolation: number, materials: []}
@@ -116,8 +116,8 @@ export const sealingSystems = pgTable("sealing_systems", {
 
 // Roofing Systems
 export const roofingSystems = pgTable("roofing_systems", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  buildingId: varchar("building_id").references(() => buildings.id).notNull(),
+  id: integer("id").generatedAlwaysAsIdentity().primaryKey(),
+  buildingId: integer("building_id").references(() => buildings.id).notNull(),
   roofingType: text("roofing_type").notNull(),
   thermalProperties: jsonb("thermal_properties"),
   waterproofing: boolean("waterproofing").default(false),
@@ -128,8 +128,8 @@ export const roofingSystems = pgTable("roofing_systems", {
 
 // Performance Evaluations
 export const performanceEvaluations = pgTable("performance_evaluations", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  buildingId: varchar("building_id").references(() => buildings.id).notNull(),
+  id: integer("id").generatedAlwaysAsIdentity().primaryKey(),
+  buildingId: integer("building_id").references(() => buildings.id).notNull(),
   structuralSafety: performanceLevelEnum("structural_safety"),
   thermalPerformance: performanceLevelEnum("thermal_performance"),
   acousticPerformance: performanceLevelEnum("acoustic_performance"),
@@ -143,9 +143,9 @@ export const performanceEvaluations = pgTable("performance_evaluations", {
 
 // Reports
 export const reports = pgTable("reports", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  buildingId: varchar("building_id").references(() => buildings.id).notNull(),
-  evaluationId: varchar("evaluation_id").references(() => performanceEvaluations.id).notNull(),
+  id: integer("id").generatedAlwaysAsIdentity().primaryKey(),
+  buildingId: integer("building_id").references(() => buildings.id).notNull(),
+  evaluationId: integer("evaluation_id").references(() => performanceEvaluations.id).notNull(),
   reportData: jsonb("report_data").notNull(), // complete report structure
   version: integer("version").default(1),
   isActive: boolean("is_active").default(true),
@@ -154,8 +154,8 @@ export const reports = pgTable("reports", {
 
 // Technicians (Responsáveis Técnicos)
 export const technicians = pgTable("technicians", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").references(() => users.id).notNull(), // owner
+  id: integer("id").generatedAlwaysAsIdentity().primaryKey(),
+  userId: integer("user_id").references(() => users.id).notNull(), // owner
   fullName: text("full_name").notNull(),
   creaCau: varchar("crea_cau", { length: 50 }).notNull(),
   registrationType: varchar("registration_type", { length: 10 }), // CREA or CAU
@@ -240,11 +240,6 @@ export const techniciansRelations = relations(technicians, ({ one }) => ({
 
 // Insert Schemas
 export const insertBuildingSchema = createInsertSchema(buildings)
-  .omit({
-    id: true,
-    createdAt: true,
-    updatedAt: true,
-  })
   .extend({
     totalArea: decimalInput,
     floors: intInput,
@@ -252,36 +247,20 @@ export const insertBuildingSchema = createInsertSchema(buildings)
   });
 
 export const insertStructuralSystemSchema = createInsertSchema(structuralSystems)
-  .omit({
-    id: true,
-    createdAt: true,
-  })
   .extend({
     materialResistance: decimalInput.optional(),
     designLife: intInput,
     designLoads: decimalInput.optional(),
   });
 
-export const insertSealingSystemSchema = createInsertSchema(sealingSystems).omit({
-  id: true,
-  createdAt: true,
-});
+export const insertSealingSystemSchema = createInsertSchema(sealingSystems);
 
 export const insertRoofingSystemSchema = createInsertSchema(roofingSystems)
-  .omit({
-    id: true,
-    createdAt: true,
-  })
   .extend({
     slope: decimalInput.optional(),
   });
 
 export const insertPerformanceEvaluationSchema = createInsertSchema(performanceEvaluations)
-  .omit({
-    id: true,
-    createdAt: true,
-    updatedAt: true,
-  })
   .partial({
     structuralSafety: true,
     thermalPerformance: true,
@@ -291,13 +270,9 @@ export const insertPerformanceEvaluationSchema = createInsertSchema(performanceE
     evaluationData: true,
   });
 
-export const insertReportSchema = createInsertSchema(reports).omit({
-  id: true,
-  generatedAt: true,
-});
+export const insertReportSchema = createInsertSchema(reports);
 
 export const insertTechnicianSchema = createInsertSchema(technicians)
-  .omit({ id: true, createdAt: true, updatedAt: true })
   .extend({
     // normalize optional strings
     cpfCnpj: z.string().optional().nullable().transform((v) => (v ? v : undefined)),
