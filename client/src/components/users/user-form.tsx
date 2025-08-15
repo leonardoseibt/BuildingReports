@@ -12,14 +12,16 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Mail, User, Phone } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
+import { Mail, Phone } from "lucide-react";
 import { insertUserSchema, type InsertUser } from "@shared/schema";
 
 interface UserFormProps {
   onSuccess?: () => void;
+  onCancel?: () => void;
 }
 
-export default function UserForm({ onSuccess }: UserFormProps = {}) {
+export default function UserForm({ onSuccess, onCancel }: UserFormProps = {}) {
   const { toast } = useToast();
   const form = useForm<InsertUser>({
     resolver: zodResolver(insertUserSchema),
@@ -48,10 +50,9 @@ export default function UserForm({ onSuccess }: UserFormProps = {}) {
   };
 
   return (
-    <div className="max-w-3xl mx-auto">
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <FormField
               name="firstName"
               control={form.control}
@@ -128,12 +129,17 @@ export default function UserForm({ onSuccess }: UserFormProps = {}) {
                 </FormItem>
               )}
             />
-          </div>
-          <div className="flex items-center justify-end gap-3">
-            <Button type="submit" className="min-w-28">Salvar</Button>
-          </div>
-        </form>
-      </Form>
-    </div>
+        </div>
+        <Separator />
+        <div className="flex items-center justify-end gap-3 pt-6">
+          <Button type="button" variant="outline" onClick={onCancel}>
+            Cancelar
+          </Button>
+          <Button type="submit" className="min-w-28">
+            Salvar
+          </Button>
+        </div>
+      </form>
+    </Form>
   );
 }
