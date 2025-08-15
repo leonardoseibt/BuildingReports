@@ -233,13 +233,7 @@ export default function UsersList() {
       {/* Modal de criação */}
       <Dialog open={openCreate} onOpenChange={setOpenCreate}>
         <DialogContent className="max-w-4xl max-h-[90vh] p-0 overflow-hidden">
-          <div className="max-h-[calc(90vh-1rem)] overflow-y-auto my-2 px-6">
-            <DialogHeader className="mb-4">
-              <DialogTitle>Novo Usuário</DialogTitle>
-              <DialogDescription>
-                Cadastre um novo usuário com nome e e-mail para acesso ao sistema.
-              </DialogDescription>
-            </DialogHeader>
+          <div className="max-h-[calc(90vh-1rem)] overflow-y-auto my-6 px-6">
             <UserForm
               onSuccess={() => setOpenCreate(false)}
               onCancel={() => setOpenCreate(false)}
