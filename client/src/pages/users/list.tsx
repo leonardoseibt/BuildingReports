@@ -14,7 +14,6 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Users, Plus, Pencil, Trash2 } from "lucide-react";
-import { Separator } from "@/components/ui/separator";
 import {
   Table,
   TableBody,
@@ -233,23 +232,18 @@ export default function UsersList() {
 
       {/* Modal de criação */}
       <Dialog open={openCreate} onOpenChange={setOpenCreate}>
-        <DialogContent className="max-w-4xl p-0 overflow-hidden">
-          <div className="px-6 py-5 border-b bg-gradient-to-r from-primary/10 to-transparent">
-            <DialogHeader className="mb-0">
-              <DialogTitle className="text-xl">Novo Usuário</DialogTitle>
-              <DialogDescription className="text-slate-600">
+        <DialogContent className="max-w-4xl max-h-[90vh] p-0 overflow-hidden">
+          <div className="max-h-[calc(90vh-1rem)] overflow-y-auto my-2 px-6">
+            <DialogHeader className="mb-4">
+              <DialogTitle>Novo Usuário</DialogTitle>
+              <DialogDescription>
                 Cadastre um novo usuário com nome e e-mail para acesso ao sistema.
               </DialogDescription>
             </DialogHeader>
-          </div>
-          <div className="max-h-[70vh] overflow-y-auto px-6 py-5">
-            <UserForm onSuccess={() => setOpenCreate(false)} />
-          </div>
-          <Separator />
-          <div className="px-6 py-4 flex items-center justify-end gap-3 bg-white">
-            <Button variant="outline" onClick={() => setOpenCreate(false)}>
-              Cancelar
-            </Button>
+            <UserForm
+              onSuccess={() => setOpenCreate(false)}
+              onCancel={() => setOpenCreate(false)}
+            />
           </div>
         </DialogContent>
       </Dialog>
