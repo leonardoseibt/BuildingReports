@@ -51,15 +51,6 @@ export default function UserForm({ onSuccess }: UserFormProps = {}) {
     <div className="max-w-3xl mx-auto">
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          <div className="space-y-2">
-            <div className="flex items-center space-x-2">
-              <User className="w-5 h-5 text-primary" />
-              <h3 className="text-lg font-medium">Dados do Usuário</h3>
-            </div>
-            <p className="text-sm text-slate-600">
-              Informe nome e e-mail do usuário que terá acesso ao sistema.
-            </p>
-          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <FormField
               name="firstName"
