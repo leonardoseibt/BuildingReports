@@ -10,7 +10,7 @@ import {
   DialogContent,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Users, Plus, Pencil, Trash2 } from "lucide-react";
+import { Users, Plus, Pencil, Trash2, Loader2 } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -57,7 +57,7 @@ export default function UsersList() {
     }
   }, [isAuthenticated, isLoading, toast]);
 
-  const { data: users = [], isFetching } = useQuery<User[]>({
+  const { data: users = [], isFetching, isLoading: isLoadingUsers } = useQuery<User[]>({
     queryKey: ["/api/users"],
     enabled: isAuthenticated,
   });
@@ -96,7 +96,8 @@ export default function UsersList() {
   toast({ title: "Usuário excluído", description: `${u.fullName} foi removido.` });
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+  // Revalida em background sem limpar lista atual
+  queryClient.invalidateQueries({ queryKey: ["/api/users"], refetchType: "inactive" });
     },
   });
 
@@ -123,14 +124,19 @@ export default function UsersList() {
           title="Usuários"
           description="Cadastre e gerencie os usuários do sistema"
           action={
-            <Button onClick={() => { setEditUser(null); setFormKey((k) => k + 1); setOpenCreate(true); }}>
-              <Plus className="w-4 h-4 mr-2" /> Novo Usuário
-            </Button>
+            <div className="flex items-center gap-2">
+              {isFetching && (
+                <Loader2 className="h-4 w-4 animate-spin text-slate-400" aria-label="Atualizando" />
+              )}
+              <Button onClick={() => { setEditUser(null); setFormKey((k) => k + 1); setOpenCreate(true); }}>
+                <Plus className="w-4 h-4 mr-2" /> Novo Usuário
+              </Button>
+            </div>
           }
         />
 
         <main className="flex-1 overflow-y-auto p-6">
-          {isFetching ? null : users.length === 0 ? (
+          {isLoadingUsers ? null : users.length === 0 ? (
             <div className="text-center py-12">
               <Users className="w-16 h-16 text-slate-300 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-slate-900 mb-2">Nenhum usuário cadastrado</h3>

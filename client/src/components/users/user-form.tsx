@@ -14,10 +14,10 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
+// removed unused Separator import
 
 import { Mail, Phone, User2, Lock, Loader2 } from "lucide-react";
-import { insertUserSchema, updateUserSchema, type InsertUser } from "@shared/schema";
+import { insertUserSchema, updateUserSchema } from "@shared/schema";
 
 interface UserFormProps {
   onSuccess?: () => void;
@@ -30,12 +30,19 @@ interface UserFormProps {
  * - Visual repaginado, com header, avatar/preview e grid responsivo
  * - Mantém compatibilidade com o schema e a API já existentes
  */
+type FormValues = {
+  fullName: string;
+  email: string;
+  password?: string;
+  phone?: string;
+};
+
 export default function UserForm({ onSuccess, onCancel, initialUser }: UserFormProps = {}) {
   const { toast } = useToast();
   const [submitting, setSubmitting] = React.useState(false);
 
   const isEdit = !!initialUser?.id;
-  const form = useForm<InsertUser>({
+  const form = useForm<FormValues>({
     resolver: zodResolver(isEdit ? updateUserSchema : insertUserSchema),
     defaultValues: {
       fullName: initialUser?.fullName ?? "",
@@ -54,21 +61,34 @@ export default function UserForm({ onSuccess, onCancel, initialUser }: UserFormP
     return i || "U";
   }, [watchName]);
 
-  const onSubmit = async (data: InsertUser) => {
+  const onSubmit = async (data: FormValues) => {
     try {
       setSubmitting(true);
+      const payload: any = {
+        fullName: data.fullName.trim(),
+        email: data.email.trim(),
+        phone: data.phone?.trim() || undefined,
+      };
+      if (!isEdit) {
+        payload.password = (data.password || "").trim();
+      } else if (data.password && data.password.trim().length > 0) {
+        payload.password = data.password.trim();
+      }
       const res = isEdit
-        ? await apiRequest("PUT", `/api/users/${initialUser!.id}` as const, data)
-        : await apiRequest("POST", "/api/users", data);
+        ? await apiRequest("PUT", `/api/users/${initialUser!.id}` as const, payload)
+        : await apiRequest("POST", "/api/users", payload);
       await res.json();
       toast({ title: "Sucesso", description: isEdit ? "Usuário atualizado." : "Usuário cadastrado." });
       onSuccess?.();
     } catch (e) {
-      toast({
-        title: "Erro",
-        description: isEdit ? "Não foi possível atualizar." : "Não foi possível cadastrar.",
-        variant: "destructive",
-      });
+      let description = isEdit ? "Não foi possível atualizar." : "Não foi possível cadastrar.";
+      if (e instanceof Error && e.message.startsWith("409")) {
+        // Conflito de e-mail (já cadastrado)
+        description = "E-mail já cadastrado.";
+        form.setError("email", { message: description });
+        if (form.setFocus) form.setFocus("email");
+      }
+      toast({ title: "Erro", description, variant: "destructive" });
     } finally {
       setSubmitting(false);
     }

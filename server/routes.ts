@@ -60,9 +60,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/users', isAuthenticated, express.json(), async (req, res) => {
     try {
       const data = insertUserSchema.parse(req.body);
+      const normalizedEmail = data.email.trim().toLowerCase();
       const passwordHash = await bcrypt.hash(data.password, 10);
   const created = await storage.upsertUser({
-        email: data.email,
+        email: normalizedEmail,
         fullName: data.fullName,
         passwordHash,
         phone: data.phone,
@@ -74,6 +75,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: 'Validation error', errors: error.errors });
       }
+      if ((error as any)?.code === '23505') {
+        return res.status(409).json({ message: 'E-mail já cadastrado.' });
+      }
       res.status(500).json({ message: 'Failed to create user' });
     }
   });
@@ -82,7 +86,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const id = Number(req.params.id);
       const data = updateUserSchema.parse(req.body);
-      let update: any = { email: data.email, fullName: data.fullName, phone: data.phone };
+      let update: any = { email: data.email.trim().toLowerCase(), fullName: data.fullName, phone: data.phone };
       if (data.password) {
         const passwordHash = await bcrypt.hash(data.password, 10);
         update.passwordHash = passwordHash;
@@ -94,6 +98,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('Error updating user:', error);
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: 'Validation error', errors: error.errors });
+      }
+      if ((error as any)?.code === '23505') {
+        return res.status(409).json({ message: 'E-mail já cadastrado.' });
       }
       res.status(500).json({ message: 'Falha ao atualizar usuário' });
     }
