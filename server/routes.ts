@@ -399,6 +399,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+
   app.post('/api/technicians', isAuthenticated, express.json(), async (req: any, res) => {
     try {
       const userId: number = Number(req.user.claims.sub);

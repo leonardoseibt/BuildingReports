@@ -41,6 +41,25 @@ export default function UserForm({ onSuccess, onCancel, initialUser }: UserFormP
   const { toast } = useToast();
   const [submitting, setSubmitting] = React.useState(false);
 
+  // Helpers for BR phone formatting and sanitization
+  const onlyDigits = React.useCallback((v: string) => v.replace(/\D/g, ""), []);
+  const formatPhoneBR = React.useCallback((v: string) => {
+    let digits = onlyDigits(v);
+    // If value starts with country code 55, strip it
+    if (digits.length > 11 && digits.startsWith("55")) digits = digits.slice(2);
+    digits = digits.slice(0, 11); // cap to 11 digits
+    if (digits.length <= 2) return digits ? `(${digits}` : "";
+    const ddd = digits.slice(0, 2);
+    const rest = digits.slice(2);
+    if (rest.length <= 4) return `(${ddd}) ${rest}`;
+    if (rest.length <= 8) {
+      // landline pattern: (00) 0000-0000
+      return `(${ddd}) ${rest.slice(0, 4)}-${rest.slice(4)}`;
+    }
+    // mobile pattern: (00) 00000-0000
+    return `(${ddd}) ${rest.slice(0, 5)}-${rest.slice(5)}`;
+  }, [onlyDigits]);
+
   const isEdit = !!initialUser?.id;
   const form = useForm<FormValues>({
     resolver: zodResolver(isEdit ? updateUserSchema : insertUserSchema),
@@ -52,6 +71,13 @@ export default function UserForm({ onSuccess, onCancel, initialUser }: UserFormP
     },
   mode: "onSubmit",
   });
+
+  // Format initial phone on mount/open
+  React.useEffect(() => {
+    if (initialUser?.phone) {
+      form.setValue("phone", formatPhoneBR(initialUser.phone));
+    }
+  }, [initialUser?.phone, form, formatPhoneBR]);
   const watchName = form.watch("fullName");
   const initials = React.useMemo(() => {
     const parts = (watchName || "").trim().split(/\s+/);
@@ -67,7 +93,11 @@ export default function UserForm({ onSuccess, onCancel, initialUser }: UserFormP
       const payload: any = {
         fullName: data.fullName.trim(),
         email: data.email.trim(),
-        phone: data.phone?.trim() || undefined,
+        phone: (() => {
+          const raw = data.phone?.trim() || "";
+          const digits = onlyDigits(raw);
+          return digits ? digits : undefined;
+        })(),
       };
       if (!isEdit) {
         payload.password = (data.password || "").trim();
@@ -157,6 +187,11 @@ export default function UserForm({ onSuccess, onCancel, initialUser }: UserFormP
                         inputMode="tel"
                         placeholder="(00) 00000-0000"
                         className="pl-9 bg-slate-50 focus:bg-white transition-colors"
+                        maxLength={15}
+                        onChange={(e) => {
+                          const formatted = formatPhoneBR(e.target.value);
+                          field.onChange(formatted);
+                        }}
                       />
                     </div>
                   </FormControl>

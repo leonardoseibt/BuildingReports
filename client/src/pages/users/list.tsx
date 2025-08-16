@@ -30,6 +30,24 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import type { PublicUser as User } from "@shared/schema";
+
+// Local formatter to display BR phone numbers stored as digits
+function formatPhoneBRDisplay(v?: string | null) {
+  if (!v) return "";
+  const digits = String(v).replace(/\D/g, "").slice(0, 11);
+  if (digits.length < 10) return v; // fallback if incomplete
+  const ddd = digits.slice(0, 2);
+  const rest = digits.slice(2);
+  if (rest.length === 8) return `(${ddd}) ${rest.slice(0, 4)}-${rest.slice(4)}`;
+  return `(${ddd}) ${rest.slice(0, 5)}-${rest.slice(5)}`;
+}
+
+function formatDateTimeBR(value?: string | Date | null) {
+  if (!value) return "";
+  const d = new Date(value as any);
+  if (isNaN(d.getTime())) return "";
+  return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(d);
+}
 import { apiRequest } from "@/lib/queryClient";
 
 export default function UsersList() {
@@ -147,21 +165,31 @@ export default function UsersList() {
           ) : (
             <div className="rounded-2xl bg-white shadow-sm ring-1 ring-slate-200/60">
               <div className="overflow-x-auto">
-                <Table>
+                <Table className="table-fixed">
                   <TableHeader>
                     <TableRow className="bg-slate-100/60">
-                      <TableHead className="w-[40%]">Nome</TableHead>
-                      <TableHead className="w-[40%]">E-mail</TableHead>
-                      <TableHead className="w-[20%] text-right">Ações</TableHead>
+                      <TableHead className="w-[27%] whitespace-nowrap max-sm:whitespace-normal">Nome</TableHead>
+                      <TableHead className="w-[27%] whitespace-nowrap max-sm:whitespace-normal">E-mail</TableHead>
+                      <TableHead className="w-[18%] whitespace-nowrap max-sm:whitespace-normal">Telefone</TableHead>
+                      <TableHead className="w-[18%] whitespace-nowrap max-sm:whitespace-normal">Criado em</TableHead>
+                      <TableHead className="w-[10%] text-right whitespace-nowrap">Ações</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {pagedUsers.map((u) => (
                       <TableRow key={u.id} className="hover:bg-slate-50">
-                        <TableCell className="font-medium">
+                        <TableCell className="w-[27%] font-medium whitespace-nowrap max-sm:whitespace-normal overflow-hidden text-ellipsis">
                           {u.fullName}
                         </TableCell>
-                        <TableCell>{u.email}</TableCell>
+                        <TableCell className="w-[27%] whitespace-nowrap max-sm:whitespace-normal overflow-hidden text-ellipsis">
+                          {u.email}
+                        </TableCell>
+                        <TableCell className="w-[18%] whitespace-nowrap max-sm:whitespace-normal overflow-hidden text-ellipsis">
+                          {formatPhoneBRDisplay(u.phone)}
+                        </TableCell>
+                        <TableCell className="w-[18%] whitespace-nowrap max-sm:whitespace-normal overflow-hidden text-ellipsis">
+                          {formatDateTimeBR(u.createdAt as any)}
+                        </TableCell>
                         <TableCell>
                           <div className="flex items-center justify-end gap-1.5">
                             <Button
