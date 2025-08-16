@@ -249,7 +249,10 @@ export const insertUserSchema = z.object({
 export const updateUserSchema = z.object({
   fullName: z.string().min(1, 'Nome é obrigatório'),
   email: z.string().email(),
-  password: z.string().min(6).optional(),
+  password: z.preprocess(
+    (val) => (typeof val === 'string' && val.trim() === '' ? undefined : val),
+    z.string().min(6, 'Senha deve ter pelo menos 6 caracteres').optional(),
+  ),
   phone: z.string().optional(),
 });
 
