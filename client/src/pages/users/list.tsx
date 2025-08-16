@@ -30,6 +30,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import type { PublicUser as User } from "@shared/schema";
+import { apiRequest } from "@/lib/queryClient";
 
 export default function UsersList() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -71,16 +72,14 @@ export default function UsersList() {
 
   // --- Mutação de exclusão com confirmação ---
   async function deleteUserRequest(id: string | number) {
-    const res = await fetch(`/api/users/${id}`, { method: "DELETE" });
-    if (!res.ok) {
-      const body = await res.text().catch(() => "");
-      throw new Error(body || `Falha ao excluir usuário ${id}`);
-    }
-    return true;
+    return apiRequest("DELETE", `/api/users/${id}`);
   }
 
   const deleteMutation = useMutation({
-    mutationFn: async (u: User) => deleteUserRequest(u.id),
+    mutationFn: async (u: User) => {
+      const res = await deleteUserRequest(u.id);
+      return res.json().catch(() => undefined);
+    },
     onMutate: async (u) => {
       // otimista: cancelar queries e aplicar snapshot
       await queryClient.cancelQueries({ queryKey: ["/api/users"] });
