@@ -7,6 +7,7 @@ import {
   performanceEvaluations,
   reports,
   type User,
+  type PublicUser,
   type UpsertUser,
   type Building,
   type InsertBuilding,
@@ -29,10 +30,12 @@ import { eq, desc, and } from "drizzle-orm";
 
 export interface IStorage {
   // User operations
-  getUser(id: number): Promise<User | undefined>;
+  getUser(id: number): Promise<PublicUser | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
-  ensureUserByEmail(email: string, firstName?: string, lastName?: string, profileImageUrl?: string, phone?: string): Promise<User>;
-  listUsers(): Promise<User[]>;
+  ensureUserByEmail(email: string, fullName?: string, phone?: string): Promise<User>;
+  listUsers(): Promise<PublicUser[]>;
+  deleteUser(id: number): Promise<boolean>;
+  updateUser(id: number, data: Partial<UpsertUser>): Promise<User>;
   
   // Building operations
   createBuilding(building: InsertBuilding): Promise<Building>;
@@ -75,8 +78,18 @@ export interface IStorage {
 
 export class DatabaseStorage implements IStorage {
   // User operations
-  async getUser(id: number): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.id, id));
+  async getUser(id: number): Promise<PublicUser | undefined> {
+    const [user] = await db
+      .select({
+        id: users.id,
+        email: users.email,
+        fullName: users.fullName,
+        phone: users.phone,
+        createdAt: users.createdAt,
+        updatedAt: users.updatedAt,
+      })
+      .from(users)
+      .where(eq(users.id, id));
     return user;
   }
 
@@ -97,24 +110,59 @@ export class DatabaseStorage implements IStorage {
 
   async ensureUserByEmail(
     email: string,
-    firstName = "Dev",
-    lastName = "User",
-    profileImageUrl = "",
+    fullName = "Dev User",
     phone = "",
   ): Promise<User> {
     const [user] = await db
       .insert(users)
-      .values({ email, firstName, lastName, profileImageUrl, phone })
+      .values({ email, fullName, phone })
       .onConflictDoUpdate({
         target: users.email!,
-        set: { firstName, lastName, profileImageUrl, phone, updatedAt: new Date() },
+        set: { fullName, phone, updatedAt: new Date() },
       })
       .returning();
     return user;
   }
 
-  async listUsers(): Promise<User[]> {
-    return await db.select().from(users).orderBy(desc(users.createdAt));
+  async listUsers(): Promise<PublicUser[]> {
+    return await db
+      .select({
+        id: users.id,
+        email: users.email,
+        fullName: users.fullName,
+        phone: users.phone,
+        createdAt: users.createdAt,
+        updatedAt: users.updatedAt,
+      })
+      .from(users)
+      .orderBy(desc(users.createdAt));
+  }
+
+  async deleteUser(id: number): Promise<boolean> {
+    try {
+      const deleted = await db
+        .delete(users)
+        .where(eq(users.id, id))
+        .returning({ id: users.id });
+      return deleted.length > 0;
+    } catch (err: any) {
+      // Postgres FK violation code
+      if (err?.code === '23503') {
+        const e = new Error('Não é possível excluir: existem registros relacionados.');
+        (e as any).status = 409;
+        throw e;
+      }
+      throw err;
+    }
+  }
+
+  async updateUser(id: number, data: Partial<UpsertUser>): Promise<User> {
+    const [row] = await db
+      .update(users)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(users.id, id))
+      .returning();
+    return row;
   }
 
   // Building operations

@@ -36,9 +36,8 @@ export const sessions = pgTable(
 export const users = pgTable("users", {
   id: integer("id").generatedAlwaysAsIdentity().primaryKey(),
   email: varchar("email").unique(),
-  firstName: varchar("first_name"),
-  lastName: varchar("last_name"),
-  profileImageUrl: varchar("profile_image_url"),
+  fullName: text("full_name").notNull(),
+  passwordHash: varchar("password_hash"),
   phone: varchar("phone", { length: 32 }),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -241,10 +240,16 @@ export const techniciansRelations = relations(technicians, ({ one }) => ({
 
 // Insert Schemas
 export const insertUserSchema = z.object({
-  firstName: z.string().min(1),
-  lastName: z.string().min(1),
+  fullName: z.string().min(1, 'Nome é obrigatório'),
   email: z.string().email(),
-  profileImageUrl: z.string().url().optional(),
+  password: z.string().min(6, 'Senha deve ter pelo menos 6 caracteres'),
+  phone: z.string().optional(),
+});
+
+export const updateUserSchema = z.object({
+  fullName: z.string().min(1, 'Nome é obrigatório'),
+  email: z.string().email(),
+  password: z.string().min(6).optional(),
   phone: z.string().optional(),
 });
 
@@ -301,6 +306,8 @@ export const insertTechnicianSchema = createInsertSchema(technicians)
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
+export type PublicUser = Omit<User, 'passwordHash'>;
+export type UpdateUser = z.infer<typeof updateUserSchema>;
 export type InsertBuilding = z.infer<typeof insertBuildingSchema>;
 export type Building = typeof buildings.$inferSelect;
 export type InsertStructuralSystem = z.infer<typeof insertStructuralSystemSchema>;

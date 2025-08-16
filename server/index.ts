@@ -1,5 +1,6 @@
 import "dotenv/config";
 import express, { type Request, Response, NextFunction } from "express";
+import net from "node:net";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 
@@ -68,11 +69,27 @@ app.use((req, res, next) => {
     serveStatic(app);
   }
 
-  // ALWAYS serve the app on the port specified in the environment variable PORT
-  // Other ports are firewalled. Default to 5000 if not specified.
-  // this serves both the API and the client.
-  // It is the only port that is not firewalled.
-  const port = parseInt(process.env.PORT || '5000', 10);
+  // Choose a port: prefer PORT env, otherwise 5000; if it's busy, pick the next available
+  async function findAvailablePort(start: number, maxTries = 20): Promise<number> {
+    function check(port: number): Promise<boolean> {
+      return new Promise((resolve) => {
+        const tester = net.createServer()
+          .once('error', () => resolve(false))
+          .once('listening', () => tester.close(() => resolve(true)))
+          .listen(port, '0.0.0.0');
+      });
+    }
+    let port = start;
+    for (let i = 0; i < maxTries; i++, port++) {
+      // eslint-disable-next-line no-await-in-loop
+      const ok = await check(port);
+      if (ok) return port;
+    }
+    return start; // fallback
+  }
+
+  const preferred = parseInt(process.env.PORT || '5000', 10);
+  const port = await findAvailablePort(preferred);
   const listenOptions: any = {
     port,
     host: process.env.HOST || "0.0.0.0",
@@ -80,8 +97,11 @@ app.use((req, res, next) => {
   if (process.platform !== "win32") {
     listenOptions.reusePort = true;
   }
-
   server.listen(listenOptions, () => {
-    log(`serving on port ${port}`);
+    if (port !== preferred) {
+      log(`port ${preferred} in use, serving on port ${port}`);
+    } else {
+      log(`serving on port ${port}`);
+    }
   });
 })();

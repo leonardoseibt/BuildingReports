@@ -2,7 +2,8 @@ import express, { type Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./auth";
-import { insertBuildingSchema, insertStructuralSystemSchema, insertSealingSystemSchema, insertRoofingSystemSchema, insertPerformanceEvaluationSchema, insertReportSchema, insertTechnicianSchema, insertUserSchema } from "@shared/schema";
+import { insertBuildingSchema, insertStructuralSystemSchema, insertSealingSystemSchema, insertRoofingSystemSchema, insertPerformanceEvaluationSchema, insertReportSchema, insertTechnicianSchema, insertUserSchema, updateUserSchema } from "@shared/schema";
+import bcrypt from "bcryptjs";
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -44,17 +45,76 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get('/api/users/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const id = Number(req.params.id);
+      const user = await storage.getUser(id);
+      if (!user) return res.status(404).json({ message: 'Usuário não encontrado' });
+      res.json(user);
+    } catch (error) {
+      console.error('Error fetching user:', error);
+      res.status(500).json({ message: 'Falha ao buscar usuário' });
+    }
+  });
+
   app.post('/api/users', isAuthenticated, express.json(), async (req, res) => {
     try {
       const data = insertUserSchema.parse(req.body);
-      const user = await storage.upsertUser(data);
-      res.json(user);
+      const passwordHash = await bcrypt.hash(data.password, 10);
+  const created = await storage.upsertUser({
+        email: data.email,
+        fullName: data.fullName,
+        passwordHash,
+        phone: data.phone,
+      } as any);
+  const { id, email, fullName, phone, createdAt, updatedAt } = created as any;
+  res.json({ id, email, fullName, phone, createdAt, updatedAt });
     } catch (error) {
       console.error('Error creating user:', error);
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: 'Validation error', errors: error.errors });
       }
       res.status(500).json({ message: 'Failed to create user' });
+    }
+  });
+
+  app.put('/api/users/:id', isAuthenticated, express.json(), async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      const data = updateUserSchema.parse(req.body);
+      let update: any = { email: data.email, fullName: data.fullName, phone: data.phone };
+      if (data.password) {
+        const passwordHash = await bcrypt.hash(data.password, 10);
+        update.passwordHash = passwordHash;
+      }
+      const saved = await storage.updateUser(id, update);
+      const { email, fullName, phone, createdAt, updatedAt } = saved as any;
+      res.json({ id, email, fullName, phone, createdAt, updatedAt });
+    } catch (error) {
+      console.error('Error updating user:', error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: 'Validation error', errors: error.errors });
+      }
+      res.status(500).json({ message: 'Falha ao atualizar usuário' });
+    }
+  });
+
+  app.delete('/api/users/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const id = Number(req.params.id);
+      if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' });
+      // prevent deleting yourself to avoid locking the session out unexpectedly
+      const currentUserId: number = Number(req.user.claims.sub);
+      if (id === currentUserId) return res.status(400).json({ message: 'Você não pode excluir o próprio usuário logado.' });
+
+      const ok = await storage.deleteUser(id);
+      if (!ok) return res.status(404).json({ message: 'Usuário não encontrado' });
+      res.json({ ok: true });
+    } catch (error: any) {
+      const status = (error as any)?.status || 500;
+      const message = (error as any)?.message || 'Falha ao excluir usuário';
+      console.error('Error deleting user:', error);
+      res.status(status).json({ message });
     }
   });
 

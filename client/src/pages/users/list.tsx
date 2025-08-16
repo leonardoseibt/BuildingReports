@@ -8,9 +8,6 @@ import UserForm from "@/components/users/user-form";
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Users, Plus, Pencil, Trash2 } from "lucide-react";
@@ -32,7 +29,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import type { User } from "@shared/schema";
+import type { PublicUser as User } from "@shared/schema";
 
 export default function UsersList() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -40,8 +37,10 @@ export default function UsersList() {
   const queryClient = useQueryClient();
 
   const [openCreate, setOpenCreate] = useState(false);
+  const [formKey, setFormKey] = useState(0);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [editUser, setEditUser] = useState<User | null>(null);
 
   // paginação — 10 itens por página
   const pageSize = 10;
@@ -94,7 +93,7 @@ export default function UsersList() {
       toast({ title: "Erro ao excluir", description: (err as Error).message, variant: "destructive" });
     },
     onSuccess: (_data, u) => {
-      toast({ title: "Usuário excluído", description: `${u.firstName} ${u.lastName} foi removido.` });
+  toast({ title: "Usuário excluído", description: `${u.fullName} foi removido.` });
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/users"] });
@@ -124,7 +123,7 @@ export default function UsersList() {
           title="Usuários"
           description="Cadastre e gerencie os usuários do sistema"
           action={
-            <Button onClick={() => setOpenCreate(true)}>
+            <Button onClick={() => { setEditUser(null); setFormKey((k) => k + 1); setOpenCreate(true); }}>
               <Plus className="w-4 h-4 mr-2" /> Novo Usuário
             </Button>
           }
@@ -136,7 +135,7 @@ export default function UsersList() {
               <Users className="w-16 h-16 text-slate-300 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-slate-900 mb-2">Nenhum usuário cadastrado</h3>
               <p className="text-slate-500 mb-6">Cadastre o primeiro usuário.</p>
-              <Button size="lg" onClick={() => setOpenCreate(true)}>
+              <Button size="lg" onClick={() => { setEditUser(null); setFormKey((k) => k + 1); setOpenCreate(true); }}>
                 <Plus className="w-4 h-4 mr-2" /> Cadastrar Usuário
               </Button>
             </div>
@@ -155,7 +154,7 @@ export default function UsersList() {
                     {pagedUsers.map((u) => (
                       <TableRow key={u.id} className="hover:bg-slate-50">
                         <TableCell className="font-medium">
-                          {u.firstName} {u.lastName}
+                          {u.fullName}
                         </TableCell>
                         <TableCell>{u.email}</TableCell>
                         <TableCell>
@@ -163,17 +162,17 @@ export default function UsersList() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              aria-label={`Editar ${u.firstName} ${u.lastName}`}
+                              aria-label={`Editar ${u.fullName}`}
                               title="Editar"
                               className="text-slate-600 hover:bg-slate-100 hover:text-slate-900"
-                              onClick={() => console.log("editar", u.id)}
+                              onClick={() => { setEditUser(u); setFormKey((k) => k + 1); setOpenCreate(true); }}
                             >
                               <Pencil className="h-4 w-4" />
                             </Button>
                             <Button
                               variant="ghost"
                               size="icon"
-                              aria-label={`Excluir ${u.firstName} ${u.lastName}`}
+                              aria-label={`Excluir ${u.fullName}`}
                               title="Excluir"
                               className="text-rose-600 hover:bg-rose-50 hover:text-rose-700"
                               onClick={() => askDelete(u)}
@@ -231,11 +230,17 @@ export default function UsersList() {
       </div>
 
       {/* Modal de criação */}
-      <Dialog open={openCreate} onOpenChange={setOpenCreate}>
+  <Dialog open={openCreate} onOpenChange={(v) => { if (v) setFormKey((k) => k + 1); if (!v) setEditUser(null); setOpenCreate(v); }}>
         <DialogContent className="max-w-4xl max-h-[90vh] p-0 overflow-hidden">
-          <div className="max-h-[calc(90vh-1rem)] overflow-y-auto my-6 px-6">
+          <div className="max-h-[calc(90vh-1rem)] overflow-y-auto my-7 px-7">
             <UserForm
-              onSuccess={() => setOpenCreate(false)}
+      key={formKey}
+              initialUser={editUser ? { id: editUser.id, fullName: editUser.fullName, email: editUser.email || '', phone: editUser.phone ?? '' } : null}
+  onSuccess={() => {
+        setEditUser(null);
+        setOpenCreate(false);
+                queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+              }}
               onCancel={() => setOpenCreate(false)}
             />
           </div>
@@ -249,7 +254,7 @@ export default function UsersList() {
             <AlertDialogTitle>Excluir usuário</AlertDialogTitle>
             <AlertDialogDescription>
               Tem certeza que deseja excluir {selectedUser ? (
-                <strong>{` ${selectedUser.firstName} ${selectedUser.lastName} `}</strong>
+                <strong>{` ${selectedUser.fullName} `}</strong>
               ) : (
                 "este usuário"
               )}
