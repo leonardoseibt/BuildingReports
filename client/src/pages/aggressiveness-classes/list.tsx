@@ -22,6 +22,13 @@ export default function AggressivenessClassesList() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<AggressivenessClass | null>(null);
 
+  const formatDate = (date: string | Date | null | undefined) => {
+    if (!date) return "—";
+    const d = typeof date === 'string' ? new Date(date) : date;
+    if (Number.isNaN(d.getTime())) return "—";
+    return d.toLocaleDateString('pt-BR');
+  };
+
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
       toast({ title: "Não autorizado", description: "Você não está logado. Fazendo login...", variant: "destructive" });
@@ -90,9 +97,10 @@ export default function AggressivenessClassesList() {
               <Table className="table-fixed">
                 <TableHeader>
                   <TableRow className="bg-slate-100/60">
-                    <TableHead className="w-[20%]">Código</TableHead>
-                    <TableHead className="w-[60%]">Descrição</TableHead>
-                    <TableHead className="w-[12%]">Ativa</TableHead>
+                    <TableHead className="w-[18%]">Código</TableHead>
+                    <TableHead className="w-[50%]">Descrição</TableHead>
+                    <TableHead className="w-[10%]">Ativa</TableHead>
+                    <TableHead className="w-[14%]">Criado em</TableHead>
                     <TableHead className="w-[8%] text-right">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -102,6 +110,7 @@ export default function AggressivenessClassesList() {
                       <TableCell className="font-medium">{t.code}</TableCell>
                       <TableCell>{t.label}</TableCell>
                       <TableCell>{(t as any).isActive ? 'Sim' : 'Não'}</TableCell>
+                      <TableCell>{formatDate((t as any).createdAt)}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1.5">
                           <Button variant="ghost" size="icon" onClick={() => { setEditItem(t); setFormKey(k => k + 1); setOpen(true); }}>
