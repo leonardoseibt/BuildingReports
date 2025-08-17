@@ -5,7 +5,7 @@ import Header from "@/components/layout/header";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import TechnicianForm from "@/components/technicians/technician-form";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { IdCard, Plus, MoreHorizontal, Loader2, Pencil, Trash2 } from "lucide-react";
 import {
@@ -111,7 +111,7 @@ export default function TechniciansList() {
           action={
             <div className="flex items-center gap-2">
               {isFetching && <Loader2 className="h-4 w-4 animate-spin text-slate-400" aria-label="Atualizando" />}
-              <Button onClick={() => setOpen(true)}>
+              <Button onClick={() => { setEditTech(null); setFormKey(k => k + 1); setOpen(true); }}>
                 <Plus className="w-4 h-4 mr-2" /> Novo Responsável Técnico
               </Button>
             </div>
@@ -123,7 +123,7 @@ export default function TechniciansList() {
               <IdCard className="w-16 h-16 text-slate-300 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-slate-900 mb-2">Nenhum responsável técnico cadastrado</h3>
               <p className="text-slate-500 mb-6">Cadastre o primeiro para utilizá-lo nos relatórios.</p>
-              <Button size="lg" onClick={() => setOpen(true)}>
+              <Button size="lg" onClick={() => { setEditTech(null); setFormKey(k => k + 1); setOpen(true); }}>
                 <Plus className="w-4 h-4 mr-2" /> Cadastrar Responsável Técnico
               </Button>
             </div>
@@ -132,11 +132,11 @@ export default function TechniciansList() {
               <Table className="table-fixed">
                 <TableHeader>
                   <TableRow className="bg-slate-100/60">
-                    <TableHead className="w-[22%] whitespace-nowrap max-sm:whitespace-normal">Nome</TableHead>
-                    <TableHead className="w-[18%] whitespace-nowrap max-sm:whitespace-normal">Registro</TableHead>
+                    <TableHead className="w-[20%] whitespace-nowrap max-sm:whitespace-normal">Nome</TableHead>
+                    <TableHead className="w-[15%] whitespace-nowrap max-sm:whitespace-normal">Registro</TableHead>
                     <TableHead className="w-[24%] whitespace-nowrap max-sm:whitespace-normal">E-mail</TableHead>
                     <TableHead className="w-[18%] whitespace-nowrap max-sm:whitespace-normal">Telefone</TableHead>
-                    <TableHead className="w-[10%] whitespace-nowrap max-sm:whitespace-normal">Criado em</TableHead>
+                    <TableHead className="w-[17%] whitespace-nowrap max-sm:whitespace-normal">Criado em</TableHead>
                     <TableHead className="w-[8%] text-right whitespace-nowrap">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -186,12 +186,29 @@ export default function TechniciansList() {
         </main>
       </div>
       <Dialog open={open} onOpenChange={(v) => { if (v) setFormKey(k => k + 1); if (!v) setEditTech(null); setOpen(v); }}>
-        <DialogContent className="max-w-3xl max-h-[90vh] p-0 overflow-hidden">
-          <div className="max-h-[calc(90vh-1rem)] overflow-y-auto my-2 px-6">
-            <DialogHeader className="mb-4">
-              <DialogTitle>{editTech ? 'Editar Responsável Técnico' : 'Novo Responsável Técnico'}</DialogTitle>
-            </DialogHeader>
-            <TechnicianForm onSuccess={() => { setEditTech(null); setOpen(false); queryClient.invalidateQueries({ queryKey: ["/api/technicians"] }); }} />
+        <DialogContent className="max-w-4xl max-h-[90vh] p-0 overflow-hidden">
+          <div className="max-h-[calc(90vh-1rem)] overflow-y-auto my-7 px-7">
+            <TechnicianForm
+              key={formKey}
+              initialTech={editTech ? {
+                id: editTech.id,
+                fullName: editTech.fullName,
+                creaCau: editTech.creaCau,
+                registrationType: editTech.registrationType,
+                licenseState: editTech.licenseState,
+                cpfCnpj: editTech.cpfCnpj || "",
+                email: editTech.email || "",
+                phone: editTech.phone || "",
+                company: editTech.company || "",
+                address: editTech.address || "",
+                city: editTech.city || "",
+                state: editTech.state,
+                cep: editTech.cep || "",
+                notes: editTech.notes || "",
+              } : null}
+              onSuccess={() => { setEditTech(null); setOpen(false); queryClient.invalidateQueries({ queryKey: ["/api/technicians"] }); }}
+              onCancel={() => setOpen(false)}
+            />
           </div>
         </DialogContent>
       </Dialog>
