@@ -145,7 +145,6 @@ export default function TechniciansList() {
                       <TableRow key={t.id} data-testid={`row-technician-${t.id}`} className="hover:bg-slate-50">
                       <TableCell className="w-[22%] font-medium whitespace-nowrap overflow-hidden text-ellipsis max-sm:whitespace-normal">{t.fullName}</TableCell>
                       <TableCell className="w-[18%] whitespace-nowrap overflow-hidden text-ellipsis max-sm:whitespace-normal">
-                        {t.registrationType ? `${t.registrationType} ` : ""}
                         {t.creaCau}
                         {t.licenseState ? ` / ${t.licenseState}` : ""}
                       </TableCell>
@@ -194,13 +193,13 @@ export default function TechniciansList() {
                 id: editTech.id,
                 fullName: editTech.fullName,
                 creaCau: editTech.creaCau,
-                registrationType: editTech.registrationType,
                 licenseState: editTech.licenseState,
                 cpfCnpj: editTech.cpfCnpj || "",
                 email: editTech.email || "",
                 phone: editTech.phone || "",
                 company: editTech.company || "",
                 address: editTech.address || "",
+                addressNumber: (editTech as any).addressNumber || "",
                 city: editTech.city || "",
                 state: editTech.state,
                 cep: editTech.cep || "",

@@ -17,17 +17,26 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { IdCard, MapPin, Mail, Phone, Loader2, User2 } from "lucide-react";
+import { UF_OPTIONS } from "@/lib/uf";
 import type { Technician } from "@shared/schema";
 
 const schema = z.object({
-  fullName: z.string().min(3),
-  creaCau: z.string().min(3),
-  licenseState: z.string().length(2).optional(),
-  cpfCnpj: z.string().optional(),
-  email: z.string().email().optional(),
-  phone: z.string().optional(),
+  fullName: z.string().min(1, 'Nome completo é obrigatório').min(3, 'Nome completo deve ter pelo menos 3 caracteres'),
+  creaCau: z.string().min(1, 'CREA/CAU é obrigatório').min(3, 'CREA/CAU deve ter pelo menos 3 caracteres'),
+  licenseState: z.string().length(2, 'UF do Registro é obrigatória'),
+  cpfCnpj: z
+    .string().min(1, 'CPF/CNPJ é obrigatório')
+    .superRefine((v, ctx) => {
+      const digits = (v || "").replace(/\D/g, "");
+      if (digits.length !== 11 && digits.length !== 14) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Informe CPF (11) ou CNPJ (14) válido." });
+      }
+    }),
+  email: z.string().min(1, 'Email é obrigatório').email('Email inválido'),
+  phone: z.string().min(1, 'Telefone é obrigatório'),
   company: z.string().optional(),
   address: z.string().optional(),
+  addressNumber: z.string().optional(),
   city: z.string().optional(),
   state: z.string().length(2).optional(),
   cep: z.string().optional(),
@@ -43,13 +52,13 @@ interface TechnicianFormProps {
     | "id"
     | "fullName"
     | "creaCau"
-    | "registrationType"
     | "licenseState"
     | "cpfCnpj"
     | "email"
     | "phone"
     | "company"
     | "address"
+  | "addressNumber"
     | "city"
     | "state"
     | "cep"
@@ -65,12 +74,13 @@ export default function TechnicianForm({ onSuccess, onCancel, initialTech }: Tec
     defaultValues: {
       fullName: initialTech?.fullName || "",
       creaCau: initialTech?.creaCau || "",
-      licenseState: initialTech?.licenseState || undefined,
+  licenseState: initialTech?.licenseState || "",
       cpfCnpj: initialTech?.cpfCnpj || "",
-      email: initialTech?.email || "",
-      phone: initialTech?.phone || "",
+  email: initialTech?.email || "",
+  phone: initialTech?.phone || "",
       company: initialTech?.company || "",
-      address: initialTech?.address || "",
+  address: initialTech?.address || "",
+  addressNumber: initialTech?.addressNumber || "",
       city: initialTech?.city || "",
       state: initialTech?.state || undefined,
       cep: initialTech?.cep || "",
@@ -81,11 +91,7 @@ export default function TechnicianForm({ onSuccess, onCancel, initialTech }: Tec
 
   const [submitting, setSubmitting] = useState(false);
 
-  const UF_OPTIONS = [
-    "AC","AL","AP","AM","BA","CE","DF","ES","GO","MA",
-    "MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN",
-    "RS","RO","RR","SC","SP","SE","TO",
-  ];
+  // UF options centralized in @/lib/uf
 
   const [isLookingUpCep, setIsLookingUpCep] = useState(false);
 
@@ -102,6 +108,54 @@ export default function TechnicianForm({ onSuccess, onCancel, initialTech }: Tec
     if (rest.length <= 8) return `(${ddd}) ${rest.slice(0, 4)}-${rest.slice(4)}`;
     return `(${ddd}) ${rest.slice(0, 5)}-${rest.slice(5)}`;
   }, [onlyDigits]);
+
+  // When Número loses focus, insert/replace it right after the street in the address
+  const mergeAddressWithNumber = useCallback((addressRaw: string, numRaw: string) => {
+    const address = (addressRaw || "").trim();
+    const num = (numRaw || "").trim();
+    if (!address && !num) return address;
+
+    // If number is empty: remove any existing number immediately after the street
+    if (!num) {
+      if (!address) return address;
+      const firstCommaIdx = address.indexOf(",");
+      if (firstCommaIdx >= 0) {
+        const street = address.slice(0, firstCommaIdx).trim();
+        let rest = address.slice(firstCommaIdx + 1).trim();
+        const match = rest.match(/^([0-9A-Za-z\/\-]+)(?:\s*,\s*|\s+)(.*)$/);
+        if (match) {
+          const tail = match[2];
+          return tail ? `${street}, ${tail}` : `${street}`;
+        }
+        return address; // no leading number to remove in rest
+      }
+      // No comma: remove a trailing number-like token, if present
+      const withoutNum = address.replace(/(?:,\s*)?[0-9A-Za-z\/\-]+\s*$/, "").trim();
+      return withoutNum;
+    }
+
+    // Split address into street and the remaining (often neighborhood/city)
+    const firstCommaIdx = address.indexOf(",");
+    if (firstCommaIdx >= 0) {
+      const street = address.slice(0, firstCommaIdx).trim();
+      let rest = address.slice(firstCommaIdx + 1).trim();
+
+      // If rest already starts with a number-like token, replace it
+      // Token: letters/numbers with optional - or / (e.g., 123, 123A, 12-3, 10/Bloco B)
+      const match = rest.match(/^([0-9A-Za-z\/\-]+)(?:\s*,\s*|\s+)(.*)$/);
+      if (match) {
+        const _existingNum = match[1];
+        const tail = match[2];
+        return tail ? `${street}, ${num}, ${tail}` : `${street}, ${num}`;
+      }
+      // Otherwise, insert number between street and rest
+      return rest ? `${street}, ${num}, ${rest}` : `${street}, ${num}`;
+    }
+
+    // No comma in address: ensure we don't duplicate a trailing number-ish piece
+    const streetOnly = address.replace(/,?\s*[0-9A-Za-z\/\-]+\s*$/, "").trim();
+    return `${streetOnly}, ${num}`;
+  }, []);
   const formatCpfCnpj = useCallback((v: string) => {
     let d = onlyDigits(v).slice(0, 14);
     if (d.length <= 11) {
@@ -134,9 +188,10 @@ export default function TechnicianForm({ onSuccess, onCancel, initialTech }: Tec
 
       if (response.ok) {
         const data = await response.json();
-  form.setValue("address", data.address);
-  form.setValue("city", data.city);
-  form.setValue("state", data.state);
+        // Keep addressNumber intact; only update street/city/state
+        form.setValue("address", data.address);
+        form.setValue("city", data.city);
+        form.setValue("state", data.state);
         toast({ title: "CEP encontrado", description: `${data.city}/${data.state}` });
       } else {
         toast({
@@ -159,16 +214,25 @@ export default function TechnicianForm({ onSuccess, onCancel, initialTech }: Tec
   const onSubmit = async (data: TechnicianFormData) => {
     try {
       setSubmitting(true);
+      const addressCombined = (() => {
+        const base = (data.address || "").trim();
+        const num = (data.addressNumber || "").trim();
+        if (!base && !num) return undefined;
+        if (!num) return base;
+        if (!base) return num;
+        return `${base}, ${num}`;
+      })();
+
       const payload = {
         fullName: (data.fullName || "").trim(),
         creaCau: (data.creaCau || "").trim(),
-        registrationType: (data as any).registrationType ? String((data as any).registrationType).trim().toUpperCase() : undefined,
-        licenseState: data.licenseState ? data.licenseState.trim().toUpperCase() : undefined,
+  licenseState: data.licenseState ? data.licenseState.trim().toUpperCase() : undefined,
         cpfCnpj: data.cpfCnpj ? onlyDigits(data.cpfCnpj) : undefined,
         email: data.email ? data.email.trim().toLowerCase() : undefined,
-        phone: data.phone ? onlyDigits(data.phone) : undefined,
+  phone: data.phone ? onlyDigits(data.phone) : undefined,
         company: data.company ? data.company.trim() : undefined,
-        address: data.address ? data.address.trim() : undefined,
+        address: addressCombined,
+  addressNumber: data.addressNumber ? data.addressNumber.trim() : undefined,
         city: data.city ? data.city.trim() : undefined,
         state: data.state ? data.state.trim().toUpperCase() : undefined,
         cep: data.cep ? onlyDigits(data.cep) : undefined,
@@ -258,9 +322,15 @@ export default function TechnicianForm({ onSuccess, onCancel, initialTech }: Tec
                 control={form.control}
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>CPF/CNPJ</FormLabel>
+                    <FormLabel>CPF/CNPJ *</FormLabel>
                     <FormControl>
-                      <Input {...field} placeholder="Opcional" inputMode="numeric" onChange={(e) => field.onChange(formatCpfCnpj(e.target.value))} className="bg-slate-50 focus:bg-white transition-colors" />
+                      <Input
+                        {...field}
+                        placeholder="Informe CPF ou CNPJ"
+                        inputMode="numeric"
+                        onChange={(e) => field.onChange(formatCpfCnpj(e.target.value))}
+                        className="bg-slate-50 focus:bg-white transition-colors"
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -282,12 +352,12 @@ export default function TechnicianForm({ onSuccess, onCancel, initialTech }: Tec
                   </FormItem>
                 )}
               />
-              <FormField
+      <FormField
                 name="licenseState"
                 control={form.control}
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>UF do Registro</FormLabel>
+        <FormLabel>UF do Registro *</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger className="bg-slate-50 focus:bg-white transition-colors">
@@ -328,7 +398,7 @@ export default function TechnicianForm({ onSuccess, onCancel, initialTech }: Tec
                 control={form.control}
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Email</FormLabel>
+                    <FormLabel>Email *</FormLabel>
                     <FormControl>
                       <div className="relative">
                         <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -339,12 +409,12 @@ export default function TechnicianForm({ onSuccess, onCancel, initialTech }: Tec
                   </FormItem>
                 )}
               />
-              <FormField
+      <FormField
                 name="phone"
                 control={form.control}
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Telefone</FormLabel>
+        <FormLabel>Telefone *</FormLabel>
                     <FormControl>
                       <div className="relative">
                         <Phone className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -401,47 +471,100 @@ export default function TechnicianForm({ onSuccess, onCancel, initialTech }: Tec
                   <FormItem className="md:col-span-2">
                     <FormLabel>Endereço</FormLabel>
                     <FormControl>
-                      <Input {...field} placeholder="Rua, número, bairro" autoComplete="street-address" className="bg-slate-50 focus:bg-white transition-colors" />
+                      <Input
+                        {...field}
+                        placeholder="Rua, bairro"
+                        autoComplete="street-address"
+                        className="bg-slate-50 focus:bg-white transition-colors"
+                        onBlur={(e) => {
+                          field.onBlur();
+                          const num = form.getValues("addressNumber") || "";
+                          const merged = mergeAddressWithNumber(e.currentTarget.value, num);
+                          if (merged !== e.currentTarget.value) {
+                            form.setValue("address", merged, { shouldDirty: true });
+                          }
+                        }}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-              <FormField
-                name="city"
-                control={form.control}
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Cidade</FormLabel>
-                    <FormControl>
-                      <Input {...field} autoComplete="address-level2" className="bg-slate-50 focus:bg-white transition-colors" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                name="state"
-                control={form.control}
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>UF</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
+
+              {/* Número, Cidade e UF na mesma linha */}
+              <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-12 gap-5">
+                <FormField
+                  name="addressNumber"
+                  control={form.control}
+                  render={({ field }) => (
+                    <FormItem className="md:col-span-2">
+                      <FormLabel>Número</FormLabel>
                       <FormControl>
-                        <SelectTrigger className="bg-slate-50 focus:bg-white transition-colors">
-                          <SelectValue placeholder="Selecione a UF" />
-                        </SelectTrigger>
+                        <Input
+                          {...field}
+                          placeholder="Número"
+                          inputMode="numeric"
+                          className="bg-slate-50 focus:bg-white transition-colors"
+                          onChange={(e) => {
+                            field.onChange(e);
+                            const currentNum = e.currentTarget.value;
+                            const currentAddress = form.getValues("address") || "";
+                            const merged = mergeAddressWithNumber(currentAddress, currentNum);
+                            if (merged !== currentAddress) {
+                              form.setValue("address", merged, { shouldDirty: true });
+                            }
+                          }}
+                          onBlur={(e) => {
+                            field.onBlur();
+                            const currentNum = e.currentTarget.value;
+                            const currentAddress = form.getValues("address") || "";
+                            const merged = mergeAddressWithNumber(currentAddress, currentNum);
+                            if (merged !== currentAddress) {
+                              form.setValue("address", merged, { shouldDirty: true });
+                            }
+                          }}
+                        />
                       </FormControl>
-                      <SelectContent>
-                        {UF_OPTIONS.map((uf) => (
-                          <SelectItem key={uf} value={uf}>{uf}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  name="city"
+                  control={form.control}
+                  render={({ field }) => (
+                    <FormItem className="md:col-span-8">
+                      <FormLabel>Cidade</FormLabel>
+                      <FormControl>
+                        <Input {...field} autoComplete="address-level2" className="bg-slate-50 focus:bg-white transition-colors" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  name="state"
+                  control={form.control}
+                  render={({ field }) => (
+                    <FormItem className="md:col-span-2">
+                      <FormLabel>UF</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger className="bg-slate-50 focus:bg-white transition-colors">
+                            <SelectValue placeholder="UF" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {UF_OPTIONS.map((uf) => (
+                            <SelectItem key={uf} value={uf}>{uf}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
               <FormField
                 name="notes"
                 control={form.control}

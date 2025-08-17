@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useEffect, useMemo, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
@@ -8,14 +8,17 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Building2, Plus, Calendar, MapPin, MoreHorizontal } from "lucide-react";
+import { Building2, Plus, MapPin, Loader2, Pencil, Trash2 } from "lucide-react";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   Table,
   TableBody,
@@ -24,12 +27,17 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import type { Building } from "@shared/schema";
+import type { Building, Technician } from "@shared/schema";
 
 export default function BuildingList() {
   const { toast } = useToast();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
+  const [formKey, setFormKey] = useState(0);
+  const [editBuilding, setEditBuilding] = useState<Building | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [selectedBuilding, setSelectedBuilding] = useState<Building | null>(null);
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -46,10 +54,23 @@ export default function BuildingList() {
     }
   }, [isAuthenticated, authLoading, toast]);
 
-  const { data: buildings, isLoading, error } = useQuery<Building[]>({
+  const { data: buildings = [], isLoading, isFetching, error } = useQuery<Building[]>({
     queryKey: ['/api/buildings'],
     enabled: isAuthenticated,
   });
+
+  const { data: technicians = [] } = useQuery<Technician[]>({
+    queryKey: ['/api/technicians'],
+    enabled: isAuthenticated,
+  });
+
+  const techNameById = useMemo(() => {
+    const map: Record<number, string> = {};
+    for (const t of technicians || []) {
+      if (t?.id != null) map[t.id] = t.fullName;
+    }
+    return map;
+  }, [technicians]);
 
   useEffect(() => {
     if (error && isUnauthorizedError(error as Error)) {
@@ -100,6 +121,35 @@ export default function BuildingList() {
     return d.toLocaleDateString('pt-BR');
   };
 
+  // Delete mutation with optimistic update
+  async function deleteBuildingRequest(id: number) {
+    const res = await fetch(`/api/buildings/${id}`, { method: 'DELETE' });
+    if (!res.ok) throw new Error(await res.text());
+    return true;
+  }
+  const deleteMutation = useMutation({
+    mutationFn: async (b: Building) => deleteBuildingRequest(b.id),
+    onMutate: async (b) => {
+      await queryClient.cancelQueries({ queryKey: ["/api/buildings"] });
+      const prev = queryClient.getQueryData<Building[]>(["/api/buildings"]) || [];
+      queryClient.setQueryData<Building[]>(["/api/buildings"], prev.filter(x => x.id !== b.id));
+      return { prev };
+    },
+    onError: (err, _b, ctx) => {
+      if (ctx?.prev) queryClient.setQueryData(["/api/buildings"], ctx.prev);
+      toast({ title: 'Erro ao excluir', description: String(err), variant: 'destructive' });
+    },
+    onSuccess: (_data, b) => {
+      toast({ title: 'Edificação excluída', description: `${b.name} foi removida.` });
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/buildings"], refetchType: 'inactive' });
+    }
+  });
+
+  function askDelete(b: Building) { setSelectedBuilding(b); setConfirmOpen(true); }
+  function confirmDelete() { if (!selectedBuilding) return; deleteMutation.mutate(selectedBuilding); setConfirmOpen(false); setSelectedBuilding(null); }
+
   return (
     <div className="flex h-screen bg-slate-50" data-testid="building-list-container">
       <Sidebar />
@@ -109,10 +159,13 @@ export default function BuildingList() {
           title="Edificações"
           description="Gerencie suas edificações cadastradas"
           action={
-            <Button data-testid="button-new-building" onClick={() => setOpen(true)}>
-              <Plus className="w-4 h-4 mr-2" />
-              Nova Edificação
-            </Button>
+            <div className="flex items-center gap-2">
+              {isFetching && <Loader2 className="h-4 w-4 animate-spin text-slate-400" aria-label="Atualizando" />}
+              <Button data-testid="button-new-building" onClick={() => { setEditBuilding(null); setFormKey(k => k + 1); setOpen(true); }}>
+                <Plus className="w-4 h-4 mr-2" />
+                Nova Edificação
+              </Button>
+            </div>
           }
         />
         
@@ -143,63 +196,69 @@ export default function BuildingList() {
               </Button>
             </div>
           ) : (
-            <div className="rounded-md border">
-              <Table>
+            <div className="rounded-2xl bg-white shadow-sm ring-1 ring-slate-200/60">
+              <Table className="table-fixed">
                 <TableHeader>
-                  <TableRow>
-                    <TableHead>Nome</TableHead>
-                    <TableHead>Localização</TableHead>
-                    <TableHead className="text-right">Área</TableHead>
-                    <TableHead className="text-right">Pav.</TableHead>
-                    <TableHead>Responsável</TableHead>
-                    <TableHead>Data</TableHead>
-                    <TableHead className="w-[50px]"></TableHead>
+                  <TableRow className="bg-slate-100/60">
+                    <TableHead className="w-[20%] whitespace-nowrap max-sm:whitespace-normal">Nome</TableHead>
+                    <TableHead className="w-[20%] whitespace-nowrap max-sm:whitespace-normal">Localização</TableHead>
+                    <TableHead className="w-[10%] text-right whitespace-nowrap">Área</TableHead>
+                    <TableHead className="w-[8%] text-right whitespace-nowrap">Pav.</TableHead>
+                    <TableHead className="w-[20%] whitespace-nowrap max-sm:whitespace-normal">Responsável</TableHead>
+                    <TableHead className="w-[14%] whitespace-nowrap max-sm:whitespace-normal">Criado em</TableHead>
+                    <TableHead className="w-[8%] text-right whitespace-nowrap">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {buildings.map((building) => (
                     <TableRow key={building.id} data-testid={`row-building-${building.id}`}>
-                      <TableCell className="font-medium" data-testid={`text-building-name-${building.id}`}>
+                      <TableCell className="w-[24%] font-medium whitespace-nowrap overflow-hidden text-ellipsis max-sm:whitespace-normal" data-testid={`text-building-name-${building.id}`}>
                         {building.name}
                       </TableCell>
-                      <TableCell className="flex items-center gap-1" data-testid={`text-building-location-${building.id}`}>
-                        <MapPin className="w-3 h-3" />
-                        {building.bioclimaticZone} • {building.typology}
-                      </TableCell>
-                      <TableCell className="text-right" data-testid={`text-building-area-${building.id}`}>
-                        {building.totalArea}m²
-                      </TableCell>
-                      <TableCell className="text-right" data-testid={`text-building-floors-${building.id}`}>
-                        {building.floors}
-                      </TableCell>
-                      <TableCell className="truncate" data-testid={`text-building-responsible-${building.id}`}>
-                        {building.technicalResponsible}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2" data-testid={`text-building-date-${building.id}`}>
-                          <Calendar className="w-3 h-3" /> {formatDate(building.createdAt!)}
-                          <Badge
-                            variant="secondary"
-                            className={getStatusColor(building.createdAt!)}
-                            data-testid={`badge-building-status-${building.id}`}
-                          >
-                            {getStatusText(building.createdAt!)}
-                          </Badge>
+                      <TableCell className="w-[20%] whitespace-nowrap overflow-hidden text-ellipsis max-sm:whitespace-normal" data-testid={`text-building-location-${building.id}`}>
+                        <div className="flex items-center gap-1">
+                          <MapPin className="w-3 h-3" />
+                          {building.bioclimaticZone} • {building.typology}
                         </div>
                       </TableCell>
-                      <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" data-testid={`button-menu-${building.id}`}>
-                              <MoreHorizontal className="w-4 h-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem>Ver Detalhes</DropdownMenuItem>
-                            <DropdownMenuItem>Editar</DropdownMenuItem>
-                            <DropdownMenuItem>Gerar Relatório</DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                      <TableCell className="w-[10%] text-right" data-testid={`text-building-area-${building.id}`}>
+                        {building.totalArea}m²
+                      </TableCell>
+                      <TableCell className="w-[8%] text-right" data-testid={`text-building-floors-${building.id}`}>
+                        {building.floors}
+                      </TableCell>
+                      <TableCell className="w-[20%] whitespace-nowrap overflow-hidden text-ellipsis max-sm:whitespace-normal" data-testid={`text-building-responsible-${building.id}`}>
+                        {building.technicianId ? (techNameById[building.technicianId] ?? "—") : "—"}
+                      </TableCell>
+                      <TableCell className="w-[10%] whitespace-nowrap overflow-hidden text-ellipsis max-sm:whitespace-normal">
+                        <div className="flex items-center gap-2" data-testid={`text-building-date-${building.id}`}>
+                          <span>{formatDate(building.createdAt!)}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="w-[8%] text-right">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            aria-label={`Editar ${building.name}`}
+                            title="Editar"
+                            className="text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                            onClick={() => { setEditBuilding(building); setFormKey(k => k + 1); setOpen(true); }}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            aria-label={`Excluir ${building.name}`}
+                            title="Excluir"
+                            className="text-rose-600 hover:bg-rose-50 hover:text-rose-700"
+                            onClick={() => askDelete(building)}
+                            disabled={deleteMutation.isPending && selectedBuilding?.id === building.id}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -209,16 +268,41 @@ export default function BuildingList() {
           )}
         </main>
       </div>
-      <Dialog open={open} onOpenChange={setOpen}>
+  <Dialog open={open} onOpenChange={(v) => { if (v) setFormKey(k => k + 1); if (!v) setEditBuilding(null); setOpen(v); }}>
         <DialogContent className="max-w-4xl max-h-[90vh] p-0 overflow-hidden">
-          <div className="max-h-[calc(90vh-1rem)] overflow-y-auto my-2 px-6">
-            <DialogHeader className="mb-4">
-              <DialogTitle>Nova Edificação</DialogTitle>
-            </DialogHeader>
-            <BuildingForm onSuccess={() => setOpen(false)} />
+          <div className="max-h-[calc(90vh-1rem)] overflow-y-auto my-7 px-7">
+    <BuildingForm key={formKey} building={editBuilding} onSuccess={() => { setEditBuilding(null); setOpen(false); queryClient.invalidateQueries({ queryKey: ["/api/buildings"] }); }} onCancel={() => setOpen(false)} />
           </div>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir edificação</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir {selectedBuilding ? (
+                <strong>{` ${selectedBuilding.name} `}</strong>
+              ) : (
+                "esta edificação"
+              )}
+              ? Essa ação não poderá ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setSelectedBuilding(null)}>
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              className="bg-rose-600 hover:bg-rose-700"
+              disabled={deleteMutation.isPending}
+            >
+              {deleteMutation.isPending ? "Excluindo…" : "Excluir"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

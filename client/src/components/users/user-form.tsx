@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 
 import { Mail, Phone, User2, Lock, Loader2 } from "lucide-react";
 import { insertUserSchema, updateUserSchema } from "@shared/schema";
+import { z } from "zod";
 
 interface UserFormProps {
   onSuccess?: () => void;
@@ -61,8 +62,27 @@ export default function UserForm({ onSuccess, onCancel, initialUser }: UserFormP
   }, [onlyDigits]);
 
   const isEdit = !!initialUser?.id;
+  // Ensure PT-BR messages on the client as well
+  const userSchemaClient = React.useMemo(() => {
+    const base = isEdit ? updateUserSchema : insertUserSchema;
+    return base.superRefine((data, ctx) => {
+      if (!data.fullName || String(data.fullName).trim().length === 0) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Nome é obrigatório', path: ['fullName'] });
+      }
+      if (!data.email || String(data.email).trim().length === 0) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Email é obrigatório', path: ['email'] });
+      }
+      if (!isEdit) {
+        const pwd = (data as any).password as string | undefined;
+        if (!pwd || pwd.trim().length < 6) {
+          ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Senha deve ter pelo menos 6 caracteres', path: ['password'] });
+        }
+      }
+    });
+  }, [isEdit]);
+
   const form = useForm<FormValues>({
-    resolver: zodResolver(isEdit ? updateUserSchema : insertUserSchema),
+    resolver: zodResolver(userSchemaClient),
     defaultValues: {
       fullName: initialUser?.fullName ?? "",
       email: initialUser?.email ?? "",

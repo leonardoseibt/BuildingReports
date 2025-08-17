@@ -23,7 +23,16 @@ import {
   type InsertReport,
   type Technician,
   type InsertTechnician,
+  type Typology,
+  type InsertTypology,
+  type NoiseClass,
+  type InsertNoiseClass,
+  type AggressivenessClass,
+  type InsertAggressivenessClass,
   technicians,
+  typologies,
+  noiseClasses,
+  aggressivenessClasses,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and } from "drizzle-orm";
@@ -42,6 +51,7 @@ export interface IStorage {
   getBuildingsByUser(userId: number): Promise<Building[]>;
   getBuilding(id: number): Promise<Building | undefined>;
   updateBuilding(id: number, building: Partial<InsertBuilding>): Promise<Building>;
+  deleteBuilding(id: number): Promise<boolean>;
   
   // Building systems operations
   createStructuralSystem(system: InsertStructuralSystem): Promise<StructuralSystem>;
@@ -77,6 +87,22 @@ export interface IStorage {
   getTechnician(id: number): Promise<Technician | undefined>;
   updateTechnician(id: number, tech: Partial<InsertTechnician>): Promise<Technician>;
   deleteTechnician(id: number): Promise<boolean>;
+
+  // Master tables
+  listTypologies(): Promise<Typology[]>;
+  createTypology(item: InsertTypology): Promise<Typology>;
+  updateTypology(id: number, item: Partial<InsertTypology>): Promise<Typology>;
+  deleteTypology(id: number): Promise<boolean>;
+
+  listNoiseClasses(): Promise<NoiseClass[]>;
+  createNoiseClass(item: InsertNoiseClass): Promise<NoiseClass>;
+  updateNoiseClass(id: number, item: Partial<InsertNoiseClass>): Promise<NoiseClass>;
+  deleteNoiseClass(id: number): Promise<boolean>;
+
+  listAggressivenessClasses(): Promise<AggressivenessClass[]>;
+  createAggressivenessClass(item: InsertAggressivenessClass): Promise<AggressivenessClass>;
+  updateAggressivenessClass(id: number, item: Partial<InsertAggressivenessClass>): Promise<AggressivenessClass>;
+  deleteAggressivenessClass(id: number): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -173,8 +199,7 @@ export class DatabaseStorage implements IStorage {
     const [newBuilding] = await db.insert(buildings).values({
       name: building.name,
       userId: building.userId,
-      technicalResponsible: building.technicalResponsible,
-      creaCau: building.creaCau,
+  technicianId: (building as any).technicianId,
       typology: building.typology,
       cep: building.cep,
       address: building.address,
@@ -205,12 +230,30 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateBuilding(id: number, building: Partial<InsertBuilding>): Promise<Building> {
+    const { userId: _ignoreUserId, ...rest } = building as any;
     const [updatedBuilding] = await db
       .update(buildings)
-      .set({ ...building, updatedAt: new Date() })
+      .set({ ...(rest as any), updatedAt: new Date() })
       .where(eq(buildings.id, id))
       .returning();
     return updatedBuilding;
+  }
+
+  async deleteBuilding(id: number): Promise<boolean> {
+    try {
+      const deleted = await db
+        .delete(buildings)
+        .where(eq(buildings.id, id))
+        .returning({ id: buildings.id });
+      return deleted.length > 0;
+    } catch (err: any) {
+      if (err?.code === '23503') {
+        const e = new Error('Não é possível excluir: existem registros relacionados.');
+        (e as any).status = 409;
+        throw e;
+      }
+      throw err;
+    }
   }
 
   // Building systems operations
@@ -391,13 +434,13 @@ export class DatabaseStorage implements IStorage {
       userId: tech.userId,
       fullName: tech.fullName,
       creaCau: tech.creaCau,
-      registrationType: tech.registrationType,
       licenseState: tech.licenseState,
       cpfCnpj: tech.cpfCnpj,
       email: tech.email,
       phone: tech.phone,
       company: tech.company,
       address: tech.address,
+  addressNumber: (tech as any).addressNumber,
       city: tech.city,
       state: tech.state,
       cep: tech.cep,
@@ -426,6 +469,55 @@ export class DatabaseStorage implements IStorage {
 
   async deleteTechnician(id: number): Promise<boolean> {
     const deleted = await db.delete(technicians).where(eq(technicians.id, id)).returning({ id: technicians.id });
+    return deleted.length > 0;
+  }
+
+  // Master tables
+  async listTypologies(): Promise<Typology[]> {
+    return await db.select().from(typologies).orderBy(desc(typologies.createdAt));
+  }
+  async createTypology(item: InsertTypology): Promise<Typology> {
+    const [row] = await db.insert(typologies).values({ code: (item as any).code, label: (item as any).label, isActive: (item as any).isActive ?? true }).returning();
+    return row as Typology;
+  }
+  async updateTypology(id: number, item: Partial<InsertTypology>): Promise<Typology> {
+    const [row] = await db.update(typologies).set({ ...(item as any), updatedAt: new Date() }).where(eq(typologies.id, id)).returning();
+    return row as Typology;
+  }
+  async deleteTypology(id: number): Promise<boolean> {
+    const deleted = await db.delete(typologies).where(eq(typologies.id, id)).returning({ id: typologies.id });
+    return deleted.length > 0;
+  }
+
+  async listNoiseClasses(): Promise<NoiseClass[]> {
+    return await db.select().from(noiseClasses).orderBy(desc(noiseClasses.createdAt));
+  }
+  async createNoiseClass(item: InsertNoiseClass): Promise<NoiseClass> {
+    const [row] = await db.insert(noiseClasses).values({ code: (item as any).code, label: (item as any).label, isActive: (item as any).isActive ?? true }).returning();
+    return row as NoiseClass;
+  }
+  async updateNoiseClass(id: number, item: Partial<InsertNoiseClass>): Promise<NoiseClass> {
+    const [row] = await db.update(noiseClasses).set({ ...(item as any), updatedAt: new Date() }).where(eq(noiseClasses.id, id)).returning();
+    return row as NoiseClass;
+  }
+  async deleteNoiseClass(id: number): Promise<boolean> {
+    const deleted = await db.delete(noiseClasses).where(eq(noiseClasses.id, id)).returning({ id: noiseClasses.id });
+    return deleted.length > 0;
+  }
+
+  async listAggressivenessClasses(): Promise<AggressivenessClass[]> {
+    return await db.select().from(aggressivenessClasses).orderBy(desc(aggressivenessClasses.createdAt));
+  }
+  async createAggressivenessClass(item: InsertAggressivenessClass): Promise<AggressivenessClass> {
+    const [row] = await db.insert(aggressivenessClasses).values({ code: (item as any).code, label: (item as any).label, isActive: (item as any).isActive ?? true }).returning();
+    return row as AggressivenessClass;
+  }
+  async updateAggressivenessClass(id: number, item: Partial<InsertAggressivenessClass>): Promise<AggressivenessClass> {
+    const [row] = await db.update(aggressivenessClasses).set({ ...(item as any), updatedAt: new Date() }).where(eq(aggressivenessClasses.id, id)).returning();
+    return row as AggressivenessClass;
+  }
+  async deleteAggressivenessClass(id: number): Promise<boolean> {
+    const deleted = await db.delete(aggressivenessClasses).where(eq(aggressivenessClasses.id, id)).returning({ id: aggressivenessClasses.id });
     return deleted.length > 0;
   }
 }

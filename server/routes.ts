@@ -2,7 +2,7 @@ import express, { type Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./auth";
-import { insertBuildingSchema, insertStructuralSystemSchema, insertSealingSystemSchema, insertRoofingSystemSchema, insertPerformanceEvaluationSchema, insertReportSchema, insertTechnicianSchema, updateTechnicianSchema, insertUserSchema, updateUserSchema } from "@shared/schema";
+import { insertBuildingSchema, updateBuildingSchema, insertStructuralSystemSchema, insertSealingSystemSchema, insertRoofingSystemSchema, insertPerformanceEvaluationSchema, insertReportSchema, insertTechnicianSchema, updateTechnicianSchema, insertUserSchema, updateUserSchema, insertTypologySchema, insertNoiseClassSchema, insertAggressivenessClassSchema } from "@shared/schema";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 
@@ -133,6 +133,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ...req.body,
         userId,
       });
+      // If technicianId is provided, ensure it exists and belongs to the same user
+      if ((buildingData as any).technicianId) {
+        const tech = await storage.getTechnician(Number((buildingData as any).technicianId));
+        if (!tech) return res.status(400).json({ message: 'Responsável técnico informado não existe.' });
+        if (tech.userId !== userId) return res.status(403).json({ message: 'Access denied' });
+      }
       
       const building = await storage.createBuilding(buildingData);
       res.json(building);
@@ -173,6 +179,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching building:", error);
       res.status(500).json({ message: "Failed to fetch building" });
+    }
+  });
+
+  app.put('/api/buildings/:id', isAuthenticated, express.json(), async (req: any, res) => {
+    try {
+      const id = Number(req.params.id);
+      const existing = await storage.getBuilding(id);
+      if (!existing) return res.status(404).json({ message: 'Edificação não encontrada' });
+      if (existing.userId !== Number(req.user.claims.sub)) return res.status(403).json({ message: 'Access denied' });
+
+      const data = updateBuildingSchema.parse(req.body);
+      if ((data as any).technicianId) {
+        const tech = await storage.getTechnician(Number((data as any).technicianId));
+        if (!tech) return res.status(400).json({ message: 'Responsável técnico informado não existe.' });
+        if (tech.userId !== Number(req.user.claims.sub)) return res.status(403).json({ message: 'Access denied' });
+      }
+      const saved = await storage.updateBuilding(id, data as any);
+      res.json(saved);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: 'Validation error', errors: error.errors });
+      }
+      console.error('Error updating building', error);
+      res.status(500).json({ message: 'Failed to update building' });
+    }
+  });
+
+  app.delete('/api/buildings/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const id = Number(req.params.id);
+      const existing = await storage.getBuilding(id);
+      if (!existing) return res.status(404).json({ message: 'Edificação não encontrada' });
+      if (existing.userId !== Number(req.user.claims.sub)) return res.status(403).json({ message: 'Access denied' });
+
+      const ok = await storage.deleteBuilding(id);
+      res.json({ ok });
+    } catch (error: any) {
+      const status = (error as any)?.status || 500;
+      const message = (error as any)?.message || 'Failed to delete building';
+      console.error('Error deleting building', error);
+      res.status(status).json({ message });
     }
   });
 
@@ -460,6 +507,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('Error deleting technician', error);
       res.status(500).json({ message: 'Failed to delete technician' });
     }
+  });
+
+  // Master tables: Typologies
+  app.get('/api/typologies', isAuthenticated, async (_req, res) => {
+    try { res.json(await storage.listTypologies()); } catch (e) { res.status(500).json({ message: 'Failed to fetch typologies' }); }
+  });
+  app.post('/api/typologies', isAuthenticated, express.json(), async (req, res) => {
+    try { const data = insertTypologySchema.parse(req.body); const row = await storage.createTypology(data as any); res.json(row); }
+    catch (error) { if (error instanceof z.ZodError) return res.status(400).json({ message: 'Validation error', errors: error.errors }); if ((error as any)?.code === '23505') return res.status(409).json({ message: 'Código já cadastrado.' }); res.status(500).json({ message: 'Failed to create typology' }); }
+  });
+  app.put('/api/typologies/:id', isAuthenticated, express.json(), async (req, res) => {
+    try { const id = Number(req.params.id); const data = insertTypologySchema.partial().parse(req.body); const row = await storage.updateTypology(id, data as any); res.json(row); }
+    catch (error) { if (error instanceof z.ZodError) return res.status(400).json({ message: 'Validation error', errors: error.errors }); if ((error as any)?.code === '23505') return res.status(409).json({ message: 'Código já cadastrado.' }); res.status(500).json({ message: 'Failed to update typology' }); }
+  });
+  app.delete('/api/typologies/:id', isAuthenticated, async (req, res) => {
+    try { const id = Number(req.params.id); const ok = await storage.deleteTypology(id); res.json({ ok }); }
+    catch { res.status(500).json({ message: 'Failed to delete typology' }); }
+  });
+
+  // Master tables: Noise classes
+  app.get('/api/noise-classes', isAuthenticated, async (_req, res) => {
+    try { res.json(await storage.listNoiseClasses()); } catch (e) { res.status(500).json({ message: 'Failed to fetch noise classes' }); }
+  });
+  app.post('/api/noise-classes', isAuthenticated, express.json(), async (req, res) => {
+    try { const data = insertNoiseClassSchema.parse(req.body); const row = await storage.createNoiseClass(data as any); res.json(row); }
+    catch (error) { if (error instanceof z.ZodError) return res.status(400).json({ message: 'Validation error', errors: error.errors }); if ((error as any)?.code === '23505') return res.status(409).json({ message: 'Código já cadastrado.' }); res.status(500).json({ message: 'Failed to create noise class' }); }
+  });
+  app.put('/api/noise-classes/:id', isAuthenticated, express.json(), async (req, res) => {
+    try { const id = Number(req.params.id); const data = insertNoiseClassSchema.partial().parse(req.body); const row = await storage.updateNoiseClass(id, data as any); res.json(row); }
+    catch (error) { if (error instanceof z.ZodError) return res.status(400).json({ message: 'Validation error', errors: error.errors }); if ((error as any)?.code === '23505') return res.status(409).json({ message: 'Código já cadastrado.' }); res.status(500).json({ message: 'Failed to update noise class' }); }
+  });
+  app.delete('/api/noise-classes/:id', isAuthenticated, async (req, res) => {
+    try { const id = Number(req.params.id); const ok = await storage.deleteNoiseClass(id); res.json({ ok }); }
+    catch { res.status(500).json({ message: 'Failed to delete noise class' }); }
+  });
+
+  // Master tables: Aggressiveness classes
+  app.get('/api/aggressiveness-classes', isAuthenticated, async (_req, res) => {
+    try { res.json(await storage.listAggressivenessClasses()); } catch (e) { res.status(500).json({ message: 'Failed to fetch aggressiveness classes' }); }
+  });
+  app.post('/api/aggressiveness-classes', isAuthenticated, express.json(), async (req, res) => {
+    try { const data = insertAggressivenessClassSchema.parse(req.body); const row = await storage.createAggressivenessClass(data as any); res.json(row); }
+    catch (error) { if (error instanceof z.ZodError) return res.status(400).json({ message: 'Validation error', errors: error.errors }); if ((error as any)?.code === '23505') return res.status(409).json({ message: 'Código já cadastrado.' }); res.status(500).json({ message: 'Failed to create aggressiveness class' }); }
+  });
+  app.put('/api/aggressiveness-classes/:id', isAuthenticated, express.json(), async (req, res) => {
+    try { const id = Number(req.params.id); const data = insertAggressivenessClassSchema.partial().parse(req.body); const row = await storage.updateAggressivenessClass(id, data as any); res.json(row); }
+    catch (error) { if (error instanceof z.ZodError) return res.status(400).json({ message: 'Validation error', errors: error.errors }); if ((error as any)?.code === '23505') return res.status(409).json({ message: 'Código já cadastrado.' }); res.status(500).json({ message: 'Failed to update aggressiveness class' }); }
+  });
+  app.delete('/api/aggressiveness-classes/:id', isAuthenticated, async (req, res) => {
+    try { const id = Number(req.params.id); const ok = await storage.deleteAggressivenessClass(id); res.json({ ok }); }
+    catch { res.status(500).json({ message: 'Failed to delete aggressiveness class' }); }
   });
 
   const httpServer = createServer(app);

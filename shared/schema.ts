@@ -44,20 +44,8 @@ export const users = pgTable("users", {
 });
 
 // Enums
-export const buildingTypologyEnum = pgEnum('building_typology', [
-  'unifamiliar', 'multifamiliar', 'comercial', 'institucional'
-]);
-
 export const bioclimaticZoneEnum = pgEnum('bioclimatic_zone', [
   'ZB1', 'ZB2', 'ZB3', 'ZB4', 'ZB5', 'ZB6', 'ZB7', 'ZB8'
-]);
-
-export const noiseClassEnum = pgEnum('noise_class', [
-  'classe1', 'classe2', 'classe3', 'classe4'
-]);
-
-export const aggressivenessClassEnum = pgEnum('aggressiveness_class', [
-  'caa1', 'caa2', 'caa3', 'caa4'
 ]);
 
 export const structuralSystemEnum = pgEnum('structural_system', [
@@ -76,18 +64,45 @@ export const evaluationStatusEnum = pgEnum('evaluation_status', [
 export const buildings = pgTable("buildings", {
   id: integer("id").generatedAlwaysAsIdentity().primaryKey(),
   userId: integer("user_id").references(() => users.id).notNull(),
+  technicianId: integer("technician_id").references(() => technicians.id),
   name: text("name").notNull(),
-  technicalResponsible: text("technical_responsible").notNull(),
-  creaCau: text("crea_cau").notNull(),
-  typology: buildingTypologyEnum("typology").notNull(),
+  typology: text("typology").notNull(),
   cep: varchar("cep", { length: 9 }).notNull(),
   address: text("address").notNull(),
   bioclimaticZone: bioclimaticZoneEnum("bioclimatic_zone").notNull(),
   totalArea: decimal("total_area", { precision: 10, scale: 2 }).notNull(),
   floors: integer("floors").notNull(),
   units: integer("units").default(1),
-  noiseClass: noiseClassEnum("noise_class").notNull(),
-  aggressivenessClass: aggressivenessClassEnum("aggressiveness_class").notNull(),
+  noiseClass: text("noise_class").notNull(),
+  aggressivenessClass: text("aggressiveness_class").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Master tables for configurable vocabularies
+export const typologies = pgTable("typologies", {
+  id: integer("id").generatedAlwaysAsIdentity().primaryKey(),
+  code: varchar("code", { length: 64 }).notNull().unique(),
+  label: varchar("label", { length: 255 }).notNull(),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const noiseClasses = pgTable("noise_classes", {
+  id: integer("id").generatedAlwaysAsIdentity().primaryKey(),
+  code: varchar("code", { length: 64 }).notNull().unique(),
+  label: varchar("label", { length: 255 }).notNull(),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const aggressivenessClasses = pgTable("aggressiveness_classes", {
+  id: integer("id").generatedAlwaysAsIdentity().primaryKey(),
+  code: varchar("code", { length: 64 }).notNull().unique(),
+  label: varchar("label", { length: 255 }).notNull(),
+  isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -158,13 +173,13 @@ export const technicians = pgTable("technicians", {
   userId: integer("user_id").references(() => users.id).notNull(), // owner
   fullName: text("full_name").notNull(),
   creaCau: varchar("crea_cau", { length: 50 }).notNull(),
-  registrationType: varchar("registration_type", { length: 10 }), // CREA or CAU
   licenseState: varchar("license_state", { length: 2 }), // UF
   cpfCnpj: varchar("cpf_cnpj", { length: 18 }),
   email: varchar("email", { length: 255 }),
   phone: varchar("phone", { length: 32 }),
   company: varchar("company", { length: 255 }),
   address: text("address"),
+  addressNumber: varchar("address_number", { length: 20 }),
   city: varchar("city", { length: 128 }),
   state: varchar("state", { length: 2 }),
   cep: varchar("cep", { length: 9 }),
@@ -183,6 +198,10 @@ export const buildingsRelations = relations(buildings, ({ one, many }) => ({
   user: one(users, {
     fields: [buildings.userId],
     references: [users.id],
+  }),
+  technician: one(technicians, {
+    fields: [buildings.technicianId!],
+    references: [technicians.id],
   }),
   structuralSystem: one(structuralSystems),
   sealingSystem: one(sealingSystems),
@@ -239,16 +258,18 @@ export const techniciansRelations = relations(technicians, ({ one }) => ({
 }));
 
 // Insert Schemas
+// Padrão de validação: Mensagens em PT-BR para todos os cadastros.
+// Ao criar novos schemas, utilize min/length/refine/superRefine com mensagens legíveis em português.
 export const insertUserSchema = z.object({
   fullName: z.string().min(1, 'Nome é obrigatório'),
-  email: z.string().email(),
+  email: z.string().min(1, 'Email é obrigatório').email('Email inválido'),
   password: z.string().min(6, 'Senha deve ter pelo menos 6 caracteres'),
   phone: z.string().optional(),
 });
 
 export const updateUserSchema = z.object({
   fullName: z.string().min(1, 'Nome é obrigatório'),
-  email: z.string().email(),
+  email: z.string().min(1, 'Email é obrigatório').email('Email inválido'),
   password: z.preprocess(
     (val) => (typeof val === 'string' && val.trim() === '' ? undefined : val),
     z.string().min(6, 'Senha deve ter pelo menos 6 caracteres').optional(),
@@ -258,10 +279,13 @@ export const updateUserSchema = z.object({
 
 export const insertBuildingSchema = createInsertSchema(buildings)
   .extend({
-    totalArea: decimalInput,
-    floors: intInput,
-    units: intInput.optional(),
+  totalArea: decimalInput,
+  floors: intInput,
+  units: intInput.optional(),
   });
+
+// Allow partial updates on buildings (no userId changes through API)
+export const updateBuildingSchema = insertBuildingSchema.partial().omit({ userId: true });
 
 export const insertStructuralSystemSchema = createInsertSchema(structuralSystems)
   .extend({
@@ -291,19 +315,24 @@ export const insertReportSchema = createInsertSchema(reports);
 
 export const insertTechnicianSchema = createInsertSchema(technicians)
   .extend({
-    // normalize optional strings
-    cpfCnpj: z.string().optional().nullable().transform((v) => (v ? v : undefined)),
-    email: z.string().email().optional().nullable().transform((v) => (v ? v : undefined)),
-    phone: z.string().optional().nullable().transform((v) => (v ? v : undefined)),
+  // required fields
+  cpfCnpj: z.string().min(1, 'CPF/CNPJ é obrigatório'),
+  email: z.string().min(1, 'Email é obrigatório').email('Email inválido'),
+  phone: z.string().min(1, 'Telefone é obrigatório'),
     company: z.string().optional().nullable().transform((v) => (v ? v : undefined)),
     address: z.string().optional().nullable().transform((v) => (v ? v : undefined)),
+  addressNumber: z.string().optional().nullable().transform((v) => (v ? v : undefined)),
     city: z.string().optional().nullable().transform((v) => (v ? v : undefined)),
-    state: z.string().optional().nullable().transform((v) => (v ? v : undefined)),
+  state: z.string().optional().nullable().transform((v) => (v ? v : undefined)),
     cep: z.string().optional().nullable().transform((v) => (v ? v : undefined)),
     notes: z.string().optional().nullable().transform((v) => (v ? v : undefined)),
-    registrationType: z.string().optional().nullable().transform((v) => (v ? v : undefined)),
-    licenseState: z.string().optional().nullable().transform((v) => (v ? v : undefined)),
+  licenseState: z.string().min(1, 'UF do Registro é obrigatória').length(2, 'UF do Registro é obrigatória'),
   });
+
+// Insert schemas for master tables
+export const insertTypologySchema = createInsertSchema(typologies);
+export const insertNoiseClassSchema = createInsertSchema(noiseClasses);
+export const insertAggressivenessClassSchema = createInsertSchema(aggressivenessClasses);
 
 // Allow partial updates on technicians (no userId changes through API)
 export const updateTechnicianSchema = insertTechnicianSchema.partial().omit({ userId: true });
@@ -316,6 +345,7 @@ export type PublicUser = Omit<User, 'passwordHash'>;
 export type UpdateUser = z.infer<typeof updateUserSchema>;
 export type InsertBuilding = z.infer<typeof insertBuildingSchema>;
 export type Building = typeof buildings.$inferSelect;
+export type UpdateBuilding = z.infer<typeof updateBuildingSchema>;
 export type InsertStructuralSystem = z.infer<typeof insertStructuralSystemSchema>;
 export type StructuralSystem = typeof structuralSystems.$inferSelect;
 export type InsertSealingSystem = z.infer<typeof insertSealingSystemSchema>;
@@ -329,3 +359,9 @@ export type Report = typeof reports.$inferSelect;
 export type InsertTechnician = z.infer<typeof insertTechnicianSchema>;
 export type Technician = typeof technicians.$inferSelect;
 export type UpdateTechnician = z.infer<typeof updateTechnicianSchema>;
+export type Typology = typeof typologies.$inferSelect;
+export type InsertTypology = z.infer<typeof insertTypologySchema>;
+export type NoiseClass = typeof noiseClasses.$inferSelect;
+export type InsertNoiseClass = z.infer<typeof insertNoiseClassSchema>;
+export type AggressivenessClass = typeof aggressivenessClasses.$inferSelect;
+export type InsertAggressivenessClass = z.infer<typeof insertAggressivenessClassSchema>;

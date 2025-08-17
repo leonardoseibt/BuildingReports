@@ -9,7 +9,10 @@ import {
   Users,
   LogOut,
   Cog,
-  IdCard
+  IdCard,
+  Layers2,
+  Volume2,
+  Shield
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -17,6 +20,9 @@ const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Edificações', href: '/buildings', icon: Building2 },
   { name: 'Responsáveis Técnicos', href: '/technicians', icon: IdCard },
+  { name: 'Tipologias', href: '/typologies', icon: Layers2 },
+  { name: 'Classes de Ruído', href: '/noise-classes', icon: Volume2 },
+  { name: 'Classes de Agressividade', href: '/aggressiveness-classes', icon: Shield },
   { name: 'Relatórios', href: '/reports', icon: FileText },
 ];
 
@@ -54,6 +60,30 @@ export default function Sidebar() {
           const Icon = item.icon;
           const isActive = location === item.href;
           
+          // Insert a divider right before "Relatórios"
+          if (item.name === 'Relatórios') {
+            return (
+              <div key={item.name}>
+                <div className="border-t border-slate-200 my-2" />
+                <Link href={item.href}>
+                  <Button
+                    variant={isActive ? "secondary" : "ghost"}
+                    className={cn(
+                      "w-full justify-start space-x-3 h-12 font-medium transition-colors",
+                      isActive 
+                        ? "bg-primary/10 text-primary hover:bg-primary/15" 
+                        : "text-slate-700 hover:bg-slate-50"
+                    )}
+                    data-testid={`nav-${item.name.toLowerCase().replace(' ', '-')}`}
+                  >
+                    <Icon className="w-5 h-5" />
+                    <span>{item.name}</span>
+                  </Button>
+                </Link>
+              </div>
+            );
+          }
+
           return (
             <Link key={item.name} href={item.href}>
               <Button
