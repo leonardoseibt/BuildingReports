@@ -305,6 +305,9 @@ export const insertTechnicianSchema = createInsertSchema(technicians)
     licenseState: z.string().optional().nullable().transform((v) => (v ? v : undefined)),
   });
 
+// Allow partial updates on technicians (no userId changes through API)
+export const updateTechnicianSchema = insertTechnicianSchema.partial().omit({ userId: true });
+
 // Types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -325,3 +328,4 @@ export type InsertReport = z.infer<typeof insertReportSchema>;
 export type Report = typeof reports.$inferSelect;
 export type InsertTechnician = z.infer<typeof insertTechnicianSchema>;
 export type Technician = typeof technicians.$inferSelect;
+export type UpdateTechnician = z.infer<typeof updateTechnicianSchema>;

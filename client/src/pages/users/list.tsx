@@ -42,11 +42,11 @@ function formatPhoneBRDisplay(v?: string | null) {
   return `(${ddd}) ${rest.slice(0, 5)}-${rest.slice(5)}`;
 }
 
-function formatDateTimeBR(value?: string | Date | null) {
+function formatDateBR(value?: string | Date | null) {
   if (!value) return "";
   const d = new Date(value as any);
   if (isNaN(d.getTime())) return "";
-  return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(d);
+  return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short" }).format(d);
 }
 import { apiRequest } from "@/lib/queryClient";
 
@@ -188,7 +188,7 @@ export default function UsersList() {
                           {formatPhoneBRDisplay(u.phone)}
                         </TableCell>
                         <TableCell className="w-[18%] whitespace-nowrap max-sm:whitespace-normal overflow-hidden text-ellipsis">
-                          {formatDateTimeBR(u.createdAt as any)}
+                          {formatDateBR(u.createdAt as any)}
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center justify-end gap-1.5">

@@ -74,6 +74,9 @@ export interface IStorage {
   // Technicians
   createTechnician(tech: InsertTechnician): Promise<Technician>;
   listTechnicians(userId: number): Promise<Technician[]>;
+  getTechnician(id: number): Promise<Technician | undefined>;
+  updateTechnician(id: number, tech: Partial<InsertTechnician>): Promise<Technician>;
+  deleteTechnician(id: number): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -405,6 +408,25 @@ export class DatabaseStorage implements IStorage {
 
   async listTechnicians(userId: number): Promise<Technician[]> {
     return await db.select().from(technicians).where(eq(technicians.userId, userId)).orderBy(desc(technicians.createdAt));
+  }
+
+  async getTechnician(id: number): Promise<Technician | undefined> {
+    const [row] = await db.select().from(technicians).where(eq(technicians.id, id));
+    return row;
+  }
+
+  async updateTechnician(id: number, tech: Partial<InsertTechnician>): Promise<Technician> {
+    const [row] = await db
+      .update(technicians)
+      .set({ ...tech, updatedAt: new Date() })
+      .where(eq(technicians.id, id))
+      .returning();
+    return row as Technician;
+  }
+
+  async deleteTechnician(id: number): Promise<boolean> {
+    const deleted = await db.delete(technicians).where(eq(technicians.id, id)).returning({ id: technicians.id });
+    return deleted.length > 0;
   }
 }
 

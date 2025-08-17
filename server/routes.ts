@@ -2,7 +2,7 @@ import express, { type Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./auth";
-import { insertBuildingSchema, insertStructuralSystemSchema, insertSealingSystemSchema, insertRoofingSystemSchema, insertPerformanceEvaluationSchema, insertReportSchema, insertTechnicianSchema, insertUserSchema, updateUserSchema } from "@shared/schema";
+import { insertBuildingSchema, insertStructuralSystemSchema, insertSealingSystemSchema, insertRoofingSystemSchema, insertPerformanceEvaluationSchema, insertReportSchema, insertTechnicianSchema, updateTechnicianSchema, insertUserSchema, updateUserSchema } from "@shared/schema";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 
@@ -412,6 +412,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: 'Validation error', errors: error.errors });
       }
       res.status(500).json({ message: 'Failed to create technician' });
+    }
+  });
+
+  app.get('/api/technicians/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const id = Number(req.params.id);
+      const row = await storage.getTechnician(id);
+      if (!row) return res.status(404).json({ message: 'Responsável técnico não encontrado' });
+      if (row.userId !== Number(req.user.claims.sub)) return res.status(403).json({ message: 'Access denied' });
+      res.json(row);
+    } catch (error) {
+      console.error('Error fetching technician', error);
+      res.status(500).json({ message: 'Failed to fetch technician' });
+    }
+  });
+
+  app.put('/api/technicians/:id', isAuthenticated, express.json(), async (req: any, res) => {
+    try {
+      const id = Number(req.params.id);
+      const existing = await storage.getTechnician(id);
+      if (!existing) return res.status(404).json({ message: 'Responsável técnico não encontrado' });
+      if (existing.userId !== Number(req.user.claims.sub)) return res.status(403).json({ message: 'Access denied' });
+
+      const data = updateTechnicianSchema.parse(req.body);
+      const saved = await storage.updateTechnician(id, data as any);
+      res.json(saved);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: 'Validation error', errors: error.errors });
+      }
+      console.error('Error updating technician', error);
+      res.status(500).json({ message: 'Failed to update technician' });
+    }
+  });
+
+  app.delete('/api/technicians/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const id = Number(req.params.id);
+      const existing = await storage.getTechnician(id);
+      if (!existing) return res.status(404).json({ message: 'Responsável técnico não encontrado' });
+      if (existing.userId !== Number(req.user.claims.sub)) return res.status(403).json({ message: 'Access denied' });
+
+      const ok = await storage.deleteTechnician(id);
+      res.json({ ok });
+    } catch (error) {
+      console.error('Error deleting technician', error);
+      res.status(500).json({ message: 'Failed to delete technician' });
     }
   });
 
