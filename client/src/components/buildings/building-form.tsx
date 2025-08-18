@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { NotchedField } from "@/components/ui/notched-field";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { MapPin, Building2, User, Home, Check, ChevronsUpDown, Loader2 } from "lucide-react";
@@ -243,21 +244,22 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
           </div>
 
           {/* Informações Básicas */}
-          <div className="rounded-2xl border bg-white/60 backdrop-blur p-5 md:p-6 shadow-sm">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Nome do Empreendimento (unchanged position 1) */}
                 <FormField
                   control={form.control}
                   name="name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Nome do Empreendimento *</FormLabel>
                       <FormControl>
-                        <Input
-                          placeholder="Ex: Residencial Vista Verde"
-                          {...field}
-                          data-testid="input-building-name"
-                        />
+                        <NotchedField label="Nome do Empreendimento" requiredMark>
+                          <Input
+                            placeholder="Ex: Residencial Vista Verde"
+                            {...field}
+                            data-testid="input-building-name"
+                            className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                          />
+                        </NotchedField>
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -270,19 +272,22 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
                   name="typologyId"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Tipologia Habitacional *</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value ? String(field.value) : undefined}>
-                        <FormControl>
-                          <SelectTrigger data-testid="select-typology">
-                            <SelectValue placeholder="Selecione a tipologia" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {(typologies || []).filter((t:any)=>t.isActive!==false).map((t:any)=> (
-                            <SelectItem key={t.id} value={String(t.id)}>{t.label}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <FormControl>
+                        <NotchedField label="Tipologia Habitacional" requiredMark>
+              <Select onValueChange={field.onChange} defaultValue={field.value ? String(field.value) : undefined}>
+                            <FormControl>
+                <SelectTrigger data-testid="select-typology" className="border-0 bg-transparent shadow-none focus:ring-0 focus:ring-offset-0">
+                                <SelectValue placeholder="Selecione a tipologia" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {(typologies || []).filter((t:any)=>t.isActive!==false).map((t:any)=> (
+                                <SelectItem key={t.id} value={String(t.id)}>{t.label}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </NotchedField>
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -294,83 +299,83 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
                   name="technicianId"
                   render={({ field }) => (
                     <FormItem className="md:col-span-2">
-                      <FormLabel>Responsável Técnico *</FormLabel>
-                      <Popover open={openTech} onOpenChange={setOpenTech}>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              variant="outline"
-                              role="combobox"
-                              className="w-full justify-between"
-                              data-testid="input-technical-responsible"
-                            >
-                              {field.value
-                                ? technicians?.find((t) => t.id === Number(field.value))?.fullName
-                                : "Selecione o responsável"}
-                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-full p-0">
-                          <Command>
-                            <CommandInput placeholder="Procurar..." />
-                            <CommandList>
-                              <CommandEmpty>Nenhum responsável encontrado.</CommandEmpty>
-                              <CommandGroup>
-                                {technicians?.map((tech) => (
-                                  <CommandItem
-                                    key={tech.id}
-                                    value={String(tech.id)}
-                                    onSelect={() => {
-                                      form.setValue('technicianId', tech.id as any);
-                                      setOpenTech(false);
-                                    }}
-                                  >
-                                    {tech.fullName}
-                                    <Check
-                                      className={cn(
-                                        'ml-auto h-4 w-4',
-                                        Number(field.value) === tech.id ? 'opacity-100' : 'opacity-0'
-                                      )}
-                                    />
-                                  </CommandItem>
-                                ))}
-                              </CommandGroup>
-                            </CommandList>
-                          </Command>
-                        </PopoverContent>
-                      </Popover>
+                      <FormControl>
+                        <NotchedField label="Responsável Técnico" requiredMark>
+                          <Popover open={openTech} onOpenChange={setOpenTech}>
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="outline"
+                                role="combobox"
+                                className="w-full justify-between border-0 bg-transparent shadow-none"
+                                data-testid="input-technical-responsible"
+                              >
+                                {field.value
+                                  ? technicians?.find((t) => t.id === Number(field.value))?.fullName
+                                  : "Selecione o responsável"}
+                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-full p-0">
+                              <Command>
+                                <CommandInput placeholder="Procurar..." />
+                                <CommandList>
+                                  <CommandEmpty>Nenhum responsável encontrado.</CommandEmpty>
+                                  <CommandGroup>
+                                    {technicians?.map((tech) => (
+                                      <CommandItem
+                                        key={tech.id}
+                                        value={String(tech.id)}
+                                        onSelect={() => {
+                                          form.setValue('technicianId', tech.id as any);
+                                          setOpenTech(false);
+                                        }}
+                                      >
+                                        {tech.fullName}
+                                        <Check
+                                          className={cn(
+                                            'ml-auto h-4 w-4',
+                                            Number(field.value) === tech.id ? 'opacity-100' : 'opacity-0'
+                                          )}
+                                        />
+                                      </CommandItem>
+                                    ))}
+                                  </CommandGroup>
+                                </CommandList>
+                              </Command>
+                            </PopoverContent>
+                          </Popover>
+                        </NotchedField>
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-              </div>
-            </div>
+          </div>
 
           {/* Localização */}
-          <div className="rounded-2xl border bg-white/60 backdrop-blur p-5 md:p-6 shadow-sm">
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
                   name="cep"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>CEP *</FormLabel>
                       <FormControl>
-                        <Input
-                          placeholder="00000-000"
-                          {...field}
-                          className="bg-slate-50 focus:bg-white transition-colors"
-                          inputMode="numeric"
-                          maxLength={9}
-                          onChange={(e) => field.onChange(formatCep(e.target.value))}
-                          onBlur={(e) => {
-                            field.onBlur();
-                            handleCepLookup(e.target.value);
-                          }}
-                          data-testid="input-cep"
-                        />
+                        <NotchedField label="CEP" requiredMark>
+                          <Input
+                            placeholder="00000-000"
+                            {...field}
+                            className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                            inputMode="numeric"
+                            maxLength={9}
+                            onChange={(e) => field.onChange(formatCep(e.target.value))}
+                            onBlur={(e) => {
+                              field.onBlur();
+                              handleCepLookup(e.target.value);
+                            }}
+                            data-testid="input-cep"
+                          />
+                        </NotchedField>
                       </FormControl>
                       <FormDescription>
                         {isLookingUpCep ? "Buscando informações..." : "A zona bioclimática será determinada automaticamente"}
@@ -385,15 +390,16 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
                   name="bioclimaticZone"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Zona Bioclimática</FormLabel>
                       <FormControl>
-                        <Input
-                          placeholder="Determinada automaticamente"
-                          {...field}
-                          readOnly
-                          className="bg-slate-100"
-                          data-testid="input-bioclimatic-zone"
-                        />
+                        <NotchedField label="Zona Bioclimática">
+                          <Input
+                            placeholder="Determinada automaticamente"
+                            {...field}
+                            readOnly
+                            className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                            data-testid="input-bioclimatic-zone"
+                          />
+                        </NotchedField>
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -406,41 +412,42 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
                 name="address"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Endereço Completo *</FormLabel>
                     <FormControl>
-                      <Input
-                        placeholder="Rua, número, bairro, cidade, estado"
-                        {...field}
-                        className="bg-slate-50 focus:bg-white transition-colors"
-                        data-testid="input-address"
-                      />
+                        <NotchedField label="Endereço Completo" requiredMark>
+                        <Input
+                          placeholder="Rua, número, bairro, cidade, estado"
+                          {...field}
+                          className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                          data-testid="input-address"
+                        />
+                      </NotchedField>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
             </div>
-          </div>
 
           {/* Características Físicas */}
-          <div className="rounded-2xl border bg-white/60 backdrop-blur p-5 md:p-6 shadow-sm">
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <FormField
                   control={form.control}
                   name="totalArea"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Área Total Construída (m²) *</FormLabel>
                       <FormControl>
-                        <Input 
-                          type="number" 
-                          step="0.01" 
-                          min="1" 
-                          placeholder="0.00" 
-                          {...field}
-                          data-testid="input-total-area"
-                        />
+                        <NotchedField label="Área Total Construída (m²)" requiredMark>
+                          <Input 
+                            type="number" 
+                            step="0.01" 
+                            min="1" 
+                            placeholder="0.00" 
+                            {...field}
+                            className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                            data-testid="input-total-area"
+                          />
+                        </NotchedField>
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -452,16 +459,18 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
                   name="floors"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Número de Pavimentos *</FormLabel>
                       <FormControl>
-                        <Input 
-                          type="number" 
-                          min="1" 
-                          max="50" 
-                          placeholder="1" 
-                          {...field}
-                          data-testid="input-floors"
-                        />
+                        <NotchedField label="Número de Pavimentos" requiredMark>
+                          <Input 
+                            type="number" 
+                            min="1" 
+                            max="50" 
+                            placeholder="1" 
+                            {...field}
+                            className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                            data-testid="input-floors"
+                          />
+                        </NotchedField>
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -473,15 +482,17 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
                   name="units"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Número de Unidades</FormLabel>
                       <FormControl>
-                        <Input 
-                          type="number" 
-                          min="1" 
-                          placeholder="1" 
-                          {...field}
-                          data-testid="input-units"
-                        />
+                        <NotchedField label="Número de Unidades">
+                          <Input 
+                            type="number" 
+                            min="1" 
+                            placeholder="1" 
+                            {...field}
+                            className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                            data-testid="input-units"
+                          />
+                        </NotchedField>
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -489,30 +500,31 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
                 />
               </div>
             </div>
-          </div>
 
           {/* Caracterização do Entorno */}
-          <div className="rounded-2xl border bg-white/60 backdrop-blur p-5 md:p-6 shadow-sm">
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
                   name="noiseClassId"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Classe de Ruído do Entorno *</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value ? String(field.value) : undefined}>
-                        <FormControl>
-                          <SelectTrigger data-testid="select-noise-class">
-                            <SelectValue placeholder="Selecione a classe" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {(noiseClasses || []).filter((t:any)=>t.isActive!==false).map((t:any)=> (
-                            <SelectItem key={t.id} value={String(t.id)}>{t.label}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <FormControl>
+                        <NotchedField label="Classe de Ruído do Entorno" requiredMark>
+                          <Select onValueChange={field.onChange} defaultValue={field.value ? String(field.value) : undefined}>
+                            <FormControl>
+                              <SelectTrigger data-testid="select-noise-class" className="border-0 bg-transparent shadow-none focus:ring-0 focus:ring-offset-0">
+                                <SelectValue placeholder="Selecione a classe" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {(noiseClasses || []).filter((t:any)=>t.isActive!==false).map((t:any)=> (
+                                <SelectItem key={t.id} value={String(t.id)}>{t.label}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </NotchedField>
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -523,26 +535,28 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
                   name="aggressivenessClassId"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Classe de Agressividade Ambiental *</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value ? String(field.value) : undefined}>
-                        <FormControl>
-                          <SelectTrigger data-testid="select-aggressiveness-class">
-                            <SelectValue placeholder="Selecione a classe" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {(aggressiveness || []).filter((t:any)=>t.isActive!==false).map((t:any)=> (
-                            <SelectItem key={t.id} value={String(t.id)}>{t.label}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <FormControl>
+                        <NotchedField label="Classe de Agressividade Ambiental" requiredMark>
+                          <Select onValueChange={field.onChange} defaultValue={field.value ? String(field.value) : undefined}>
+                            <FormControl>
+                              <SelectTrigger data-testid="select-aggressiveness-class" className="border-0 bg-transparent shadow-none focus:ring-0 focus:ring-offset-0">
+                                <SelectValue placeholder="Selecione a classe" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {(aggressiveness || []).filter((t:any)=>t.isActive!==false).map((t:any)=> (
+                                <SelectItem key={t.id} value={String(t.id)}>{t.label}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </NotchedField>
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
               </div>
             </div>
-          </div>
 
           {/* AÇÕES */}
           <div className="flex items-center justify-end gap-3">

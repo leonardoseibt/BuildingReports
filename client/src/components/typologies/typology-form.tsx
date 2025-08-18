@@ -3,6 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { NotchedField } from "@/components/ui/notched-field";
 import { Button } from "@/components/ui/button";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -47,24 +48,30 @@ export default function TypologyForm({ initialItem, onSuccess, onCancel }: { ini
         <div className="rounded-2xl border bg-white/80 backdrop-blur px-5 py-4 md:px-6 md:py-5 shadow-sm">
           <h2 className="text-xl font-semibold tracking-tight text-slate-900">{initialItem ? 'Editar Tipologia' : 'Nova Tipologia'}</h2>
         </div>
-        <div className="rounded-2xl border bg-white/60 backdrop-blur p-5 md:p-6 shadow-sm">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <FormField name="code" control={form.control} render={({ field }) => (
-              <FormItem className="md:col-span-1">
-                <FormLabel>Código *</FormLabel>
-                <FormControl><Input placeholder="unifamiliar" {...field} /></FormControl>
-                <FormMessage />
-              </FormItem>
-            )} />
-            <FormField name="label" control={form.control} render={({ field }) => (
-              <FormItem className="md:col-span-2">
-                <FormLabel>Descrição *</FormLabel>
-                <FormControl><Input placeholder="Unifamiliar" {...field} /></FormControl>
-                <FormMessage />
-              </FormItem>
-            )} />
-          </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <FormField name="code" control={form.control} render={({ field }) => (
+            <FormItem className="md:col-span-1">
+              <FormControl>
+                <NotchedField label="Código" requiredMark>
+                  <Input placeholder="unifamiliar" {...field} className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" />
+                </NotchedField>
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )} />
+          <FormField name="label" control={form.control} render={({ field }) => (
+            <FormItem className="md:col-span-2">
+              <FormControl>
+                <NotchedField label="Descrição" requiredMark>
+                  <Input placeholder="Unifamiliar" {...field} className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" />
+                </NotchedField>
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )} />
         </div>
+
         <div className="flex justify-end gap-2">
           <Button type="button" variant="outline" onClick={onCancel}>Cancelar</Button>
           <Button type="submit" disabled={mutation.isPending}>{mutation.isPending ? 'Salvando…' : 'Salvar'}</Button>

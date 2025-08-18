@@ -14,6 +14,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { NotchedField } from "@/components/ui/notched-field";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { IdCard, MapPin, Mail, Phone, Loader2, User2 } from "lucide-react";
@@ -299,19 +300,19 @@ export default function TechnicianForm({ onSuccess, onCancel, initialTech }: Tec
           </div>
 
           {/* CAMPOS - DADOS PROFISSIONAIS */}
-          <div className="rounded-2xl border bg-white/60 backdrop-blur p-5 md:p-6 shadow-sm">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
                 name="fullName"
                 control={form.control}
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Nome completo *</FormLabel>
                     <FormControl>
-                      <div className="relative">
-                        <User2 className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                        <Input {...field} placeholder="Nome do profissional" autoComplete="off" className="pl-9 bg-slate-50 focus:bg-white transition-colors" />
-                      </div>
+                      <NotchedField label="Nome completo" requiredMark>
+                        <div className="relative">
+                          <User2 className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                          <Input {...field} placeholder="Nome do profissional" autoComplete="off" className="pl-9 bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" />
+                        </div>
+                      </NotchedField>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -322,15 +323,16 @@ export default function TechnicianForm({ onSuccess, onCancel, initialTech }: Tec
                 control={form.control}
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>CPF/CNPJ *</FormLabel>
                     <FormControl>
-                      <Input
-                        {...field}
-                        placeholder="Informe CPF ou CNPJ"
-                        inputMode="numeric"
-                        onChange={(e) => field.onChange(formatCpfCnpj(e.target.value))}
-                        className="bg-slate-50 focus:bg-white transition-colors"
-                      />
+                      <NotchedField label="CPF/CNPJ" requiredMark>
+                        <Input
+                          {...field}
+                          placeholder="Informe CPF ou CNPJ"
+                          inputMode="numeric"
+                          onChange={(e) => field.onChange(formatCpfCnpj(e.target.value))}
+                          className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                        />
+                      </NotchedField>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -341,12 +343,13 @@ export default function TechnicianForm({ onSuccess, onCancel, initialTech }: Tec
                 control={form.control}
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>CREA/CAU *</FormLabel>
                     <FormControl>
-                      <div className="relative">
-                        <IdCard className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                        <Input {...field} placeholder="Número do registro" autoComplete="off" className="pl-9 bg-slate-50 focus:bg-white transition-colors" />
-                      </div>
+                      <NotchedField label="CREA/CAU" requiredMark>
+                        <div className="relative">
+                          <IdCard className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                          <Input {...field} placeholder="Número do registro" autoComplete="off" className="pl-9 bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" />
+                        </div>
+                      </NotchedField>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -357,19 +360,22 @@ export default function TechnicianForm({ onSuccess, onCancel, initialTech }: Tec
                 control={form.control}
                 render={({ field }) => (
                   <FormItem>
-        <FormLabel>UF do Registro *</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger className="bg-slate-50 focus:bg-white transition-colors">
-                          <SelectValue placeholder="Selecione a UF" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {UF_OPTIONS.map((uf) => (
-                          <SelectItem key={uf} value={uf}>{uf}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+        <FormControl>
+          <NotchedField label="UF do Registro" requiredMark>
+      <Select onValueChange={field.onChange} value={field.value}>
+              <FormControl>
+        <SelectTrigger className="border-0 bg-transparent shadow-none focus:ring-0 focus:ring-offset-0">
+                  <SelectValue placeholder="Selecione a UF" />
+                </SelectTrigger>
+              </FormControl>
+              <SelectContent>
+                {UF_OPTIONS.map((uf) => (
+                  <SelectItem key={uf} value={uf}>{uf}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </NotchedField>
+        </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -379,31 +385,31 @@ export default function TechnicianForm({ onSuccess, onCancel, initialTech }: Tec
                 control={form.control}
                 render={({ field }) => (
                   <FormItem className="md:col-span-2">
-                    <FormLabel>Empresa</FormLabel>
                     <FormControl>
-                      <Input {...field} placeholder="Opcional" autoComplete="organization" className="bg-slate-50 focus:bg-white transition-colors" />
+                      <NotchedField label="Empresa">
+                        <Input {...field} placeholder="Opcional" autoComplete="organization" className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" />
+                      </NotchedField>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-            </div>
           </div>
 
           {/* CAMPOS - CONTATO E ENDEREÇO */}
-          <div className="rounded-2xl border bg-white/60 backdrop-blur p-5 md:p-6 shadow-sm">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
                 name="email"
                 control={form.control}
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Email *</FormLabel>
                     <FormControl>
-                      <div className="relative">
-                        <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                        <Input type="email" {...field} placeholder="email@exemplo.com" className="pl-9 bg-slate-50 focus:bg-white transition-colors" autoComplete="off" />
-                      </div>
+                      <NotchedField label="Email" requiredMark>
+                        <div className="relative">
+                          <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                          <Input type="email" {...field} placeholder="email@exemplo.com" className="pl-9 bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" autoComplete="off" />
+                        </div>
+                      </NotchedField>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -414,20 +420,21 @@ export default function TechnicianForm({ onSuccess, onCancel, initialTech }: Tec
                 control={form.control}
                 render={({ field }) => (
                   <FormItem>
-        <FormLabel>Telefone *</FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                        <Phone className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                        <Input
-                          {...field}
-                          placeholder="(00) 00000-0000"
-                          className="pl-9 bg-slate-50 focus:bg-white transition-colors"
-                          inputMode="tel"
-                          maxLength={15}
-                          onChange={(e) => field.onChange(formatPhoneBR(e.target.value))}
-                        />
-                      </div>
-                    </FormControl>
+        <FormControl>
+          <NotchedField label="Telefone" requiredMark>
+            <div className="relative">
+              <Phone className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <Input
+                {...field}
+                placeholder="(00) 00000-0000"
+                className="pl-9 bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                inputMode="tel"
+                maxLength={15}
+                onChange={(e) => field.onChange(formatPhoneBR(e.target.value))}
+              />
+            </div>
+          </NotchedField>
+        </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -437,23 +444,24 @@ export default function TechnicianForm({ onSuccess, onCancel, initialTech }: Tec
                 control={form.control}
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>CEP</FormLabel>
                     <FormControl>
-                      <div className="relative">
-                        <MapPin className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                        <Input
-                          {...field}
-                          placeholder="00000-000"
-                          className="pl-9 bg-slate-50 focus:bg-white transition-colors"
-                          inputMode="numeric"
-                          maxLength={9}
-                          onChange={(e) => field.onChange(formatCep(e.target.value))}
-                          onBlur={(e) => {
-                            field.onBlur();
-                            handleCepLookup(e.target.value);
-                          }}
-                        />
-                      </div>
+                      <NotchedField label="CEP">
+                        <div className="relative">
+                          <MapPin className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                          <Input
+                            {...field}
+                            placeholder="00000-000"
+                            className="pl-9 bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                            inputMode="numeric"
+                            maxLength={9}
+                            onChange={(e) => field.onChange(formatCep(e.target.value))}
+                            onBlur={(e) => {
+                              field.onBlur();
+                              handleCepLookup(e.target.value);
+                            }}
+                          />
+                        </div>
+                      </NotchedField>
                     </FormControl>
                     <FormDescription>
                       {isLookingUpCep
@@ -469,22 +477,23 @@ export default function TechnicianForm({ onSuccess, onCancel, initialTech }: Tec
                 control={form.control}
                 render={({ field }) => (
                   <FormItem className="md:col-span-2">
-                    <FormLabel>Endereço</FormLabel>
                     <FormControl>
-                      <Input
-                        {...field}
-                        placeholder="Rua, bairro"
-                        autoComplete="street-address"
-                        className="bg-slate-50 focus:bg-white transition-colors"
-                        onBlur={(e) => {
-                          field.onBlur();
-                          const num = form.getValues("addressNumber") || "";
-                          const merged = mergeAddressWithNumber(e.currentTarget.value, num);
-                          if (merged !== e.currentTarget.value) {
-                            form.setValue("address", merged, { shouldDirty: true });
-                          }
-                        }}
-                      />
+                      <NotchedField label="Endereço">
+                        <Input
+                          {...field}
+                          placeholder="Rua, bairro"
+                          autoComplete="street-address"
+                          className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                          onBlur={(e) => {
+                            field.onBlur();
+                            const num = form.getValues("addressNumber") || "";
+                            const merged = mergeAddressWithNumber(e.currentTarget.value, num);
+                            if (merged !== e.currentTarget.value) {
+                              form.setValue("address", merged, { shouldDirty: true });
+                            }
+                          }}
+                        />
+                      </NotchedField>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -492,38 +501,39 @@ export default function TechnicianForm({ onSuccess, onCancel, initialTech }: Tec
               />
 
               {/* Número, Cidade e UF na mesma linha */}
-              <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-12 gap-5">
+              <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-12 gap-4">
                 <FormField
                   name="addressNumber"
                   control={form.control}
                   render={({ field }) => (
                     <FormItem className="md:col-span-2">
-                      <FormLabel>Número</FormLabel>
                       <FormControl>
-                        <Input
-                          {...field}
-                          placeholder="Número"
-                          inputMode="numeric"
-                          className="bg-slate-50 focus:bg-white transition-colors"
-                          onChange={(e) => {
-                            field.onChange(e);
-                            const currentNum = e.currentTarget.value;
-                            const currentAddress = form.getValues("address") || "";
-                            const merged = mergeAddressWithNumber(currentAddress, currentNum);
-                            if (merged !== currentAddress) {
-                              form.setValue("address", merged, { shouldDirty: true });
-                            }
-                          }}
-                          onBlur={(e) => {
-                            field.onBlur();
-                            const currentNum = e.currentTarget.value;
-                            const currentAddress = form.getValues("address") || "";
-                            const merged = mergeAddressWithNumber(currentAddress, currentNum);
-                            if (merged !== currentAddress) {
-                              form.setValue("address", merged, { shouldDirty: true });
-                            }
-                          }}
-                        />
+                        <NotchedField label="Número">
+                          <Input
+                            {...field}
+                            placeholder="Número"
+                            inputMode="numeric"
+                            className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                            onChange={(e) => {
+                              field.onChange(e);
+                              const currentNum = e.currentTarget.value;
+                              const currentAddress = form.getValues("address") || "";
+                              const merged = mergeAddressWithNumber(currentAddress, currentNum);
+                              if (merged !== currentAddress) {
+                                form.setValue("address", merged, { shouldDirty: true });
+                              }
+                            }}
+                            onBlur={(e) => {
+                              field.onBlur();
+                              const currentNum = e.currentTarget.value;
+                              const currentAddress = form.getValues("address") || "";
+                              const merged = mergeAddressWithNumber(currentAddress, currentNum);
+                              if (merged !== currentAddress) {
+                                form.setValue("address", merged, { shouldDirty: true });
+                              }
+                            }}
+                          />
+                        </NotchedField>
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -534,9 +544,10 @@ export default function TechnicianForm({ onSuccess, onCancel, initialTech }: Tec
                   control={form.control}
                   render={({ field }) => (
                     <FormItem className="md:col-span-8">
-                      <FormLabel>Cidade</FormLabel>
                       <FormControl>
-                        <Input {...field} autoComplete="address-level2" className="bg-slate-50 focus:bg-white transition-colors" />
+                        <NotchedField label="Cidade">
+                          <Input {...field} autoComplete="address-level2" className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" />
+                        </NotchedField>
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -547,19 +558,22 @@ export default function TechnicianForm({ onSuccess, onCancel, initialTech }: Tec
                   control={form.control}
                   render={({ field }) => (
                     <FormItem className="md:col-span-2">
-                      <FormLabel>UF</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger className="bg-slate-50 focus:bg-white transition-colors">
-                            <SelectValue placeholder="UF" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {UF_OPTIONS.map((uf) => (
-                            <SelectItem key={uf} value={uf}>{uf}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <FormControl>
+                        <NotchedField label="UF">
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger className="border-0 bg-transparent shadow-none focus:ring-0 focus:ring-offset-0">
+                                <SelectValue placeholder="UF" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {UF_OPTIONS.map((uf) => (
+                                <SelectItem key={uf} value={uf}>{uf}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </NotchedField>
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -570,15 +584,15 @@ export default function TechnicianForm({ onSuccess, onCancel, initialTech }: Tec
                 control={form.control}
                 render={({ field }) => (
                   <FormItem className="md:col-span-2">
-                    <FormLabel>Observações</FormLabel>
                     <FormControl>
-                      <Input {...field} placeholder="Notas adicionais" autoComplete="off" className="bg-slate-50 focus:bg-white transition-colors" />
+                      <NotchedField label="Observações">
+                        <Input {...field} placeholder="Notas adicionais" autoComplete="off" className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" />
+                      </NotchedField>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-            </div>
           </div>
 
           <div className="flex items-center justify-end gap-3">
