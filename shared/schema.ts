@@ -66,15 +66,16 @@ export const buildings = pgTable("buildings", {
   userId: integer("user_id").references(() => users.id).notNull(),
   technicianId: integer("technician_id").references(() => technicians.id),
   name: text("name").notNull(),
-  typology: text("typology").notNull(),
+  // New FKs to master tables
+  typologyId: integer("typology_id").references(() => typologies.id),
   cep: varchar("cep", { length: 9 }).notNull(),
   address: text("address").notNull(),
   bioclimaticZone: bioclimaticZoneEnum("bioclimatic_zone").notNull(),
   totalArea: decimal("total_area", { precision: 10, scale: 2 }).notNull(),
   floors: integer("floors").notNull(),
   units: integer("units").default(1),
-  noiseClass: text("noise_class").notNull(),
-  aggressivenessClass: text("aggressiveness_class").notNull(),
+  noiseClassId: integer("noise_class_id").references(() => noiseClasses.id),
+  aggressivenessClassId: integer("aggressiveness_class_id").references(() => aggressivenessClasses.id),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -200,7 +201,7 @@ export const buildingsRelations = relations(buildings, ({ one, many }) => ({
     references: [users.id],
   }),
   technician: one(technicians, {
-    fields: [buildings.technicianId!],
+  fields: [buildings.technicianId],
     references: [technicians.id],
   }),
   structuralSystem: one(structuralSystems),
@@ -279,9 +280,9 @@ export const updateUserSchema = z.object({
 
 export const insertBuildingSchema = createInsertSchema(buildings)
   .extend({
-  totalArea: decimalInput,
-  floors: intInput,
-  units: intInput.optional(),
+    totalArea: decimalInput,
+    floors: intInput,
+    units: intInput.optional(),
   });
 
 // Allow partial updates on buildings (no userId changes through API)

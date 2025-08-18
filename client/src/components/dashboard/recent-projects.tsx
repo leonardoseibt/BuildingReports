@@ -100,7 +100,7 @@ export default function RecentProjects() {
                       {building.name}
                     </h4>
                     <p className="text-sm text-slate-500" data-testid={`text-project-location-${building.id}`}>
-                      {building.bioclimaticZone} • {building.typology}
+                      {building.bioclimaticZone} • {(building as any).typologyLabel || (building as any).typologyCode || '—'}
                     </p>
                     <p className="text-xs text-slate-400" data-testid={`text-project-time-${building.id}`}>
                       Atualizado {getRelativeTime(building.createdAt!)}

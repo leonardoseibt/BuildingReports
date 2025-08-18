@@ -208,7 +208,9 @@ export function calculateAcousticPerformance(
   building: Building,
   sealingSystem: SealingSystem | null
 ): AcousticPerformanceResult {
-  const noiseClassLimit = ACOUSTIC_LIMITS[building.noiseClass] || 45;
+  const nc: any = (building as any);
+  const noiseKey = nc.noiseClassCode || nc.noiseClass || '';
+  const noiseClassLimit = ACOUSTIC_LIMITS[noiseKey] || 45;
   
   // Extract acoustic properties from sealing system
   const acousticProps = sealingSystem?.acousticProperties as any;
@@ -239,9 +241,9 @@ export function calculateAcousticPerformance(
   }
   
   // Noise class specific recommendations
-  if (building.noiseClass === 'classe4') {
+  if (noiseKey === 'classe4') {
     recommendations.push("Área recreacional: atenção especial a ruídos de impacto");
-  } else if (building.noiseClass === 'classe3') {
+  } else if (noiseKey === 'classe3') {
     recommendations.push("Área comercial: considerar horários de funcionamento");
   }
   
@@ -295,7 +297,9 @@ export function calculateWaterTightness(
   }
   
   // Additional points for building type
-  if (building.typology === 'multifamiliar') {
+  const typ: any = (building as any);
+  const typCodeOrLabel = typ.typologyCode || typ.typology || typ.typologyLabel || '';
+  if (typCodeOrLabel === 'multifamiliar') {
     waterproofingScore += 25;
     recommendations.push("Edificação multifamiliar: verificar detalhes de fachada");
   }
@@ -338,6 +342,8 @@ export function calculateFireSafety(
   let materialScore = 60; // Base score
   let escapeRouteScore = 60; // Base score
   const recommendations: string[] = [];
+  const typFS: any = (building as any);
+  const typCodeOrLabel = typFS.typologyCode || typFS.typology || typFS.typologyLabel || '';
   
   // Evaluate based on building characteristics
   if (building.floors <= 2) {
@@ -352,7 +358,7 @@ export function calculateFireSafety(
   }
   
   // Evaluate based on typology
-  if (building.typology === 'comercial' || building.typology === 'institucional') {
+  if (typCodeOrLabel === 'comercial' || typCodeOrLabel === 'institucional') {
     materialScore += 20;
     escapeRouteScore += 20;
     recommendations.push("Uso não residencial: exigências especiais de segurança");

@@ -51,6 +51,34 @@
 				"$tsc"
 			],
 			"group": "build"
+		},
+		{
+			"label": "db:migrate:master-tables",
+			"type": "shell",
+			"command": "npx",
+			"args": [
+				"tsx",
+				"scripts/run-sql.ts",
+				"scripts/sql/20250817_master_tables_for_building_attributes.sql"
+			],
+			"problemMatcher": [
+				"$tsc"
+			],
+			"group": "build"
+		},
+		{
+			"label": "db:migrate:buildings-fk",
+			"type": "shell",
+			"command": "npx",
+			"args": [
+				"tsx",
+				"scripts/run-sql.ts",
+				"scripts/sql/20250818_add_master_fk_to_buildings.sql"
+			],
+			"problemMatcher": [
+				"$tsc"
+			],
+			"group": "build"
 		}
 	]
 }

@@ -196,46 +196,125 @@ export class DatabaseStorage implements IStorage {
 
   // Building operations
   async createBuilding(building: InsertBuilding): Promise<Building> {
-    const [newBuilding] = await db.insert(buildings).values({
+    // Normalize: assign provided values and ensure FK ids exist
+    const values: any = {
       name: building.name,
       userId: building.userId,
-  technicianId: (building as any).technicianId,
-      typology: building.typology,
+      technicianId: (building as any).technicianId,
       cep: building.cep,
       address: building.address,
       bioclimaticZone: building.bioclimaticZone,
       totalArea: building.totalArea,
       floors: building.floors,
       units: building.units,
-      noiseClass: building.noiseClass,
-      aggressivenessClass: building.aggressivenessClass,
-    }).returning();
+    };
+    if ((building as any).typologyId) {
+      const [t] = await db.select().from(typologies).where(eq(typologies.id, (building as any).typologyId));
+      if (t) { values.typologyId = t.id; }
+    }
+    if ((building as any).noiseClassId) {
+      const [n] = await db.select().from(noiseClasses).where(eq(noiseClasses.id, (building as any).noiseClassId));
+      if (n) { values.noiseClassId = n.id; }
+    }
+    if ((building as any).aggressivenessClassId) {
+      const [a] = await db.select().from(aggressivenessClasses).where(eq(aggressivenessClasses.id, (building as any).aggressivenessClassId));
+      if (a) { values.aggressivenessClassId = a.id; }
+    }
+    const [newBuilding] = await db.insert(buildings).values(values).returning();
     return newBuilding;
   }
 
   async getBuildingsByUser(userId: number): Promise<Building[]> {
     return await db
-      .select()
+      .select({
+        id: buildings.id,
+        userId: buildings.userId,
+        technicianId: buildings.technicianId,
+        name: buildings.name,
+        typologyId: buildings.typologyId,
+        noiseClassId: buildings.noiseClassId,
+        aggressivenessClassId: buildings.aggressivenessClassId,
+        cep: buildings.cep,
+        address: buildings.address,
+        bioclimaticZone: buildings.bioclimaticZone,
+        totalArea: buildings.totalArea,
+        floors: buildings.floors,
+        units: buildings.units,
+        createdAt: buildings.createdAt,
+        updatedAt: buildings.updatedAt,
+        typologyCode: typologies.code,
+        typologyLabel: typologies.label,
+        noiseClassCode: noiseClasses.code,
+        noiseClassLabel: noiseClasses.label,
+        aggressivenessClassCode: aggressivenessClasses.code,
+        aggressivenessClassLabel: aggressivenessClasses.label,
+      })
       .from(buildings)
+      .leftJoin(typologies, eq(buildings.typologyId, typologies.id))
+      .leftJoin(noiseClasses, eq(buildings.noiseClassId, noiseClasses.id))
+      .leftJoin(aggressivenessClasses, eq(buildings.aggressivenessClassId, aggressivenessClasses.id))
       .where(eq(buildings.userId, userId))
-      .orderBy(desc(buildings.createdAt));
+      .orderBy(desc(buildings.createdAt)) as any;
   }
 
   async getBuilding(id: number): Promise<Building | undefined> {
-    const [building] = await db
-      .select()
+    const [row] = await db
+      .select({
+        id: buildings.id,
+        userId: buildings.userId,
+        technicianId: buildings.technicianId,
+        name: buildings.name,
+        typologyId: buildings.typologyId,
+        noiseClassId: buildings.noiseClassId,
+        aggressivenessClassId: buildings.aggressivenessClassId,
+        cep: buildings.cep,
+        address: buildings.address,
+        bioclimaticZone: buildings.bioclimaticZone,
+        totalArea: buildings.totalArea,
+        floors: buildings.floors,
+        units: buildings.units,
+        createdAt: buildings.createdAt,
+        updatedAt: buildings.updatedAt,
+        typologyCode: typologies.code,
+        typologyLabel: typologies.label,
+        noiseClassCode: noiseClasses.code,
+        noiseClassLabel: noiseClasses.label,
+        aggressivenessClassCode: aggressivenessClasses.code,
+        aggressivenessClassLabel: aggressivenessClasses.label,
+      })
       .from(buildings)
+      .leftJoin(typologies, eq(buildings.typologyId, typologies.id))
+      .leftJoin(noiseClasses, eq(buildings.noiseClassId, noiseClasses.id))
+      .leftJoin(aggressivenessClasses, eq(buildings.aggressivenessClassId, aggressivenessClasses.id))
       .where(eq(buildings.id, id));
-    return building;
+    return row as any;
   }
 
   async updateBuilding(id: number, building: Partial<InsertBuilding>): Promise<Building> {
     const { userId: _ignoreUserId, ...rest } = building as any;
-    const [updatedBuilding] = await db
-      .update(buildings)
-      .set({ ...(rest as any), updatedAt: new Date() })
-      .where(eq(buildings.id, id))
-      .returning();
+    const updates: any = { updatedAt: new Date() };
+    if (rest.name != null) updates.name = rest.name;
+    if (rest.technicianId !== undefined) updates.technicianId = rest.technicianId;
+    if (rest.cep != null) updates.cep = rest.cep;
+    if (rest.address != null) updates.address = rest.address;
+    if (rest.bioclimaticZone != null) updates.bioclimaticZone = rest.bioclimaticZone;
+    if (rest.totalArea != null) updates.totalArea = rest.totalArea;
+    if (rest.floors != null) updates.floors = rest.floors;
+    if (rest.units != null) updates.units = rest.units;
+    if (rest.typologyId != null) {
+      const [t] = await db.select().from(typologies).where(eq(typologies.id, rest.typologyId));
+      if (t) { updates.typologyId = t.id; }
+    }
+    if (rest.noiseClassId != null) {
+      const [n] = await db.select().from(noiseClasses).where(eq(noiseClasses.id, rest.noiseClassId));
+      if (n) { updates.noiseClassId = n.id; }
+    }
+    if (rest.aggressivenessClassId != null) {
+      const [a] = await db.select().from(aggressivenessClasses).where(eq(aggressivenessClasses.id, rest.aggressivenessClassId));
+      if (a) { updates.aggressivenessClassId = a.id; }
+    }
+
+    const [updatedBuilding] = await db.update(buildings).set(updates).where(eq(buildings.id, id)).returning();
     return updatedBuilding;
   }
 

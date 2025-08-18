@@ -22,7 +22,7 @@ const buildingFormSchema = z.object({
   technicianId: z.union([z.string(), z.number()]).transform((v) =>
     typeof v === 'string' ? Number(v) : v
   ).refine((v) => !!v, 'Responsável técnico é obrigatório'),
-  typology: z.string().min(1, "Tipologia é obrigatória"),
+  typologyId: z.union([z.string(), z.number()]).transform((v)=> typeof v==='string'? Number(v): v).optional(),
   cep: z.string()
     .min(8, "CEP deve ter 8 dígitos")
     .max(9, "CEP deve ter 8 dígitos")
@@ -40,8 +40,8 @@ const buildingFormSchema = z.object({
   units: z.string()
     .optional()
     .transform((val) => val ? parseInt(val, 10) : 1),
-  noiseClass: z.string().min(1, "Classe de ruído é obrigatória"),
-  aggressivenessClass: z.string().min(1, "Classe de agressividade é obrigatória"),
+  noiseClassId: z.union([z.string(), z.number()]).transform((v)=> typeof v==='string'? Number(v): v).optional(),
+  aggressivenessClassId: z.union([z.string(), z.number()]).transform((v)=> typeof v==='string'? Number(v): v).optional(),
 });
 
 type BuildingFormData = z.infer<typeof buildingFormSchema>;
@@ -76,15 +76,15 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
     defaultValues: {
       name: '',
   technicianId: undefined as any,
-  typology: undefined as any,
+  typologyId: undefined as any,
       cep: '',
       address: '',
       bioclimaticZone: undefined as any,
       totalArea: 0 as any,
       floors: 0 as any,
       units: 1 as any,
-  noiseClass: undefined as any,
-  aggressivenessClass: undefined as any,
+  noiseClassId: undefined as any,
+  aggressivenessClassId: undefined as any,
     },
     mode: "onSubmit",
   });
@@ -93,25 +93,25 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
   useEffect(() => {
     if (!building) {
       form.reset({
-  name: '', technicianId: undefined as any, typology: undefined as any,
+  name: '', technicianId: undefined as any, typologyId: undefined as any,
         cep: '', address: '', bioclimaticZone: undefined as any,
-        totalArea: 0 as any, floors: 0 as any, units: 1 as any,
-        noiseClass: undefined as any, aggressivenessClass: undefined as any,
+  totalArea: 0 as any, floors: 0 as any, units: 1 as any,
+  noiseClassId: undefined as any, aggressivenessClassId: undefined as any,
       });
       return;
     }
     form.reset({
       name: building.name || '',
   technicianId: (building as any).technicianId as any,
-      typology: building.typology as any,
+  typologyId: (building as any).typologyId ?? undefined,
       cep: building.cep || '',
       address: building.address || '',
       bioclimaticZone: (building.bioclimaticZone as any) || undefined,
       totalArea: String(building.totalArea) as any,
       floors: String(building.floors) as any,
       units: String(building.units ?? 1) as any,
-      noiseClass: (building.noiseClass as any) || undefined,
-      aggressivenessClass: (building.aggressivenessClass as any) || undefined,
+  noiseClassId: (building as any).noiseClassId ?? undefined,
+  aggressivenessClassId: (building as any).aggressivenessClassId ?? undefined,
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [building]);
@@ -267,11 +267,11 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
                 {/* Tipologia Habitacional moves to position 2 */}
                 <FormField
                   control={form.control}
-                  name="typology"
+                  name="typologyId"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Tipologia Habitacional *</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select onValueChange={field.onChange} defaultValue={field.value ? String(field.value) : undefined}>
                         <FormControl>
                           <SelectTrigger data-testid="select-typology">
                             <SelectValue placeholder="Selecione a tipologia" />
@@ -279,7 +279,7 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
                         </FormControl>
                         <SelectContent>
                           {(typologies || []).filter((t:any)=>t.isActive!==false).map((t:any)=> (
-                            <SelectItem key={t.id} value={t.code}>{t.label}</SelectItem>
+                            <SelectItem key={t.id} value={String(t.id)}>{t.label}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
@@ -497,11 +497,11 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <FormField
                   control={form.control}
-                  name="noiseClass"
+                  name="noiseClassId"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Classe de Ruído do Entorno *</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select onValueChange={field.onChange} defaultValue={field.value ? String(field.value) : undefined}>
                         <FormControl>
                           <SelectTrigger data-testid="select-noise-class">
                             <SelectValue placeholder="Selecione a classe" />
@@ -509,7 +509,7 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
                         </FormControl>
                         <SelectContent>
                           {(noiseClasses || []).filter((t:any)=>t.isActive!==false).map((t:any)=> (
-                            <SelectItem key={t.id} value={t.code}>{t.label}</SelectItem>
+                            <SelectItem key={t.id} value={String(t.id)}>{t.label}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
@@ -520,11 +520,11 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
                 
                 <FormField
                   control={form.control}
-                  name="aggressivenessClass"
+                  name="aggressivenessClassId"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Classe de Agressividade Ambiental *</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select onValueChange={field.onChange} defaultValue={field.value ? String(field.value) : undefined}>
                         <FormControl>
                           <SelectTrigger data-testid="select-aggressiveness-class">
                             <SelectValue placeholder="Selecione a classe" />
@@ -532,7 +532,7 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
                         </FormControl>
                         <SelectContent>
                           {(aggressiveness || []).filter((t:any)=>t.isActive!==false).map((t:any)=> (
-                            <SelectItem key={t.id} value={t.code}>{t.label}</SelectItem>
+                            <SelectItem key={t.id} value={String(t.id)}>{t.label}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>

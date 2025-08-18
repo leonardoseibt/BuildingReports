@@ -139,7 +139,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (!tech) return res.status(400).json({ message: 'Responsável técnico informado não existe.' });
         if (tech.userId !== userId) return res.status(403).json({ message: 'Access denied' });
       }
-      
+      // Validate master ids (if provided)
+      const { typologyId, noiseClassId, aggressivenessClassId } = buildingData as any;
+      if (typologyId) {
+        const list = await storage.listTypologies();
+        if (!list.find(t => t.id === Number(typologyId))) return res.status(400).json({ message: 'Tipologia inválida' });
+      }
+      if (noiseClassId) {
+        const list = await storage.listNoiseClasses();
+        if (!list.find(n => n.id === Number(noiseClassId))) return res.status(400).json({ message: 'Classe de ruído inválida' });
+      }
+      if (aggressivenessClassId) {
+        const list = await storage.listAggressivenessClasses();
+        if (!list.find(a => a.id === Number(aggressivenessClassId))) return res.status(400).json({ message: 'Classe de agressividade inválida' });
+      }
+
       const building = await storage.createBuilding(buildingData);
       res.json(building);
     } catch (error) {
@@ -194,6 +208,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const tech = await storage.getTechnician(Number((data as any).technicianId));
         if (!tech) return res.status(400).json({ message: 'Responsável técnico informado não existe.' });
         if (tech.userId !== Number(req.user.claims.sub)) return res.status(403).json({ message: 'Access denied' });
+      }
+      // Validate master ids (if provided)
+      const { typologyId, noiseClassId, aggressivenessClassId } = data as any;
+      if (typologyId) {
+        const list = await storage.listTypologies();
+        if (!list.find(t => t.id === Number(typologyId))) return res.status(400).json({ message: 'Tipologia inválida' });
+      }
+      if (noiseClassId) {
+        const list = await storage.listNoiseClasses();
+        if (!list.find(n => n.id === Number(noiseClassId))) return res.status(400).json({ message: 'Classe de ruído inválida' });
+      }
+      if (aggressivenessClassId) {
+        const list = await storage.listAggressivenessClasses();
+        if (!list.find(a => a.id === Number(aggressivenessClassId))) return res.status(400).json({ message: 'Classe de agressividade inválida' });
       }
       const saved = await storage.updateBuilding(id, data as any);
       res.json(saved);

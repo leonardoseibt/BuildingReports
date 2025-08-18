@@ -218,7 +218,7 @@ export default function BuildingList() {
                       <TableCell className="w-[20%] whitespace-nowrap overflow-hidden text-ellipsis max-sm:whitespace-normal" data-testid={`text-building-location-${building.id}`}>
                         <div className="flex items-center gap-1">
                           <MapPin className="w-3 h-3" />
-                          {building.bioclimaticZone} • {building.typology}
+                          {building.bioclimaticZone} • {(building as any).typologyLabel || (building as any).typologyCode || '—'}
                         </div>
                       </TableCell>
                       <TableCell className="w-[10%] text-right" data-testid={`text-building-area-${building.id}`}>
