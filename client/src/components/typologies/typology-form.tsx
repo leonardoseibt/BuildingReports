@@ -48,16 +48,16 @@ export default function TypologyForm({ initialItem, onSuccess, onCancel }: { ini
           <h2 className="text-xl font-semibold tracking-tight text-slate-900">{initialItem ? 'Editar Tipologia' : 'Nova Tipologia'}</h2>
         </div>
         <div className="rounded-2xl border bg-white/60 backdrop-blur p-5 md:p-6 shadow-sm">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <FormField name="code" control={form.control} render={({ field }) => (
-              <FormItem>
+              <FormItem className="md:col-span-1">
                 <FormLabel>Código *</FormLabel>
                 <FormControl><Input placeholder="unifamiliar" {...field} /></FormControl>
                 <FormMessage />
               </FormItem>
             )} />
             <FormField name="label" control={form.control} render={({ field }) => (
-              <FormItem>
+              <FormItem className="md:col-span-2">
                 <FormLabel>Descrição *</FormLabel>
                 <FormControl><Input placeholder="Unifamiliar" {...field} /></FormControl>
                 <FormMessage />
