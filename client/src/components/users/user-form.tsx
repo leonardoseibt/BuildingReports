@@ -4,17 +4,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-// removed unused Separator import
 
 import { Mail, Phone, User2, Lock, Loader2 } from "lucide-react";
 import { insertUserSchema, updateUserSchema } from "@shared/schema";
@@ -26,11 +18,6 @@ interface UserFormProps {
   initialUser?: { id: number; fullName: string; email: string; phone?: string | null } | null;
 }
 
-/**
- * Componente de formulário de "Novo Usuário"
- * - Visual repaginado, com header, avatar/preview e grid responsivo
- * - Mantém compatibilidade com o schema e a API já existentes
- */
 type FormValues = {
   fullName: string;
   email: string;
@@ -42,27 +29,20 @@ export default function UserForm({ onSuccess, onCancel, initialUser }: UserFormP
   const { toast } = useToast();
   const [submitting, setSubmitting] = React.useState(false);
 
-  // Helpers for BR phone formatting and sanitization
   const onlyDigits = React.useCallback((v: string) => v.replace(/\D/g, ""), []);
   const formatPhoneBR = React.useCallback((v: string) => {
     let digits = onlyDigits(v);
-    // If value starts with country code 55, strip it
     if (digits.length > 11 && digits.startsWith("55")) digits = digits.slice(2);
-    digits = digits.slice(0, 11); // cap to 11 digits
+    digits = digits.slice(0, 11);
     if (digits.length <= 2) return digits ? `(${digits}` : "";
     const ddd = digits.slice(0, 2);
     const rest = digits.slice(2);
     if (rest.length <= 4) return `(${ddd}) ${rest}`;
-    if (rest.length <= 8) {
-      // landline pattern: (00) 0000-0000
-      return `(${ddd}) ${rest.slice(0, 4)}-${rest.slice(4)}`;
-    }
-    // mobile pattern: (00) 00000-0000
+    if (rest.length <= 8) return `(${ddd}) ${rest.slice(0, 4)}-${rest.slice(4)}`;
     return `(${ddd}) ${rest.slice(0, 5)}-${rest.slice(5)}`;
   }, [onlyDigits]);
 
   const isEdit = !!initialUser?.id;
-  // Ensure PT-BR messages on the client as well
   const userSchemaClient = React.useMemo(() => {
     const base = isEdit ? updateUserSchema : insertUserSchema;
     return base.superRefine((data, ctx) => {
@@ -89,15 +69,15 @@ export default function UserForm({ onSuccess, onCancel, initialUser }: UserFormP
       password: "",
       phone: initialUser?.phone ?? "",
     },
-  mode: "onSubmit",
+    mode: "onSubmit",
   });
 
-  // Format initial phone on mount/open
   React.useEffect(() => {
     if (initialUser?.phone) {
       form.setValue("phone", formatPhoneBR(initialUser.phone));
     }
   }, [initialUser?.phone, form, formatPhoneBR]);
+
   const watchName = form.watch("fullName");
   const initials = React.useMemo(() => {
     const parts = (watchName || "").trim().split(/\s+/);
@@ -133,7 +113,6 @@ export default function UserForm({ onSuccess, onCancel, initialUser }: UserFormP
     } catch (e) {
       let description = isEdit ? "Não foi possível atualizar." : "Não foi possível cadastrar.";
       if (e instanceof Error && e.message.startsWith("409")) {
-        // Conflito de e-mail (já cadastrado)
         description = "E-mail já cadastrado.";
         form.setError("email", { message: description });
         if (form.setFocus) form.setFocus("email");
@@ -146,17 +125,15 @@ export default function UserForm({ onSuccess, onCancel, initialUser }: UserFormP
 
   return (
     <Form {...form}>
-  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6" autoComplete="off">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6" autoComplete="off">
         {/* HEADER */}
         <div className="rounded-2xl border bg-white/80 backdrop-blur px-5 py-4 md:px-6 md:py-5 shadow-sm">
           <div className="flex items-start gap-4">
-            {/* Avatar / Preview */}
             <div className="relative shrink-0">
               <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-slate-200 to-slate-100 ring-1 ring-slate-200 flex items-center justify-center overflow-hidden">
                 <span className="font-semibold text-slate-700">{initials}</span>
               </div>
             </div>
-
             <div className="flex-1">
               <h2 className="text-xl font-semibold tracking-tight text-slate-900">
                 {isEdit ? 'Editar Usuário' : 'Novo Usuário'}
@@ -168,122 +145,133 @@ export default function UserForm({ onSuccess, onCancel, initialUser }: UserFormP
           </div>
         </div>
 
-        {/* CAMPOS */}
-        <div className="rounded-2xl border bg-white/60 backdrop-blur p-5 md:p-6 shadow-sm">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <FormField
-              name="fullName"
-              control={form.control}
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Nome completo *</FormLabel>
-                  <FormControl>
-                    <div className="relative">
-                      <User2 className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                      <Input
-                        {...field}
-                        placeholder="Nome completo"
-                        className="pl-9 bg-slate-50 focus:bg-white transition-colors"
-                        autoComplete="off"
-                      />
+        {/* CAMPOS: cada campo com borda e rótulo embutido (notched) */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <FormField
+            name="fullName"
+            control={form.control}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="sr-only">Nome completo</FormLabel>
+                <FormControl>
+                  <div className="relative">
+                    <span className="absolute -top-2 left-3 px-1 text-xs font-medium text-slate-600 bg-white">Nome completo *</span>
+        <div className="rounded-xl border border-slate-300 focus-within:border-slate-400 bg-white px-2 py-1.5 transition-colors">
+                      <div className="relative">
+                        <User2 className="w-4 h-4 text-slate-400 absolute left-1.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                        <Input
+                          {...field}
+                          placeholder="Nome completo"
+          className="pl-6 bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                          autoComplete="off"
+                        />
+                      </div>
                     </div>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                  </div>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
-            <FormField
-              name="phone"
-              control={form.control}
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Telefone</FormLabel>
-                  <FormControl>
-                    <div className="relative">
-                      <Phone className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                      <Input
-                        {...field}
-                        inputMode="tel"
-                        placeholder="(00) 00000-0000"
-                        className="pl-9 bg-slate-50 focus:bg-white transition-colors"
-                        maxLength={15}
-                        onChange={(e) => {
-                          const formatted = formatPhoneBR(e.target.value);
-                          field.onChange(formatted);
-                        }}
-                      />
+          <FormField
+            name="phone"
+            control={form.control}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="sr-only">Telefone</FormLabel>
+                <FormControl>
+                  <div className="relative">
+                    <span className="absolute -top-2 left-3 px-1 text-xs font-medium text-slate-600 bg-white">Telefone</span>
+        <div className="rounded-xl border border-slate-300 focus-within:border-slate-400 bg-white px-2 py-1.5 transition-colors">
+                      <div className="relative">
+                        <Phone className="w-4 h-4 text-slate-400 absolute left-1.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                        <Input
+                          {...field}
+                          inputMode="tel"
+                          placeholder="(00) 00000-0000"
+          className="pl-6 bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                          maxLength={15}
+                          onChange={(e) => {
+                            const formatted = formatPhoneBR(e.target.value);
+                            field.onChange(formatted);
+                          }}
+                        />
+                      </div>
                     </div>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                  </div>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
-            <FormField
-              name="email"
-              control={form.control}
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Email *</FormLabel>
-                  <FormControl>
-                    <div className="relative">
-                      <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                      <Input
-                        type="email"
-                        autoComplete="off"
-                        {...field}
-                        placeholder="nome@exemplo.com"
-                        className="pl-9 bg-slate-50 focus:bg-white transition-colors"
-                      />
+          <FormField
+            name="email"
+            control={form.control}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="sr-only">Email</FormLabel>
+                <FormControl>
+                  <div className="relative">
+                    <span className="absolute -top-2 left-3 px-1 text-xs font-medium text-slate-600 bg-white">Email *</span>
+                    <div className="rounded-xl border border-slate-300 focus-within:border-slate-400 bg-white px-2 py-1.5 transition-colors">
+                      <div className="relative">
+                        <Mail className="w-4 h-4 text-slate-400 absolute left-1.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                        <Input
+                          type="email"
+                          autoComplete="off"
+                          {...field}
+                          placeholder="nome@exemplo.com"
+                          className="pl-6 bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                        />
+                      </div>
                     </div>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                  </div>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
-            <FormField
-              name="password"
-              control={form.control}
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Senha *</FormLabel>
-                  <FormControl>
-                    <div className="relative">
-                      <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                      <Input
-                        type="password"
-                        autoComplete="new-password"
-                        {...field}
-                        placeholder="••••••••"
-                        className="pl-9 bg-slate-50 focus:bg-white transition-colors"
-                      />
+          <FormField
+            name="password"
+            control={form.control}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="sr-only">Senha</FormLabel>
+                <FormControl>
+                  <div className="relative">
+                    <span className="absolute -top-2 left-3 px-1 text-xs font-medium text-slate-600 bg-white">{isEdit ? 'Senha (opcional)' : 'Senha *'}</span>
+        <div className="rounded-xl border border-slate-300 focus-within:border-slate-400 bg-white px-2 py-1.5 transition-colors">
+                      <div className="relative">
+                        <Lock className="w-4 h-4 text-slate-400 absolute left-1.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                        <Input
+                          type="password"
+                          autoComplete="new-password"
+                          {...field}
+                          placeholder="••••••••"
+          className="pl-6 bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                        />
+                      </div>
                     </div>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
+                  </div>
+                </FormControl>
+                <FormMessage />
+                {isEdit && (
+                  <p className="mt-1 text-xs text-slate-500">Deixe em branco para manter a senha atual.</p>
+                )}
+              </FormItem>
+            )}
+          />
         </div>
 
         {/* AÇÕES */}
         <div className="flex items-center justify-end gap-3">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={onCancel}
-            className="rounded-xl"
-          >
+          <Button type="button" variant="outline" onClick={onCancel} className="rounded-xl">
             Cancelar
           </Button>
-
-          <Button
-            type="submit"
-            className="min-w-32 rounded-xl"
-            disabled={submitting}
-          >
+          <Button type="submit" className="min-w-32 rounded-xl" disabled={submitting}>
             {submitting ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
