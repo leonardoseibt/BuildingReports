@@ -2,7 +2,7 @@ import express, { type Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./auth";
-import { insertBuildingSchema, updateBuildingSchema, insertStructuralSystemSchema, insertSealingSystemSchema, insertRoofingSystemSchema, insertPerformanceEvaluationSchema, insertReportSchema, insertTechnicianSchema, updateTechnicianSchema, insertUserSchema, updateUserSchema, insertTypologySchema, insertNoiseClassSchema, insertAggressivenessClassSchema } from "@shared/schema";
+import { insertBuildingSchema, updateBuildingSchema, insertStructuralSystemSchema, insertSealingSystemSchema, insertRoofingSystemSchema, insertPerformanceEvaluationSchema, insertReportSchema, insertTechnicianSchema, updateTechnicianSchema, insertUserSchema, updateUserSchema, insertTypologySchema, insertNoiseClassSchema, insertAggressivenessClassSchema, insertBioclimaticZoneSchema, insertBioclimaticZoneCoverageSchema } from "@shared/schema";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 
@@ -436,19 +436,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (data.erro) {
         return res.status(404).json({ message: "CEP not found" });
       }
-      
-      // Determine bioclimatic zone based on location
-      // This is a simplified mapping - in production, use proper geographical mapping
-      const bioclimaticZoneMap: Record<string, string> = {
-        'AC': 'ZB8', 'AL': 'ZB8', 'AP': 'ZB8', 'AM': 'ZB8', 'BA': 'ZB8',
-        'CE': 'ZB8', 'DF': 'ZB4', 'ES': 'ZB8', 'GO': 'ZB6', 'MA': 'ZB8',
-        'MT': 'ZB7', 'MS': 'ZB6', 'MG': 'ZB3', 'PA': 'ZB8', 'PB': 'ZB8',
-        'PR': 'ZB2', 'PE': 'ZB8', 'PI': 'ZB7', 'RJ': 'ZB8', 'RN': 'ZB8',
-        'RS': 'ZB2', 'RO': 'ZB8', 'RR': 'ZB8', 'SC': 'ZB2', 'SP': 'ZB3',
-        'SE': 'ZB8', 'TO': 'ZB7'
-      };
-      
-      const bioclimaticZone = bioclimaticZoneMap[data.uf] || 'ZB3';
+      // Determine bioclimatic zone based on DB coverages (city first, then UF)
+      const zoneFromDb = await storage.findBioclimaticZoneForLocation(data.uf, data.localidade);
+      const bioclimaticZone = zoneFromDb || 'ZB3';
       
       res.json({
         address: `${data.logradouro}, ${data.bairro}, ${data.localidade}, ${data.uf}`,
@@ -460,6 +450,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error looking up CEP:", error);
       res.status(500).json({ message: "Failed to lookup CEP" });
     }
+  });
+
+  // Bioclimatic Zones API
+  app.get('/api/bioclimatic-zones', isAuthenticated, async (_req, res) => {
+    try { res.json(await storage.listBioclimaticZones()); } catch { res.status(500).json({ message: 'Failed to fetch zones' }); }
+  });
+  app.post('/api/bioclimatic-zones', isAuthenticated, express.json(), async (req, res) => {
+    try { const data = insertBioclimaticZoneSchema.parse(req.body); const row = await storage.createBioclimaticZone(data as any); res.json(row); }
+    catch (error) { if (error instanceof z.ZodError) return res.status(400).json({ message: 'Validation error', errors: error.errors }); if ((error as any)?.code === '23505') return res.status(409).json({ message: 'Código já cadastrado.' }); res.status(500).json({ message: 'Failed to create zone' }); }
+  });
+  app.put('/api/bioclimatic-zones/:id', isAuthenticated, express.json(), async (req, res) => {
+    try { const id = Number(req.params.id); const data = insertBioclimaticZoneSchema.partial().parse(req.body); const row = await storage.updateBioclimaticZone(id, data as any); res.json(row); }
+    catch (error) { if (error instanceof z.ZodError) return res.status(400).json({ message: 'Validation error', errors: error.errors }); if ((error as any)?.code === '23505') return res.status(409).json({ message: 'Código já cadastrado.' }); res.status(500).json({ message: 'Failed to update zone' }); }
+  });
+  app.delete('/api/bioclimatic-zones/:id', isAuthenticated, async (req, res) => {
+    try { const id = Number(req.params.id); const ok = await storage.deleteBioclimaticZone(id); res.json({ ok }); }
+    catch (error: any) { const status = (error as any)?.status || 500; const message = (error as any)?.message || 'Failed to delete zone'; res.status(status).json({ message }); }
+  });
+  // Coverages
+  app.get('/api/bioclimatic-zones/:id/coverages', isAuthenticated, async (req, res) => {
+    try { const id = Number(req.params.id); res.json(await storage.listBioclimaticZoneCoverages(id)); }
+    catch { res.status(500).json({ message: 'Failed to fetch coverages' }); }
+  });
+  app.post('/api/bioclimatic-zones/:id/coverages', isAuthenticated, express.json(), async (req, res) => {
+    try { const id = Number(req.params.id); const data = insertBioclimaticZoneCoverageSchema.pick({ state: true, city: true }).parse(req.body); const row = await storage.createBioclimaticZoneCoverage(id, { state: (data as any).state, city: (data as any).city }); res.json(row); }
+    catch (error) { if (error instanceof z.ZodError) return res.status(400).json({ message: 'Validation error', errors: error.errors }); res.status(500).json({ message: 'Failed to create coverage' }); }
+  });
+  app.delete('/api/bioclimatic-zones/coverages/:coverageId', isAuthenticated, async (req, res) => {
+    try { const coverageId = Number(req.params.coverageId); const ok = await storage.deleteBioclimaticZoneCoverage(coverageId); res.json({ ok }); }
+    catch { res.status(500).json({ message: 'Failed to delete coverage' }); }
   });
 
   // Technicians routes

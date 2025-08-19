@@ -79,6 +79,35 @@
 				"$tsc"
 			],
 			"group": "build"
+		},
+		{
+			"label": "db:migrate:buildings-address-and-height",
+			"type": "shell",
+			"command": "npx",
+			"args": [
+				"tsx",
+				"scripts/run-sql.ts",
+				"scripts/sql/20250819_add_building_address_number_and_height.sql"
+			],
+			"problemMatcher": [
+				"$tsc"
+			],
+			"group": "build"
+		},
+		{
+			"label": "db:migrate:buildings-address-and-height",
+			"type": "shell",
+			"command": "npx",
+			"args": [
+				"tsx",
+				"scripts/run-sql.ts",
+				"scripts/sql/20250819_add_building_address_number_and_height.sql"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$tsc"
+			],
+			"group": "build"
 		}
 	]
 }

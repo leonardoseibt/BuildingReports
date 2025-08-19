@@ -11,7 +11,7 @@ interface NotchedFieldProps extends React.HTMLAttributes<HTMLDivElement> {
 
 export function NotchedField({ label, requiredMark, children, className, ...props }: NotchedFieldProps) {
   return (
-    <div className={cn("relative rounded-md border bg-white px-2.5 pb-2 pt-2.5 focus-within:border-foreground", className)} {...props}>
+  <div className={cn("relative rounded-md border bg-white px-2 pb-1.5 pt-2 focus-within:border-foreground", className)} {...props}>
       <span className="pointer-events-none absolute -top-2 left-2 inline-flex items-center gap-1 bg-white px-1 text-xs text-muted-foreground">
         {label}
         {requiredMark ? <span className="text-red-500">*</span> : null}

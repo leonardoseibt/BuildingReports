@@ -60,6 +60,24 @@ export const evaluationStatusEnum = pgEnum('evaluation_status', [
   'pending', 'in_progress', 'completed', 'approved'
 ]);
 
+// Bioclimatic Zones master tables
+export const bioclimaticZones = pgTable("bioclimatic_zones", {
+  id: integer("id").generatedAlwaysAsIdentity().primaryKey(),
+  code: varchar("code", { length: 8 }).notNull().unique(), // e.g., ZB1..ZB8
+  label: varchar("label", { length: 255 }).notNull(),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const bioclimaticZoneCoverages = pgTable("bioclimatic_zone_coverages", {
+  id: integer("id").generatedAlwaysAsIdentity().primaryKey(),
+  zoneId: integer("zone_id").references(() => bioclimaticZones.id).notNull(),
+  state: varchar("state", { length: 2 }).notNull(), // UF
+  city: varchar("city", { length: 128 }), // optional; blank means whole UF
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Buildings table
 export const buildings = pgTable("buildings", {
   id: integer("id").generatedAlwaysAsIdentity().primaryKey(),
@@ -70,8 +88,10 @@ export const buildings = pgTable("buildings", {
   typologyId: integer("typology_id").references(() => typologies.id),
   cep: varchar("cep", { length: 9 }).notNull(),
   address: text("address").notNull(),
+  addressNumber: varchar("address_number", { length: 20 }),
   bioclimaticZone: bioclimaticZoneEnum("bioclimatic_zone").notNull(),
   totalArea: decimal("total_area", { precision: 10, scale: 2 }).notNull(),
+  buildingHeight: decimal("building_height", { precision: 10, scale: 2 }),
   floors: integer("floors").notNull(),
   units: integer("units").default(1),
   noiseClassId: integer("noise_class_id").references(() => noiseClasses.id),
@@ -211,6 +231,17 @@ export const buildingsRelations = relations(buildings, ({ one, many }) => ({
   reports: many(reports),
 }));
 
+export const bioclimaticZonesRelations = relations(bioclimaticZones, ({ many }) => ({
+  coverages: many(bioclimaticZoneCoverages),
+}));
+
+export const bioclimaticZoneCoveragesRelations = relations(bioclimaticZoneCoverages, ({ one }) => ({
+  zone: one(bioclimaticZones, {
+    fields: [bioclimaticZoneCoverages.zoneId],
+    references: [bioclimaticZones.id],
+  }),
+}));
+
 export const structuralSystemsRelations = relations(structuralSystems, ({ one }) => ({
   building: one(buildings, {
     fields: [structuralSystems.buildingId],
@@ -281,6 +312,7 @@ export const updateUserSchema = z.object({
 export const insertBuildingSchema = createInsertSchema(buildings)
   .extend({
     totalArea: decimalInput,
+  buildingHeight: decimalInput.optional(),
     floors: intInput,
     units: intInput.optional(),
   });
@@ -335,6 +367,9 @@ export const insertTypologySchema = createInsertSchema(typologies);
 export const insertNoiseClassSchema = createInsertSchema(noiseClasses);
 export const insertAggressivenessClassSchema = createInsertSchema(aggressivenessClasses);
 
+export const insertBioclimaticZoneSchema = createInsertSchema(bioclimaticZones);
+export const insertBioclimaticZoneCoverageSchema = createInsertSchema(bioclimaticZoneCoverages);
+
 // Allow partial updates on technicians (no userId changes through API)
 export const updateTechnicianSchema = insertTechnicianSchema.partial().omit({ userId: true });
 
@@ -366,3 +401,7 @@ export type NoiseClass = typeof noiseClasses.$inferSelect;
 export type InsertNoiseClass = z.infer<typeof insertNoiseClassSchema>;
 export type AggressivenessClass = typeof aggressivenessClasses.$inferSelect;
 export type InsertAggressivenessClass = z.infer<typeof insertAggressivenessClassSchema>;
+export type BioclimaticZone = typeof bioclimaticZones.$inferSelect;
+export type InsertBioclimaticZone = z.infer<typeof insertBioclimaticZoneSchema>;
+export type BioclimaticZoneCoverage = typeof bioclimaticZoneCoverages.$inferSelect;
+export type InsertBioclimaticZoneCoverage = z.infer<typeof insertBioclimaticZoneCoverageSchema>;

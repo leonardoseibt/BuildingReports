@@ -14,6 +14,7 @@ import TypologiesList from "@/pages/typologies/list";
 import NoiseClassesList from "@/pages/noise-classes/list";
 import AggressivenessClassesList from "@/pages/aggressiveness-classes/list";
 import UsersList from "@/pages/users/list";
+import BioclimaticZonesList from "@/pages/bioclimatic-zones";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -31,6 +32,7 @@ function Router() {
           <Route path="/typologies" component={TypologiesList} />
           <Route path="/noise-classes" component={NoiseClassesList} />
           <Route path="/aggressiveness-classes" component={AggressivenessClassesList} />
+          <Route path="/bioclimatic-zones" component={BioclimaticZonesList} />
           <Route path="/users" component={UsersList} />
         </>
       )}

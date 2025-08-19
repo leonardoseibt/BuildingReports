@@ -12,7 +12,8 @@ import {
   IdCard,
   Layers2,
   Volume2,
-  Shield
+  Shield,
+  Globe2
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -23,6 +24,7 @@ const navigation = [
   { name: 'Tipologias', href: '/typologies', icon: Layers2 },
   { name: 'Classes de Ruído', href: '/noise-classes', icon: Volume2 },
   { name: 'Classes de Agressividade', href: '/aggressiveness-classes', icon: Shield },
+  { name: 'Zonas Bioclimáticas', href: '/bioclimatic-zones', icon: Globe2 },
   { name: 'Relatórios', href: '/reports', icon: FileText },
 ];
 

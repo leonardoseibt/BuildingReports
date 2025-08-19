@@ -29,11 +29,13 @@ const buildingFormSchema = z.object({
     .max(9, "CEP deve ter 8 dígitos")
     .regex(/^\d{5}-?\d{3}$/, "CEP deve estar no formato 00000-000"),
   address: z.string().min(1, "Endereço é obrigatório"),
+  addressNumber: z.string().optional(),
   bioclimaticZone: z.enum(["ZB1","ZB2","ZB3","ZB4","ZB5","ZB6","ZB7","ZB8"]).optional(),
   totalArea: z.string()
     .min(1, "Área total é obrigatória")
     .transform((val) => parseFloat(val))
     .refine((val) => val > 0, "Área deve ser maior que zero"),
+  buildingHeight: z.string().optional().transform((v) => v && v.trim() !== '' ? parseFloat(v) : undefined),
   floors: z.string()
     .min(1, "Número de pavimentos é obrigatório")
     .transform((val) => parseInt(val, 10))
@@ -64,6 +66,42 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
   const { data: aggressiveness } = useQuery<any[]>({ queryKey: ['/api/aggressiveness-classes'] });
   const [openTech, setOpenTech] = useState(false);
 
+  // Helper: merge address with number similar to technician form
+  const mergeAddressWithNumber = (addressRaw: string, numRaw: string) => {
+    const address = (addressRaw || "").trim();
+    const num = (numRaw || "").trim();
+    if (!address && !num) return address;
+    if (!num) {
+      if (!address) return address;
+      const firstCommaIdx = address.indexOf(",");
+      if (firstCommaIdx >= 0) {
+        const street = address.slice(0, firstCommaIdx).trim();
+        let rest = address.slice(firstCommaIdx + 1).trim();
+        const match = rest.match(/^([0-9A-Za-z\/\-]+)(?:\s*,\s*|\s+)(.*)$/);
+        if (match) {
+          const tail = match[2];
+          return tail ? `${street}, ${tail}` : `${street}`;
+        }
+        return address;
+      }
+      const withoutNum = address.replace(/(?:,\s*)?[0-9A-Za-z\/\-]+\s*$/, "").trim();
+      return withoutNum;
+    }
+    const firstCommaIdx = address.indexOf(",");
+    if (firstCommaIdx >= 0) {
+      const street = address.slice(0, firstCommaIdx).trim();
+      let rest = address.slice(firstCommaIdx + 1).trim();
+      const match = rest.match(/^([0-9A-Za-z\/\-]+)(?:\s*,\s*|\s+)(.*)$/);
+      if (match) {
+        const tail = match[2];
+        return tail ? `${street}, ${num}, ${tail}` : `${street}, ${num}`;
+      }
+      return rest ? `${street}, ${num}, ${rest}` : `${street}, ${num}`;
+    }
+    const streetOnly = address.replace(/,?\s*[0-9A-Za-z\/\-]+\s*$/, "").trim();
+    return `${streetOnly}, ${num}`;
+  };
+
   // Helpers (paridade com outros formulários)
   const onlyDigits = (v: string) => v.replace(/\D/g, "");
   const formatCep = (v: string) => {
@@ -80,8 +118,10 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
   typologyId: undefined as any,
       cep: '',
       address: '',
+  addressNumber: '',
       bioclimaticZone: undefined as any,
       totalArea: 0 as any,
+  buildingHeight: undefined as any,
       floors: 0 as any,
       units: 1 as any,
   noiseClassId: undefined as any,
@@ -95,8 +135,8 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
     if (!building) {
       form.reset({
   name: '', technicianId: undefined as any, typologyId: undefined as any,
-        cep: '', address: '', bioclimaticZone: undefined as any,
-  totalArea: 0 as any, floors: 0 as any, units: 1 as any,
+    cep: '', address: '', addressNumber: '', bioclimaticZone: undefined as any,
+  totalArea: 0 as any, buildingHeight: undefined as any, floors: 0 as any, units: 1 as any,
   noiseClassId: undefined as any, aggressivenessClassId: undefined as any,
       });
       return;
@@ -106,9 +146,11 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
   technicianId: (building as any).technicianId as any,
   typologyId: (building as any).typologyId ?? undefined,
       cep: building.cep || '',
-      address: building.address || '',
+    address: building.address || '',
+    addressNumber: (building as any).addressNumber || '',
       bioclimaticZone: (building.bioclimaticZone as any) || undefined,
       totalArea: String(building.totalArea) as any,
+    buildingHeight: (building as any).buildingHeight != null ? String((building as any).buildingHeight) as any : undefined,
       floors: String(building.floors) as any,
       units: String(building.units ?? 1) as any,
   noiseClassId: (building as any).noiseClassId ?? undefined,
@@ -163,7 +205,9 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
       
       if (response.ok) {
         const data = await response.json();
-        form.setValue('address', data.address);
+  const currentNumber = form.getValues('addressNumber') || '';
+  const mergedAddress = mergeAddressWithNumber(data.address, currentNumber);
+  form.setValue('address', mergedAddress);
         form.setValue('bioclimaticZone', data.bioclimaticZone);
         toast({
           title: "CEP encontrado",
@@ -274,10 +318,15 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
                     <FormItem>
                       <FormControl>
                         <NotchedField label="Tipologia Habitacional" requiredMark>
-              <Select onValueChange={field.onChange} defaultValue={field.value ? String(field.value) : undefined}>
+              <Select onValueChange={field.onChange} value={field.value ? String(field.value) : undefined}>
                             <FormControl>
                 <SelectTrigger data-testid="select-typology" className="border-0 bg-transparent shadow-none focus:ring-0 focus:ring-offset-0">
-                                <SelectValue placeholder="Selecione a tipologia" />
+                                <SelectValue placeholder="Selecione a tipologia">
+                                  {(() => {
+                                    const sel = (typologies || []).find((t:any) => String(t.id) === String(field.value));
+                                    return sel ? sel.label : undefined;
+                                  })()}
+                                </SelectValue>
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
@@ -354,7 +403,7 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
 
           {/* Localização */}
           <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <FormField
                   control={form.control}
                   name="cep"
@@ -385,6 +434,39 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
                   )}
                 />
                 
+    <FormField
+                  control={form.control}
+                  name="addressNumber"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormControl>
+      <NotchedField label="Número">
+                          <Input
+                            placeholder="Número"
+                            {...field}
+                            inputMode="numeric"
+                            className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                            onChange={(e) => {
+                              field.onChange(e);
+                              const num = e.currentTarget.value;
+                              const addr = form.getValues('address') || '';
+                              const merged = mergeAddressWithNumber(addr, num);
+                              if (merged !== addr) form.setValue('address', merged, { shouldDirty: true });
+                            }}
+                            onBlur={(e) => {
+                              field.onBlur();
+                              const num = e.currentTarget.value;
+                              const addr = form.getValues('address') || '';
+                              const merged = mergeAddressWithNumber(addr, num);
+                              if (merged !== addr) form.setValue('address', merged, { shouldDirty: true });
+                            }}
+                          />
+                        </NotchedField>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
                 <FormField
                   control={form.control}
                   name="bioclimaticZone"
@@ -419,6 +501,14 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
                           {...field}
                           className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
                           data-testid="input-address"
+                          onBlur={(e) => {
+                            field.onBlur();
+                            const num = form.getValues('addressNumber') || '';
+                            const merged = mergeAddressWithNumber(e.currentTarget.value, num);
+                            if (merged !== e.currentTarget.value) {
+                              form.setValue('address', merged, { shouldDirty: true });
+                            }
+                          }}
                         />
                       </NotchedField>
                     </FormControl>
@@ -430,7 +520,7 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
 
           {/* Características Físicas */}
           <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <FormField
                   control={form.control}
                   name="totalArea"
@@ -446,6 +536,27 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
                             {...field}
                             className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
                             data-testid="input-total-area"
+                          />
+                        </NotchedField>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="buildingHeight"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormControl>
+                        <NotchedField label="Altura da Edificação (m)">
+                          <Input 
+                            type="number" 
+                            step="0.01" 
+                            min="0" 
+                            placeholder="0.00" 
+                            {...field}
+                            className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
                           />
                         </NotchedField>
                       </FormControl>
@@ -481,7 +592,7 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
                   control={form.control}
                   name="units"
                   render={({ field }) => (
-                    <FormItem>
+                    <FormItem className="md:col-span-1">
                       <FormControl>
                         <NotchedField label="Número de Unidades">
                           <Input 
@@ -511,15 +622,20 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
                     <FormItem>
                       <FormControl>
                         <NotchedField label="Classe de Ruído do Entorno" requiredMark>
-                          <Select onValueChange={field.onChange} defaultValue={field.value ? String(field.value) : undefined}>
+                          <Select onValueChange={field.onChange} value={field.value ? String(field.value) : undefined}>
                             <FormControl>
                               <SelectTrigger data-testid="select-noise-class" className="border-0 bg-transparent shadow-none focus:ring-0 focus:ring-offset-0">
-                                <SelectValue placeholder="Selecione a classe" />
+                                <SelectValue placeholder="Selecione a classe">
+                                  {(() => {
+                                    const sel = (noiseClasses || []).find((t:any) => String(t.id) === String(field.value));
+                                    return sel ? `${sel.code} - ${sel.label}` : undefined;
+                                  })()}
+                                </SelectValue>
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
                               {(noiseClasses || []).filter((t:any)=>t.isActive!==false).map((t:any)=> (
-                                <SelectItem key={t.id} value={String(t.id)}>{t.label}</SelectItem>
+                                <SelectItem key={t.id} value={String(t.id)}>{`${t.code} - ${t.label}`}</SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
@@ -537,15 +653,20 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
                     <FormItem>
                       <FormControl>
                         <NotchedField label="Classe de Agressividade Ambiental" requiredMark>
-                          <Select onValueChange={field.onChange} defaultValue={field.value ? String(field.value) : undefined}>
+                          <Select onValueChange={field.onChange} value={field.value ? String(field.value) : undefined}>
                             <FormControl>
                               <SelectTrigger data-testid="select-aggressiveness-class" className="border-0 bg-transparent shadow-none focus:ring-0 focus:ring-offset-0">
-                                <SelectValue placeholder="Selecione a classe" />
+                                <SelectValue placeholder="Selecione a classe">
+                                  {(() => {
+                                    const sel = (aggressiveness || []).find((t:any) => String(t.id) === String(field.value));
+                                    return sel ? `${sel.code} - ${sel.label}` : undefined;
+                                  })()}
+                                </SelectValue>
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
                               {(aggressiveness || []).filter((t:any)=>t.isActive!==false).map((t:any)=> (
-                                <SelectItem key={t.id} value={String(t.id)}>{t.label}</SelectItem>
+                                <SelectItem key={t.id} value={String(t.id)}>{`${t.code} - ${t.label}`}</SelectItem>
                               ))}
                             </SelectContent>
                           </Select>

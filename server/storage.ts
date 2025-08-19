@@ -33,9 +33,15 @@ import {
   typologies,
   noiseClasses,
   aggressivenessClasses,
+  bioclimaticZones,
+  bioclimaticZoneCoverages,
+  type BioclimaticZone,
+  type InsertBioclimaticZone,
+  type BioclimaticZoneCoverage,
+  type InsertBioclimaticZoneCoverage,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and } from "drizzle-orm";
+import { eq, desc, and, asc, isNull } from "drizzle-orm";
 
 export interface IStorage {
   // User operations
@@ -103,6 +109,16 @@ export interface IStorage {
   createAggressivenessClass(item: InsertAggressivenessClass): Promise<AggressivenessClass>;
   updateAggressivenessClass(id: number, item: Partial<InsertAggressivenessClass>): Promise<AggressivenessClass>;
   deleteAggressivenessClass(id: number): Promise<boolean>;
+
+  // Bioclimatic zones
+  listBioclimaticZones(): Promise<BioclimaticZone[]>;
+  createBioclimaticZone(item: InsertBioclimaticZone): Promise<BioclimaticZone>;
+  updateBioclimaticZone(id: number, item: Partial<InsertBioclimaticZone>): Promise<BioclimaticZone>;
+  deleteBioclimaticZone(id: number): Promise<boolean>;
+  listBioclimaticZoneCoverages(zoneId: number): Promise<BioclimaticZoneCoverage[]>;
+  createBioclimaticZoneCoverage(zoneId: number, item: Omit<InsertBioclimaticZoneCoverage, 'zoneId'>): Promise<BioclimaticZoneCoverage>;
+  deleteBioclimaticZoneCoverage(id: number): Promise<boolean>;
+  findBioclimaticZoneForLocation(state: string, city?: string | null): Promise<string | null>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -203,8 +219,10 @@ export class DatabaseStorage implements IStorage {
       technicianId: (building as any).technicianId,
       cep: building.cep,
       address: building.address,
+  addressNumber: (building as any).addressNumber,
       bioclimaticZone: building.bioclimaticZone,
       totalArea: building.totalArea,
+  buildingHeight: (building as any).buildingHeight,
       floors: building.floors,
       units: building.units,
     };
@@ -236,8 +254,10 @@ export class DatabaseStorage implements IStorage {
         aggressivenessClassId: buildings.aggressivenessClassId,
         cep: buildings.cep,
         address: buildings.address,
+  addressNumber: buildings.addressNumber,
         bioclimaticZone: buildings.bioclimaticZone,
         totalArea: buildings.totalArea,
+  buildingHeight: buildings.buildingHeight,
         floors: buildings.floors,
         units: buildings.units,
         createdAt: buildings.createdAt,
@@ -269,8 +289,10 @@ export class DatabaseStorage implements IStorage {
         aggressivenessClassId: buildings.aggressivenessClassId,
         cep: buildings.cep,
         address: buildings.address,
+  addressNumber: buildings.addressNumber,
         bioclimaticZone: buildings.bioclimaticZone,
         totalArea: buildings.totalArea,
+  buildingHeight: buildings.buildingHeight,
         floors: buildings.floors,
         units: buildings.units,
         createdAt: buildings.createdAt,
@@ -297,8 +319,10 @@ export class DatabaseStorage implements IStorage {
     if (rest.technicianId !== undefined) updates.technicianId = rest.technicianId;
     if (rest.cep != null) updates.cep = rest.cep;
     if (rest.address != null) updates.address = rest.address;
+  if (rest.addressNumber !== undefined) updates.addressNumber = rest.addressNumber as any;
     if (rest.bioclimaticZone != null) updates.bioclimaticZone = rest.bioclimaticZone;
     if (rest.totalArea != null) updates.totalArea = rest.totalArea;
+  if (rest.buildingHeight !== undefined) updates.buildingHeight = rest.buildingHeight as any;
     if (rest.floors != null) updates.floors = rest.floors;
     if (rest.units != null) updates.units = rest.units;
     if (rest.typologyId != null) {
@@ -553,7 +577,8 @@ export class DatabaseStorage implements IStorage {
 
   // Master tables
   async listTypologies(): Promise<Typology[]> {
-    return await db.select().from(typologies).orderBy(desc(typologies.createdAt));
+  // For select presentation: order by code ascending
+  return await db.select().from(typologies).orderBy(asc(typologies.code));
   }
   async createTypology(item: InsertTypology): Promise<Typology> {
     const [row] = await db.insert(typologies).values({ code: (item as any).code, label: (item as any).label, isActive: (item as any).isActive ?? true }).returning();
@@ -569,7 +594,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   async listNoiseClasses(): Promise<NoiseClass[]> {
-    return await db.select().from(noiseClasses).orderBy(desc(noiseClasses.createdAt));
+  // For select presentation: order by code ascending
+  return await db.select().from(noiseClasses).orderBy(asc(noiseClasses.code));
   }
   async createNoiseClass(item: InsertNoiseClass): Promise<NoiseClass> {
     const [row] = await db.insert(noiseClasses).values({ code: (item as any).code, label: (item as any).label, isActive: (item as any).isActive ?? true }).returning();
@@ -585,7 +611,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   async listAggressivenessClasses(): Promise<AggressivenessClass[]> {
-    return await db.select().from(aggressivenessClasses).orderBy(desc(aggressivenessClasses.createdAt));
+  // For select presentation: order by code ascending
+  return await db.select().from(aggressivenessClasses).orderBy(asc(aggressivenessClasses.code));
   }
   async createAggressivenessClass(item: InsertAggressivenessClass): Promise<AggressivenessClass> {
     const [row] = await db.insert(aggressivenessClasses).values({ code: (item as any).code, label: (item as any).label, isActive: (item as any).isActive ?? true }).returning();
@@ -598,6 +625,91 @@ export class DatabaseStorage implements IStorage {
   async deleteAggressivenessClass(id: number): Promise<boolean> {
     const deleted = await db.delete(aggressivenessClasses).where(eq(aggressivenessClasses.id, id)).returning({ id: aggressivenessClasses.id });
     return deleted.length > 0;
+  }
+
+  // Bioclimatic zones
+  async listBioclimaticZones(): Promise<BioclimaticZone[]> {
+    return await db.select().from(bioclimaticZones).orderBy(asc(bioclimaticZones.code));
+  }
+
+  async createBioclimaticZone(item: InsertBioclimaticZone): Promise<BioclimaticZone> {
+    const [row] = await db.insert(bioclimaticZones).values({
+      code: (item as any).code,
+      label: (item as any).label,
+      isActive: (item as any).isActive ?? true,
+    }).returning();
+    return row as BioclimaticZone;
+  }
+
+  async updateBioclimaticZone(id: number, item: Partial<InsertBioclimaticZone>): Promise<BioclimaticZone> {
+    const [row] = await db.update(bioclimaticZones)
+      .set({ ...(item as any), updatedAt: new Date() })
+      .where(eq(bioclimaticZones.id, id))
+      .returning();
+    return row as BioclimaticZone;
+  }
+
+  async deleteBioclimaticZone(id: number): Promise<boolean> {
+    try {
+      const deleted = await db.delete(bioclimaticZones)
+        .where(eq(bioclimaticZones.id, id))
+        .returning({ id: bioclimaticZones.id });
+      return deleted.length > 0;
+    } catch (err: any) {
+      if (err?.code === '23503') {
+        const e = new Error('Não é possível excluir: existem abrangências vinculadas.');
+        (e as any).status = 409;
+        throw e;
+      }
+      throw err;
+    }
+  }
+
+  async listBioclimaticZoneCoverages(zoneId: number): Promise<BioclimaticZoneCoverage[]> {
+    return await db.select().from(bioclimaticZoneCoverages)
+      .where(eq(bioclimaticZoneCoverages.zoneId, zoneId))
+      .orderBy(asc(bioclimaticZoneCoverages.state), asc(bioclimaticZoneCoverages.city));
+  }
+
+  async createBioclimaticZoneCoverage(zoneId: number, item: Omit<InsertBioclimaticZoneCoverage, 'zoneId'>): Promise<BioclimaticZoneCoverage> {
+    const [row] = await db.insert(bioclimaticZoneCoverages).values({
+      zoneId,
+      state: (item as any).state,
+      city: (item as any).city,
+    }).returning();
+    return row as BioclimaticZoneCoverage;
+  }
+
+  async deleteBioclimaticZoneCoverage(id: number): Promise<boolean> {
+    const deleted = await db.delete(bioclimaticZoneCoverages).where(eq(bioclimaticZoneCoverages.id, id)).returning({ id: bioclimaticZoneCoverages.id });
+    return deleted.length > 0;
+  }
+
+  async findBioclimaticZoneForLocation(state: string, city?: string | null): Promise<string | null> {
+    const uf = (state || '').toUpperCase();
+    const cityName = (city || '').trim();
+
+    // Try city-specific coverage first
+    if (cityName) {
+      const [cov] = await db.select({ zoneId: bioclimaticZoneCoverages.zoneId })
+        .from(bioclimaticZoneCoverages)
+        .where(and(eq(bioclimaticZoneCoverages.state, uf), eq(bioclimaticZoneCoverages.city, cityName)))
+        .limit(1);
+      if (cov) {
+        const [zone] = await db.select({ code: bioclimaticZones.code }).from(bioclimaticZones).where(eq(bioclimaticZones.id, cov.zoneId)).limit(1);
+        return zone?.code ?? null;
+      }
+    }
+    // Then UF-only coverage (city null)
+    const [covUF] = await db.select({ zoneId: bioclimaticZoneCoverages.zoneId })
+      .from(bioclimaticZoneCoverages)
+      .where(and(eq(bioclimaticZoneCoverages.state, uf), isNull(bioclimaticZoneCoverages.city)))
+      .limit(1);
+    if (covUF) {
+      const [zone] = await db.select({ code: bioclimaticZones.code }).from(bioclimaticZones).where(eq(bioclimaticZones.id, covUF.zoneId)).limit(1);
+      return zone?.code ?? null;
+    }
+    return null;
   }
 }
 

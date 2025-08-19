@@ -64,6 +64,20 @@ export default function BuildingList() {
     enabled: isAuthenticated,
   });
 
+  // Ensure master data is loaded before opening the form
+  async function prefetchMasters() {
+    try {
+      await Promise.all([
+        queryClient.ensureQueryData({ queryKey: ['/api/typologies'] }),
+        queryClient.ensureQueryData({ queryKey: ['/api/noise-classes'] }),
+        queryClient.ensureQueryData({ queryKey: ['/api/aggressiveness-classes'] }),
+        queryClient.ensureQueryData({ queryKey: ['/api/technicians'] }),
+      ]);
+    } catch (_) {
+      // ignore prefetch errors; form will fetch as usual
+    }
+  }
+
   const techNameById = useMemo(() => {
     const map: Record<number, string> = {};
     for (const t of technicians || []) {
@@ -161,7 +175,7 @@ export default function BuildingList() {
           action={
             <div className="flex items-center gap-2">
               {isFetching && <Loader2 className="h-4 w-4 animate-spin text-slate-400" aria-label="Atualizando" />}
-              <Button data-testid="button-new-building" onClick={() => { setEditBuilding(null); setFormKey(k => k + 1); setOpen(true); }}>
+              <Button data-testid="button-new-building" onClick={async () => { await prefetchMasters(); setEditBuilding(null); setFormKey(k => k + 1); setOpen(true); }}>
                 <Plus className="w-4 h-4 mr-2" />
                 Nova Edificação
               </Button>
@@ -243,7 +257,7 @@ export default function BuildingList() {
                             aria-label={`Editar ${building.name}`}
                             title="Editar"
                             className="text-slate-600 hover:bg-slate-100 hover:text-slate-900"
-                            onClick={() => { setEditBuilding(building); setFormKey(k => k + 1); setOpen(true); }}
+                            onClick={async () => { await prefetchMasters(); setEditBuilding(building); setFormKey(k => k + 1); setOpen(true); }}
                           >
                             <Pencil className="h-4 w-4" />
                           </Button>

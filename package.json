@@ -12,7 +12,9 @@
     "db:migrate:ids": "tsx scripts/run-sql.ts scripts/sql/20250814_ids_to_int.sql",
     "db:migrate:identity": "tsx scripts/run-sql.ts scripts/sql/20250814_convert_defaults_to_identity.sql",
     "db:migrate:users": "tsx scripts/run-sql.ts scripts/sql/20250815_users_fullname_password.sql",
-    "db:check:ids": "tsx scripts/run-sql.ts scripts/sql/check_ids.sql"
+  "db:check:ids": "tsx scripts/run-sql.ts scripts/sql/check_ids.sql",
+  "db:migrate:bioclimatic": "tsx scripts/run-sql.ts scripts/sql/20250819_bioclimatic_zones.sql",
+  "db:seed:bioclimatic": "tsx scripts/run-sql.ts scripts/sql/20250819_bioclimatic_zones_seed.sql"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
