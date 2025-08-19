@@ -92,8 +92,8 @@ export default function BioclimaticZonesList() {
                 <TableHeader>
                   <TableRow className="bg-slate-100/60">
                     <TableHead className="w-[12%]">Código</TableHead>
-                    <TableHead className="w-[48%]">Descrição</TableHead>
-                    <TableHead className="w-[14%]">Ativa</TableHead>
+                    <TableHead className="w-[40%]">Descrição</TableHead>
+                    <TableHead className="w-[22%]">Ativa</TableHead>
                     <TableHead className="w-[18%]">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
