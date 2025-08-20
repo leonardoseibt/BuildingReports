@@ -10,7 +10,7 @@ import {
   DialogContent,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Users, Plus, Pencil, Trash2, Loader2 } from "lucide-react";
+import { Users, Plus, Pencil, Trash2, Loader2, Search, ArrowDown, ArrowUp } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -60,6 +60,9 @@ export default function UsersList() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [editUser, setEditUser] = useState<User | null>(null);
+  const [search, setSearch] = useState("");
+  const [sortBy, setSortBy] = useState<"fullName" | "email" | "phone" | "createdAt" | null>(null);
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
 
   // paginação — 10 itens por página
   const pageSize = 10;
@@ -81,12 +84,72 @@ export default function UsersList() {
     enabled: isAuthenticated,
   });
 
-  const totalPages = Math.max(1, Math.ceil(users.length / pageSize));
+  // Filter (supports punctuation like '(' in phones and '/' in dates)
+  const normText = (v: any) =>
+    String(v ?? "")
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]+/g, "");
+  const onlyDigits = (v: any) => String(v ?? "").replace(/\D+/g, "");
+  const filtered = useMemo(() => {
+    const q = normText(search);
+    const qDigits = onlyDigits(search);
+    if (!q) return users;
+    return users.filter((u) => {
+      const name = normText(u.fullName);
+      const email = normText(u.email);
+      const phoneDisplay = formatPhoneBRDisplay(u.phone);
+      const phoneText = normText(phoneDisplay);
+      const phoneDigits = onlyDigits(u.phone);
+      const createdDisplay = formatDateBR(u.createdAt as any);
+      const createdText = normText(createdDisplay);
+      const createdRaw = normText(u.createdAt as any);
+      return (
+        name.includes(q) ||
+        email.includes(q) ||
+        phoneText.includes(q) ||
+        (!!qDigits && phoneDigits.includes(qDigits)) ||
+        createdText.includes(q) ||
+        createdRaw.includes(q)
+      );
+    });
+  }, [users, search]);
+
+  // Sort
+  const sorted = useMemo(() => {
+    if (!sortBy) return filtered;
+    const arr = [...filtered];
+    arr.sort((a, b) => {
+      const av = (a as any)[sortBy];
+      const bv = (b as any)[sortBy];
+      let cmp = 0;
+      if (sortBy === 'createdAt') {
+        const ad = av ? new Date(av).getTime() : 0;
+        const bd = bv ? new Date(bv).getTime() : 0;
+        cmp = ad - bd;
+      } else {
+        cmp = String(av ?? '').localeCompare(String(bv ?? ''), 'pt-BR', { sensitivity: 'base' });
+      }
+      return sortDir === 'asc' ? cmp : -cmp;
+    });
+    return arr;
+  }, [filtered, sortBy, sortDir]);
+
+  // Pagination over sorted list
+  const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize));
   const pageSafe = Math.min(page, totalPages);
-  const pagedUsers = useMemo(
-    () => users.slice((pageSafe - 1) * pageSize, pageSafe * pageSize),
-    [users, pageSafe]
-  );
+  const pagedUsers = useMemo(() => sorted.slice((pageSafe - 1) * pageSize, pageSafe * pageSize), [sorted, pageSafe]);
+
+  const toggleSort = (col: typeof sortBy) => {
+    if (col === null) return;
+    if (sortBy !== col) {
+      setSortBy(col);
+  setSortDir('asc'); // first click is ascending
+    } else {
+  setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    }
+    setPage(1);
+  };
 
   // --- Mutação de exclusão com confirmação ---
   async function deleteUserRequest(id: string | number) {
@@ -153,6 +216,21 @@ export default function UsersList() {
         />
 
         <main className="flex-1 overflow-y-auto p-6">
+          {/* Search Card */}
+          <div className="rounded-2xl border bg-white/80 backdrop-blur px-5 py-4 md:px-6 md:py-5 shadow-sm mb-4">
+            <div className="flex items-center gap-3">
+              <div className="relative w-full max-w-lg">
+                <input
+                  type="text"
+                  value={search}
+                  onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                  placeholder="Buscar usuários (nome, e-mail, telefone, data)"
+                  className="w-full h-9 rounded-md border px-9 text-sm"
+                />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
+              </div>
+            </div>
+          </div>
           {isLoadingUsers ? null : users.length === 0 ? (
             <div className="text-center py-12">
               <Users className="w-16 h-16 text-slate-300 mx-auto mb-4" />
@@ -166,12 +244,64 @@ export default function UsersList() {
             <div className="rounded-2xl bg-white shadow-sm ring-1 ring-slate-200/60">
               <div className="overflow-x-auto">
                 <Table className="table-fixed">
-                  <TableHeader>
+          <TableHeader>
                     <TableRow className="bg-slate-100/60">
-                      <TableHead className="w-[27%] whitespace-nowrap max-sm:whitespace-normal">Nome</TableHead>
-                      <TableHead className="w-[27%] whitespace-nowrap max-sm:whitespace-normal">E-mail</TableHead>
-                      <TableHead className="w-[18%] whitespace-nowrap max-sm:whitespace-normal">Telefone</TableHead>
-                      <TableHead className="w-[18%] whitespace-nowrap max-sm:whitespace-normal">Criado em</TableHead>
+            <TableHead
+              onClick={() => toggleSort('fullName')}
+              aria-sort={sortBy === 'fullName' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
+              className="w-[27%] whitespace-nowrap max-sm:whitespace-normal cursor-pointer select-none"
+            >
+              <span>Nome</span>
+              {sortBy === 'fullName' && (
+                sortDir === 'asc' ? (
+                  <ArrowUp className="inline-block w-3 h-3 ml-1 opacity-70" />
+                ) : (
+                  <ArrowDown className="inline-block w-3 h-3 ml-1 opacity-70" />
+                )
+              )}
+            </TableHead>
+            <TableHead
+              onClick={() => toggleSort('email')}
+              aria-sort={sortBy === 'email' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
+              className="w-[27%] whitespace-nowrap max-sm:whitespace-normal cursor-pointer select-none"
+            >
+              <span>E-mail</span>
+              {sortBy === 'email' && (
+                sortDir === 'asc' ? (
+                  <ArrowUp className="inline-block w-3 h-3 ml-1 opacity-70" />
+                ) : (
+                  <ArrowDown className="inline-block w-3 h-3 ml-1 opacity-70" />
+                )
+              )}
+            </TableHead>
+            <TableHead
+              onClick={() => toggleSort('phone')}
+              aria-sort={sortBy === 'phone' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
+              className="w-[18%] whitespace-nowrap max-sm:whitespace-normal cursor-pointer select-none"
+            >
+              <span>Telefone</span>
+              {sortBy === 'phone' && (
+                sortDir === 'asc' ? (
+                  <ArrowUp className="inline-block w-3 h-3 ml-1 opacity-70" />
+                ) : (
+                  <ArrowDown className="inline-block w-3 h-3 ml-1 opacity-70" />
+                )
+              )}
+            </TableHead>
+            <TableHead
+              onClick={() => toggleSort('createdAt')}
+              aria-sort={sortBy === 'createdAt' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
+              className="w-[18%] whitespace-nowrap max-sm:whitespace-normal cursor-pointer select-none"
+            >
+              <span>Criado em</span>
+              {sortBy === 'createdAt' && (
+                sortDir === 'asc' ? (
+                  <ArrowUp className="inline-block w-3 h-3 ml-1 opacity-70" />
+                ) : (
+                  <ArrowDown className="inline-block w-3 h-3 ml-1 opacity-70" />
+                )
+              )}
+            </TableHead>
                       <TableHead className="w-[10%] text-right whitespace-nowrap">Ações</TableHead>
                     </TableRow>
                   </TableHeader>

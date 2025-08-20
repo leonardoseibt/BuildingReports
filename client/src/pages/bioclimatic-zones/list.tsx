@@ -6,7 +6,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Globe2, Plus, Loader2, Pencil, Trash2, MapPin, X } from "lucide-react";
+import { Globe2, Plus, Loader2, Pencil, Trash2, MapPin, X, Search, ArrowUp, ArrowDown } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import type { BioclimaticZone, BioclimaticZoneCoverage } from "@shared/schema";
@@ -22,6 +22,11 @@ export default function BioclimaticZonesList() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<BioclimaticZone | null>(null);
   const [coveragesFor, setCoveragesFor] = useState<BioclimaticZone | null>(null);
+  const [search, setSearch] = useState("");
+  const [sortBy, setSortBy] = useState<"code" | "label" | "isActive" | "createdAt" | null>(null);
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+  const pageSize = 10;
+  const [page, setPage] = useState(1);
 
   const formatDate = (date: string | Date | null | undefined) => {
     if (!date) return "—";
@@ -38,6 +43,49 @@ export default function BioclimaticZonesList() {
   }, [isAuthenticated, isLoading, toast]);
 
   const { data: zones = [], isFetching, isLoading: isLoadingItems } = useQuery<BioclimaticZone[]>({ queryKey: ["/api/bioclimatic-zones"], enabled: isAuthenticated });
+  const normText = (v: any) => String(v ?? "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]+/g, "");
+  const filtered = useMemo(() => {
+    const q = normText(search);
+    if (!q) return zones;
+    return zones.filter((z) =>
+      normText(z.code).includes(q) ||
+      normText(z.label).includes(q) ||
+      normText((z as any).createdAt).includes(q)
+    );
+  }, [zones, search]);
+  const sorted = useMemo(() => {
+    if (!sortBy) return filtered;
+    const arr = [...filtered];
+    arr.sort((a, b) => {
+      const av = (a as any)[sortBy];
+      const bv = (b as any)[sortBy];
+      let cmp = 0;
+      if (sortBy === 'createdAt') {
+        const ad = av ? new Date(av).getTime() : 0;
+        const bd = bv ? new Date(bv).getTime() : 0;
+        cmp = ad - bd;
+      } else if (sortBy === 'isActive') {
+        cmp = Number((a as any).isActive) - Number((b as any).isActive);
+      } else {
+        cmp = String(av ?? '').localeCompare(String(bv ?? ''), 'pt-BR', { sensitivity: 'base' });
+      }
+      return sortDir === 'asc' ? cmp : -cmp;
+    });
+    return arr;
+  }, [filtered, sortBy, sortDir]);
+  const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize));
+  const pageSafe = Math.min(page, totalPages);
+  const pagedZones = useMemo(() => sorted.slice((pageSafe - 1) * pageSize, pageSafe * pageSize), [sorted, pageSafe]);
+  const toggleSort = (col: typeof sortBy) => {
+    if (col === null) return;
+    if (sortBy !== col) {
+      setSortBy(col);
+      setSortDir('asc');
+    } else {
+      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    }
+    setPage(1);
+  };
 
   async function deleteRequest(id: number) {
     const res = await fetch(`/api/bioclimatic-zones/${id}`, { method: 'DELETE' });
@@ -82,6 +130,21 @@ export default function BioclimaticZonesList() {
           }
         />
         <main className="flex-1 overflow-y-auto p-6">
+          {/* Search Card */}
+          <div className="rounded-2xl border bg-white/80 backdrop-blur px-5 py-4 md:px-6 md:py-5 shadow-sm mb-4">
+            <div className="flex items-center gap-3">
+              <div className="relative w-full max-w-lg">
+                <input
+                  type="text"
+                  value={search}
+                  onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                  placeholder="Buscar zonas (código, descrição, data)"
+                  className="w-full h-9 rounded-md border px-9 text-sm"
+                />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
+              </div>
+            </div>
+          </div>
           {isLoadingItems ? (
             <div className="text-center py-12"><Globe2 className="w-16 h-16 text-slate-300 mx-auto mb-4" /><p className="text-slate-500">Carregando...</p></div>
           ) : zones.length === 0 ? (
@@ -98,15 +161,15 @@ export default function BioclimaticZonesList() {
               <Table className="table-fixed">
                 <TableHeader>
                   <TableRow className="bg-slate-100/60">
-                    <TableHead className="w-[12%]">Código</TableHead>
-                    <TableHead className="w-[46%]">Descrição</TableHead>
-                    <TableHead className="w-[10%]">Ativa</TableHead>
-                    <TableHead className="w-[14%]">Criado em</TableHead>
+                    <TableHead onClick={() => toggleSort('code')} aria-sort={sortBy === 'code' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} className="w-[12%] cursor-pointer select-none">Código {sortBy === 'code' && (sortDir === 'asc' ? <ArrowUp className="inline-block w-3 h-3 ml-1 opacity-70" /> : <ArrowDown className="inline-block w-3 h-3 ml-1 opacity-70" />)}</TableHead>
+                    <TableHead onClick={() => toggleSort('label')} aria-sort={sortBy === 'label' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} className="w-[46%] cursor-pointer select-none">Descrição {sortBy === 'label' && (sortDir === 'asc' ? <ArrowUp className="inline-block w-3 h-3 ml-1 opacity-70" /> : <ArrowDown className="inline-block w-3 h-3 ml-1 opacity-70" />)}</TableHead>
+                    <TableHead onClick={() => toggleSort('isActive')} aria-sort={sortBy === 'isActive' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} className="w-[10%] cursor-pointer select-none">Ativa {sortBy === 'isActive' && (sortDir === 'asc' ? <ArrowUp className="inline-block w-3 h-3 ml-1 opacity-70" /> : <ArrowDown className="inline-block w-3 h-3 ml-1 opacity-70" />)}</TableHead>
+                    <TableHead onClick={() => toggleSort('createdAt')} aria-sort={sortBy === 'createdAt' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} className="w-[14%] cursor-pointer select-none">Criado em {sortBy === 'createdAt' && (sortDir === 'asc' ? <ArrowUp className="inline-block w-3 h-3 ml-1 opacity-70" /> : <ArrowDown className="inline-block w-3 h-3 ml-1 opacity-70" />)}</TableHead>
                     <TableHead className="w-[18%]">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {zones.map((z) => (
+                  {pagedZones.map((z) => (
                     <TableRow key={z.id}>
                       <TableCell className="font-medium">{z.code}</TableCell>
                       <TableCell>{z.label}</TableCell>
@@ -129,6 +192,21 @@ export default function BioclimaticZonesList() {
                   ))}
                 </TableBody>
               </Table>
+              <div className="flex items-center justify-between gap-4 border-t px-4 py-3 text-sm text-slate-600">
+                <p>
+                  Mostrando <span className="font-semibold">{pagedZones.length}</span> de {" "}
+                  <span className="font-semibold">{filtered.length}</span> zonas
+                </p>
+                <div className="flex items-center gap-1">
+                  <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={pageSafe === 1}>Anterior</Button>
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                    <Button key={p} variant={pageSafe === p ? "default" : "outline"} size="sm" onClick={() => setPage(p)} className={pageSafe === p ? "" : "bg-white"}>
+                      {p}
+                    </Button>
+                  ))}
+                  <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={pageSafe === totalPages}>Próxima</Button>
+                </div>
+              </div>
             </div>
           )}
         </main>

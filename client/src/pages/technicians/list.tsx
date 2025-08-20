@@ -7,7 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import TechnicianForm from "@/components/technicians/technician-form";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { IdCard, Plus, MoreHorizontal, Loader2, Pencil, Trash2 } from "lucide-react";
+import { IdCard, Plus, MoreHorizontal, Loader2, Pencil, Trash2, Search, ArrowUp, ArrowDown } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -60,6 +60,11 @@ export default function TechniciansList() {
   const [editTech, setEditTech] = useState<Technician | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [selectedTech, setSelectedTech] = useState<Technician | null>(null);
+  const [search, setSearch] = useState("");
+  const [sortBy, setSortBy] = useState<"fullName" | "creaCau" | "email" | "phone" | "createdAt" | null>(null);
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+  const pageSize = 10;
+  const [page, setPage] = useState(1);
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -69,6 +74,76 @@ export default function TechniciansList() {
   }, [isAuthenticated, isLoading, toast]);
 
   const { data: technicians = [], isFetching, isLoading: isLoadingTechs } = useQuery<Technician[]>({ queryKey: ["/api/technicians"], enabled: isAuthenticated });
+
+  // Filter helpers
+  const normText = (v: any) => String(v ?? "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]+/g, "");
+  const onlyDigits = (v: any) => String(v ?? "").replace(/\D+/g, "");
+
+  const filtered = useMemo(() => {
+    const q = normText(search);
+    const qDigits = onlyDigits(search);
+    if (!q) return technicians;
+    return technicians.filter((t) => {
+      const name = normText(t.fullName);
+      const reg = normText(`${t.creaCau ?? ""} ${t.licenseState ?? ""}`);
+      const email = normText(t.email);
+      const phoneDisplay = formatPhoneBRDisplay(t.phone);
+      const phoneText = normText(phoneDisplay);
+      const phoneDigits = onlyDigits(t.phone);
+      const createdDisplay = formatDateBR((t as any).createdAt);
+      const createdText = normText(createdDisplay);
+      const createdRaw = normText((t as any).createdAt);
+      return (
+        name.includes(q) ||
+        reg.includes(q) ||
+        email.includes(q) ||
+        phoneText.includes(q) ||
+        (!!qDigits && phoneDigits.includes(qDigits)) ||
+        createdText.includes(q) ||
+        createdRaw.includes(q)
+      );
+    });
+  }, [technicians, search]);
+
+  const sorted = useMemo(() => {
+    if (!sortBy) return filtered;
+    const arr = [...filtered];
+    arr.sort((a, b) => {
+      const av = (a as any)[sortBy];
+      const bv = (b as any)[sortBy];
+      let cmp = 0;
+      if (sortBy === 'createdAt') {
+        const ad = av ? new Date(av).getTime() : 0;
+        const bd = bv ? new Date(bv).getTime() : 0;
+        cmp = ad - bd;
+      } else if (sortBy === 'phone') {
+        cmp = onlyDigits(av).localeCompare(onlyDigits(bv));
+      } else if (sortBy === 'creaCau') {
+        const aReg = `${a.creaCau ?? ''} ${a.licenseState ?? ''}`;
+        const bReg = `${b.creaCau ?? ''} ${b.licenseState ?? ''}`;
+        cmp = aReg.localeCompare(bReg, 'pt-BR', { sensitivity: 'base' });
+      } else {
+        cmp = String(av ?? '').localeCompare(String(bv ?? ''), 'pt-BR', { sensitivity: 'base' });
+      }
+      return sortDir === 'asc' ? cmp : -cmp;
+    });
+    return arr;
+  }, [filtered, sortBy, sortDir]);
+
+  const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize));
+  const pageSafe = Math.min(page, totalPages);
+  const pagedTechnicians = useMemo(() => sorted.slice((pageSafe - 1) * pageSize, pageSafe * pageSize), [sorted, pageSafe]);
+
+  const toggleSort = (col: typeof sortBy) => {
+    if (col === null) return;
+    if (sortBy !== col) {
+      setSortBy(col);
+      setSortDir('asc');
+    } else {
+      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    }
+    setPage(1);
+  };
 
   // Delete mutation with optimistic update
   async function deleteTechRequest(id: number) {
@@ -118,6 +193,21 @@ export default function TechniciansList() {
           }
         />
         <main className="flex-1 overflow-y-auto p-6">
+          {/* Search Card */}
+          <div className="rounded-2xl border bg-white/80 backdrop-blur px-5 py-4 md:px-6 md:py-5 shadow-sm mb-4">
+            <div className="flex items-center gap-3">
+              <div className="relative w-full max-w-lg">
+                <input
+                  type="text"
+                  value={search}
+                  onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                  placeholder="Buscar técnicos (nome, registro, e-mail, telefone, data)"
+                  className="w-full h-9 rounded-md border px-9 text-sm"
+                />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
+              </div>
+            </div>
+          </div>
           {isLoadingTechs ? null : technicians.length === 0 ? (
             <div className="text-center py-12">
               <IdCard className="w-16 h-16 text-slate-300 mx-auto mb-4" />
@@ -132,16 +222,16 @@ export default function TechniciansList() {
               <Table className="table-fixed">
                 <TableHeader>
                   <TableRow className="bg-slate-100/60">
-                    <TableHead className="w-[20%] whitespace-nowrap max-sm:whitespace-normal">Nome</TableHead>
-                    <TableHead className="w-[15%] whitespace-nowrap max-sm:whitespace-normal">Registro</TableHead>
-                    <TableHead className="w-[24%] whitespace-nowrap max-sm:whitespace-normal">E-mail</TableHead>
-                    <TableHead className="w-[18%] whitespace-nowrap max-sm:whitespace-normal">Telefone</TableHead>
-                    <TableHead className="w-[17%] whitespace-nowrap max-sm:whitespace-normal">Criado em</TableHead>
+                    <TableHead onClick={() => toggleSort('fullName')} aria-sort={sortBy === 'fullName' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} className="w-[20%] whitespace-nowrap max-sm:whitespace-normal cursor-pointer select-none">Nome {sortBy === 'fullName' && (sortDir === 'asc' ? <ArrowUp className="inline-block w-3 h-3 ml-1 opacity-70" /> : <ArrowDown className="inline-block w-3 h-3 ml-1 opacity-70" />)}</TableHead>
+                    <TableHead onClick={() => toggleSort('creaCau')} aria-sort={sortBy === 'creaCau' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} className="w-[15%] whitespace-nowrap max-sm:whitespace-normal cursor-pointer select-none">Registro {sortBy === 'creaCau' && (sortDir === 'asc' ? <ArrowUp className="inline-block w-3 h-3 ml-1 opacity-70" /> : <ArrowDown className="inline-block w-3 h-3 ml-1 opacity-70" />)}</TableHead>
+                    <TableHead onClick={() => toggleSort('email')} aria-sort={sortBy === 'email' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} className="w-[24%] whitespace-nowrap max-sm:whitespace-normal cursor-pointer select-none">E-mail {sortBy === 'email' && (sortDir === 'asc' ? <ArrowUp className="inline-block w-3 h-3 ml-1 opacity-70" /> : <ArrowDown className="inline-block w-3 h-3 ml-1 opacity-70" />)}</TableHead>
+                    <TableHead onClick={() => toggleSort('phone')} aria-sort={sortBy === 'phone' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} className="w-[18%] whitespace-nowrap max-sm:whitespace-normal cursor-pointer select-none">Telefone {sortBy === 'phone' && (sortDir === 'asc' ? <ArrowUp className="inline-block w-3 h-3 ml-1 opacity-70" /> : <ArrowDown className="inline-block w-3 h-3 ml-1 opacity-70" />)}</TableHead>
+                    <TableHead onClick={() => toggleSort('createdAt')} aria-sort={sortBy === 'createdAt' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} className="w-[17%] whitespace-nowrap max-sm:whitespace-normal cursor-pointer select-none">Criado em {sortBy === 'createdAt' && (sortDir === 'asc' ? <ArrowUp className="inline-block w-3 h-3 ml-1 opacity-70" /> : <ArrowDown className="inline-block w-3 h-3 ml-1 opacity-70" />)}</TableHead>
                     <TableHead className="w-[8%] text-right whitespace-nowrap">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {technicians.map((t) => (
+                  {pagedTechnicians.map((t) => (
                       <TableRow key={t.id} data-testid={`row-technician-${t.id}`} className="hover:bg-slate-50">
                       <TableCell className="w-[22%] font-medium whitespace-nowrap overflow-hidden text-ellipsis max-sm:whitespace-normal">{t.fullName}</TableCell>
                       <TableCell className="w-[18%] whitespace-nowrap overflow-hidden text-ellipsis max-sm:whitespace-normal">
@@ -180,6 +270,21 @@ export default function TechniciansList() {
                   ))}
                 </TableBody>
               </Table>
+              <div className="flex items-center justify-between gap-4 border-t px-4 py-3 text-sm text-slate-600">
+                <p>
+                  Mostrando <span className="font-semibold">{pagedTechnicians.length}</span> de {" "}
+                  <span className="font-semibold">{filtered.length}</span> técnicos
+                </p>
+                <div className="flex items-center gap-1">
+                  <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={pageSafe === 1}>Anterior</Button>
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                    <Button key={p} variant={pageSafe === p ? "default" : "outline"} size="sm" onClick={() => setPage(p)} className={pageSafe === p ? "" : "bg-white"}>
+                      {p}
+                    </Button>
+                  ))}
+                  <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={pageSafe === totalPages}>Próxima</Button>
+                </div>
+              </div>
             </div>
           )}
         </main>

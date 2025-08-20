@@ -21,18 +21,7 @@ export default function Header({ title, description, action }: HeaderProps) {
             {description}
           </p>
         </div>
-        <div className="flex items-center space-x-4">
-          {/* Search Bar */}
-          <div className="relative">
-            <Input 
-              type="search" 
-              placeholder="Buscar projetos..." 
-              className="w-80 pl-10"
-              data-testid="input-search"
-            />
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
-          </div>
-          
+  <div className="flex items-center space-x-4">
           {/* Action Button */}
           {action}
           

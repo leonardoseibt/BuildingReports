@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
-import { insertBuildingSchema, type Technician, type Building } from "@shared/schema";
+import { insertBuildingSchema, type Technician, type Building, type BioclimaticZone } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
@@ -64,6 +64,7 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
   const { data: typologies } = useQuery<any[]>({ queryKey: ['/api/typologies'] });
   const { data: noiseClasses } = useQuery<any[]>({ queryKey: ['/api/noise-classes'] });
   const { data: aggressiveness } = useQuery<any[]>({ queryKey: ['/api/aggressiveness-classes'] });
+  const { data: zones = [] } = useQuery<BioclimaticZone[]>({ queryKey: ['/api/bioclimatic-zones'] });
   const [openTech, setOpenTech] = useState(false);
 
   // Helper: merge address with number similar to technician form
@@ -403,12 +404,12 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
 
           {/* Localização */}
           <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
                 <FormField
                   control={form.control}
                   name="cep"
                   render={({ field }) => (
-                    <FormItem>
+                    <FormItem className="md:col-span-1">
                       <FormControl>
                         <NotchedField label="CEP" requiredMark>
                           <Input
@@ -426,19 +427,16 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
                           />
                         </NotchedField>
                       </FormControl>
-                      <FormDescription>
-                        {isLookingUpCep ? "Buscando informações..." : "A zona bioclimática será determinada automaticamente"}
-                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
                 
-    <FormField
+  <FormField
                   control={form.control}
                   name="addressNumber"
                   render={({ field }) => (
-                    <FormItem>
+          <FormItem className="md:col-span-1">
                       <FormControl>
       <NotchedField label="Número">
                           <Input
@@ -471,18 +469,30 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
                   control={form.control}
                   name="bioclimaticZone"
                   render={({ field }) => (
-                    <FormItem>
+                    <FormItem className="md:col-span-4">
                       <FormControl>
                         <NotchedField label="Zona Bioclimática">
-                          <Input
-                            placeholder="Determinada automaticamente"
-                            {...field}
-                            readOnly
-                            className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
-                            data-testid="input-bioclimatic-zone"
-                          />
+                          {(() => {
+                            const code = form.watch('bioclimaticZone') as string | undefined;
+                            const z = zones.find((zz) => zz.code === code);
+                            const display = z ? `${z.code} - ${z.label}` : (code || '');
+                            return (
+                              <Input
+                                placeholder="Determinada automaticamente"
+                                {...field}
+                                value={display}
+                                readOnly
+                                className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                                data-testid="input-bioclimatic-zone"
+                                title={display}
+                              />
+                            );
+                          })()}
                         </NotchedField>
                       </FormControl>
+                      <FormDescription>
+                        {isLookingUpCep ? "Buscando informações..." : "A zona bioclimática será determinada automaticamente"}
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}

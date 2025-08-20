@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
 import { Button } from "@/components/ui/button";
-import { Building2, Plus, MapPin, Loader2, Pencil, Trash2 } from "lucide-react";
+import { Building2, Plus, MapPin, Loader2, Pencil, Trash2, Search, ArrowUp, ArrowDown } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -38,6 +38,11 @@ export default function BuildingList() {
   const [editBuilding, setEditBuilding] = useState<Building | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [selectedBuilding, setSelectedBuilding] = useState<Building | null>(null);
+  const [search, setSearch] = useState("");
+  const [sortBy, setSortBy] = useState<"name" | "location" | "totalArea" | "floors" | "technician" | "createdAt" | null>(null);
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+  const pageSize = 10;
+  const [page, setPage] = useState(1);
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -85,6 +90,71 @@ export default function BuildingList() {
     }
     return map;
   }, [technicians]);
+
+  // Helpers for filtering/sorting
+  const normText = (v: any) => String(v ?? "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]+/g, "");
+  const filtered = useMemo(() => {
+    const q = normText(search);
+    if (!q) return buildings;
+    return buildings.filter((b) => {
+      const name = normText(b.name);
+      const typology = normText((b as any).typologyLabel || (b as any).typologyCode || "");
+      const zone = normText(b.bioclimaticZone || "");
+      const responsible = normText(b.technicianId ? (techNameById[b.technicianId] ?? "") : "");
+      const created = normText(b.createdAt as any);
+      return (
+        name.includes(q) ||
+        typology.includes(q) ||
+        zone.includes(q) ||
+        responsible.includes(q) ||
+        created.includes(q)
+      );
+    });
+  }, [buildings, search, techNameById]);
+
+  const sorted = useMemo(() => {
+    if (!sortBy) return filtered;
+    const arr = [...filtered];
+    arr.sort((a, b) => {
+      let cmp = 0;
+      if (sortBy === 'createdAt') {
+        const ad = a.createdAt ? new Date(a.createdAt as any).getTime() : 0;
+        const bd = b.createdAt ? new Date(b.createdAt as any).getTime() : 0;
+        cmp = ad - bd;
+      } else if (sortBy === 'totalArea' || sortBy === 'floors') {
+        cmp = Number((a as any)[sortBy] ?? 0) - Number((b as any)[sortBy] ?? 0);
+      } else if (sortBy === 'technician') {
+        const an = a.technicianId ? (techNameById[a.technicianId] ?? '') : '';
+        const bn = b.technicianId ? (techNameById[b.technicianId] ?? '') : '';
+        cmp = an.localeCompare(bn, 'pt-BR', { sensitivity: 'base' });
+      } else if (sortBy === 'location') {
+        const al = `${a.bioclimaticZone || ''} ${(a as any).typologyLabel || (a as any).typologyCode || ''}`;
+        const bl = `${b.bioclimaticZone || ''} ${(b as any).typologyLabel || (b as any).typologyCode || ''}`;
+        cmp = al.localeCompare(bl, 'pt-BR', { sensitivity: 'base' });
+      } else {
+        const av = (a as any)[sortBy];
+        const bv = (b as any)[sortBy];
+        cmp = String(av ?? '').localeCompare(String(bv ?? ''), 'pt-BR', { sensitivity: 'base' });
+      }
+      return sortDir === 'asc' ? cmp : -cmp;
+    });
+    return arr;
+  }, [filtered, sortBy, sortDir, techNameById]);
+
+  const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize));
+  const pageSafe = Math.min(page, totalPages);
+  const pagedBuildings = useMemo(() => sorted.slice((pageSafe - 1) * pageSize, pageSafe * pageSize), [sorted, pageSafe]);
+
+  const toggleSort = (col: typeof sortBy) => {
+    if (col === null) return;
+    if (sortBy !== col) {
+      setSortBy(col);
+      setSortDir('asc');
+    } else {
+      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    }
+    setPage(1);
+  };
 
   useEffect(() => {
     if (error && isUnauthorizedError(error as Error)) {
@@ -184,6 +254,21 @@ export default function BuildingList() {
         />
         
         <main className="flex-1 overflow-y-auto p-6">
+          {/* Search Card */}
+          <div className="rounded-2xl border bg-white/80 backdrop-blur px-5 py-4 md:px-6 md:py-5 shadow-sm mb-4">
+            <div className="flex items-center gap-3">
+              <div className="relative w-full max-w-lg">
+                <input
+                  type="text"
+                  value={search}
+                  onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                  placeholder="Buscar edificações (nome, localização, responsável, data)"
+                  className="w-full h-9 rounded-md border px-9 text-sm"
+                />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
+              </div>
+            </div>
+          </div>
           {isLoading ? (
             <div className="flex items-center justify-center py-12">
               <div className="text-center">
@@ -214,17 +299,17 @@ export default function BuildingList() {
               <Table className="table-fixed">
                 <TableHeader>
                   <TableRow className="bg-slate-100/60">
-                    <TableHead className="w-[20%] whitespace-nowrap max-sm:whitespace-normal">Nome</TableHead>
-                    <TableHead className="w-[20%] whitespace-nowrap max-sm:whitespace-normal">Localização</TableHead>
-                    <TableHead className="w-[10%] text-right whitespace-nowrap">Área</TableHead>
-                    <TableHead className="w-[8%] text-right whitespace-nowrap">Pav.</TableHead>
-                    <TableHead className="w-[20%] whitespace-nowrap max-sm:whitespace-normal">Responsável</TableHead>
-                    <TableHead className="w-[14%] whitespace-nowrap max-sm:whitespace-normal">Criado em</TableHead>
+                    <TableHead onClick={() => toggleSort('name')} aria-sort={sortBy === 'name' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} className="w-[20%] whitespace-nowrap max-sm:whitespace-normal cursor-pointer select-none">Nome {sortBy === 'name' && (sortDir === 'asc' ? <ArrowUp className="inline-block w-3 h-3 ml-1 opacity-70" /> : <ArrowDown className="inline-block w-3 h-3 ml-1 opacity-70" />)}</TableHead>
+                    <TableHead onClick={() => toggleSort('location')} aria-sort={sortBy === 'location' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} className="w-[20%] whitespace-nowrap max-sm:whitespace-normal cursor-pointer select-none">Localização {sortBy === 'location' && (sortDir === 'asc' ? <ArrowUp className="inline-block w-3 h-3 ml-1 opacity-70" /> : <ArrowDown className="inline-block w-3 h-3 ml-1 opacity-70" />)}</TableHead>
+                    <TableHead onClick={() => toggleSort('totalArea')} aria-sort={sortBy === 'totalArea' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} className="w-[10%] text-right whitespace-nowrap cursor-pointer select-none">Área {sortBy === 'totalArea' && (sortDir === 'asc' ? <ArrowUp className="inline-block w-3 h-3 ml-1 opacity-70" /> : <ArrowDown className="inline-block w-3 h-3 ml-1 opacity-70" />)}</TableHead>
+                    <TableHead onClick={() => toggleSort('floors')} aria-sort={sortBy === 'floors' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} className="w-[8%] text-right whitespace-nowrap cursor-pointer select-none">Pav. {sortBy === 'floors' && (sortDir === 'asc' ? <ArrowUp className="inline-block w-3 h-3 ml-1 opacity-70" /> : <ArrowDown className="inline-block w-3 h-3 ml-1 opacity-70" />)}</TableHead>
+                    <TableHead onClick={() => toggleSort('technician')} aria-sort={sortBy === 'technician' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} className="w-[20%] whitespace-nowrap max-sm:whitespace-normal cursor-pointer select-none">Responsável {sortBy === 'technician' && (sortDir === 'asc' ? <ArrowUp className="inline-block w-3 h-3 ml-1 opacity-70" /> : <ArrowDown className="inline-block w-3 h-3 ml-1 opacity-70" />)}</TableHead>
+                    <TableHead onClick={() => toggleSort('createdAt')} aria-sort={sortBy === 'createdAt' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} className="w-[14%] whitespace-nowrap max-sm:whitespace-normal cursor-pointer select-none">Criado em {sortBy === 'createdAt' && (sortDir === 'asc' ? <ArrowUp className="inline-block w-3 h-3 ml-1 opacity-70" /> : <ArrowDown className="inline-block w-3 h-3 ml-1 opacity-70" />)}</TableHead>
                     <TableHead className="w-[8%] text-right whitespace-nowrap">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {buildings.map((building) => (
+                  {pagedBuildings.map((building) => (
                     <TableRow key={building.id} data-testid={`row-building-${building.id}`}>
                       <TableCell className="w-[24%] font-medium whitespace-nowrap overflow-hidden text-ellipsis max-sm:whitespace-normal" data-testid={`text-building-name-${building.id}`}>
                         {building.name}
@@ -278,6 +363,21 @@ export default function BuildingList() {
                   ))}
                 </TableBody>
               </Table>
+              <div className="flex items-center justify-between gap-4 border-t px-4 py-3 text-sm text-slate-600">
+                <p>
+                  Mostrando <span className="font-semibold">{pagedBuildings.length}</span> de {" "}
+                  <span className="font-semibold">{filtered.length}</span> edificações
+                </p>
+                <div className="flex items-center gap-1">
+                  <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={pageSafe === 1}>Anterior</Button>
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                    <Button key={p} variant={pageSafe === p ? "default" : "outline"} size="sm" onClick={() => setPage(p)} className={pageSafe === p ? "" : "bg-white"}>
+                      {p}
+                    </Button>
+                  ))}
+                  <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={pageSafe === totalPages}>Próxima</Button>
+                </div>
+              </div>
             </div>
           )}
         </main>
