@@ -305,8 +305,7 @@ export default function BuildingList() {
                     <TableHead onClick={() => toggleSort('totalArea')} aria-sort={sortBy === 'totalArea' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} className="w-[10%] text-right whitespace-nowrap cursor-pointer select-none">Área {sortBy === 'totalArea' && (sortDir === 'asc' ? <ArrowUp className="inline-block w-3 h-3 ml-1 opacity-70" /> : <ArrowDown className="inline-block w-3 h-3 ml-1 opacity-70" />)}</TableHead>
                     <TableHead onClick={() => toggleSort('floors')} aria-sort={sortBy === 'floors' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} className="w-[8%] text-right whitespace-nowrap cursor-pointer select-none">Pav. {sortBy === 'floors' && (sortDir === 'asc' ? <ArrowUp className="inline-block w-3 h-3 ml-1 opacity-70" /> : <ArrowDown className="inline-block w-3 h-3 ml-1 opacity-70" />)}</TableHead>
                     <TableHead onClick={() => toggleSort('technician')} aria-sort={sortBy === 'technician' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} className="w-[20%] whitespace-nowrap max-sm:whitespace-normal cursor-pointer select-none">Responsável {sortBy === 'technician' && (sortDir === 'asc' ? <ArrowUp className="inline-block w-3 h-3 ml-1 opacity-70" /> : <ArrowDown className="inline-block w-3 h-3 ml-1 opacity-70" />)}</TableHead>
-                    <TableHead onClick={() => toggleSort('createdAt')} aria-sort={sortBy === 'createdAt' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} className="w-[14%] whitespace-nowrap max-sm:whitespace-normal cursor-pointer select-none">Criado em {sortBy === 'createdAt' && (sortDir === 'asc' ? <ArrowUp className="inline-block w-3 h-3 ml-1 opacity-70" /> : <ArrowDown className="inline-block w-3 h-3 ml-1 opacity-70" />)}</TableHead>
-                    <TableHead className="w-[8%] text-right whitespace-nowrap">Ações</TableHead>
+                    <TableHead className="w-[14%] text-right whitespace-nowrap">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -330,12 +329,7 @@ export default function BuildingList() {
                       <TableCell className="w-[20%] whitespace-nowrap overflow-hidden text-ellipsis max-sm:whitespace-normal" data-testid={`text-building-responsible-${building.id}`}>
                         {building.technicianId ? (techNameById[building.technicianId] ?? "—") : "—"}
                       </TableCell>
-                      <TableCell className="w-[10%] whitespace-nowrap overflow-hidden text-ellipsis max-sm:whitespace-normal">
-                        <div className="flex items-center gap-2" data-testid={`text-building-date-${building.id}`}>
-                          <span>{formatDate(building.createdAt!)}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="w-[8%] text-right">
+                      <TableCell className="w-[14%] text-right">
                         <div className="flex items-center justify-end gap-1.5">
                           <Button
                             variant="ghost"

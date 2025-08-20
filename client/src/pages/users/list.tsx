@@ -289,21 +289,7 @@ export default function UsersList() {
                 )
               )}
             </TableHead>
-            <TableHead
-              onClick={() => toggleSort('createdAt')}
-              aria-sort={sortBy === 'createdAt' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
-              className="w-[18%] whitespace-nowrap max-sm:whitespace-normal cursor-pointer select-none"
-            >
-              <span>Criado em</span>
-              {sortBy === 'createdAt' && (
-                sortDir === 'asc' ? (
-                  <ArrowUp className="inline-block w-3 h-3 ml-1 opacity-70" />
-                ) : (
-                  <ArrowDown className="inline-block w-3 h-3 ml-1 opacity-70" />
-                )
-              )}
-            </TableHead>
-                      <TableHead className="w-[10%] text-right whitespace-nowrap">Ações</TableHead>
+                      <TableHead className="w-[28%] text-right whitespace-nowrap">Ações</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -318,10 +304,7 @@ export default function UsersList() {
                         <TableCell className="w-[18%] whitespace-nowrap max-sm:whitespace-normal overflow-hidden text-ellipsis">
                           {formatPhoneBRDisplay(u.phone)}
                         </TableCell>
-                        <TableCell className="w-[18%] whitespace-nowrap max-sm:whitespace-normal overflow-hidden text-ellipsis">
-                          {formatDateBR(u.createdAt as any)}
-                        </TableCell>
-                        <TableCell>
+                        <TableCell className="w-[28%]">
                           <div className="flex items-center justify-end gap-1.5">
                             <Button
                               variant="ghost"

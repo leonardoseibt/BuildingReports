@@ -227,8 +227,7 @@ export default function TechniciansList() {
                     <TableHead onClick={() => toggleSort('creaCau')} aria-sort={sortBy === 'creaCau' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} className="w-[15%] whitespace-nowrap max-sm:whitespace-normal cursor-pointer select-none">Registro {sortBy === 'creaCau' && (sortDir === 'asc' ? <ArrowUp className="inline-block w-3 h-3 ml-1 opacity-70" /> : <ArrowDown className="inline-block w-3 h-3 ml-1 opacity-70" />)}</TableHead>
                     <TableHead onClick={() => toggleSort('email')} aria-sort={sortBy === 'email' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} className="w-[24%] whitespace-nowrap max-sm:whitespace-normal cursor-pointer select-none">E-mail {sortBy === 'email' && (sortDir === 'asc' ? <ArrowUp className="inline-block w-3 h-3 ml-1 opacity-70" /> : <ArrowDown className="inline-block w-3 h-3 ml-1 opacity-70" />)}</TableHead>
                     <TableHead onClick={() => toggleSort('phone')} aria-sort={sortBy === 'phone' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} className="w-[18%] whitespace-nowrap max-sm:whitespace-normal cursor-pointer select-none">Telefone {sortBy === 'phone' && (sortDir === 'asc' ? <ArrowUp className="inline-block w-3 h-3 ml-1 opacity-70" /> : <ArrowDown className="inline-block w-3 h-3 ml-1 opacity-70" />)}</TableHead>
-                    <TableHead onClick={() => toggleSort('createdAt')} aria-sort={sortBy === 'createdAt' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} className="w-[17%] whitespace-nowrap max-sm:whitespace-normal cursor-pointer select-none">Criado em {sortBy === 'createdAt' && (sortDir === 'asc' ? <ArrowUp className="inline-block w-3 h-3 ml-1 opacity-70" /> : <ArrowDown className="inline-block w-3 h-3 ml-1 opacity-70" />)}</TableHead>
-                    <TableHead className="w-[8%] text-right whitespace-nowrap">Ações</TableHead>
+                    <TableHead className="w-[17%] text-right whitespace-nowrap">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -241,8 +240,7 @@ export default function TechniciansList() {
                       </TableCell>
                       <TableCell className="w-[24%] whitespace-nowrap overflow-hidden text-ellipsis max-sm:whitespace-normal">{t.email || "-"}</TableCell>
                       <TableCell className="w-[18%] whitespace-nowrap overflow-hidden text-ellipsis max-sm:whitespace-normal">{formatPhoneBRDisplay(t.phone)}</TableCell>
-                      <TableCell className="w-[10%] whitespace-nowrap overflow-hidden text-ellipsis max-sm:whitespace-normal">{formatDateBR((t as any).createdAt)}</TableCell>
-                      <TableCell className="w-[8%] text-right">
+                      <TableCell className="w-[17%] text-right">
                         <div className="flex items-center justify-end gap-1.5">
                           <Button
                             variant="ghost"
