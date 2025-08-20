@@ -5,6 +5,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { NotchedField } from "@/components/ui/notched-field";
 import { Button } from "@/components/ui/button";
+import FormHeader from "@/components/ui/form-header";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -45,9 +46,7 @@ export default function NoiseClassForm({ initialItem, onSuccess, onCancel }: { i
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit((data) => mutation.mutate(data))} className="space-y-6" autoComplete="off">
-        <div className="rounded-2xl border bg-white/80 backdrop-blur px-5 py-4 md:px-6 md:py-5 shadow-sm">
-          <h2 className="text-xl font-semibold tracking-tight text-slate-900">{initialItem ? 'Editar Classe de Ruído' : 'Nova Classe de Ruído'}</h2>
-        </div>
+  <FormHeader title={initialItem ? 'Editar Classe de Ruído' : 'Nova Classe de Ruído'} subtitle={initialItem ? 'Atualize os dados da classe de ruído.' : 'Cadastre uma nova classe de ruído.'} initials={initialItem?.code ?? null} />
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <FormField name="code" control={form.control} render={({ field }) => (

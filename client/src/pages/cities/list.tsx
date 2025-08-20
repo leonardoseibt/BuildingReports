@@ -5,9 +5,11 @@ import Header from "@/components/layout/header";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+import FormHeader from "@/components/ui/form-header";
 import { Button } from "@/components/ui/button";
 import { Building2, Plus, Loader2, Pencil, Trash2, Search, ArrowUp, ArrowDown } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { PaginationSimple as Pagination } from "@/components/ui/pagination";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
  type StateRow = { id: number; code: string; name: string };
@@ -195,15 +197,7 @@ export default function CitiesList() {
                   Mostrando <span className="font-semibold">{pagedItems.length}</span> de {" "}
                   <span className="font-semibold">{filtered.length}</span> municípios
                 </p>
-                <div className="flex items-center gap-1">
-                  <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={pageSafe === 1}>Anterior</Button>
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-                    <Button key={p} variant={pageSafe === p ? "default" : "outline"} size="sm" onClick={() => setPage(p)} className={pageSafe === p ? "" : "bg-white"}>
-                      {p}
-                    </Button>
-                  ))}
-                  <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={pageSafe === totalPages}>Próxima</Button>
-                </div>
+                <Pagination totalPages={totalPages} page={pageSafe} onPageChange={(p: number) => setPage(p)} />
               </div>
             </div>
           )}
@@ -211,16 +205,17 @@ export default function CitiesList() {
       </div>
 
       <Dialog open={open} onOpenChange={(v) => { if (!v) setEditItem(null); setOpen(v); }}>
-        <DialogContent className="max-w-lg max-h-[90vh] p-0 overflow-hidden">
+    <DialogContent className="max-w-xl max-h-[90vh] p-0 overflow-hidden">
           <div className="max-h-[calc(90vh-1rem)] overflow-y-auto my-7 px-7 space-y-3">
-            <div className="grid grid-cols-3 gap-2">
-              <select value={stateId} onChange={(e) => setStateId(e.target.value ? Number(e.target.value) : "")} className="col-span-1 h-9 border rounded px-2">
+            <FormHeader title={editItem ? 'Editar Município' : 'Novo Município'} subtitle={editItem ? 'Atualize os dados do município.' : 'Cadastre um novo município.'} initials={cityName ?? null} />
+            <div className="grid grid-cols-1 sm:[grid-template-columns:12rem_1fr] gap-2 items-start">
+              <select value={stateId} onChange={(e) => setStateId(e.target.value ? Number(e.target.value) : "")} className="h-9 border rounded px-2 w-full">
                 <option value="">UF</option>
                 {states.map((s) => (
                   <option key={s.id} value={s.id}>{s.code} - {s.name}</option>
                 ))}
               </select>
-              <input value={cityName} onChange={(e) => setCityName(e.target.value)} placeholder="Município" className="col-span-2 h-9 border rounded px-2" />
+              <input value={cityName} onChange={(e) => setCityName(e.target.value)} placeholder="Município" className="h-9 border rounded px-2 w-full" />
             </div>
             <div className="flex justify-end">
               <Button size="sm" onClick={() => saveMutation.mutate()} disabled={!stateId || !cityName || saveMutation.isPending}>{editItem ? 'Salvar' : 'Adicionar'}</Button>

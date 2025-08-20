@@ -8,6 +8,7 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Volume2, Plus, Loader2, Pencil, Trash2, Search, ArrowUp, ArrowDown } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { PaginationSimple as Pagination } from "@/components/ui/pagination";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import type { NoiseClass } from "@shared/schema";
 import NoiseClassForm from "@/components/noise-classes/noise-class-form";
@@ -193,15 +194,7 @@ export default function NoiseClassesList() {
                   Mostrando <span className="font-semibold">{pagedItems.length}</span> de {" "}
                   <span className="font-semibold">{filtered.length}</span> classes
                 </p>
-                <div className="flex items-center gap-1">
-                  <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={pageSafe === 1}>Anterior</Button>
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-                    <Button key={p} variant={pageSafe === p ? "default" : "outline"} size="sm" onClick={() => setPage(p)} className={pageSafe === p ? "" : "bg-white"}>
-                      {p}
-                    </Button>
-                  ))}
-                  <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={pageSafe === totalPages}>Próxima</Button>
-                </div>
+                <Pagination totalPages={totalPages} page={pageSafe} onPageChange={(p: number) => setPage(p)} />
               </div>
             </div>
           )}

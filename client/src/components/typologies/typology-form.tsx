@@ -4,6 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { NotchedField } from "@/components/ui/notched-field";
+import FormHeader from "@/components/ui/form-header";
 import { Button } from "@/components/ui/button";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -45,9 +46,7 @@ export default function TypologyForm({ initialItem, onSuccess, onCancel }: { ini
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit((data) => mutation.mutate(data))} className="space-y-6" autoComplete="off">
-        <div className="rounded-2xl border bg-white/80 backdrop-blur px-5 py-4 md:px-6 md:py-5 shadow-sm">
-          <h2 className="text-xl font-semibold tracking-tight text-slate-900">{initialItem ? 'Editar Tipo de Uso' : 'Novo Tipo de Uso'}</h2>
-        </div>
+  <FormHeader title={initialItem ? 'Editar Tipo de Uso' : 'Novo Tipo de Uso'} subtitle={initialItem ? 'Atualize os dados do tipo de uso.' : 'Cadastre um novo tipo de uso.'} initials={initialItem?.code ?? null} />
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <FormField name="code" control={form.control} render={({ field }) => (

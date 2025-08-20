@@ -8,6 +8,7 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Globe2, Plus, Loader2, Pencil, Trash2, MapPin, X, Search, ArrowUp, ArrowDown } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { PaginationSimple as Pagination } from "@/components/ui/pagination";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import type { BioclimaticZone } from "@shared/schema";
 import { ZoneForm } from "@/components/bioclimatic-zones";
@@ -197,15 +198,7 @@ export default function BioclimaticZonesList() {
                   Mostrando <span className="font-semibold">{pagedZones.length}</span> de {" "}
                   <span className="font-semibold">{filtered.length}</span> zonas
                 </p>
-                <div className="flex items-center gap-1">
-                  <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={pageSafe === 1}>Anterior</Button>
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-                    <Button key={p} variant={pageSafe === p ? "default" : "outline"} size="sm" onClick={() => setPage(p)} className={pageSafe === p ? "" : "bg-white"}>
-                      {p}
-                    </Button>
-                  ))}
-                  <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={pageSafe === totalPages}>Próxima</Button>
-                </div>
+                <Pagination totalPages={totalPages} page={pageSafe} onPageChange={(p: number) => setPage(p)} />
               </div>
             </div>
           )}
