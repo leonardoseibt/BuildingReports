@@ -35,13 +35,19 @@ import {
   aggressivenessClasses,
   bioclimaticZones,
   bioclimaticZoneCoverages,
+  states,
+  cities,
   type BioclimaticZone,
   type InsertBioclimaticZone,
   type BioclimaticZoneCoverage,
   type InsertBioclimaticZoneCoverage,
+  type State,
+  type InsertState,
+  type City,
+  type InsertCity,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and, asc, isNull } from "drizzle-orm";
+import { eq, desc, and, asc, isNull, ilike } from "drizzle-orm";
 
 export interface IStorage {
   // User operations
@@ -117,8 +123,15 @@ export interface IStorage {
   deleteBioclimaticZone(id: number): Promise<boolean>;
   listBioclimaticZoneCoverages(zoneId: number): Promise<BioclimaticZoneCoverage[]>;
   createBioclimaticZoneCoverage(zoneId: number, item: Omit<InsertBioclimaticZoneCoverage, 'zoneId'>): Promise<BioclimaticZoneCoverage>;
+  updateBioclimaticZoneCoverage(id: number, item: Partial<InsertBioclimaticZoneCoverage>): Promise<BioclimaticZoneCoverage>;
   deleteBioclimaticZoneCoverage(id: number): Promise<boolean>;
   findBioclimaticZoneForLocation(state: string, city?: string | null): Promise<string | null>;
+
+  // States & Cities
+  listStates(): Promise<State[]>;
+  createState(item: InsertState): Promise<State>;
+  listCitiesByState(stateId: number): Promise<City[]>;
+  createCity(item: InsertCity): Promise<City>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -666,17 +679,40 @@ export class DatabaseStorage implements IStorage {
   }
 
   async listBioclimaticZoneCoverages(zoneId: number): Promise<BioclimaticZoneCoverage[]> {
-    return await db.select().from(bioclimaticZoneCoverages)
+    // Return enriched rows joined with cities and states for UI convenience
+    const rows = await db
+      .select({
+        id: bioclimaticZoneCoverages.id,
+        zoneId: bioclimaticZoneCoverages.zoneId,
+        cityId: cities.id,
+        city: cities.name,
+        stateId: states.id,
+        state: states.code,
+      })
+      .from(bioclimaticZoneCoverages)
+      .leftJoin(cities, eq(bioclimaticZoneCoverages.cityId, cities.id))
+      .leftJoin(states, eq(cities.stateId, states.id))
       .where(eq(bioclimaticZoneCoverages.zoneId, zoneId))
-      .orderBy(asc(bioclimaticZoneCoverages.state), asc(bioclimaticZoneCoverages.city));
+      .orderBy(asc(cities.name));
+    return rows as any;
   }
 
   async createBioclimaticZoneCoverage(zoneId: number, item: Omit<InsertBioclimaticZoneCoverage, 'zoneId'>): Promise<BioclimaticZoneCoverage> {
     const [row] = await db.insert(bioclimaticZoneCoverages).values({
       zoneId,
-      state: (item as any).state,
-      city: (item as any).city,
+      cityId: (item as any).cityId,
     }).returning();
+    return row as BioclimaticZoneCoverage;
+  }
+
+  async updateBioclimaticZoneCoverage(id: number, item: Partial<InsertBioclimaticZoneCoverage>): Promise<BioclimaticZoneCoverage> {
+    const update: any = { };
+  if ((item as any).cityId !== undefined) update.cityId = (item as any).cityId;
+
+    const [row] = await db.update(bioclimaticZoneCoverages)
+      .set(update)
+      .where(eq(bioclimaticZoneCoverages.id, id))
+      .returning();
     return row as BioclimaticZoneCoverage;
   }
 
@@ -688,28 +724,34 @@ export class DatabaseStorage implements IStorage {
   async findBioclimaticZoneForLocation(state: string, city?: string | null): Promise<string | null> {
     const uf = (state || '').toUpperCase();
     const cityName = (city || '').trim();
-
-    // Try city-specific coverage first
-    if (cityName) {
-      const [cov] = await db.select({ zoneId: bioclimaticZoneCoverages.zoneId })
-        .from(bioclimaticZoneCoverages)
-        .where(and(eq(bioclimaticZoneCoverages.state, uf), eq(bioclimaticZoneCoverages.city, cityName)))
-        .limit(1);
-      if (cov) {
-        const [zone] = await db.select({ code: bioclimaticZones.code }).from(bioclimaticZones).where(eq(bioclimaticZones.id, cov.zoneId)).limit(1);
-        return zone?.code ?? null;
-      }
-    }
-    // Then UF-only coverage (city null)
-    const [covUF] = await db.select({ zoneId: bioclimaticZoneCoverages.zoneId })
+    if (!uf || !cityName) return null;
+    const [st] = await db.select().from(states).where(eq(states.code, uf)).limit(1);
+    if (!st) return null;
+    const [ci] = await db.select().from(cities).where(and(eq(cities.stateId, (st as any).id), ilike(cities.name, cityName))).limit(1);
+    if (!ci) return null;
+    const [cov] = await db.select({ zoneId: bioclimaticZoneCoverages.zoneId })
       .from(bioclimaticZoneCoverages)
-      .where(and(eq(bioclimaticZoneCoverages.state, uf), isNull(bioclimaticZoneCoverages.city)))
+      .where(eq(bioclimaticZoneCoverages.cityId, (ci as any).id))
       .limit(1);
-    if (covUF) {
-      const [zone] = await db.select({ code: bioclimaticZones.code }).from(bioclimaticZones).where(eq(bioclimaticZones.id, covUF.zoneId)).limit(1);
-      return zone?.code ?? null;
-    }
-    return null;
+    if (!cov) return null;
+    const [zone] = await db.select({ code: bioclimaticZones.code }).from(bioclimaticZones).where(eq(bioclimaticZones.id, cov.zoneId)).limit(1);
+    return zone?.code ?? null;
+  }
+
+  // States & Cities
+  async listStates(): Promise<State[]> {
+    return await db.select().from(states).orderBy(asc(states.code));
+  }
+  async createState(item: InsertState): Promise<State> {
+    const [row] = await db.insert(states).values(item as any).onConflictDoNothing().returning();
+    return row as any;
+  }
+  async listCitiesByState(stateId: number): Promise<City[]> {
+    return await db.select().from(cities).where(eq(cities.stateId, stateId)).orderBy(asc(cities.name));
+  }
+  async createCity(item: InsertCity): Promise<City> {
+    const [row] = await db.insert(cities).values(item as any).onConflictDoNothing().returning();
+    return row as any;
   }
 }
 

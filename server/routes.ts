@@ -2,7 +2,7 @@ import express, { type Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./auth";
-import { insertBuildingSchema, updateBuildingSchema, insertStructuralSystemSchema, insertSealingSystemSchema, insertRoofingSystemSchema, insertPerformanceEvaluationSchema, insertReportSchema, insertTechnicianSchema, updateTechnicianSchema, insertUserSchema, updateUserSchema, insertTypologySchema, insertNoiseClassSchema, insertAggressivenessClassSchema, insertBioclimaticZoneSchema, insertBioclimaticZoneCoverageSchema } from "@shared/schema";
+import { insertBuildingSchema, updateBuildingSchema, insertStructuralSystemSchema, insertSealingSystemSchema, insertRoofingSystemSchema, insertPerformanceEvaluationSchema, insertReportSchema, insertTechnicianSchema, updateTechnicianSchema, insertUserSchema, updateUserSchema, insertTypologySchema, insertNoiseClassSchema, insertAggressivenessClassSchema, insertBioclimaticZoneSchema, insertBioclimaticZoneCoverageSchema, insertStateSchema, insertCitySchema } from "@shared/schema";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 
@@ -474,12 +474,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     catch { res.status(500).json({ message: 'Failed to fetch coverages' }); }
   });
   app.post('/api/bioclimatic-zones/:id/coverages', isAuthenticated, express.json(), async (req, res) => {
-    try { const id = Number(req.params.id); const data = insertBioclimaticZoneCoverageSchema.pick({ state: true, city: true }).parse(req.body); const row = await storage.createBioclimaticZoneCoverage(id, { state: (data as any).state, city: (data as any).city }); res.json(row); }
-    catch (error) { if (error instanceof z.ZodError) return res.status(400).json({ message: 'Validation error', errors: error.errors }); res.status(500).json({ message: 'Failed to create coverage' }); }
+    try {
+      const id = Number(req.params.id);
+      const payload = insertBioclimaticZoneCoverageSchema.pick({ cityId: true }).required({ cityId: true }).parse(req.body as any);
+      const row = await storage.createBioclimaticZoneCoverage(id, { cityId: (payload as any).cityId } as any);
+      res.json(row);
+    } catch (error) {
+      if (error instanceof z.ZodError) return res.status(400).json({ message: 'Validation error', errors: error.errors });
+      res.status(500).json({ message: 'Failed to create coverage' });
+    }
+  });
+  app.put('/api/bioclimatic-zones/coverages/:coverageId', isAuthenticated, express.json(), async (req, res) => {
+    try {
+      const coverageId = Number(req.params.coverageId);
+      const payload = insertBioclimaticZoneCoverageSchema.pick({ cityId: true }).partial().parse(req.body as any);
+      const row = await storage.updateBioclimaticZoneCoverage(coverageId, payload as any);
+      res.json(row);
+    } catch (error) {
+      if (error instanceof z.ZodError) return res.status(400).json({ message: 'Validation error', errors: error.errors });
+      res.status(500).json({ message: 'Failed to update coverage' });
+    }
   });
   app.delete('/api/bioclimatic-zones/coverages/:coverageId', isAuthenticated, async (req, res) => {
     try { const coverageId = Number(req.params.coverageId); const ok = await storage.deleteBioclimaticZoneCoverage(coverageId); res.json({ ok }); }
     catch { res.status(500).json({ message: 'Failed to delete coverage' }); }
+  });
+
+  // States & Cities endpoints
+  app.get('/api/states', isAuthenticated, async (_req, res) => {
+    try { res.json(await storage.listStates()); } catch { res.status(500).json({ message: 'Failed to fetch states' }); }
+  });
+  app.post('/api/states', isAuthenticated, express.json(), async (req, res) => {
+    try { const data = insertStateSchema.parse(req.body); const row = await storage.createState(data as any); res.json(row); }
+    catch (error) { if (error instanceof z.ZodError) return res.status(400).json({ message: 'Validation error', errors: error.errors }); res.status(500).json({ message: 'Failed to create state' }); }
+  });
+  app.get('/api/states/:stateId/cities', isAuthenticated, async (req, res) => {
+    try { const stateId = Number(req.params.stateId); res.json(await storage.listCitiesByState(stateId)); }
+    catch { res.status(500).json({ message: 'Failed to fetch cities' }); }
+  });
+  app.post('/api/cities', isAuthenticated, express.json(), async (req, res) => {
+    try { const data = insertCitySchema.parse(req.body); const row = await storage.createCity(data as any); res.json(row); }
+    catch (error) { if (error instanceof z.ZodError) return res.status(400).json({ message: 'Validation error', errors: error.errors }); res.status(500).json({ message: 'Failed to create city' }); }
   });
 
   // Technicians routes

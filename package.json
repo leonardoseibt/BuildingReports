@@ -17,7 +17,16 @@
   "db:seed:bioclimatic": "tsx scripts/run-sql.ts scripts/sql/20250819_bioclimatic_zones_seed.sql",
   "db:seed:bioclimatic-coverages": "tsx scripts/run-sql.ts scripts/sql/20250819_bioclimatic_coverages_seed.sql",
   "db:migrate:bioclimatic-details": "tsx scripts/run-sql.ts scripts/sql/20250819_bioclimatic_zone_details.sql",
-  "db:rollback:bioclimatic-details": "tsx scripts/run-sql.ts scripts/sql/20250819_bioclimatic_zone_details_rollback.sql"
+  "db:rollback:bioclimatic-details": "tsx scripts/run-sql.ts scripts/sql/20250819_bioclimatic_zone_details_rollback.sql",
+  "db:migrate:bioclimatic-coverages-extend": "tsx scripts/run-sql.ts scripts/sql/20250820_extend_bioclimatic_coverages_table.sql",
+  "db:migrate:prev-zone-code": "tsx scripts/run-sql.ts scripts/sql/20250821_add_prev_zone_code_to_coverages.sql",
+  "db:migrate:normalize-coverages": "tsx scripts/run-sql.ts scripts/sql/20250820_normalize_coverages_states_cities.sql",
+  "db:seed:bioclimatic-1R-6B": "tsx scripts/run-sql.ts scripts/sql/20250820_reset_bioclimatic_zones_and_seed_1R_6B.sql",
+  "db:truncate:coverages": "tsx scripts/run-sql.ts scripts/sql/20250820_truncate_coverages.sql",
+  "db:check:coverages": "tsx scripts/run-sql.ts scripts/sql/20250820_check_coverages_populated.sql",
+  "import:coverages:csv": "tsx scripts/import/coverages-from-csv.ts",
+  "reimport:coverages": "npm run -s db:truncate:coverages && tsx scripts/import/coverages-from-csv.ts",
+  "check:coverages:health": "tsx scripts/check/coverages-health.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

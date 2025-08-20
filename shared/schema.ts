@@ -70,11 +70,36 @@ export const bioclimaticZones = pgTable("bioclimatic_zones", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// New normalized location tables
+export const states = pgTable("states", {
+  id: integer("id").generatedAlwaysAsIdentity().primaryKey(),
+  code: varchar("code", { length: 2 }).notNull().unique(), // UF, e.g., RS
+  name: varchar("name", { length: 128 }).notNull(), // e.g., Rio Grande do Sul
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const cities = pgTable("cities", {
+  id: integer("id").generatedAlwaysAsIdentity().primaryKey(),
+  stateId: integer("state_id").references(() => states.id).notNull(),
+  name: varchar("name", { length: 128 }).notNull(),
+  // City-level attributes that used to live in coverages
+  region: varchar("region", { length: 64 }),
+  latitude: decimal("latitude", { precision: 10, scale: 6 }),
+  longitude: decimal("longitude", { precision: 10, scale: 6 }),
+  altitudeM: decimal("altitude_m", { precision: 10, scale: 2 }),
+  tbsC: decimal("tbs_c", { precision: 10, scale: 2 }),
+  urPercent: decimal("ur_percent", { precision: 5, scale: 2 }),
+  radiacaoWm2: decimal("radiacao_wm2", { precision: 10, scale: 2 }),
+  ventoMS: decimal("vento_m_s", { precision: 10, scale: 2 }),
+  amplitudeC: decimal("amplitude_c", { precision: 10, scale: 2 }),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Coverages now only associate city -> zone
 export const bioclimaticZoneCoverages = pgTable("bioclimatic_zone_coverages", {
   id: integer("id").generatedAlwaysAsIdentity().primaryKey(),
   zoneId: integer("zone_id").references(() => bioclimaticZones.id).notNull(),
-  state: varchar("state", { length: 2 }).notNull(), // UF
-  city: varchar("city", { length: 128 }), // optional; blank means whole UF
+  cityId: integer("city_id").references(() => cities.id).notNull(),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -242,6 +267,17 @@ export const bioclimaticZoneCoveragesRelations = relations(bioclimaticZoneCovera
   }),
 }));
 
+export const statesRelations = relations(states, ({ many }) => ({
+  cities: many(cities),
+}));
+
+export const citiesRelations = relations(cities, ({ one }) => ({
+  state: one(states, {
+    fields: [cities.stateId],
+    references: [states.id],
+  }),
+}));
+
 export const structuralSystemsRelations = relations(structuralSystems, ({ one }) => ({
   building: one(buildings, {
     fields: [structuralSystems.buildingId],
@@ -368,6 +404,19 @@ export const insertNoiseClassSchema = createInsertSchema(noiseClasses);
 export const insertAggressivenessClassSchema = createInsertSchema(aggressivenessClasses);
 
 export const insertBioclimaticZoneSchema = createInsertSchema(bioclimaticZones);
+export const insertStateSchema = createInsertSchema(states);
+export const insertCitySchema = createInsertSchema(cities)
+  .extend({
+    latitude: decimalInput.optional(),
+    longitude: decimalInput.optional(),
+    altitudeM: decimalInput.optional(),
+    tbsC: decimalInput.optional(),
+    urPercent: decimalInput.optional(),
+    radiacaoWm2: decimalInput.optional(),
+    ventoMS: decimalInput.optional(),
+    amplitudeC: decimalInput.optional(),
+  });
+
 export const insertBioclimaticZoneCoverageSchema = createInsertSchema(bioclimaticZoneCoverages);
 
 // Allow partial updates on technicians (no userId changes through API)
@@ -405,3 +454,7 @@ export type BioclimaticZone = typeof bioclimaticZones.$inferSelect;
 export type InsertBioclimaticZone = z.infer<typeof insertBioclimaticZoneSchema>;
 export type BioclimaticZoneCoverage = typeof bioclimaticZoneCoverages.$inferSelect;
 export type InsertBioclimaticZoneCoverage = z.infer<typeof insertBioclimaticZoneCoverageSchema>;
+export type State = typeof states.$inferSelect;
+export type InsertState = z.infer<typeof insertStateSchema>;
+export type City = typeof cities.$inferSelect;
+export type InsertCity = z.infer<typeof insertCitySchema>;

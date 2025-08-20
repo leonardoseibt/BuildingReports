@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Globe2, Plus, Loader2, Pencil, Trash2, MapPin, X, Search, ArrowUp, ArrowDown } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import type { BioclimaticZone, BioclimaticZoneCoverage } from "@shared/schema";
+import type { BioclimaticZone } from "@shared/schema";
 import { ZoneForm } from "@/components/bioclimatic-zones";
 
 export default function BioclimaticZonesList() {
@@ -246,20 +246,46 @@ export default function BioclimaticZonesList() {
 function CoveragesPanel({ zone, onClose }: { zone: BioclimaticZone; onClose: () => void; }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { data: coverages = [], isLoading } = useQuery<BioclimaticZoneCoverage[]>({ queryKey: ["/api/bioclimatic-zones", zone.id, "coverages"], queryFn: async () => {
+  type CoverageRow = { id: number; zoneId: number; cityId: number; stateId: number; state: string; city: string };
+  const { data: coverages = [], isLoading } = useQuery<CoverageRow[]>({ queryKey: ["/api/bioclimatic-zones", zone.id, "coverages"], queryFn: async () => {
     const res = await fetch(`/api/bioclimatic-zones/${zone.id}/coverages`);
     if (!res.ok) throw new Error(await res.text());
     return res.json();
   }});
 
+  // Load states and cities
+  type State = { id: number; code: string; name: string };
+  type City = { id: number; stateId: number; name: string };
+  const { data: states = [] } = useQuery<State[]>({ queryKey: ["/api/states"], queryFn: async () => { const r = await fetch('/api/states'); if (!r.ok) throw new Error(await r.text()); return r.json(); } });
+  const [selectedStateId, setSelectedStateId] = useState<number | null>(null);
+  const { data: cities = [] } = useQuery<City[]>({
+    queryKey: ["/api/states", selectedStateId, "cities"],
+    enabled: !!selectedStateId,
+    queryFn: async () => {
+      const r = await fetch(`/api/states/${selectedStateId}/cities`);
+      if (!r.ok) throw new Error(await r.text());
+      return r.json();
+    }
+  });
+
   const addMutation = useMutation({
-    mutationFn: async (payload: { state: string; city?: string; }) => {
+    mutationFn: async (payload: { cityId: number }) => {
       const res = await fetch(`/api/bioclimatic-zones/${zone.id}/coverages`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
       if (!res.ok) throw new Error(await res.text());
       return res.json();
     },
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["/api/bioclimatic-zones", zone.id, "coverages"] }); toast({ title: 'Abrangência adicionada' }); },
     onError: () => { toast({ title: 'Erro', description: 'Falha ao adicionar abrangência', variant: 'destructive' }); },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, payload }: { id: number; payload: { cityId?: number } }) => {
+      const res = await fetch(`/api/bioclimatic-zones/coverages/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      if (!res.ok) throw new Error(await res.text());
+      return res.json();
+    },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["/api/bioclimatic-zones", zone.id, "coverages"] }); toast({ title: 'Abrangência atualizada' }); setEditingId(null); },
+    onError: () => { toast({ title: 'Erro', description: 'Falha ao atualizar abrangência', variant: 'destructive' }); },
   });
 
   const deleteMutation = useMutation({
@@ -272,23 +298,49 @@ function CoveragesPanel({ zone, onClose }: { zone: BioclimaticZone; onClose: () 
     onError: () => { toast({ title: 'Erro', description: 'Falha ao remover abrangência', variant: 'destructive' }); },
   });
 
-  const [state, setState] = useState("");
-  const [city, setCity] = useState("");
+  const [selectedCityId, setSelectedCityId] = useState<number | null>(null);
+  const [editingId, setEditingId] = useState<number | null>(null);
 
   return (
-    <div className="fixed inset-y-0 right-0 w-[28rem] bg-white shadow-2xl border-l border-slate-200 p-6 flex flex-col">
+    <div className="fixed inset-y-0 right-0 w-[34rem] bg-white shadow-2xl border-l border-slate-200 p-6 flex flex-col">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-semibold">Abrangências — {zone.code}</h3>
         <Button variant="ghost" size="icon" onClick={onClose}><X className="h-5 w-5" /></Button>
       </div>
 
-      <div className="space-y-2">
-        <div className="grid grid-cols-3 gap-2">
-          <input value={state} onChange={(e) => setState(e.target.value.toUpperCase())} placeholder="UF" className="col-span-1 h-8 border rounded px-2" maxLength={2} />
-          <input value={city} onChange={(e) => setCity(e.target.value)} placeholder="Cidade (opcional para UF toda)" className="col-span-2 h-8 border rounded px-2" />
+      <div className="space-y-3">
+        <div className="grid grid-cols-2 gap-2">
+          <select
+            className="h-8 border rounded px-2"
+            value={selectedStateId ?? ''}
+            onChange={(e) => { const v = e.target.value ? Number(e.target.value) : null; setSelectedStateId(v); setSelectedCityId(null); }}
+          >
+            <option value="">Selecione a UF</option>
+            {states.map((s) => (
+              <option key={s.id} value={s.id}>{s.code} — {s.name}</option>
+            ))}
+          </select>
+          <select
+            className="h-8 border rounded px-2"
+            value={selectedCityId ?? ''}
+            onChange={(e) => setSelectedCityId(e.target.value ? Number(e.target.value) : null)}
+            disabled={!selectedStateId}
+          >
+            <option value="">Selecione o Município</option>
+            {cities.map((c) => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+          </select>
         </div>
-        <div className="flex justify-end">
-          <Button size="sm" onClick={() => addMutation.mutate({ state, city: city.trim() || undefined })} disabled={!state || addMutation.isPending}>Adicionar</Button>
+        <div className="flex justify-end mt-1.5">
+      <Button size="sm" onClick={() => {
+            if (!selectedCityId) return;
+            if (editingId) {
+              updateMutation.mutate({ id: editingId, payload: { cityId: selectedCityId || undefined } });
+            } else {
+              addMutation.mutate({ cityId: selectedCityId });
+            }
+          }} disabled={!selectedCityId || addMutation.isPending || updateMutation.isPending}>{editingId ? 'Salvar' : 'Adicionar'}</Button>
         </div>
       </div>
 
@@ -298,14 +350,38 @@ function CoveragesPanel({ zone, onClose }: { zone: BioclimaticZone; onClose: () 
         ) : coverages.length === 0 ? (
           <p className="text-slate-500">Nenhuma abrangência cadastrada.</p>
         ) : (
-          <ul className="space-y-1">
-            {coverages.map((c) => (
-              <li key={(c as any).id} className="flex items-center justify-between border rounded px-3 py-2">
-                <span>{c.state} {c.city ? `— ${c.city}` : '(UF inteira)'}</span>
-                <Button variant="ghost" size="icon" onClick={() => deleteMutation.mutate((c as any).id)} className="text-rose-600 hover:bg-rose-50 hover:text-rose-700"><Trash2 className="h-4 w-4" /></Button>
-              </li>
-            ))}
-          </ul>
+          <div className="overflow-auto">
+            <table className="min-w-full text-sm">
+              <thead className="bg-slate-100">
+                <tr>
+                  <th className="px-2 py-1 text-left">UF</th>
+                  <th className="px-2 py-1 text-left">Município</th>
+                  <th className="px-2 py-1 text-right">Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                {coverages.map((c) => (
+                  <tr key={(c as any).id} className="border-b">
+                    <td className="px-2 py-1">{(c as any).state}</td>
+                    <td className="px-2 py-1">{(c as any).city}</td>
+                    <td className="px-2 py-1 text-right">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <Button variant="ghost" size="icon" onClick={() => {
+                          setEditingId((c as any).id);
+                          setSelectedStateId((c as any).stateId);
+                          // When state changes, cities will load via useQuery. Preselect current city
+                          setSelectedCityId((c as any).cityId);
+                        }}>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => deleteMutation.mutate((c as any).id)} className="text-rose-600 hover:bg-rose-50 hover:text-rose-700"><Trash2 className="h-4 w-4" /></Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
     </div>
