@@ -23,6 +23,13 @@ export default function BioclimaticZonesList() {
   const [selectedItem, setSelectedItem] = useState<BioclimaticZone | null>(null);
   const [coveragesFor, setCoveragesFor] = useState<BioclimaticZone | null>(null);
 
+  const formatDate = (date: string | Date | null | undefined) => {
+    if (!date) return "—";
+    const d = typeof date === 'string' ? new Date(date) : date;
+    if (Number.isNaN(d.getTime())) return "—";
+    return d.toLocaleDateString('pt-BR');
+  };
+
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
       toast({ title: "Não autorizado", description: "Você não está logado. Fazendo login...", variant: "destructive" });
@@ -92,8 +99,9 @@ export default function BioclimaticZonesList() {
                 <TableHeader>
                   <TableRow className="bg-slate-100/60">
                     <TableHead className="w-[12%]">Código</TableHead>
-                    <TableHead className="w-[40%]">Descrição</TableHead>
-                    <TableHead className="w-[22%]">Ativa</TableHead>
+                    <TableHead className="w-[46%]">Descrição</TableHead>
+                    <TableHead className="w-[10%]">Ativa</TableHead>
+                    <TableHead className="w-[14%]">Criado em</TableHead>
                     <TableHead className="w-[18%]">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -103,6 +111,7 @@ export default function BioclimaticZonesList() {
                       <TableCell className="font-medium">{z.code}</TableCell>
                       <TableCell>{z.label}</TableCell>
                       <TableCell>{(z as any).isActive ? 'Sim' : 'Não'}</TableCell>
+                      <TableCell>{formatDate((z as any).createdAt)}</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1.5">
                           <Button variant="ghost" size="sm" onClick={() => { setCoveragesFor(z); }}>

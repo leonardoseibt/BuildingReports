@@ -23,15 +23,18 @@ export default function ZoneForm({ initialItem, onSuccess, onCancel }: { initial
   const queryClient = useQueryClient();
   const form = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: initialItem ? { code: initialItem.code, label: initialItem.label, isActive: (initialItem as any).isActive ?? true } : { code: '', label: '', isActive: true },
+    defaultValues: initialItem
+      ? { code: initialItem.code, label: initialItem.label, isActive: (initialItem as any).isActive ?? true }
+      : { code: '', label: '', isActive: true },
     mode: 'onSubmit',
   });
 
   const mutation = useMutation({
     mutationFn: async (data: FormData) => {
+  const payload: any = { code: data.code, label: data.label, isActive: data.isActive ?? true };
       const method = initialItem ? 'PUT' : 'POST';
       const url = initialItem ? `/api/bioclimatic-zones/${initialItem.id}` : '/api/bioclimatic-zones';
-      const res = await apiRequest(method as any, url, data);
+      const res = await apiRequest(method as any, url, payload);
       return res.json();
     },
     onSuccess: () => {
@@ -71,6 +74,8 @@ export default function ZoneForm({ initialItem, onSuccess, onCancel }: { initial
             </FormItem>
           )} />
         </div>
+
+  {/* Campos mínimos */}
 
         <div className="flex justify-end gap-2">
           <Button type="button" variant="outline" onClick={onCancel}>Cancelar</Button>

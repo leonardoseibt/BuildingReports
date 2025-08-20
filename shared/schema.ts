@@ -66,11 +66,6 @@ export const bioclimaticZones = pgTable("bioclimatic_zones", {
   code: varchar("code", { length: 8 }).notNull().unique(), // e.g., ZB1..ZB8
   label: varchar("label", { length: 255 }).notNull(),
   isActive: boolean("is_active").default(true),
-  // New detail fields
-  characteristics: jsonb("characteristics"), // string[]
-  recommendations: jsonb("recommendations"), // string[]
-  thermalLimits: jsonb("thermal_limits"), // { wallTransmittance: number, roofTransmittance: number }
-  designStrategies: jsonb("design_strategies"), // string[]
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
