@@ -143,7 +143,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { typologyId, noiseClassId, aggressivenessClassId } = buildingData as any;
       if (typologyId) {
         const list = await storage.listTypologies();
-        if (!list.find(t => t.id === Number(typologyId))) return res.status(400).json({ message: 'Tipologia inválida' });
+  if (!list.find(t => t.id === Number(typologyId))) return res.status(400).json({ message: 'Tipo de uso inválido' });
       }
       if (noiseClassId) {
         const list = await storage.listNoiseClasses();
@@ -213,7 +213,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { typologyId, noiseClassId, aggressivenessClassId } = data as any;
       if (typologyId) {
         const list = await storage.listTypologies();
-        if (!list.find(t => t.id === Number(typologyId))) return res.status(400).json({ message: 'Tipologia inválida' });
+  if (!list.find(t => t.id === Number(typologyId))) return res.status(400).json({ message: 'Tipo de uso inválido' });
       }
       if (noiseClassId) {
         const list = await storage.listNoiseClasses();

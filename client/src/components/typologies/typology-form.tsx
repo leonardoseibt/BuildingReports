@@ -35,18 +35,18 @@ export default function TypologyForm({ initialItem, onSuccess, onCancel }: { ini
       return res.json();
     },
     onSuccess: () => {
-      toast({ title: 'Sucesso', description: `Tipologia ${initialItem ? 'atualizada' : 'cadastrada'} com sucesso!` });
+  toast({ title: 'Sucesso', description: `Tipo de Uso ${initialItem ? 'atualizado' : 'cadastrado'} com sucesso!` });
       queryClient.invalidateQueries({ queryKey: ['/api/typologies'] });
       onSuccess?.();
     },
-    onError: () => { toast({ title: 'Erro', description: 'Falha ao salvar tipologia', variant: 'destructive' }); },
+  onError: () => { toast({ title: 'Erro', description: 'Falha ao salvar tipo de uso', variant: 'destructive' }); },
   });
 
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit((data) => mutation.mutate(data))} className="space-y-6" autoComplete="off">
         <div className="rounded-2xl border bg-white/80 backdrop-blur px-5 py-4 md:px-6 md:py-5 shadow-sm">
-          <h2 className="text-xl font-semibold tracking-tight text-slate-900">{initialItem ? 'Editar Tipologia' : 'Nova Tipologia'}</h2>
+          <h2 className="text-xl font-semibold tracking-tight text-slate-900">{initialItem ? 'Editar Tipo de Uso' : 'Novo Tipo de Uso'}</h2>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

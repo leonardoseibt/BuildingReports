@@ -21,7 +21,7 @@ const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Edificações', href: '/buildings', icon: Building2 },
   { name: 'Responsáveis Técnicos', href: '/technicians', icon: IdCard },
-  { name: 'Tipologias', href: '/typologies', icon: Layers2 },
+  { name: 'Tipos de Uso', href: '/typologies', icon: Layers2 },
   { name: 'Classes de Ruído', href: '/noise-classes', icon: Volume2 },
   { name: 'Classes de Agressividade', href: '/aggressiveness-classes', icon: Shield },
   { name: 'Zonas Bioclimáticas', href: '/bioclimatic-zones', icon: Globe2 },

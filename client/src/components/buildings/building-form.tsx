@@ -311,18 +311,18 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
                   )}
                 />
 
-                {/* Tipologia Habitacional moves to position 2 */}
+                {/* Tipo de Uso Habitacional moves to position 2 */}
                 <FormField
                   control={form.control}
                   name="typologyId"
                   render={({ field }) => (
                     <FormItem>
                       <FormControl>
-                        <NotchedField label="Tipologia Habitacional" requiredMark>
+                        <NotchedField label="Tipo de Uso Habitacional" requiredMark>
               <Select onValueChange={field.onChange} value={field.value ? String(field.value) : undefined}>
                             <FormControl>
                 <SelectTrigger data-testid="select-typology" className="border-0 bg-transparent shadow-none focus:ring-0 focus:ring-offset-0">
-                                <SelectValue placeholder="Selecione a tipologia">
+                                <SelectValue placeholder="Selecione o tipo de uso">
                                   {(() => {
                                     const sel = (typologies || []).find((t:any) => String(t.id) === String(field.value));
                                     return sel ? sel.label : undefined;

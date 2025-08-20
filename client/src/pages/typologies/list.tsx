@@ -107,7 +107,7 @@ export default function TypologiesList() {
       if (ctx?.prev) queryClient.setQueryData(["/api/typologies"], ctx.prev);
       toast({ title: 'Erro ao excluir', description: String(err), variant: 'destructive' });
     },
-    onSuccess: (_data, t) => { toast({ title: 'Tipologia excluída', description: `${t.label} foi removida.` }); },
+  onSuccess: (_data, t) => { toast({ title: 'Tipo de Uso excluído', description: `${t.label} foi removido.` }); },
     onSettled: () => { queryClient.invalidateQueries({ queryKey: ["/api/typologies"], refetchType: 'inactive' }); }
   });
 
@@ -121,13 +121,13 @@ export default function TypologiesList() {
       <Sidebar />
       <div className="flex-1 flex flex-col overflow-hidden">
         <Header
-          title="Tipologias"
-          description="Gerencie as tipologias habitacionais"
+          title="Tipos de Uso"
+          description="Gerencie os tipos de uso habitacional"
           action={
             <div className="flex items-center gap-2">
               {isFetching && <Loader2 className="h-4 w-4 animate-spin text-slate-400" aria-label="Atualizando" />}
               <Button onClick={() => { setEditItem(null); setFormKey(k => k + 1); setOpen(true); }}>
-                <Plus className="w-4 h-4 mr-2" /> Nova Tipologia
+                <Plus className="w-4 h-4 mr-2" /> Novo Tipo de Uso
               </Button>
             </div>
           }
@@ -141,7 +141,7 @@ export default function TypologiesList() {
                   type="text"
                   value={search}
                   onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-                  placeholder="Buscar tipologias (código, descrição, data)"
+                  placeholder="Buscar tipos de uso (código, descrição, data)"
                   className="w-full h-9 rounded-md border px-9 text-sm"
                 />
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
@@ -153,10 +153,10 @@ export default function TypologiesList() {
           ) : items.length === 0 ? (
             <div className="text-center py-12">
               <Layers2 className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-slate-900 mb-2">Nenhuma tipologia cadastrada</h3>
+              <h3 className="text-lg font-medium text-slate-900 mb-2">Nenhum tipo de uso cadastrado</h3>
               <p className="text-slate-500 mb-6">Cadastre a primeira para utilizá-la nas edificações.</p>
               <Button size="lg" onClick={() => { setEditItem(null); setFormKey(k => k + 1); setOpen(true); }}>
-                <Plus className="w-4 h-4 mr-2" /> Cadastrar Tipologia
+                <Plus className="w-4 h-4 mr-2" /> Cadastrar Tipo de Uso
               </Button>
             </div>
           ) : (
@@ -195,7 +195,7 @@ export default function TypologiesList() {
               <div className="flex items-center justify-between gap-4 border-t px-4 py-3 text-sm text-slate-600">
                 <p>
                   Mostrando <span className="font-semibold">{pagedItems.length}</span> de {" "}
-                  <span className="font-semibold">{filtered.length}</span> tipologias
+                  <span className="font-semibold">{filtered.length}</span> tipos de uso
                 </p>
                 <div className="flex items-center gap-1">
                   <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={pageSafe === 1}>Anterior</Button>
@@ -223,9 +223,9 @@ export default function TypologiesList() {
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Excluir tipologia</AlertDialogTitle>
+            <AlertDialogTitle>Excluir tipo de uso</AlertDialogTitle>
             <AlertDialogDescription>
-              Tem certeza que deseja excluir {selectedItem ? (<strong>{` ${selectedItem.label} `}</strong>) : ("esta tipologia")}?
+              Tem certeza que deseja excluir {selectedItem ? (<strong>{` ${selectedItem.label} `}</strong>) : ("este tipo de uso")}? 
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
