@@ -508,13 +508,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try { const data = insertStateSchema.parse(req.body); const row = await storage.createState(data as any); res.json(row); }
     catch (error) { if (error instanceof z.ZodError) return res.status(400).json({ message: 'Validation error', errors: error.errors }); res.status(500).json({ message: 'Failed to create state' }); }
   });
+  app.put('/api/states/:id', isAuthenticated, express.json(), async (req, res) => {
+    try { const id = Number(req.params.id); const row = await storage.updateState(id, insertStateSchema.partial().parse(req.body) as any); res.json(row); }
+    catch (error) { if (error instanceof z.ZodError) return res.status(400).json({ message: 'Validation error', errors: error.errors }); res.status(500).json({ message: 'Failed to update state' }); }
+  });
+  app.delete('/api/states/:id', isAuthenticated, async (req, res) => {
+    try { const id = Number(req.params.id); const ok = await storage.deleteState(id); res.json({ ok }); }
+    catch { res.status(500).json({ message: 'Failed to delete state' }); }
+  });
   app.get('/api/states/:stateId/cities', isAuthenticated, async (req, res) => {
     try { const stateId = Number(req.params.stateId); res.json(await storage.listCitiesByState(stateId)); }
     catch { res.status(500).json({ message: 'Failed to fetch cities' }); }
   });
+  app.get('/api/cities', isAuthenticated, async (_req, res) => {
+    try { res.json(await storage.listCities()); } catch { res.status(500).json({ message: 'Failed to fetch cities' }); }
+  });
   app.post('/api/cities', isAuthenticated, express.json(), async (req, res) => {
     try { const data = insertCitySchema.parse(req.body); const row = await storage.createCity(data as any); res.json(row); }
     catch (error) { if (error instanceof z.ZodError) return res.status(400).json({ message: 'Validation error', errors: error.errors }); res.status(500).json({ message: 'Failed to create city' }); }
+  });
+  app.put('/api/cities/:id', isAuthenticated, express.json(), async (req, res) => {
+    try { const id = Number(req.params.id); const row = await storage.updateCity(id, insertCitySchema.partial().parse(req.body) as any); res.json(row); }
+    catch (error) { if (error instanceof z.ZodError) return res.status(400).json({ message: 'Validation error', errors: error.errors }); res.status(500).json({ message: 'Failed to update city' }); }
+  });
+  app.delete('/api/cities/:id', isAuthenticated, async (req, res) => {
+    try { const id = Number(req.params.id); const ok = await storage.deleteCity(id); res.json({ ok }); }
+    catch { res.status(500).json({ message: 'Failed to delete city' }); }
   });
 
   // Technicians routes

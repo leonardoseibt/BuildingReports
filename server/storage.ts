@@ -49,6 +49,9 @@ import {
 import { db } from "./db";
 import { eq, desc, and, asc, isNull, ilike } from "drizzle-orm";
 
+// Use a single Portuguese (Brazil) collator for accent-aware, numeric-friendly sorting
+const ptCollator = new Intl.Collator('pt-BR', { usage: 'sort', sensitivity: 'accent', numeric: true, ignorePunctuation: true });
+
 export interface IStorage {
   // User operations
   getUser(id: number): Promise<PublicUser | undefined>;
@@ -130,8 +133,13 @@ export interface IStorage {
   // States & Cities
   listStates(): Promise<State[]>;
   createState(item: InsertState): Promise<State>;
+  updateState(id: number, item: Partial<InsertState>): Promise<State>;
+  deleteState(id: number): Promise<boolean>;
   listCitiesByState(stateId: number): Promise<City[]>;
+  listCities(): Promise<City[]>;
   createCity(item: InsertCity): Promise<City>;
+  updateCity(id: number, item: Partial<InsertCity>): Promise<City>;
+  deleteCity(id: number): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -590,8 +598,9 @@ export class DatabaseStorage implements IStorage {
 
   // Master tables
   async listTypologies(): Promise<Typology[]> {
-  // For select presentation: order by code ascending
-  return await db.select().from(typologies).orderBy(asc(typologies.code));
+  const rows = await db.select().from(typologies);
+  rows.sort((a: any, b: any) => ptCollator.compare(String(a.code ?? ''), String(b.code ?? '')));
+  return rows as any;
   }
   async createTypology(item: InsertTypology): Promise<Typology> {
     const [row] = await db.insert(typologies).values({ code: (item as any).code, label: (item as any).label, isActive: (item as any).isActive ?? true }).returning();
@@ -607,8 +616,9 @@ export class DatabaseStorage implements IStorage {
   }
 
   async listNoiseClasses(): Promise<NoiseClass[]> {
-  // For select presentation: order by code ascending
-  return await db.select().from(noiseClasses).orderBy(asc(noiseClasses.code));
+  const rows = await db.select().from(noiseClasses);
+  rows.sort((a: any, b: any) => ptCollator.compare(String(a.code ?? ''), String(b.code ?? '')));
+  return rows as any;
   }
   async createNoiseClass(item: InsertNoiseClass): Promise<NoiseClass> {
     const [row] = await db.insert(noiseClasses).values({ code: (item as any).code, label: (item as any).label, isActive: (item as any).isActive ?? true }).returning();
@@ -624,8 +634,9 @@ export class DatabaseStorage implements IStorage {
   }
 
   async listAggressivenessClasses(): Promise<AggressivenessClass[]> {
-  // For select presentation: order by code ascending
-  return await db.select().from(aggressivenessClasses).orderBy(asc(aggressivenessClasses.code));
+  const rows = await db.select().from(aggressivenessClasses);
+  rows.sort((a: any, b: any) => ptCollator.compare(String(a.code ?? ''), String(b.code ?? '')));
+  return rows as any;
   }
   async createAggressivenessClass(item: InsertAggressivenessClass): Promise<AggressivenessClass> {
     const [row] = await db.insert(aggressivenessClasses).values({ code: (item as any).code, label: (item as any).label, isActive: (item as any).isActive ?? true }).returning();
@@ -642,7 +653,9 @@ export class DatabaseStorage implements IStorage {
 
   // Bioclimatic zones
   async listBioclimaticZones(): Promise<BioclimaticZone[]> {
-    return await db.select().from(bioclimaticZones).orderBy(asc(bioclimaticZones.code));
+  const rows = await db.select().from(bioclimaticZones);
+  rows.sort((a: any, b: any) => ptCollator.compare(String(a.code ?? ''), String(b.code ?? '')));
+  return rows as any;
   }
 
   async createBioclimaticZone(item: InsertBioclimaticZone): Promise<BioclimaticZone> {
@@ -692,8 +705,8 @@ export class DatabaseStorage implements IStorage {
       .from(bioclimaticZoneCoverages)
       .leftJoin(cities, eq(bioclimaticZoneCoverages.cityId, cities.id))
       .leftJoin(states, eq(cities.stateId, states.id))
-      .where(eq(bioclimaticZoneCoverages.zoneId, zoneId))
-      .orderBy(asc(cities.name));
+      .where(eq(bioclimaticZoneCoverages.zoneId, zoneId));
+    (rows as any).sort((a: any, b: any) => ptCollator.compare(String(a.city ?? ''), String(b.city ?? '')));
     return rows as any;
   }
 
@@ -740,18 +753,43 @@ export class DatabaseStorage implements IStorage {
 
   // States & Cities
   async listStates(): Promise<State[]> {
-    return await db.select().from(states).orderBy(asc(states.code));
+  const rows = await db.select().from(states);
+  rows.sort((a: any, b: any) => ptCollator.compare(String(a.code ?? ''), String(b.code ?? '')));
+  return rows as any;
   }
   async createState(item: InsertState): Promise<State> {
     const [row] = await db.insert(states).values(item as any).onConflictDoNothing().returning();
     return row as any;
   }
+  async updateState(id: number, item: Partial<InsertState>): Promise<State> {
+    const [row] = await db.update(states).set(item as any).where(eq(states.id, id)).returning();
+    return row as any;
+  }
+  async deleteState(id: number): Promise<boolean> {
+    const deleted = await db.delete(states).where(eq(states.id, id)).returning({ id: states.id });
+    return deleted.length > 0;
+  }
   async listCitiesByState(stateId: number): Promise<City[]> {
-    return await db.select().from(cities).where(eq(cities.stateId, stateId)).orderBy(asc(cities.name));
+  const rows = await db.select().from(cities).where(eq(cities.stateId, stateId));
+  rows.sort((a: any, b: any) => ptCollator.compare(String(a.name ?? ''), String(b.name ?? '')));
+  return rows as any;
+  }
+  async listCities(): Promise<City[]> {
+  const rows = await db.select().from(cities);
+  rows.sort((a: any, b: any) => ptCollator.compare(String(a.name ?? ''), String(b.name ?? '')));
+  return rows as any;
   }
   async createCity(item: InsertCity): Promise<City> {
     const [row] = await db.insert(cities).values(item as any).onConflictDoNothing().returning();
     return row as any;
+  }
+  async updateCity(id: number, item: Partial<InsertCity>): Promise<City> {
+    const [row] = await db.update(cities).set(item as any).where(eq(cities.id, id)).returning();
+    return row as any;
+  }
+  async deleteCity(id: number): Promise<boolean> {
+    const deleted = await db.delete(cities).where(eq(cities.id, id)).returning({ id: cities.id });
+    return deleted.length > 0;
   }
 }
 

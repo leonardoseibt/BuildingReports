@@ -67,7 +67,7 @@ export default function BioclimaticZonesList() {
       } else if (sortBy === 'isActive') {
         cmp = Number((a as any).isActive) - Number((b as any).isActive);
       } else {
-        cmp = String(av ?? '').localeCompare(String(bv ?? ''), 'pt-BR', { sensitivity: 'base' });
+        cmp = String(av ?? '').localeCompare(String(bv ?? ''), 'pt-BR', { usage: 'sort', sensitivity: 'accent', numeric: true, ignorePunctuation: true });
       }
       return sortDir === 'asc' ? cmp : -cmp;
     });

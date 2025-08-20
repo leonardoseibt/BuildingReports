@@ -25,6 +25,8 @@ const navigation = [
   { name: 'Classes de Ruído', href: '/noise-classes', icon: Volume2 },
   { name: 'Classes de Agressividade', href: '/aggressiveness-classes', icon: Shield },
   { name: 'Zonas Bioclimáticas', href: '/bioclimatic-zones', icon: Globe2 },
+  { name: 'Estados', href: '/states', icon: Globe2 },
+  { name: 'Municípios', href: '/cities', icon: Globe2 },
   { name: 'Relatórios', href: '/reports', icon: FileText },
 ];
 
