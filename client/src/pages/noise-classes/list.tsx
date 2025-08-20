@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
@@ -6,7 +6,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Volume2, Plus, Loader2, Pencil, Trash2 } from "lucide-react";
+import { Volume2, Plus, Loader2, Pencil, Trash2, Search, ArrowUp, ArrowDown } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import type { NoiseClass } from "@shared/schema";
@@ -21,6 +21,11 @@ export default function NoiseClassesList() {
   const [editItem, setEditItem] = useState<NoiseClass | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<NoiseClass | null>(null);
+  const [search, setSearch] = useState("");
+  const [sortBy, setSortBy] = useState<"code" | "label" | "isActive" | "createdAt" | null>(null);
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+  const pageSize = 10;
+  const [page, setPage] = useState(1);
 
   const formatDate = (date: string | Date | null | undefined) => {
     if (!date) return "—";
@@ -37,6 +42,49 @@ export default function NoiseClassesList() {
   }, [isAuthenticated, isLoading, toast]);
 
   const { data: items = [], isFetching, isLoading: isLoadingItems } = useQuery<NoiseClass[]>({ queryKey: ["/api/noise-classes"], enabled: isAuthenticated });
+  const normText = (v: any) => String(v ?? "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]+/g, "");
+  const filtered = useMemo(() => {
+    const q = normText(search);
+    if (!q) return items;
+    return items.filter((t) =>
+      normText(t.code).includes(q) ||
+      normText(t.label).includes(q) ||
+      normText((t as any).createdAt).includes(q)
+    );
+  }, [items, search]);
+  const sorted = useMemo(() => {
+    if (!sortBy) return filtered;
+    const arr = [...filtered];
+    arr.sort((a, b) => {
+      const av = (a as any)[sortBy];
+      const bv = (b as any)[sortBy];
+      let cmp = 0;
+      if (sortBy === 'createdAt') {
+        const ad = av ? new Date(av).getTime() : 0;
+        const bd = bv ? new Date(bv).getTime() : 0;
+        cmp = ad - bd;
+      } else if (sortBy === 'isActive') {
+        cmp = Number((a as any).isActive) - Number((b as any).isActive);
+      } else {
+        cmp = String(av ?? '').localeCompare(String(bv ?? ''), 'pt-BR', { sensitivity: 'base' });
+      }
+      return sortDir === 'asc' ? cmp : -cmp;
+    });
+    return arr;
+  }, [filtered, sortBy, sortDir]);
+  const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize));
+  const pageSafe = Math.min(page, totalPages);
+  const pagedItems = useMemo(() => sorted.slice((pageSafe - 1) * pageSize, pageSafe * pageSize), [sorted, pageSafe]);
+  const toggleSort = (col: typeof sortBy) => {
+    if (col === null) return;
+    if (sortBy !== col) {
+      setSortBy(col);
+      setSortDir('asc');
+    } else {
+      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    }
+    setPage(1);
+  };
 
   async function deleteRequest(id: number) {
     const res = await fetch(`/api/noise-classes/${id}`, { method: 'DELETE' });
@@ -81,6 +129,21 @@ export default function NoiseClassesList() {
           }
         />
         <main className="flex-1 overflow-y-auto p-6">
+          {/* Search Card */}
+          <div className="rounded-2xl border bg-white/80 backdrop-blur px-5 py-4 md:px-6 md:py-5 shadow-sm mb-4">
+            <div className="flex items-center gap-3">
+              <div className="relative w-full max-w-lg">
+                <input
+                  type="text"
+                  value={search}
+                  onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                  placeholder="Buscar classes (código, descrição, data)"
+                  className="w-full h-9 rounded-md border px-9 text-sm"
+                />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
+              </div>
+            </div>
+          </div>
           {isLoadingItems ? (
             <div className="text-center py-12"><Volume2 className="w-16 h-16 text-slate-300 mx-auto mb-4" /><p className="text-slate-500">Carregando...</p></div>
           ) : items.length === 0 ? (
@@ -97,15 +160,15 @@ export default function NoiseClassesList() {
               <Table className="table-fixed">
                 <TableHeader>
                   <TableRow className="bg-slate-100/60">
-                    <TableHead className="w-[18%]">Código</TableHead>
-                    <TableHead className="w-[50%]">Descrição</TableHead>
-                    <TableHead className="w-[10%]">Ativa</TableHead>
-                    <TableHead className="w-[14%]">Criado em</TableHead>
+                    <TableHead onClick={() => toggleSort('code')} aria-sort={sortBy === 'code' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} className="w-[18%] cursor-pointer select-none">Código {sortBy === 'code' && (sortDir === 'asc' ? <ArrowUp className="inline-block w-3 h-3 ml-1 opacity-70" /> : <ArrowDown className="inline-block w-3 h-3 ml-1 opacity-70" />)}</TableHead>
+                    <TableHead onClick={() => toggleSort('label')} aria-sort={sortBy === 'label' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} className="w-[50%] cursor-pointer select-none">Descrição {sortBy === 'label' && (sortDir === 'asc' ? <ArrowUp className="inline-block w-3 h-3 ml-1 opacity-70" /> : <ArrowDown className="inline-block w-3 h-3 ml-1 opacity-70" />)}</TableHead>
+                    <TableHead onClick={() => toggleSort('isActive')} aria-sort={sortBy === 'isActive' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} className="w-[10%] cursor-pointer select-none">Ativa {sortBy === 'isActive' && (sortDir === 'asc' ? <ArrowUp className="inline-block w-3 h-3 ml-1 opacity-70" /> : <ArrowDown className="inline-block w-3 h-3 ml-1 opacity-70" />)}</TableHead>
+                    <TableHead onClick={() => toggleSort('createdAt')} aria-sort={sortBy === 'createdAt' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} className="w-[14%] cursor-pointer select-none">Criado em {sortBy === 'createdAt' && (sortDir === 'asc' ? <ArrowUp className="inline-block w-3 h-3 ml-1 opacity-70" /> : <ArrowDown className="inline-block w-3 h-3 ml-1 opacity-70" />)}</TableHead>
                     <TableHead className="w-[8%] text-right">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {items.map((t) => (
+                  {pagedItems.map((t: NoiseClass) => (
                     <TableRow key={t.id}>
                       <TableCell className="font-medium">{t.code}</TableCell>
                       <TableCell>{t.label}</TableCell>
@@ -125,6 +188,21 @@ export default function NoiseClassesList() {
                   ))}
                 </TableBody>
               </Table>
+              <div className="flex items-center justify-between gap-4 border-t px-4 py-3 text-sm text-slate-600">
+                <p>
+                  Mostrando <span className="font-semibold">{pagedItems.length}</span> de {" "}
+                  <span className="font-semibold">{filtered.length}</span> classes
+                </p>
+                <div className="flex items-center gap-1">
+                  <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={pageSafe === 1}>Anterior</Button>
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                    <Button key={p} variant={pageSafe === p ? "default" : "outline"} size="sm" onClick={() => setPage(p)} className={pageSafe === p ? "" : "bg-white"}>
+                      {p}
+                    </Button>
+                  ))}
+                  <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={pageSafe === totalPages}>Próxima</Button>
+                </div>
+              </div>
             </div>
           )}
         </main>
