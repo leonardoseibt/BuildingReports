@@ -151,7 +151,7 @@ export default function BioclimaticZonesList() {
             <div className="text-center py-12">
               <Globe2 className="w-16 h-16 text-slate-300 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-slate-900 mb-2">Nenhuma zona cadastrada</h3>
-              <p className="text-slate-500 mb-6">Cadastre as zonas ZB1..ZB8 e suas abrangências.</p>
+              <p className="text-slate-500 mb-6">Cadastre as zonas bioclimáticas e suas abrangências.</p>
               <Button size="lg" onClick={() => { setEditItem(null); setFormKey(k => k + 1); setOpen(true); }}>
                 <Plus className="w-4 h-4 mr-2" /> Cadastrar Zona
               </Button>
