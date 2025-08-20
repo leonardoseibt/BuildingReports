@@ -64,7 +64,7 @@ export default function TechniciansList() {
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<"fullName" | "creaCau" | "email" | "phone" | "createdAt" | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
-  const pageSize = 10;
+  const pageSize = 15;
   const [page, setPage] = useState(1);
 
   useEffect(() => {

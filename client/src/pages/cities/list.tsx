@@ -6,6 +6,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import FormHeader from "@/components/ui/form-header";
+import { Input } from "@/components/ui/input";
+import { NotchedField } from "@/components/ui/notched-field";
 import { Button } from "@/components/ui/button";
 import { Building2, Plus, Loader2, Pencil, Trash2, Search, ArrowUp, ArrowDown } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -26,7 +28,7 @@ export default function CitiesList() {
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<"state" | "name" | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
-  const pageSize = 10;
+  const pageSize = 15;
   const [page, setPage] = useState(1);
 
   const [stateId, setStateId] = useState<number | "">("");
@@ -206,19 +208,33 @@ export default function CitiesList() {
 
       <Dialog open={open} onOpenChange={(v) => { if (!v) setEditItem(null); setOpen(v); }}>
     <DialogContent className="max-w-xl max-h-[90vh] p-0 overflow-hidden">
-          <div className="max-h-[calc(90vh-1rem)] overflow-y-auto my-7 px-7 space-y-3">
+          <div className="max-h-[calc(90vh-1rem)] overflow-y-auto my-7 px-7 space-y-6">
             <FormHeader title={editItem ? 'Editar Município' : 'Novo Município'} subtitle={editItem ? 'Atualize os dados do município.' : 'Cadastre um novo município.'} initials={cityName ?? null} />
-            <div className="grid grid-cols-1 sm:[grid-template-columns:12rem_1fr] gap-2 items-start">
-              <select value={stateId} onChange={(e) => setStateId(e.target.value ? Number(e.target.value) : "")} className="h-9 border rounded px-2 w-full">
-                <option value="">UF</option>
-                {states.map((s) => (
-                  <option key={s.id} value={s.id}>{s.code} - {s.name}</option>
-                ))}
-              </select>
-              <input value={cityName} onChange={(e) => setCityName(e.target.value)} placeholder="Município" className="h-9 border rounded px-2 w-full" />
+            <div className="grid grid-cols-1 sm:[grid-template-columns:14rem_1fr] gap-5 items-start">
+              <NotchedField label="UF" requiredMark>
+                <select
+                  value={stateId}
+                  onChange={(e) => setStateId(e.target.value ? Number(e.target.value) : "")}
+                  className="w-full h-9 bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 px-1"
+                >
+                  <option value="">Selecione a UF</option>
+                  {states.map((s) => (
+                    <option key={s.id} value={s.id}>{s.code} - {s.name}</option>
+                  ))}
+                </select>
+              </NotchedField>
+              <NotchedField label="Município" requiredMark>
+                <Input
+                  value={cityName}
+                  onChange={(e) => setCityName(e.target.value)}
+                  placeholder="Nome do município"
+                  className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                />
+              </NotchedField>
             </div>
-            <div className="flex justify-end">
-              <Button size="sm" onClick={() => saveMutation.mutate()} disabled={!stateId || !cityName || saveMutation.isPending}>{editItem ? 'Salvar' : 'Adicionar'}</Button>
+            <div className="flex items-center justify-end gap-3">
+              <Button type="button" variant="outline" className="rounded-xl" onClick={() => { setOpen(false); setEditItem(null); }}>Cancelar</Button>
+              <Button size="sm" className="min-w-32 rounded-xl" onClick={() => saveMutation.mutate()} disabled={!stateId || !cityName || saveMutation.isPending}>Salvar</Button>
             </div>
           </div>
         </DialogContent>

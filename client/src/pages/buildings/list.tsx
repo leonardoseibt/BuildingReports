@@ -42,7 +42,7 @@ export default function BuildingList() {
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<"name" | "location" | "totalArea" | "floors" | "technician" | "createdAt" | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
-  const pageSize = 10;
+  const pageSize = 15;
   const [page, setPage] = useState(1);
 
   // Redirect to login if not authenticated

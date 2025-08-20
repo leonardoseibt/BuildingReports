@@ -76,9 +76,9 @@ export default function ZoneForm({ initialItem, onSuccess, onCancel }: { initial
 
   {/* Campos mínimos */}
 
-        <div className="flex justify-end gap-2">
-          <Button type="button" variant="outline" onClick={onCancel}>Cancelar</Button>
-          <Button type="submit" disabled={mutation.isPending}>{mutation.isPending ? 'Salvando…' : 'Salvar'}</Button>
+        <div className="flex items-center justify-end gap-3">
+          <Button type="button" variant="outline" className="rounded-xl" onClick={onCancel}>Cancelar</Button>
+          <Button type="submit" className="min-w-32 rounded-xl" disabled={mutation.isPending}>{mutation.isPending ? 'Salvando…' : 'Salvar'}</Button>
         </div>
       </form>
     </Form>

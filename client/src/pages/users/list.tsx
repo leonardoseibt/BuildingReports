@@ -66,7 +66,7 @@ export default function UsersList() {
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
 
   // paginação — 10 itens por página
-  const pageSize = 10;
+  const pageSize = 15;
   const [page, setPage] = useState(1);
 
   useEffect(() => {

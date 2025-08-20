@@ -6,6 +6,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import FormHeader from "@/components/ui/form-header";
+import { Input } from "@/components/ui/input";
+import { NotchedField } from "@/components/ui/notched-field";
 import { Button } from "@/components/ui/button";
 import { Globe2, Plus, Loader2, Pencil, Trash2, Search, ArrowUp, ArrowDown } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -26,7 +28,7 @@ export default function StatesList() {
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<"code" | "name" | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
-  const pageSize = 10;
+  const pageSize = 15;
   const [page, setPage] = useState(1);
 
   useEffect(() => {
@@ -196,16 +198,32 @@ export default function StatesList() {
       </div>
 
       <Dialog open={open} onOpenChange={(v) => { if (v) setFormKey(k => k + 1); if (!v) setEditItem(null); setOpen(v); }}>
-        <DialogContent className="max-w-lg max-h-[90vh] p-0 overflow-hidden">
-          <div className="max-h-[calc(90vh-1rem)] overflow-y-auto my-7 px-7 space-y-3">
+        <DialogContent className="max-w-xl max-h-[90vh] p-0 overflow-hidden">
+          <div className="max-h-[calc(90vh-1rem)] overflow-y-auto my-7 px-7 space-y-6">
             {/* Header */}
             <FormHeader title={editItem ? 'Editar Estado' : 'Novo Estado'} subtitle={editItem ? 'Atualize os dados do estado (UF).' : 'Cadastre um novo estado (UF).'} initials={code ?? null} />
-            <div className="grid grid-cols-3 gap-2">
-              <input value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} placeholder="UF (ex: RS)" className="col-span-1 h-9 border rounded px-2" maxLength={2} />
-              <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nome" className="col-span-2 h-9 border rounded px-2" />
+            <div className="grid grid-cols-1 md:[grid-template-columns:10rem_1fr] gap-5 items-start">
+              <NotchedField label="Código" requiredMark>
+                <Input
+                  value={code}
+                  onChange={(e) => setCode(e.target.value.toUpperCase())}
+                  placeholder="RS"
+                  maxLength={2}
+                  className="uppercase bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                />
+              </NotchedField>
+              <NotchedField label="Nome" requiredMark>
+                <Input
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Nome do estado"
+                  className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                />
+              </NotchedField>
             </div>
-            <div className="flex justify-end">
-              <Button size="sm" onClick={() => saveMutation.mutate()} disabled={!code || !name || saveMutation.isPending}>{editItem ? 'Salvar' : 'Adicionar'}</Button>
+            <div className="flex items-center justify-end gap-3">
+              <Button type="button" variant="outline" className="rounded-xl" onClick={() => { setOpen(false); setEditItem(null); }}>Cancelar</Button>
+              <Button size="sm" className="min-w-32 rounded-xl" onClick={() => saveMutation.mutate()} disabled={!code || !name || saveMutation.isPending}>Salvar</Button>
             </div>
           </div>
         </DialogContent>

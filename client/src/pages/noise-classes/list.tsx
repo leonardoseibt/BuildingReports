@@ -25,7 +25,7 @@ export default function NoiseClassesList() {
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<"code" | "label" | "isActive" | "createdAt" | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
-  const pageSize = 10;
+  const pageSize = 15;
   const [page, setPage] = useState(1);
 
   const formatDate = (date: string | Date | null | undefined) => {
