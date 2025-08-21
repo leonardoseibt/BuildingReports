@@ -43,24 +43,54 @@ export default function Sidebar() {
   const [location] = useLocation();
   const { user } = useAuth();
 
-  const [isCollapsed, setIsCollapsed] = useState(false);
-  const [open, setOpen] = useState({
-    operacoes: false,
-    cadastros: false,
-    cadPessoas: false,
-    cadLocalizacao: false,
-    cadParametros: false,
-    administracao: false,
+  const [isCollapsed, setIsCollapsed] = useState(() => {
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("sidebar-collapsed");
+      if (window.innerWidth < 1024) return true;
+      return stored ? JSON.parse(stored) : false;
+    }
+    return false;
+  });
+
+  const initialOpen = {
+    operacoes: true,
+    cadastros: true,
+    cadPessoas: true,
+    cadLocalizacao: true,
+    cadParametros: true,
+    administracao: true,
+  };
+
+  const [open, setOpen] = useState(() => {
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("sidebar-open");
+      return stored ? JSON.parse(stored) : initialOpen;
+    }
+    return initialOpen;
   });
 
   useEffect(() => {
     const handleResize = () => {
-      setIsCollapsed(window.innerWidth < 1024);
+      if (window.innerWidth < 1024) {
+        setIsCollapsed(true);
+      } else {
+        const stored = localStorage.getItem("sidebar-collapsed");
+        setIsCollapsed(stored ? JSON.parse(stored) : false);
+      }
     };
-    handleResize();
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
+
+  useEffect(() => {
+    localStorage.setItem("sidebar-open", JSON.stringify(open));
+  }, [open]);
+
+  const toggleSidebar = () => {
+    const next = !isCollapsed;
+    setIsCollapsed(next);
+    localStorage.setItem("sidebar-collapsed", JSON.stringify(next));
+  };
 
   const toggleSection = (key: keyof typeof open) => {
     setOpen((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -102,7 +132,7 @@ export default function Sidebar() {
           variant="ghost"
           size="icon"
           className="ml-auto"
-          onClick={() => setIsCollapsed(!isCollapsed)}
+          onClick={toggleSidebar}
           data-testid="button-toggle-sidebar"
         >
           {isCollapsed ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
