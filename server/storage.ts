@@ -104,16 +104,19 @@ export interface IStorage {
   deleteTechnician(id: number): Promise<boolean>;
 
   // Master tables
+  getTypology(id: number): Promise<Typology | undefined>;
   listTypologies(): Promise<Typology[]>;
   createTypology(item: InsertTypology): Promise<Typology>;
   updateTypology(id: number, item: Partial<InsertTypology>): Promise<Typology>;
   deleteTypology(id: number): Promise<boolean>;
 
+  getNoiseClass(id: number): Promise<NoiseClass | undefined>;
   listNoiseClasses(): Promise<NoiseClass[]>;
   createNoiseClass(item: InsertNoiseClass): Promise<NoiseClass>;
   updateNoiseClass(id: number, item: Partial<InsertNoiseClass>): Promise<NoiseClass>;
   deleteNoiseClass(id: number): Promise<boolean>;
 
+  getAggressivenessClass(id: number): Promise<AggressivenessClass | undefined>;
   listAggressivenessClasses(): Promise<AggressivenessClass[]>;
   createAggressivenessClass(item: InsertAggressivenessClass): Promise<AggressivenessClass>;
   updateAggressivenessClass(id: number, item: Partial<InsertAggressivenessClass>): Promise<AggressivenessClass>;
@@ -598,10 +601,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Master tables
+  async getTypology(id: number): Promise<Typology | undefined> {
+    const [row] = await db.select().from(typologies).where(eq(typologies.id, id)).limit(1);
+    return row as any;
+  }
   async listTypologies(): Promise<Typology[]> {
-  const rows = await db.select().from(typologies);
-  rows.sort((a: any, b: any) => ptCollator.compare(String(a.code ?? ''), String(b.code ?? '')));
-  return rows as any;
+    const rows = await db.select().from(typologies);
+    rows.sort((a: any, b: any) => ptCollator.compare(String(a.code ?? ''), String(b.code ?? '')));
+    return rows as any;
   }
   async createTypology(item: InsertTypology): Promise<Typology> {
     const [row] = await db.insert(typologies).values({ code: (item as any).code, label: (item as any).label, isActive: (item as any).isActive ?? true }).returning();
@@ -616,10 +623,14 @@ export class DatabaseStorage implements IStorage {
     return deleted.length > 0;
   }
 
+  async getNoiseClass(id: number): Promise<NoiseClass | undefined> {
+    const [row] = await db.select().from(noiseClasses).where(eq(noiseClasses.id, id)).limit(1);
+    return row as any;
+  }
   async listNoiseClasses(): Promise<NoiseClass[]> {
-  const rows = await db.select().from(noiseClasses);
-  rows.sort((a: any, b: any) => ptCollator.compare(String(a.code ?? ''), String(b.code ?? '')));
-  return rows as any;
+    const rows = await db.select().from(noiseClasses);
+    rows.sort((a: any, b: any) => ptCollator.compare(String(a.code ?? ''), String(b.code ?? '')));
+    return rows as any;
   }
   async createNoiseClass(item: InsertNoiseClass): Promise<NoiseClass> {
     const [row] = await db.insert(noiseClasses).values({ code: (item as any).code, label: (item as any).label, isActive: (item as any).isActive ?? true }).returning();
@@ -634,10 +645,14 @@ export class DatabaseStorage implements IStorage {
     return deleted.length > 0;
   }
 
+  async getAggressivenessClass(id: number): Promise<AggressivenessClass | undefined> {
+    const [row] = await db.select().from(aggressivenessClasses).where(eq(aggressivenessClasses.id, id)).limit(1);
+    return row as any;
+  }
   async listAggressivenessClasses(): Promise<AggressivenessClass[]> {
-  const rows = await db.select().from(aggressivenessClasses);
-  rows.sort((a: any, b: any) => ptCollator.compare(String(a.code ?? ''), String(b.code ?? '')));
-  return rows as any;
+    const rows = await db.select().from(aggressivenessClasses);
+    rows.sort((a: any, b: any) => ptCollator.compare(String(a.code ?? ''), String(b.code ?? '')));
+    return rows as any;
   }
   async createAggressivenessClass(item: InsertAggressivenessClass): Promise<AggressivenessClass> {
     const [row] = await db.insert(aggressivenessClasses).values({ code: (item as any).code, label: (item as any).label, isActive: (item as any).isActive ?? true }).returning();
