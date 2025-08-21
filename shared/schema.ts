@@ -84,7 +84,6 @@ export const cities = pgTable("cities", {
   stateId: integer("state_id").references(() => states.id).notNull(),
   name: varchar("name", { length: 128 }).notNull(),
   // City-level attributes that used to live in coverages
-  region: varchar("region", { length: 64 }),
   latitude: decimal("latitude", { precision: 10, scale: 6 }),
   longitude: decimal("longitude", { precision: 10, scale: 6 }),
   altitudeM: decimal("altitude_m", { precision: 10, scale: 2 }),

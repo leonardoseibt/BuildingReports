@@ -38,7 +38,7 @@ export default function CitiesList() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<CityRow | null>(null);
   const [search, setSearch] = useState("");
-  const [sortBy, setSortBy] = useState<"state" | "name" | null>(null);
+  const [sortBy, setSortBy] = useState<"state" | "name" | "region" | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const pageSize = 15;
   const [page, setPage] = useState(1);
@@ -86,7 +86,14 @@ export default function CitiesList() {
     if (!q) return cities;
     return cities.filter((t) => {
       const uf = stateById.get(t.stateId);
-      return normText(t.name).includes(q) || (uf && (normText(uf.code).includes(q) || normText(uf.name).includes(q)));
+      return (
+        normText(t.name).includes(q) ||
+        (uf && (
+          normText(uf.code).includes(q) ||
+          normText(uf.name).includes(q) ||
+          normText((uf as any).region ?? '').includes(q)
+        ))
+      );
     });
   }, [cities, search, stateById]);
 
@@ -96,8 +103,8 @@ export default function CitiesList() {
     arr.sort((a, b) => {
       const ua = stateById.get(a.stateId);
       const ub = stateById.get(b.stateId);
-      const av = sortBy === 'name' ? a.name : ua?.code ?? '';
-      const bv = sortBy === 'name' ? b.name : ub?.code ?? '';
+  const av = sortBy === 'name' ? a.name : sortBy === 'region' ? (ua as any)?.region ?? '' : ua?.code ?? '';
+  const bv = sortBy === 'name' ? b.name : sortBy === 'region' ? (ub as any)?.region ?? '' : ub?.code ?? '';
       const cmp = String(av ?? '').localeCompare(String(bv ?? ''), 'pt-BR', { usage: 'sort', sensitivity: 'accent', numeric: true, ignorePunctuation: true });
       return sortDir === 'asc' ? cmp : -cmp;
     });
@@ -213,7 +220,8 @@ export default function CitiesList() {
                 <TableHeader>
                   <TableRow className="bg-slate-100/60">
           <TableHead onClick={() => toggleSort('state')} aria-sort={sortBy === 'state' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} className="w-[10%] cursor-pointer select-none">UF {sortBy === 'state' && (sortDir === 'asc' ? <ArrowUp className="inline-block w-3 h-3 ml-1 opacity-70" /> : <ArrowDown className="inline-block w-3 h-3 ml-1 opacity-70" />)}</TableHead>
-          <TableHead onClick={() => toggleSort('name')} aria-sort={sortBy === 'name' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} className="w-[34%] cursor-pointer select-none">Município {sortBy === 'name' && (sortDir === 'asc' ? <ArrowUp className="inline-block w-3 h-3 ml-1 opacity-70" /> : <ArrowDown className="inline-block w-3 h-3 ml-1 opacity-70" />)}</TableHead>
+          <TableHead onClick={() => toggleSort('name')} aria-sort={sortBy === 'name' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} className="w-[30%] cursor-pointer select-none">Município {sortBy === 'name' && (sortDir === 'asc' ? <ArrowUp className="inline-block w-3 h-3 ml-1 opacity-70" /> : <ArrowDown className="inline-block w-3 h-3 ml-1 opacity-70" />)}</TableHead>
+          <TableHead onClick={() => toggleSort('region')} aria-sort={sortBy === 'region' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} className="w-[14%] cursor-pointer select-none">Região {sortBy === 'region' && (sortDir === 'asc' ? <ArrowUp className="inline-block w-3 h-3 ml-1 opacity-70" /> : <ArrowDown className="inline-block w-3 h-3 ml-1 opacity-70" />)}</TableHead>
           <TableHead className="w-[21%] text-right">Latitude</TableHead>
           <TableHead className="w-[21%] text-right">Longitude</TableHead>
           <TableHead className="w-[14%] text-right">Ações</TableHead>
@@ -226,6 +234,7 @@ export default function CitiesList() {
                       <TableRow key={t.id}>
                         <TableCell className="font-medium">{uf?.code}</TableCell>
             <TableCell>{t.name}</TableCell>
+            <TableCell>{(uf as any)?.region ?? '-'}</TableCell>
             <TableCell className="text-right">{t.latitude ?? '-'}</TableCell>
             <TableCell className="text-right">{t.longitude ?? '-'}</TableCell>
             <TableCell className="text-right">

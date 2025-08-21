@@ -172,7 +172,7 @@ async function main() {
       const zoneId = zoneMap.get(code) || zoneMap.get((normZoneCode('ZB' + code) || ''));
       if (!zoneId) { console.warn('Unknown zone code:', code); skipped++; continue; }
 
-      const latitude = toNum(getField(r, ['Latitude', 'LAT', 'LATITUDE']));
+  const latitude = toNum(getField(r, ['Latitude', 'LAT', 'LATITUDE']));
       const longitude = toNum(getField(r, ['Longitude', 'LONG', 'LON', 'LONGITUDE']));
       const altitude = toNum(getField(r, ['Altitude_m', 'Altitude (m)', 'ALTITUDE', 'ALT']));
       const tbs = toNum(getField(r, ['TBS_C', 'TBS (C)', 'TBS (°C)', 'TBS', 'TEMP_BULBO_SECO', 'TBS_C_MED']));
@@ -193,17 +193,20 @@ async function main() {
           stateId = Number(ins.rows[0].id);
           createdStates++;
         }
+        // Ensure state's region from CSV if provided
+        if (reg && stateId != null) {
+          await client.query('UPDATE states SET region = COALESCE(region, $2) WHERE id = $1', [stateId, reg]);
+        }
       }
 
       // Ensure city
       let cityId: number | null = null;
       {
-        const sel = await client.query('SELECT id, region, latitude, longitude, altitude_m, tbs_c, ur_percent, radiacao_wm2, vento_m_s, amplitude_c FROM cities WHERE state_id = $1 AND lower(name) = lower($2) LIMIT 1', [stateId, cityName]);
+        const sel = await client.query('SELECT id, latitude, longitude, altitude_m, tbs_c, ur_percent, radiacao_wm2, vento_m_s, amplitude_c FROM cities WHERE state_id = $1 AND lower(name) = lower($2) LIMIT 1', [stateId, cityName]);
         if (sel.rows.length > 0) {
           cityId = Number(sel.rows[0].id);
           // Update metrics if we have values and existing are null
           const needsUpdate = (
-            (reg && !sel.rows[0].region) ||
             (latitude != null && sel.rows[0].latitude == null) ||
             (longitude != null && sel.rows[0].longitude == null) ||
             (altitude != null && sel.rows[0].altitude_m == null) ||
@@ -216,26 +219,25 @@ async function main() {
           if (needsUpdate) {
             await client.query(
               `UPDATE cities SET 
-                region = COALESCE(region, $1),
-                latitude = COALESCE(latitude, $2),
-                longitude = COALESCE(longitude, $3),
-                altitude_m = COALESCE(altitude_m, $4),
-                tbs_c = COALESCE(tbs_c, $5),
-                ur_percent = COALESCE(ur_percent, $6),
-                radiacao_wm2 = COALESCE(radiacao_wm2, $7),
-                vento_m_s = COALESCE(vento_m_s, $8),
-                amplitude_c = COALESCE(amplitude_c, $9)
-               WHERE id = $10`,
-              [reg || null, latitude, longitude, altitude, tbs, ur, rad, vento, amp, cityId]
+                latitude = COALESCE(latitude, $1),
+                longitude = COALESCE(longitude, $2),
+                altitude_m = COALESCE(altitude_m, $3),
+                tbs_c = COALESCE(tbs_c, $4),
+                ur_percent = COALESCE(ur_percent, $5),
+                radiacao_wm2 = COALESCE(radiacao_wm2, $6),
+                vento_m_s = COALESCE(vento_m_s, $7),
+                amplitude_c = COALESCE(amplitude_c, $8)
+               WHERE id = $9`,
+              [latitude, longitude, altitude, tbs, ur, rad, vento, amp, cityId]
             );
             updatedCities++;
           }
         } else {
           const ins = await client.query(
-            `INSERT INTO cities (state_id, name, region, latitude, longitude, altitude_m, tbs_c, ur_percent, radiacao_wm2, vento_m_s, amplitude_c)
-             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+            `INSERT INTO cities (state_id, name, latitude, longitude, altitude_m, tbs_c, ur_percent, radiacao_wm2, vento_m_s, amplitude_c)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
              RETURNING id`,
-            [stateId, cityName, reg || null, latitude, longitude, altitude, tbs, ur, rad, vento, amp]
+            [stateId, cityName, latitude, longitude, altitude, tbs, ur, rad, vento, amp]
           );
           cityId = Number(ins.rows[0].id);
           createdCities++;

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -17,6 +17,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { cn } from "@/lib/utils";
 import { z } from "zod";
+// removed ScrollArea to avoid double scrollbars in the dropdown
 
 const buildingFormSchema = z.object({
   name: z.string().min(1, "Nome é obrigatório"),
@@ -58,6 +59,7 @@ interface BuildingFormProps {
 export default function BuildingForm({ onSuccess, onCancel, building }: BuildingFormProps = {}) {
   const [, navigate] = useLocation();
   const [isLookingUpCep, setIsLookingUpCep] = useState(false);
+  const [zoneLocked, setZoneLocked] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { data: technicians } = useQuery<Technician[]>({ queryKey: ['/api/technicians'] });
@@ -66,6 +68,7 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
   const { data: aggressiveness } = useQuery<any[]>({ queryKey: ['/api/aggressiveness-classes'] });
   const { data: zones = [] } = useQuery<BioclimaticZone[]>({ queryKey: ['/api/bioclimatic-zones'] });
   const [openTech, setOpenTech] = useState(false);
+  const [openZone, setOpenZone] = useState(false);
 
   // Helper: merge address with number similar to technician form
   const mergeAddressWithNumber = (addressRaw: string, numRaw: string) => {
@@ -157,8 +160,27 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
   noiseClassId: (building as any).noiseClassId ?? undefined,
   aggressivenessClassId: (building as any).aggressivenessClassId ?? undefined,
     });
+    // If CEP comes pre-filled on edit, validate it immediately to lock/fill zone
+    const preCep = building.cep || '';
+    const d = onlyDigits(preCep);
+    if (d.length >= 8) {
+      handleCepLookup(preCep);
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [building]);
+
+  // On first open, if CEP is already filled (e.g., persisted in unsaved state), validate it
+  const didInitialCepCheck = useRef(false);
+  useEffect(() => {
+    if (didInitialCepCheck.current) return;
+    didInitialCepCheck.current = true;
+    const pre = form.getValues('cep');
+    const d = onlyDigits(pre || '');
+    if (d.length >= 8) {
+      handleCepLookup(pre);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const createBuildingMutation = useMutation({
     mutationFn: async (data: BuildingFormData) => {
@@ -198,23 +220,25 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
 
   const handleCepLookup = async (cep: string) => {
     if (!cep || cep.length < 8) return;
-    
+
     setIsLookingUpCep(true);
     try {
       const cleanCep = onlyDigits(cep);
       const response = await fetch(`/api/cep/${cleanCep}`);
-      
+
       if (response.ok) {
         const data = await response.json();
-  const currentNumber = form.getValues('addressNumber') || '';
-  const mergedAddress = mergeAddressWithNumber(data.address, currentNumber);
-  form.setValue('address', mergedAddress);
+        const currentNumber = form.getValues('addressNumber') || '';
+        const mergedAddress = mergeAddressWithNumber(data.address, currentNumber);
+        form.setValue('address', mergedAddress);
         form.setValue('bioclimaticZone', data.bioclimaticZone);
+        setZoneLocked(true); // lock selection when CEP resolves
         toast({
           title: "CEP encontrado",
           description: `Zona bioclimática: ${data.bioclimaticZone}`,
         });
       } else {
+        setZoneLocked(false); // unlock selection when CEP not found
         toast({
           title: "CEP não encontrado",
           description: "Verifique o CEP informado.",
@@ -222,6 +246,7 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
         });
       }
     } catch (error) {
+      setZoneLocked(false); // unlock selection on error
       toast({
         title: "Erro",
         description: "Erro ao buscar informações do CEP.",
@@ -418,7 +443,15 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
                             className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
                             inputMode="numeric"
                             maxLength={9}
-                            onChange={(e) => field.onChange(formatCep(e.target.value))}
+                            onChange={(e) => {
+                              const formatted = formatCep(e.target.value);
+                              field.onChange(formatted);
+                              // If CEP is incomplete, allow manual zone selection
+                              const only = formatted.replace(/\D/g, "");
+                              if (only.length < 8) {
+                                setZoneLocked(false);
+                              }
+                            }}
                             onBlur={(e) => {
                               field.onBlur();
                               handleCepLookup(e.target.value);
@@ -472,13 +505,14 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
                     <FormItem className="md:col-span-4">
                       <FormControl>
                         <NotchedField label="Zona Bioclimática">
-                          <Popover>
+                          <Popover open={openZone} onOpenChange={(v) => { if (!zoneLocked) setOpenZone(v); }}>
                             <PopoverTrigger asChild>
                               <Button
                                 variant="outline"
                                 role="combobox"
                                 className="w-full justify-between border-0 bg-transparent shadow-none"
                                 data-testid="input-bioclimatic-zone"
+                                disabled={zoneLocked}
                               >
                                 {(() => {
                                   const code = form.watch('bioclimaticZone') as string | undefined;
@@ -488,10 +522,10 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
                                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                               </Button>
                             </PopoverTrigger>
-                            <PopoverContent className="w-full p-0">
+                            <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
                               <Command>
                                 <CommandInput placeholder="Buscar zona…" />
-                                <CommandList>
+                                <CommandList className="max-h-64 overflow-y-auto overflow-x-hidden" onWheel={(e) => e.stopPropagation()}>
                                   <CommandEmpty>Nenhuma zona encontrada.</CommandEmpty>
                                   <CommandGroup>
                                     {zones.map((z) => (
@@ -500,6 +534,7 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
                                         value={`${z.code} - ${z.label}`}
                                         onSelect={() => {
                                           form.setValue('bioclimaticZone', z.code as any, { shouldDirty: true });
+                                          setOpenZone(false);
                                         }}
                                       >
                                         {z.code} - {z.label}
@@ -514,7 +549,11 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
                         </NotchedField>
                       </FormControl>
                       <FormDescription>
-                        {isLookingUpCep ? "Buscando informações..." : "Preenchida automaticamente pelo CEP; você pode alterar manualmente."}
+                        {isLookingUpCep
+                          ? "Buscando informações..."
+                          : zoneLocked
+                            ? "Determinada automaticamente pelo CEP (bloqueada)."
+                            : "CEP não encontrado — selecione manualmente."}
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
