@@ -64,6 +64,7 @@ export default function BioclimaticZonesList() {
     const base = zones.filter((z) =>
       normText(z.code).includes(q) ||
       normText(z.label).includes(q) ||
+      normText((z as any).isActive ? 'sim' : 'nao').includes(q) ||
       normText((z as any).createdAt).includes(q)
     );
     // If there are zones returned from city search, union them with base filter
@@ -162,7 +163,7 @@ export default function BioclimaticZonesList() {
                   type="text"
                   value={search}
                   onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-                  placeholder="Buscar zonas (código, descrição, data ou Município)"
+                  placeholder="Buscar zonas (código, descrição, status, data ou Município)"
                   className="w-full h-9 rounded-md border px-9 text-sm"
                 />
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
