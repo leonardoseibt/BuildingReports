@@ -92,21 +92,54 @@ export async function setupAuth(app: Express) {
     if (!normalizedEmail) {
       return res.status(400).json({ message: "Email é obrigatório" });
     }
-    const dbUser = await storage.ensureUserByEmail(normalizedEmail, fullName);
-    const exp = Math.floor(Date.now() / 1000) + 60 * 60;
-    const user: any = {
-      claims: { sub: dbUser.id, email: normalizedEmail, full_name: dbUser.fullName, exp },
-      expires_at: exp,
-    };
-    req.session.regenerate((regenErr) => {
-      if (regenErr) return res.status(500).json({ message: "Login failed" });
-      (req as any).login(user, (err: any) => {
-        if (err) return res.status(500).json({ message: "Login failed" });
-        req.session.save((saveErr) => {
-          if (saveErr) return res.status(500).json({ message: "Login failed" });
-          res.json({ ok: true });
+  });
+
+  app.get("/api/verify-email", async (req, res) => {
+    const token = req.query.token;
+    if (typeof token !== "string") return res.status(400).json({ message: "Token inválido" });
+    const user = await storage.verifyUserByToken(token);
+    if (!user) return res.status(400).json({ message: "Token inválido" });
+    res.redirect("/login?verified=1");
+  });
+
+  app.post("/api/login", rateLimit, express.json(), async (req, res) => {
+    try {
+      const { email, password } = authSchema.parse(req.body);
+      const normalizedEmail = email.trim().toLowerCase();
+      const dbUser = await storage.getUserByEmail(normalizedEmail);
+      if (!dbUser || !dbUser.passwordHash) {
+        return res.status(401).json({ message: "Credenciais inválidas" });
+      }
+      if (!dbUser.emailVerified) {
+        return res.status(401).json({ message: "E-mail não verificado" });
+      }
+      const match = await bcrypt.compare(password, dbUser.passwordHash);
+      if (!match) {
+        return res.status(401).json({ message: "Credenciais inválidas" });
+      }
+      const exp = Math.floor(Date.now() / 1000) + 60 * 60;
+      const user: any = {
+        claims: {
+          sub: dbUser.id,
+          email: dbUser.email,
+          full_name: dbUser.fullName,
+          exp,
+        },
+        expires_at: exp,
+      };
+      await new Promise<void>((resolve, reject) => {
+        req.session.regenerate((regenErr) => {
+          if (regenErr) return reject(regenErr);
+          (req as any).login(user, (err: any) => {
+            if (err) return reject(err);
+            req.session.save((saveErr) => {
+              if (saveErr) return reject(saveErr);
+              resolve();
+            });
+          });
         });
       });
+      res.json({ ok: true });
     } catch (err) {
       if (err instanceof z.ZodError) {
         return res.status(400).json({ message: "Dados inválidos", errors: err.errors });
