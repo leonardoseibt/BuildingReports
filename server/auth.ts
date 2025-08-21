@@ -9,6 +9,11 @@ import { storage } from "./storage";
 
 const isProd = process.env.NODE_ENV === "production";
 
+const authSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(1),
+});
+
 // Simple in-memory rate limiter for login attempts
 const loginAttempts = new Map<string, { count: number; first: number }>();
 const MAX_ATTEMPTS = 5;
