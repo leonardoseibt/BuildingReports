@@ -114,7 +114,7 @@ export const buildings = pgTable("buildings", {
   cep: varchar("cep", { length: 9 }).notNull(),
   address: text("address").notNull(),
   addressNumber: varchar("address_number", { length: 20 }),
-  bioclimaticZone: bioclimaticZoneEnum("bioclimatic_zone").notNull(),
+  bioclimaticZone: varchar("bioclimatic_zone", { length: 16 }).notNull(),
   totalArea: decimal("total_area", { precision: 10, scale: 2 }).notNull(),
   buildingHeight: decimal("building_height", { precision: 10, scale: 2 }),
   floors: integer("floors").notNull(),

@@ -30,7 +30,7 @@ const buildingFormSchema = z.object({
     .regex(/^\d{5}-?\d{3}$/, "CEP deve estar no formato 00000-000"),
   address: z.string().min(1, "Endereço é obrigatório"),
   addressNumber: z.string().optional(),
-  bioclimaticZone: z.enum(["ZB1","ZB2","ZB3","ZB4","ZB5","ZB6","ZB7","ZB8"]).optional(),
+  bioclimaticZone: z.string().optional(),
   totalArea: z.string()
     .min(1, "Área total é obrigatória")
     .transform((val) => parseFloat(val))

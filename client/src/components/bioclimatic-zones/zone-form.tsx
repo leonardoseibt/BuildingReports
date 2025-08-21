@@ -12,7 +12,7 @@ import { apiRequest } from "@/lib/queryClient";
 import type { BioclimaticZone } from "@shared/schema";
 
 const schema = z.object({
-  code: z.string().min(1, 'Código é obrigatório').regex(/^ZB[1-8]$/, 'Formato esperado: ZB1..ZB8'),
+  code: z.string().min(1, 'Código é obrigatório'),
   label: z.string().min(1, 'Descrição é obrigatória'),
   isActive: z.boolean().optional(),
 });
