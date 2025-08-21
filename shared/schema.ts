@@ -35,7 +35,7 @@ export const sessions = pgTable(
 // User storage table for application users
 export const users = pgTable("users", {
   id: integer("id").generatedAlwaysAsIdentity().primaryKey(),
-  email: varchar("email").unique(),
+  email: varchar("email").notNull().unique(),
   fullName: text("full_name").notNull(),
   passwordHash: varchar("password_hash"),
   emailVerified: boolean("email_verified").default(false),
