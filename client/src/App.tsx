@@ -1,4 +1,5 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, Redirect } from "wouter";
+import type { RouteProps } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -18,28 +19,35 @@ import BioclimaticZonesList from "@/pages/bioclimatic-zones";
 import StatesList from "@/pages/states/list.tsx";
 import CitiesList from "@/pages/cities/list.tsx";
 
-function Router() {
+function PrivateRoute(props: RouteProps) {
   const { isAuthenticated, isLoading } = useAuth();
 
+  if (isLoading) {
+    return <></>;
+  }
+
+  if (!isAuthenticated) {
+    return <Redirect to="/login" />;
+  }
+
+  return <Route {...props} />;
+}
+
+function Router() {
   return (
     <Switch>
-      {isLoading || !isAuthenticated ? (
-        <Route path="/" component={Login} />
-      ) : (
-        <>
-          <Route path="/" component={Dashboard} />
-          <Route path="/buildings" component={BuildingList} />
-          <Route path="/reports" component={ReportList} />
-          <Route path="/technicians" component={TechniciansList} />
-          <Route path="/typologies" component={TypologiesList} />
-          <Route path="/noise-classes" component={NoiseClassesList} />
-          <Route path="/aggressiveness-classes" component={AggressivenessClassesList} />
-          <Route path="/bioclimatic-zones" component={BioclimaticZonesList} />
-          <Route path="/states" component={StatesList} />
-          <Route path="/cities" component={CitiesList} />
-          <Route path="/users" component={UsersList} />
-        </>
-      )}
+      <Route path="/login" component={Login} />
+      <PrivateRoute path="/" component={Dashboard} />
+      <PrivateRoute path="/buildings" component={BuildingList} />
+      <PrivateRoute path="/reports" component={ReportList} />
+      <PrivateRoute path="/technicians" component={TechniciansList} />
+      <PrivateRoute path="/typologies" component={TypologiesList} />
+      <PrivateRoute path="/noise-classes" component={NoiseClassesList} />
+      <PrivateRoute path="/aggressiveness-classes" component={AggressivenessClassesList} />
+      <PrivateRoute path="/bioclimatic-zones" component={BioclimaticZonesList} />
+      <PrivateRoute path="/states" component={StatesList} />
+      <PrivateRoute path="/cities" component={CitiesList} />
+      <PrivateRoute path="/users" component={UsersList} />
       <Route component={NotFound} />
     </Switch>
   );

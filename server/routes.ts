@@ -62,14 +62,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const data = insertUserSchema.parse(req.body);
       const normalizedEmail = data.email.trim().toLowerCase();
       const passwordHash = await bcrypt.hash(data.password, 10);
-  const created = await storage.upsertUser({
+      const created = await storage.upsertUser({
         email: normalizedEmail,
         fullName: data.fullName,
         passwordHash,
         phone: data.phone,
+        emailVerified: true,
       } as any);
-  const { id, email, fullName, phone, createdAt, updatedAt } = created as any;
-  res.json({ id, email, fullName, phone, createdAt, updatedAt });
+      const { id, email, fullName, phone, createdAt, updatedAt } = created as any;
+      res.json({ id, email, fullName, phone, createdAt, updatedAt });
     } catch (error) {
       console.error('Error creating user:', error);
       if (error instanceof z.ZodError) {
@@ -142,16 +143,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Validate master ids (if provided)
       const { typologyId, noiseClassId, aggressivenessClassId } = buildingData as any;
       if (typologyId) {
-        const list = await storage.listTypologies();
-  if (!list.find(t => t.id === Number(typologyId))) return res.status(400).json({ message: 'Tipo de uso inválido' });
+        const typology = await storage.getTypology(Number(typologyId));
+        if (!typology) return res.status(400).json({ message: 'Tipo de uso inválido' });
       }
       if (noiseClassId) {
-        const list = await storage.listNoiseClasses();
-        if (!list.find(n => n.id === Number(noiseClassId))) return res.status(400).json({ message: 'Classe de ruído inválida' });
+        const noiseClass = await storage.getNoiseClass(Number(noiseClassId));
+        if (!noiseClass) return res.status(400).json({ message: 'Classe de ruído inválida' });
       }
       if (aggressivenessClassId) {
-        const list = await storage.listAggressivenessClasses();
-        if (!list.find(a => a.id === Number(aggressivenessClassId))) return res.status(400).json({ message: 'Classe de agressividade inválida' });
+        const aggressivenessClass = await storage.getAggressivenessClass(Number(aggressivenessClassId));
+        if (!aggressivenessClass) return res.status(400).json({ message: 'Classe de agressividade inválida' });
       }
 
       const building = await storage.createBuilding(buildingData);
@@ -212,16 +213,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Validate master ids (if provided)
       const { typologyId, noiseClassId, aggressivenessClassId } = data as any;
       if (typologyId) {
-        const list = await storage.listTypologies();
-  if (!list.find(t => t.id === Number(typologyId))) return res.status(400).json({ message: 'Tipo de uso inválido' });
+        const typology = await storage.getTypology(Number(typologyId));
+        if (!typology) return res.status(400).json({ message: 'Tipo de uso inválido' });
       }
       if (noiseClassId) {
-        const list = await storage.listNoiseClasses();
-        if (!list.find(n => n.id === Number(noiseClassId))) return res.status(400).json({ message: 'Classe de ruído inválida' });
+        const noiseClass = await storage.getNoiseClass(Number(noiseClassId));
+        if (!noiseClass) return res.status(400).json({ message: 'Classe de ruído inválida' });
       }
       if (aggressivenessClassId) {
-        const list = await storage.listAggressivenessClasses();
-        if (!list.find(a => a.id === Number(aggressivenessClassId))) return res.status(400).json({ message: 'Classe de agressividade inválida' });
+        const aggressivenessClass = await storage.getAggressivenessClass(Number(aggressivenessClassId));
+        if (!aggressivenessClass) return res.status(400).json({ message: 'Classe de agressividade inválida' });
       }
       const saved = await storage.updateBuilding(id, data as any);
       res.json(saved);
