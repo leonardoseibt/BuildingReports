@@ -9,6 +9,7 @@ export default function Login() {
   const { toast } = useToast();
   const { isAuthenticated } = useAuth();
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -22,12 +23,17 @@ export default function Login() {
       const res = await fetch("/api/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email, password }),
       });
       if (res.ok) {
         window.location.href = "/";
       } else {
-        toast({ title: "Erro", description: "Login falhou", variant: "destructive" });
+        const data = await res.json().catch(() => ({}));
+        toast({
+          title: "Erro",
+          description: data.message || "Login falhou",
+          variant: "destructive",
+        });
       }
     } catch (err) {
       toast({ title: "Erro", description: "Login falhou", variant: "destructive" });
@@ -39,7 +45,7 @@ export default function Login() {
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle className="text-2xl">Entrar</CardTitle>
-          <CardDescription>Informe seu email para acessar o sistema</CardDescription>
+          <CardDescription>Informe seu email e senha para acessar o sistema</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -48,6 +54,13 @@ export default function Login() {
               placeholder="seu@email.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+            <Input
+              type="password"
+              placeholder="Senha"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
               required
             />
             <Button type="submit" className="w-full" data-testid="button-login">
