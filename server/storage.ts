@@ -755,7 +755,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async findZonesByCityName(q: string): Promise<Array<{ id: number; code: string; label: string }>> {
-    const norm = q.normalize("NFD").replace(/[\u0300-\u036f]+/g, "").toLowerCase();
+    const norm = q.normalize("NFD").replace(/[\u0300-\u036f]+/g, "");
     const query = `%${norm}%`;
     // Join coverages -> zones -> cities to find matching city names (case/accent-insensitive)
     const rows = await db
@@ -763,7 +763,7 @@ export class DatabaseStorage implements IStorage {
       .from(bioclimaticZoneCoverages)
       .leftJoin(cities, eq(bioclimaticZoneCoverages.cityId, cities.id))
       .leftJoin(bioclimaticZones, eq(bioclimaticZoneCoverages.zoneId, bioclimaticZones.id))
-      .where(sql`unaccent(lower(${cities.name})) like ${query}`);
+      .where(sql`unaccent(${cities.name}) ilike ${query}`);
     // Deduplicate zones
     const map = new Map<number, { id: number; code: string; label: string }>();
     for (const r of rows as any[]) {
@@ -806,11 +806,11 @@ export class DatabaseStorage implements IStorage {
     if (!uf || !cityName) return null;
     const [st] = await db.select().from(states).where(eq(states.code, uf)).limit(1);
     if (!st) return null;
-    const normCity = cityName.normalize("NFD").replace(/[\u0300-\u036f]+/g, "").toLowerCase();
+    const normCity = cityName.normalize("NFD").replace(/[\u0300-\u036f]+/g, "");
     const [ci] = await db
       .select()
       .from(cities)
-      .where(and(eq(cities.stateId, (st as any).id), sql`unaccent(lower(${cities.name})) = ${normCity}`))
+      .where(and(eq(cities.stateId, (st as any).id), sql`unaccent(${cities.name}) ilike ${normCity}`))
       .limit(1);
     if (!ci) return null;
     const [cov] = await db.select({ zoneId: bioclimaticZoneCoverages.zoneId })
