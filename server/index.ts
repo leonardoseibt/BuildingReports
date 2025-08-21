@@ -4,6 +4,53 @@ import net from "node:net";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 
+const SENSITIVE_FIELDS = ["password", "passwordHash", "token", "secret"];
+
+export function sanitizeLogData(obj: any): any {
+  if (obj == null || typeof obj !== "object") return obj;
+  if (Array.isArray(obj)) return obj.map((item) => sanitizeLogData(item));
+  return Object.entries(obj).reduce<Record<string, any>>((acc, [key, value]) => {
+    if (SENSITIVE_FIELDS.includes(key)) {
+      return acc;
+    }
+    acc[key] = sanitizeLogData(value);
+    return acc;
+  }, {});
+}
+
+export function createLoggingMiddleware(logger = log) {
+  return (req: Request, res: Response, next: NextFunction) => {
+    const start = Date.now();
+    const path = req.path;
+    let capturedJsonResponse: Record<string, any> | undefined = undefined;
+
+    const originalResJson = res.json;
+    res.json = function (bodyJson: any, ...args: any[]) {
+      capturedJsonResponse = bodyJson;
+      return (originalResJson as any).apply(res, [bodyJson, ...args]);
+    };
+
+    res.on("finish", () => {
+      const duration = Date.now() - start;
+      if (path.startsWith("/api")) {
+        let logLine = `${path} ${res.statusCode} in ${duration}ms`;
+        if (process.env.LOG_RESPONSES === "true" && capturedJsonResponse) {
+          let sanitized = sanitizeLogData(capturedJsonResponse);
+          let serialized = JSON.stringify(sanitized);
+          if (serialized.length > 80) {
+            serialized = serialized.slice(0, 79) + "…";
+          }
+          logLine += ` :: ${serialized}`;
+        }
+
+        logger(logLine);
+      }
+    });
+
+    next();
+  };
+}
+
 // In dev, keep the process alive and surface errors clearly
 process.on("unhandledRejection", (reason) => {
   console.error("Unhandled Promise rejection:", reason);
@@ -16,38 +63,11 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-app.use((req, res, next) => {
-  const start = Date.now();
-  const path = req.path;
-  let capturedJsonResponse: Record<string, any> | undefined = undefined;
+app.use(createLoggingMiddleware());
 
-  const originalResJson = res.json;
-  res.json = function (bodyJson, ...args) {
-    capturedJsonResponse = bodyJson;
-    return originalResJson.apply(res, [bodyJson, ...args]);
-  };
-
-  res.on("finish", () => {
-    const duration = Date.now() - start;
-    if (path.startsWith("/api")) {
-      let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
-      if (capturedJsonResponse) {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
-      }
-
-      if (logLine.length > 80) {
-        logLine = logLine.slice(0, 79) + "…";
-      }
-
-      log(logLine);
-    }
-  });
-
-  next();
-});
-
-(async () => {
-  const server = await registerRoutes(app);
+if (process.env.NODE_ENV !== "test") {
+  (async () => {
+    const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
@@ -97,11 +117,12 @@ app.use((req, res, next) => {
   if (process.platform !== "win32") {
     listenOptions.reusePort = true;
   }
-  server.listen(listenOptions, () => {
-    if (port !== preferred) {
-      log(`port ${preferred} in use, serving on port ${port}`);
-    } else {
-      log(`serving on port ${port}`);
-    }
-  });
-})();
+    server.listen(listenOptions, () => {
+      if (port !== preferred) {
+        log(`port ${preferred} in use, serving on port ${port}`);
+      } else {
+        log(`serving on port ${port}`);
+      }
+    });
+  })();
+}

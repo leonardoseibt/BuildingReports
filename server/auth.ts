@@ -2,9 +2,32 @@ import express, { type Express, type RequestHandler } from "express";
 import passport from "passport";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
+import bcrypt from "bcryptjs";
+import { z } from "zod";
+import { nanoid } from "nanoid";
 import { storage } from "./storage";
 
 const isProd = process.env.NODE_ENV === "production";
+
+// Simple in-memory rate limiter for login attempts
+const loginAttempts = new Map<string, { count: number; first: number }>();
+const MAX_ATTEMPTS = 5;
+const WINDOW_MS = 60_000; // 1 minute
+
+const rateLimit: RequestHandler = (req, res, next) => {
+  const ip = req.ip ?? "";
+  const now = Date.now();
+  const entry = loginAttempts.get(ip);
+  if (!entry || now - entry.first > WINDOW_MS) {
+    loginAttempts.set(ip, { count: 1, first: now });
+    return next();
+  }
+  if (entry.count >= MAX_ATTEMPTS) {
+    return res.status(429).json({ message: "Muitas tentativas. Tente novamente mais tarde." });
+  }
+  entry.count++;
+  next();
+};
 
 export function getSession() {
   const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
@@ -84,12 +107,17 @@ export async function setupAuth(app: Express) {
           res.json({ ok: true });
         });
       });
-    });
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: "Dados inválidos", errors: err.errors });
+      }
+      res.status(500).json({ message: "Login failed" });
+    }
   });
 
   app.get("/api/logout", (req, res) => {
     req.logout(() => {
-      res.redirect("/");
+      res.redirect("/login");
     });
   });
 }

@@ -38,6 +38,8 @@ export const users = pgTable("users", {
   email: varchar("email").notNull().unique(),
   fullName: text("full_name").notNull(),
   passwordHash: varchar("password_hash"),
+  emailVerified: boolean("email_verified").default(false),
+  verificationToken: varchar("verification_token"),
   phone: varchar("phone", { length: 32 }),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -426,7 +428,7 @@ export const updateTechnicianSchema = insertTechnicianSchema.partial().omit({ us
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
-export type PublicUser = Omit<User, 'passwordHash'>;
+export type PublicUser = Omit<User, 'passwordHash' | 'verificationToken'>;
 export type UpdateUser = z.infer<typeof updateUserSchema>;
 export type InsertBuilding = z.infer<typeof insertBuildingSchema>;
 export type Building = typeof buildings.$inferSelect;

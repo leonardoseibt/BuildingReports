@@ -29,6 +29,7 @@
   "check:coverages:health": "tsx scripts/check/coverages-health.ts",
   "db:migrate:drop-city-region": "tsx scripts/run-sql.ts scripts/sql/20250820_drop_region_from_cities.sql",
   "db:migrate:region-to-states": "tsx scripts/run-sql.ts scripts/sql/20250821_move_region_to_states.sql"
+  ,"test": "cross-env NODE_ENV=test tsx --test server/index.test.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
