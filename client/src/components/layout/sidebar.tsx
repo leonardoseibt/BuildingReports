@@ -14,7 +14,8 @@ import {
   Layers2,
   Volume2,
   Shield,
-  Globe2,
+  Map,
+  Sun,
   ChevronRight,
   ChevronLeft
 } from "lucide-react";
@@ -93,7 +94,7 @@ export default function Sidebar() {
   };
 
   const toggleSection = (key: keyof typeof open) => {
-    setOpen((prev) => ({ ...prev, [key]: !prev[key] }));
+    setOpen((prev: typeof open) => ({ ...prev, [key]: !prev[key] }));
   };
 
   const handleLogout = () => {
@@ -234,21 +235,21 @@ export default function Sidebar() {
                     <div className="pl-2 space-y-0.5">
                       <NavLink
                         href="/states"
-                        icon={Globe2}
+                        icon={Map}
                         label="Estados"
                         isActive={location === '/states'}
                         testId="nav-estados"
                       />
                       <NavLink
                         href="/cities"
-                        icon={Globe2}
+                        icon={Building2}
                         label="Municípios"
                         isActive={location === '/cities'}
                         testId="nav-municípios"
                       />
                       <NavLink
                         href="/bioclimatic-zones"
-                        icon={Globe2}
+                        icon={Sun}
                         label="Zonas Bioclimáticas"
                         isActive={location === '/bioclimatic-zones'}
                         testId="nav-zonas-bioclimáticas"
