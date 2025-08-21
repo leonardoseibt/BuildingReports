@@ -43,10 +43,11 @@ export async function setupAuth(app: Express) {
   // GET /api/login => auto login demo user (for convenience)
   app.get("/api/login", async (req, res) => {
     const email = "dev@example.com";
-    const dbUser = await storage.ensureUserByEmail(email, "Dev User");
+    const normalizedEmail = email.trim().toLowerCase();
+    const dbUser = await storage.ensureUserByEmail(normalizedEmail, "Dev User");
     const exp = Math.floor(Date.now() / 1000) + 60 * 60;
     const user: any = {
-      claims: { sub: dbUser.id, email, full_name: dbUser.fullName, exp },
+      claims: { sub: dbUser.id, email: normalizedEmail, full_name: dbUser.fullName, exp },
       expires_at: exp,
     };
     req.session.regenerate((regenErr) => {
@@ -64,10 +65,14 @@ export async function setupAuth(app: Express) {
   // POST /api/login => accepts { email, fullName? }
   app.post("/api/login", express.json(), async (req, res) => {
     const { email = "dev@example.com", fullName = "Dev User" } = req.body ?? {};
-    const dbUser = await storage.ensureUserByEmail(email, fullName);
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!normalizedEmail) {
+      return res.status(400).json({ message: "Email é obrigatório" });
+    }
+    const dbUser = await storage.ensureUserByEmail(normalizedEmail, fullName);
     const exp = Math.floor(Date.now() / 1000) + 60 * 60;
     const user: any = {
-      claims: { sub: dbUser.id, email, full_name: dbUser.fullName, exp },
+      claims: { sub: dbUser.id, email: normalizedEmail, full_name: dbUser.fullName, exp },
       expires_at: exp,
     };
     req.session.regenerate((regenErr) => {

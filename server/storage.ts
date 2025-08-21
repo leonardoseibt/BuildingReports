@@ -180,9 +180,13 @@ export class DatabaseStorage implements IStorage {
     fullName = "Dev User",
     phone = "",
   ): Promise<User> {
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!normalizedEmail) {
+      throw new Error("Email is required");
+    }
     const [user] = await db
       .insert(users)
-      .values({ email, fullName, phone })
+      .values({ email: normalizedEmail, fullName, phone })
       .onConflictDoUpdate({
         target: users.email!,
         set: { fullName, phone, updatedAt: new Date() },
