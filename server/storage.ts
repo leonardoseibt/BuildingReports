@@ -755,27 +755,16 @@ export class DatabaseStorage implements IStorage {
   }
 
   async findZonesByCityName(q: string): Promise<Array<{ id: number; code: string; label: string }>> {
-    // Prefer accent-insensitive search using unaccent, but gracefully fall back if extension is unavailable
-    const norm = q.normalize("NFD").replace(/[\u0300-\u036f]+/g, "");
-    const queryLike = `%${norm}%`;
-    let rows: Array<{ id: number; code: string; label: string }> = [] as any;
-    try {
-      rows = await db
-        .select({ id: bioclimaticZones.id, code: bioclimaticZones.code, label: bioclimaticZones.label })
-        .from(bioclimaticZoneCoverages)
-        .innerJoin(cities, eq(bioclimaticZoneCoverages.cityId, cities.id))
-        .innerJoin(bioclimaticZones, eq(bioclimaticZoneCoverages.zoneId, bioclimaticZones.id))
-        .where(sql`unaccent(${cities.name}) ilike ${queryLike}`);
-    } catch (_err) {
-      // Fallback: basic ilike without unaccent (still case-insensitive)
-      const basicLike = `%${q}%`;
-      rows = await db
-        .select({ id: bioclimaticZones.id, code: bioclimaticZones.code, label: bioclimaticZones.label })
-        .from(bioclimaticZoneCoverages)
-        .innerJoin(cities, eq(bioclimaticZoneCoverages.cityId, cities.id))
-        .innerJoin(bioclimaticZones, eq(bioclimaticZoneCoverages.zoneId, bioclimaticZones.id))
-        .where(sql`${cities.name} ilike ${basicLike}`);
-    }
+    // Accent-insensitive, case-insensitive search without requiring unaccent extension
+    const src = 'áàâãäéèêëíìîïóòôõöúùûüçñ';
+    const dst = 'aaaaaeeeeiiiiooooouuuucn';
+    const qLower = q.toLowerCase();
+    const rows = await db
+      .select({ id: bioclimaticZones.id, code: bioclimaticZones.code, label: bioclimaticZones.label })
+      .from(bioclimaticZoneCoverages)
+      .innerJoin(cities, eq(bioclimaticZoneCoverages.cityId, cities.id))
+      .innerJoin(bioclimaticZones, eq(bioclimaticZoneCoverages.zoneId, bioclimaticZones.id))
+      .where(sql`translate(lower(${cities.name}), ${src}, ${dst}) like '%' || translate(lower(${qLower}), ${src}, ${dst}) || '%'`);
     // Deduplicate zones
     const map = new Map<number, { id: number; code: string; label: string }>();
     for (const r of rows as any[]) {
@@ -818,22 +807,17 @@ export class DatabaseStorage implements IStorage {
     if (!uf || !cityName) return null;
     const [st] = await db.select().from(states).where(eq(states.code, uf)).limit(1);
     if (!st) return null;
-    const normCity = cityName.normalize("NFD").replace(/[\u0300-\u036f]+/g, "");
-    let ci: any;
-    try {
-      [ci] = await db
-        .select()
-        .from(cities)
-        .where(and(eq(cities.stateId, (st as any).id), sql`unaccent(${cities.name}) ilike ${normCity}`))
-        .limit(1);
-    } catch (_err) {
-      // Fallback without unaccent: try case-insensitive exact match
-      [ci] = await db
-        .select()
-        .from(cities)
-        .where(and(eq(cities.stateId, (st as any).id), sql`${cities.name} ilike ${cityName}`))
-        .limit(1);
-    }
+    const src = 'áàâãäéèêëíìîïóòôõöúùûüçñ';
+    const dst = 'aaaaaeeeeiiiiooooouuuucn';
+    const cityLower = cityName.toLowerCase();
+    const [ci] = await db
+      .select()
+      .from(cities)
+      .where(and(
+        eq(cities.stateId, (st as any).id),
+        sql`translate(lower(${cities.name}), ${src}, ${dst}) = translate(lower(${cityLower}), ${src}, ${dst})`
+      ))
+      .limit(1);
     if (!ci) return null;
     const [cov] = await db.select({ zoneId: bioclimaticZoneCoverages.zoneId })
       .from(bioclimaticZoneCoverages)
