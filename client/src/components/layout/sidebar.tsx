@@ -17,23 +17,24 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
-const navigation = [
-  { name: 'Dashboard', href: '/', icon: LayoutDashboard },
-  { name: 'Edificações', href: '/buildings', icon: Building2 },
-  { name: 'Responsáveis Técnicos', href: '/technicians', icon: IdCard },
-  { name: 'Tipos de Uso', href: '/typologies', icon: Layers2 },
-  { name: 'Classes de Ruído', href: '/noise-classes', icon: Volume2 },
-  { name: 'Classes de Agressividade', href: '/aggressiveness-classes', icon: Shield },
-  { name: 'Zonas Bioclimáticas', href: '/bioclimatic-zones', icon: Globe2 },
-  { name: 'Estados', href: '/states', icon: Globe2 },
-  { name: 'Municípios', href: '/cities', icon: Globe2 },
-  { name: 'Relatórios', href: '/reports', icon: FileText },
-];
-
-const bottomNavigation = [
-  { name: 'Usuários', href: '/users', icon: Users },
-  { name: 'Configurações', href: '/settings', icon: Cog },
-];
+function NavLink({ href, icon: Icon, label, isActive, testId, indent = 0 }: { href: string; icon: any; label: string; isActive: boolean; testId: string; indent?: number; }) {
+  return (
+    <Link href={href}>
+      <Button
+        variant={isActive ? "secondary" : "ghost"}
+        className={cn(
+          "w-full justify-start space-x-3 h-10 font-medium transition-colors",
+          isActive ? "bg-primary/10 text-primary hover:bg-primary/15" : "text-slate-700 hover:bg-slate-50",
+          indent ? `pl-${indent}` : ""
+        )}
+        data-testid={testId}
+      >
+        <Icon className="w-5 h-5" />
+        <span>{label}</span>
+      </Button>
+    </Link>
+  );
+}
 
 export default function Sidebar() {
   const [location] = useLocation();
@@ -44,9 +45,9 @@ export default function Sidebar() {
   };
 
   return (
-  <div className="w-72 bg-white shadow-lg border-r border-slate-200 flex flex-col overflow-y-hidden overscroll-none" data-testid="sidebar">
+    <div className="w-72 bg-white shadow-lg border-r border-slate-200 flex flex-col overflow-y-hidden overscroll-none" data-testid="sidebar">
       {/* Logo Section */}
-  <div className="h-20 px-6 flex items-center border-b border-slate-200 bg-white">
+      <div className="h-20 px-6 flex items-center border-b border-slate-200 bg-white">
         <div className="flex items-center space-x-3">
           <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
             <Building2 className="text-primary-foreground text-xl" />
@@ -59,79 +60,49 @@ export default function Sidebar() {
       </div>
 
       {/* Navigation Menu */}
-      <nav className="flex-1 p-4 space-y-2">
-        {navigation.map((item) => {
-          const Icon = item.icon;
-          const isActive = location === item.href;
-          
-          // Insert a divider right before "Relatórios"
-          if (item.name === 'Relatórios') {
-            return (
-              <div key={item.name}>
-                <div className="border-t border-slate-200 my-2" />
-                <Link href={item.href}>
-                  <Button
-                    variant={isActive ? "secondary" : "ghost"}
-                    className={cn(
-                      "w-full justify-start space-x-3 h-12 font-medium transition-colors",
-                      isActive 
-                        ? "bg-primary/10 text-primary hover:bg-primary/15" 
-                        : "text-slate-700 hover:bg-slate-50"
-                    )}
-                    data-testid={`nav-${item.name.toLowerCase().replace(' ', '-')}`}
-                  >
-                    <Icon className="w-5 h-5" />
-                    <span>{item.name}</span>
-                  </Button>
-                </Link>
-              </div>
-            );
-          }
+      <nav className="flex-1 p-4 space-y-4">
+        {/* Dashboard (standalone) */}
+        <div>
+          <NavLink href="/" icon={LayoutDashboard} label="Dashboard" isActive={location === '/'} testId="nav-dashboard" />
+        </div>
 
-          return (
-            <Link key={item.name} href={item.href}>
-              <Button
-                variant={isActive ? "secondary" : "ghost"}
-                className={cn(
-                  "w-full justify-start space-x-3 h-12 font-medium transition-colors",
-                  isActive 
-                    ? "bg-primary/10 text-primary hover:bg-primary/15" 
-                    : "text-slate-700 hover:bg-slate-50"
-                )}
-                data-testid={`nav-${item.name.toLowerCase().replace(' ', '-')}`}
-              >
-                <Icon className="w-5 h-5" />
-                <span>{item.name}</span>
-              </Button>
-            </Link>
-          );
-        })}
-        
-        {/* Divider */}
-        <div className="border-t border-slate-200 my-4"></div>
-        
-        {bottomNavigation.map((item) => {
-          const Icon = item.icon;
-          const isActive = location === item.href;
-          
-          return (
-            <Link key={item.name} href={item.href}>
-              <Button
-                variant={isActive ? "secondary" : "ghost"}
-                className={cn(
-                  "w-full justify-start space-x-3 h-12 font-medium transition-colors",
-                  isActive 
-                    ? "bg-primary/10 text-primary hover:bg-primary/15" 
-                    : "text-slate-700 hover:bg-slate-50"
-                )}
-                data-testid={`nav-${item.name.toLowerCase()}`}
-              >
-                <Icon className="w-5 h-5" />
-                <span>{item.name}</span>
-              </Button>
-            </Link>
-          );
-        })}
+        {/* Operações */}
+        <div>
+          <div className="px-2 text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Operações</div>
+          <NavLink href="/buildings" icon={Building2} label="Edificações" isActive={location === '/buildings'} testId="nav-edificações" />
+          <NavLink href="/reports" icon={FileText} label="Relatórios" isActive={location === '/reports'} testId="nav-relatórios" />
+        </div>
+
+        {/* Cadastros */}
+        <div>
+          <div className="px-2 text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Cadastros</div>
+          {/* Pessoas e Profissionais */}
+          <div className="px-2 text-[11px] text-slate-500 font-medium mt-1 mb-1">Pessoas e Profissionais</div>
+          <div className="pl-2">
+            <NavLink href="/technicians" icon={IdCard} label="Responsáveis Técnicos" isActive={location === '/technicians'} testId="nav-responsáveis-técnicos" />
+          </div>
+          {/* Localização */}
+          <div className="px-2 text-[11px] text-slate-500 font-medium mt-3 mb-1">Localização</div>
+          <div className="pl-2 space-y-0.5">
+            <NavLink href="/states" icon={Globe2} label="Estados" isActive={location === '/states'} testId="nav-estados" />
+            <NavLink href="/cities" icon={Globe2} label="Municípios" isActive={location === '/cities'} testId="nav-municípios" />
+            <NavLink href="/bioclimatic-zones" icon={Globe2} label="Zonas Bioclimáticas" isActive={location === '/bioclimatic-zones'} testId="nav-zonas-bioclimáticas" />
+          </div>
+          {/* Parâmetros */}
+          <div className="px-2 text-[11px] text-slate-500 font-medium mt-3 mb-1">Parâmetros</div>
+          <div className="pl-2 space-y-0.5">
+            <NavLink href="/typologies" icon={Layers2} label="Tipos de Uso" isActive={location === '/typologies'} testId="nav-tipos-de-uso" />
+            <NavLink href="/noise-classes" icon={Volume2} label="Classes de Ruído" isActive={location === '/noise-classes'} testId="nav-classes-de-ruído" />
+            <NavLink href="/aggressiveness-classes" icon={Shield} label="Classes de Agressividade" isActive={location === '/aggressiveness-classes'} testId="nav-classes-de-agressividade" />
+          </div>
+        </div>
+
+        {/* Administração */}
+        <div>
+          <div className="px-2 text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Administração</div>
+          <NavLink href="/users" icon={Users} label="Usuários" isActive={location === '/users'} testId="nav-usuários" />
+          <NavLink href="/settings" icon={Cog} label="Configurações" isActive={location === '/settings'} testId="nav-configurações" />
+        </div>
       </nav>
 
       {/* User Profile Section */}
@@ -146,9 +117,9 @@ export default function Sidebar() {
             </p>
             <p className="text-xs text-slate-500">Engenheiro Civil</p>
           </div>
-          <Button 
-            variant="ghost" 
-            size="sm" 
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={handleLogout}
             className="text-slate-400 hover:text-slate-600 p-2"
             data-testid="button-logout"

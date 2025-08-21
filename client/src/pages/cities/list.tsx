@@ -15,7 +15,20 @@ import { PaginationSimple as Pagination } from "@/components/ui/pagination";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
  type StateRow = { id: number; code: string; name: string };
- type CityRow = { id: number; stateId: number; name: string };
+ type CityRow = {
+   id: number;
+   stateId: number;
+   name: string;
+   region?: string | null;
+   latitude?: string | number | null;
+   longitude?: string | number | null;
+   altitudeM?: string | number | null;
+   tbsC?: string | number | null;
+   urPercent?: string | number | null;
+   radiacaoWm2?: string | number | null;
+   ventoMS?: string | number | null;
+   amplitudeC?: string | number | null;
+ };
 
 export default function CitiesList() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -33,6 +46,31 @@ export default function CitiesList() {
 
   const [stateId, setStateId] = useState<number | "">("");
   const [cityName, setCityName] = useState("");
+  const [region, setRegion] = useState("");
+  const [latitude, setLatitude] = useState("");
+  const [longitude, setLongitude] = useState("");
+  const [altitudeM, setAltitudeM] = useState("");
+  const [tbsC, setTbsC] = useState("");
+  const [urPercent, setUrPercent] = useState("");
+  const [radiacaoWm2, setRadiacaoWm2] = useState("");
+  const [ventoMS, setVentoMS] = useState("");
+  const [amplitudeC, setAmplitudeC] = useState("");
+
+  function resetFormFields() {
+    setStateId("");
+    setCityName("");
+    setRegion("");
+    setLatitude("");
+    setLongitude("");
+    setAltitudeM("");
+    setTbsC("");
+    setUrPercent("");
+    setRadiacaoWm2("");
+    setVentoMS("");
+    setAmplitudeC("");
+  }
+
+  const macrorregioes = ["Norte", "Nordeste", "Centro-Oeste", "Sudeste", "Sul"] as const;
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -105,7 +143,19 @@ export default function CitiesList() {
 
   const saveMutation = useMutation({
     mutationFn: async () => {
-      const body = { name: cityName.trim(), stateId: stateId === "" ? undefined : Number(stateId) } as any;
+      const body = {
+        name: cityName.trim(),
+        stateId: stateId === "" ? undefined : Number(stateId),
+        region: region.trim() || undefined,
+        latitude: latitude === "" ? undefined : Number(latitude),
+        longitude: longitude === "" ? undefined : Number(longitude),
+        altitudeM: altitudeM === "" ? undefined : Number(altitudeM),
+        tbsC: tbsC === "" ? undefined : Number(tbsC),
+        urPercent: urPercent === "" ? undefined : Number(urPercent),
+        radiacaoWm2: radiacaoWm2 === "" ? undefined : Number(radiacaoWm2),
+        ventoMS: ventoMS === "" ? undefined : Number(ventoMS),
+        amplitudeC: amplitudeC === "" ? undefined : Number(amplitudeC),
+      } as any;
       if (!body.stateId) throw new Error('Selecione uma UF');
       if (editItem) {
         const res = await fetch(`/api/cities/${editItem.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
@@ -117,7 +167,7 @@ export default function CitiesList() {
       return res.json();
     },
     onSuccess: () => {
-      setOpen(false); setEditItem(null); setStateId(""); setCityName("");
+  setOpen(false); setEditItem(null); resetFormFields();
       queryClient.invalidateQueries({ queryKey: ["/api/cities"] });
       toast({ title: 'Município salvo' });
     },
@@ -136,7 +186,7 @@ export default function CitiesList() {
           action={
             <div className="flex items-center gap-2">
               {isFetching && <Loader2 className="h-4 w-4 animate-spin text-slate-400" aria-label="Atualizando" />}
-              <Button onClick={() => { setEditItem(null); setStateId(""); setCityName(""); setOpen(true); }}>
+              <Button onClick={() => { setEditItem(null); resetFormFields(); setOpen(true); }}>
                 <Plus className="w-4 h-4 mr-2" /> Novo Município
               </Button>
             </div>
@@ -158,18 +208,21 @@ export default function CitiesList() {
               <Building2 className="w-16 h-16 text-slate-300 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-slate-900 mb-2">Nenhum município cadastrado</h3>
               <p className="text-slate-500 mb-6">Cadastre o primeiro município para utilizá-lo nas abrangências.</p>
-              <Button size="lg" onClick={() => { setEditItem(null); setStateId(""); setCityName(""); setOpen(true); }}>
+              <Button size="lg" onClick={() => { setEditItem(null); resetFormFields(); setOpen(true); }}>
                 <Plus className="w-4 h-4 mr-2" /> Cadastrar Município
               </Button>
             </div>
           ) : (
             <div className="rounded-2xl bg-white shadow-sm ring-1 ring-slate-200/60">
-              <Table className="table-fixed">
+        <Table className="table-fixed">
                 <TableHeader>
                   <TableRow className="bg-slate-100/60">
-                    <TableHead onClick={() => toggleSort('state')} aria-sort={sortBy === 'state' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} className="w-[18%] cursor-pointer select-none">UF {sortBy === 'state' && (sortDir === 'asc' ? <ArrowUp className="inline-block w-3 h-3 ml-1 opacity-70" /> : <ArrowDown className="inline-block w-3 h-3 ml-1 opacity-70" />)}</TableHead>
-                    <TableHead onClick={() => toggleSort('name')} aria-sort={sortBy === 'name' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} className="w-[64%] cursor-pointer select-none">Município {sortBy === 'name' && (sortDir === 'asc' ? <ArrowUp className="inline-block w-3 h-3 ml-1 opacity-70" /> : <ArrowDown className="inline-block w-3 h-3 ml-1 opacity-70" />)}</TableHead>
-                    <TableHead className="w-[18%] text-right">Ações</TableHead>
+          <TableHead onClick={() => toggleSort('state')} aria-sort={sortBy === 'state' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} className="w-[10%] cursor-pointer select-none">UF {sortBy === 'state' && (sortDir === 'asc' ? <ArrowUp className="inline-block w-3 h-3 ml-1 opacity-70" /> : <ArrowDown className="inline-block w-3 h-3 ml-1 opacity-70" />)}</TableHead>
+          <TableHead onClick={() => toggleSort('name')} aria-sort={sortBy === 'name' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} className="w-[38%] cursor-pointer select-none">Município {sortBy === 'name' && (sortDir === 'asc' ? <ArrowUp className="inline-block w-3 h-3 ml-1 opacity-70" /> : <ArrowDown className="inline-block w-3 h-3 ml-1 opacity-70" />)}</TableHead>
+          <TableHead className="w-[18%]">Região</TableHead>
+          <TableHead className="w-[12%] text-right">Latitude</TableHead>
+          <TableHead className="w-[12%] text-right">Longitude</TableHead>
+          <TableHead className="w-[10%] text-right">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -178,10 +231,13 @@ export default function CitiesList() {
                     return (
                       <TableRow key={t.id}>
                         <TableCell className="font-medium">{uf?.code}</TableCell>
-                        <TableCell>{t.name}</TableCell>
-                        <TableCell className="text-right">
+            <TableCell>{t.name}</TableCell>
+            <TableCell>{t.region ?? '-'}</TableCell>
+            <TableCell className="text-right">{t.latitude ?? '-'}</TableCell>
+            <TableCell className="text-right">{t.longitude ?? '-'}</TableCell>
+            <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-1.5">
-                            <Button variant="ghost" size="icon" onClick={() => { setEditItem(t); setStateId(t.stateId); setCityName(t.name); setOpen(true); }}>
+                            <Button variant="ghost" size="icon" onClick={() => { setEditItem(t); setStateId(t.stateId); setCityName(t.name); setRegion(t.region ? String(t.region) : ""); setLatitude(t.latitude != null ? String(t.latitude) : ""); setLongitude(t.longitude != null ? String(t.longitude) : ""); setAltitudeM(t.altitudeM != null ? String(t.altitudeM) : ""); setTbsC(t.tbsC != null ? String(t.tbsC) : ""); setUrPercent(t.urPercent != null ? String(t.urPercent) : ""); setRadiacaoWm2(t.radiacaoWm2 != null ? String(t.radiacaoWm2) : ""); setVentoMS(t.ventoMS != null ? String(t.ventoMS) : ""); setAmplitudeC(t.amplitudeC != null ? String(t.amplitudeC) : ""); setOpen(true); }}>
                               <Pencil className="h-4 w-4" />
                             </Button>
                             <Button variant="ghost" size="icon" className="text-rose-600 hover:bg-rose-50 hover:text-rose-700" onClick={() => askDelete(t)} disabled={deleteMutation.isPending && selectedItem?.id === t.id}>
@@ -206,24 +262,24 @@ export default function CitiesList() {
         </main>
       </div>
 
-      <Dialog open={open} onOpenChange={(v) => { if (!v) setEditItem(null); setOpen(v); }}>
-    <DialogContent className="max-w-xl max-h-[90vh] p-0 overflow-hidden">
+      <Dialog open={open} onOpenChange={(v) => { if (!v) { setEditItem(null); resetFormFields(); } setOpen(v); }}>
+  <DialogContent className="max-w-5xl max-h-[90vh] p-0 overflow-hidden">
           <div className="max-h-[calc(90vh-1rem)] overflow-y-auto my-7 px-7 space-y-6">
             <FormHeader title={editItem ? 'Editar Município' : 'Novo Município'} subtitle={editItem ? 'Atualize os dados do município.' : 'Cadastre um novo município.'} initials={cityName ?? null} />
-            <div className="grid grid-cols-1 sm:[grid-template-columns:14rem_1fr] gap-5 items-start">
-              <NotchedField label="UF" requiredMark>
+            <div className="grid grid-cols-1 sm:[grid-template-columns:22rem_1fr] gap-5 items-start">
+              <NotchedField label="Estado (UF)" requiredMark labelClassName="whitespace-nowrap">
                 <select
                   value={stateId}
                   onChange={(e) => setStateId(e.target.value ? Number(e.target.value) : "")}
                   className="w-full h-9 bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 px-1"
                 >
-                  <option value="">Selecione a UF</option>
+                  <option value="">Selecione o estado (UF)</option>
                   {states.map((s) => (
                     <option key={s.id} value={s.id}>{s.code} - {s.name}</option>
                   ))}
                 </select>
               </NotchedField>
-              <NotchedField label="Município" requiredMark>
+              <NotchedField label="Município" requiredMark labelClassName="whitespace-nowrap">
                 <Input
                   value={cityName}
                   onChange={(e) => setCityName(e.target.value)}
@@ -232,8 +288,52 @@ export default function CitiesList() {
                 />
               </NotchedField>
             </div>
+
+            {/* Demais campos do cadastro de municípios (conforme tabela) */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+              <NotchedField label="Região" labelClassName="whitespace-nowrap">
+                <select
+                  value={region}
+                  onChange={(e) => setRegion(e.target.value)}
+                  className="w-full h-9 bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 px-1"
+                >
+                  <option value="">Selecione a região</option>
+                  {macrorregioes.map((r) => (
+                    <option key={r} value={r}>{r}</option>
+                  ))}
+                </select>
+              </NotchedField>
+              <NotchedField label="Latitude (°)" labelClassName="whitespace-nowrap">
+                <Input type="number" step="0.000001" value={latitude} onChange={(e) => setLatitude(e.target.value)} placeholder="-30.0346" className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" />
+              </NotchedField>
+              <NotchedField label="Longitude (°)" labelClassName="whitespace-nowrap">
+                <Input type="number" step="0.000001" value={longitude} onChange={(e) => setLongitude(e.target.value)} placeholder="-51.2177" className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" />
+              </NotchedField>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+              <NotchedField label="Altitude (m)" labelClassName="whitespace-nowrap">
+                <Input type="number" step="0.01" value={altitudeM} onChange={(e) => setAltitudeM(e.target.value)} placeholder="100.00" className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" />
+              </NotchedField>
+              <NotchedField label="Temperatura de bulbo seco média anual (°C)" labelClassName="whitespace-nowrap">
+                <Input type="number" step="0.01" value={tbsC} onChange={(e) => setTbsC(e.target.value)} placeholder="24.50" className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" />
+              </NotchedField>
+              <NotchedField label="Umidade relativa média anual (%)" labelClassName="whitespace-nowrap">
+                <Input type="number" step="0.01" value={urPercent} onChange={(e) => setUrPercent(e.target.value)} placeholder="65.00" className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" />
+              </NotchedField>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+              <NotchedField label="Média anual da radiação global diária (W/m²)" labelClassName="whitespace-nowrap">
+                <Input type="number" step="0.01" value={radiacaoWm2} onChange={(e) => setRadiacaoWm2(e.target.value)} placeholder="500.00" className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" />
+              </NotchedField>
+              <NotchedField label="Velocidade do vento média anual (m/s)" labelClassName="whitespace-nowrap">
+                <Input type="number" step="0.01" value={ventoMS} onChange={(e) => setVentoMS(e.target.value)} placeholder="2.50" className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" />
+              </NotchedField>
+              <NotchedField label="Média anual da amplitude térmica (°C)" labelClassName="whitespace-nowrap">
+                <Input type="number" step="0.01" value={amplitudeC} onChange={(e) => setAmplitudeC(e.target.value)} placeholder="10.00" className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" />
+              </NotchedField>
+            </div>
             <div className="flex items-center justify-end gap-3">
-              <Button type="button" variant="outline" className="rounded-xl" onClick={() => { setOpen(false); setEditItem(null); }}>Cancelar</Button>
+              <Button type="button" variant="outline" className="rounded-xl" onClick={() => { setOpen(false); setEditItem(null); resetFormFields(); }}>Cancelar</Button>
               <Button size="sm" className="min-w-32 rounded-xl" onClick={() => saveMutation.mutate()} disabled={!stateId || !cityName || saveMutation.isPending}>Salvar</Button>
             </div>
           </div>
