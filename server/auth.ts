@@ -125,16 +125,19 @@ export async function setupAuth(app: Express) {
         },
         expires_at: exp,
       };
-      req.session.regenerate((regenErr) => {
-        if (regenErr) return res.status(500).json({ message: "Login failed" });
-        (req as any).login(user, (err: any) => {
-          if (err) return res.status(500).json({ message: "Login failed" });
-          req.session.save((saveErr) => {
-            if (saveErr) return res.status(500).json({ message: "Login failed" });
-            res.json({ ok: true });
+      await new Promise<void>((resolve, reject) => {
+        req.session.regenerate((regenErr) => {
+          if (regenErr) return reject(regenErr);
+          (req as any).login(user, (err: any) => {
+            if (err) return reject(err);
+            req.session.save((saveErr) => {
+              if (saveErr) return reject(saveErr);
+              resolve();
+            });
           });
         });
       });
+      res.json({ ok: true });
     } catch (err) {
       if (err instanceof z.ZodError) {
         return res.status(400).json({ message: "Dados inválidos", errors: err.errors });
