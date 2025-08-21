@@ -48,35 +48,37 @@ export default function BioclimaticZonesList() {
   // Search by city name: query backend for zones that cover a given city
   const searchTrim = search.trim();
   const enableCitySearch = isAuthenticated && searchTrim.length >= 2;
-  const { data: zonesByCity = [] } = useQuery<Array<{ id: number; code: string; label: string }>>({
+  const { data: zonesByCity = [], isError: isCitySearchError, error: citySearchError } = useQuery<Array<{ id: number; code: string; label: string }>>({
     queryKey: ["/api/bioclimatic-zones/search-by-city", searchTrim],
     enabled: enableCitySearch,
+    retry: false,
     queryFn: async () => {
       const res = await fetch(`/api/bioclimatic-zones/search-by-city?q=${encodeURIComponent(searchTrim)}`);
       if (!res.ok) throw new Error(await res.text());
       return res.json();
     }
   });
+  useEffect(() => {
+    if (isCitySearchError && citySearchError) {
+      toast({ title: "Busca por município indisponível", description: String((citySearchError as any)?.message || citySearchError), variant: "destructive" });
+    }
+  }, [isCitySearchError, citySearchError, toast]);
   const normText = (v: any) => String(v ?? "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]+/g, "");
   const filtered = useMemo(() => {
     const q = normText(search);
+    // If city search returned results, strictly filter zones to those covering the city
+    if ((zonesByCity?.length || 0) > 0) {
+      const ids = new Set(zonesByCity.map((z) => z.id));
+      return zones.filter((z) => ids.has(z.id));
+    }
+    // Fallback: local text filter across zone fields
     if (!q) return zones;
-    const base = zones.filter((z) =>
+    return zones.filter((z) =>
       normText(z.code).includes(q) ||
       normText(z.label).includes(q) ||
       normText((z as any).isActive ? 'sim' : 'nao').includes(q) ||
       normText((z as any).createdAt).includes(q)
     );
-    // If there are zones returned from city search, union them with base filter
-    if ((zonesByCity?.length || 0) > 0) {
-      const ids = new Set(zonesByCity.map((z) => z.id));
-      const byCity = zones.filter((z) => ids.has(z.id));
-      // Union unique by id
-      const map = new Map<number, BioclimaticZone>();
-      for (const it of [...base, ...byCity]) map.set(it.id, it);
-      return Array.from(map.values());
-    }
-    return base;
   }, [zones, search, zonesByCity]);
   const sorted = useMemo(() => {
     if (!sortBy) return filtered;
