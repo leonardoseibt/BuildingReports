@@ -62,14 +62,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const data = insertUserSchema.parse(req.body);
       const normalizedEmail = data.email.trim().toLowerCase();
       const passwordHash = await bcrypt.hash(data.password, 10);
-  const created = await storage.upsertUser({
+      const created = await storage.upsertUser({
         email: normalizedEmail,
         fullName: data.fullName,
         passwordHash,
         phone: data.phone,
+        emailVerified: true,
       } as any);
-  const { id, email, fullName, phone, createdAt, updatedAt } = created as any;
-  res.json({ id, email, fullName, phone, createdAt, updatedAt });
+      const { id, email, fullName, phone, createdAt, updatedAt } = created as any;
+      res.json({ id, email, fullName, phone, createdAt, updatedAt });
     } catch (error) {
       console.error('Error creating user:', error);
       if (error instanceof z.ZodError) {
