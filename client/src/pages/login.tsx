@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,13 +9,14 @@ import { useAuth } from "@/hooks/useAuth";
 export default function Login() {
   const { toast } = useToast();
   const { isAuthenticated } = useAuth();
+  const [, setLocation] = useLocation();
   const [email, setEmail] = useState("");
 
   useEffect(() => {
     if (isAuthenticated) {
-      window.location.href = "/";
+      setLocation("/");
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, setLocation]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,7 +27,7 @@ export default function Login() {
         body: JSON.stringify({ email }),
       });
       if (res.ok) {
-        window.location.href = "/";
+        setLocation("/");
       } else {
         toast({ title: "Erro", description: "Login falhou", variant: "destructive" });
       }
