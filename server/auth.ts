@@ -62,33 +62,35 @@ export async function setupAuth(app: Express) {
   passport.serializeUser((user: Express.User, cb) => cb(null, user));
   passport.deserializeUser((user: Express.User, cb) => cb(null, user));
 
-  const authSchema = z.object({
-    email: z.string().email(),
-    password: z.string().min(6),
+  // Local login endpoints
+  // GET /api/login => auto login demo user (for convenience)
+  app.get("/api/login", async (req, res) => {
+    const email = "dev@example.com";
+    const normalizedEmail = email.trim().toLowerCase();
+    const dbUser = await storage.ensureUserByEmail(normalizedEmail, "Dev User");
+    const exp = Math.floor(Date.now() / 1000) + 60 * 60;
+    const user: any = {
+      claims: { sub: dbUser.id, email: normalizedEmail, full_name: dbUser.fullName, exp },
+      expires_at: exp,
+    };
+    req.session.regenerate((regenErr) => {
+      if (regenErr) return res.status(500).json({ message: "Login failed" });
+      (req as any).login(user, (err: any) => {
+        if (err) return res.status(500).json({ message: "Login failed" });
+        req.session.save((saveErr) => {
+          if (saveErr) return res.status(500).json({ message: "Login failed" });
+          res.redirect("/");
+        });
+      });
+    });
   });
 
-  app.post("/api/register", express.json(), async (req, res) => {
-    try {
-      const body = authSchema.extend({ fullName: z.string().min(1) }).parse(req.body);
-      const email = body.email.trim().toLowerCase();
-      const existing = await storage.getUserByEmail(email);
-      if (existing) return res.status(409).json({ message: "E-mail já cadastrado" });
-      const passwordHash = await bcrypt.hash(body.password, 10);
-      const verificationToken = nanoid();
-      await storage.createUser({
-        email,
-        fullName: body.fullName,
-        passwordHash,
-        verificationToken,
-        emailVerified: false,
-      } as any);
-      console.log(`Verification link: http://localhost:5173/verify?token=${verificationToken}`);
-      res.json({ ok: true });
-    } catch (err) {
-      if (err instanceof z.ZodError) {
-        return res.status(400).json({ message: "Dados inválidos", errors: err.errors });
-      }
-      res.status(500).json({ message: "Falha ao registrar" });
+  // POST /api/login => accepts { email, fullName? }
+  app.post("/api/login", express.json(), async (req, res) => {
+    const { email = "dev@example.com", fullName = "Dev User" } = req.body ?? {};
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!normalizedEmail) {
+      return res.status(400).json({ message: "Email é obrigatório" });
     }
   });
 
