@@ -47,7 +47,7 @@ import {
   type InsertCity,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and, asc, isNull, ilike } from "drizzle-orm";
+import { eq, desc, and, asc, isNull, sql } from "drizzle-orm";
 
 // Use a single Portuguese (Brazil) collator for accent-aware, numeric-friendly sorting
 const ptCollator = new Intl.Collator('pt-BR', { usage: 'sort', sensitivity: 'accent', numeric: true, ignorePunctuation: true });
@@ -755,14 +755,15 @@ export class DatabaseStorage implements IStorage {
   }
 
   async findZonesByCityName(q: string): Promise<Array<{ id: number; code: string; label: string }>> {
-    const query = `%${q}%`;
-    // Join coverages -> zones -> cities to find matching city names
+    const norm = q.normalize("NFD").replace(/[\u0300-\u036f]+/g, "").toLowerCase();
+    const query = `%${norm}%`;
+    // Join coverages -> zones -> cities to find matching city names (case/accent-insensitive)
     const rows = await db
       .select({ id: bioclimaticZones.id, code: bioclimaticZones.code, label: bioclimaticZones.label })
       .from(bioclimaticZoneCoverages)
       .leftJoin(cities, eq(bioclimaticZoneCoverages.cityId, cities.id))
       .leftJoin(bioclimaticZones, eq(bioclimaticZoneCoverages.zoneId, bioclimaticZones.id))
-      .where(ilike(cities.name, query));
+      .where(sql`unaccent(lower(${cities.name})) like ${query}`);
     // Deduplicate zones
     const map = new Map<number, { id: number; code: string; label: string }>();
     for (const r of rows as any[]) {
@@ -805,7 +806,12 @@ export class DatabaseStorage implements IStorage {
     if (!uf || !cityName) return null;
     const [st] = await db.select().from(states).where(eq(states.code, uf)).limit(1);
     if (!st) return null;
-    const [ci] = await db.select().from(cities).where(and(eq(cities.stateId, (st as any).id), ilike(cities.name, cityName))).limit(1);
+    const normCity = cityName.normalize("NFD").replace(/[\u0300-\u036f]+/g, "").toLowerCase();
+    const [ci] = await db
+      .select()
+      .from(cities)
+      .where(and(eq(cities.stateId, (st as any).id), sql`unaccent(lower(${cities.name})) = ${normCity}`))
+      .limit(1);
     if (!ci) return null;
     const [cov] = await db.select({ zoneId: bioclimaticZoneCoverages.zoneId })
       .from(bioclimaticZoneCoverages)
