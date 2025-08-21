@@ -472,26 +472,49 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
                     <FormItem className="md:col-span-4">
                       <FormControl>
                         <NotchedField label="Zona Bioclimática">
-                          {(() => {
-                            const code = form.watch('bioclimaticZone') as string | undefined;
-                            const z = zones.find((zz) => zz.code === code);
-                            const display = z ? `${z.code} - ${z.label}` : (code || '');
-                            return (
-                              <Input
-                                placeholder="Determinada automaticamente"
-                                {...field}
-                                value={display}
-                                readOnly
-                                className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="outline"
+                                role="combobox"
+                                className="w-full justify-between border-0 bg-transparent shadow-none"
                                 data-testid="input-bioclimatic-zone"
-                                title={display}
-                              />
-                            );
-                          })()}
+                              >
+                                {(() => {
+                                  const code = form.watch('bioclimaticZone') as string | undefined;
+                                  const z = zones.find((zz) => zz.code === code);
+                                  return z ? `${z.code} - ${z.label}` : (code || 'Selecione ou busque…');
+                                })()}
+                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-full p-0">
+                              <Command>
+                                <CommandInput placeholder="Buscar zona…" />
+                                <CommandList>
+                                  <CommandEmpty>Nenhuma zona encontrada.</CommandEmpty>
+                                  <CommandGroup>
+                                    {zones.map((z) => (
+                                      <CommandItem
+                                        key={z.id}
+                                        value={`${z.code} - ${z.label}`}
+                                        onSelect={() => {
+                                          form.setValue('bioclimaticZone', z.code as any, { shouldDirty: true });
+                                        }}
+                                      >
+                                        {z.code} - {z.label}
+                                        <Check className={cn('ml-auto h-4 w-4', (form.getValues('bioclimaticZone') || '') === z.code ? 'opacity-100' : 'opacity-0')} />
+                                      </CommandItem>
+                                    ))}
+                                  </CommandGroup>
+                                </CommandList>
+                              </Command>
+                            </PopoverContent>
+                          </Popover>
                         </NotchedField>
                       </FormControl>
                       <FormDescription>
-                        {isLookingUpCep ? "Buscando informações..." : "A zona bioclimática será determinada automaticamente"}
+                        {isLookingUpCep ? "Buscando informações..." : "Preenchida automaticamente pelo CEP; você pode alterar manualmente."}
                       </FormDescription>
                       <FormMessage />
                     </FormItem>

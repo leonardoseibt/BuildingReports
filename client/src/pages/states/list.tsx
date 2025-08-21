@@ -14,7 +14,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { PaginationSimple as Pagination } from "@/components/ui/pagination";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
-type StateRow = { id: number; code: string; name: string };
+type StateRow = { id: number; code: string; name: string; region?: string | null };
 
 export default function StatesList() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -97,10 +97,12 @@ export default function StatesList() {
 
   const [code, setCode] = useState("");
   const [name, setName] = useState("");
+  const [region, setRegion] = useState("");
+  const macrorregioes = ["Norte", "Nordeste", "Centro-Oeste", "Sudeste", "Sul"] as const;
 
   const saveMutation = useMutation({
     mutationFn: async () => {
-      const body = { code: code.trim().toUpperCase(), name: name.trim() };
+  const body = { code: code.trim().toUpperCase(), name: name.trim(), region: region.trim() || undefined };
       if (editItem) {
         const res = await fetch(`/api/states/${editItem.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
         if (!res.ok) throw new Error(await res.text());
@@ -111,7 +113,7 @@ export default function StatesList() {
       return res.json();
     },
     onSuccess: () => {
-      setOpen(false); setEditItem(null); setCode(""); setName("");
+      setOpen(false); setEditItem(null); setCode(""); setName(""); setRegion("");
       queryClient.invalidateQueries({ queryKey: ["/api/states"] });
       toast({ title: 'Estado salvo' });
     },
@@ -162,7 +164,8 @@ export default function StatesList() {
                 <TableHeader>
                   <TableRow className="bg-slate-100/60">
                     <TableHead onClick={() => toggleSort('code')} aria-sort={sortBy === 'code' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} className="w-[18%] cursor-pointer select-none">Código {sortBy === 'code' && (sortDir === 'asc' ? <ArrowUp className="inline-block w-3 h-3 ml-1 opacity-70" /> : <ArrowDown className="inline-block w-3 h-3 ml-1 opacity-70" />)}</TableHead>
-                    <TableHead onClick={() => toggleSort('name')} aria-sort={sortBy === 'name' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} className="w-[64%] cursor-pointer select-none">Nome {sortBy === 'name' && (sortDir === 'asc' ? <ArrowUp className="inline-block w-3 h-3 ml-1 opacity-70" /> : <ArrowDown className="inline-block w-3 h-3 ml-1 opacity-70" />)}</TableHead>
+                    <TableHead onClick={() => toggleSort('name')} aria-sort={sortBy === 'name' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} className="w-[46%] cursor-pointer select-none">Nome {sortBy === 'name' && (sortDir === 'asc' ? <ArrowUp className="inline-block w-3 h-3 ml-1 opacity-70" /> : <ArrowDown className="inline-block w-3 h-3 ml-1 opacity-70" />)}</TableHead>
+                    <TableHead className="w-[18%]">Região</TableHead>
                     <TableHead className="w-[18%] text-right">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -171,9 +174,10 @@ export default function StatesList() {
                     <TableRow key={t.id}>
                       <TableCell className="font-medium">{t.code}</TableCell>
                       <TableCell>{t.name}</TableCell>
+                      <TableCell>{t.region ?? '-'}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1.5">
-                          <Button variant="ghost" size="icon" onClick={() => { setEditItem(t); setCode(t.code); setName(t.name); setFormKey(k => k + 1); setOpen(true); }}>
+                          <Button variant="ghost" size="icon" onClick={() => { setEditItem(t); setCode(t.code); setName(t.name); setRegion(t.region ?? ""); setFormKey(k => k + 1); setOpen(true); }}>
                             <Pencil className="h-4 w-4" />
                           </Button>
                           <Button variant="ghost" size="icon" className="text-rose-600 hover:bg-rose-50 hover:text-rose-700" onClick={() => askDelete(t)} disabled={deleteMutation.isPending && selectedItem?.id === t.id}>
@@ -219,6 +223,20 @@ export default function StatesList() {
                   placeholder="Nome do estado"
                   className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
                 />
+              </NotchedField>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <NotchedField label="Região" labelClassName="whitespace-nowrap">
+                <select
+                  value={region}
+                  onChange={(e) => setRegion(e.target.value)}
+                  className="w-full h-9 bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 px-1"
+                >
+                  <option value="">Selecione a região</option>
+                  {macrorregioes.map((r) => (
+                    <option key={r} value={r}>{r}</option>
+                  ))}
+                </select>
               </NotchedField>
             </div>
             <div className="flex items-center justify-end gap-3">

@@ -129,6 +129,7 @@ export interface IStorage {
   updateBioclimaticZoneCoverage(id: number, item: Partial<InsertBioclimaticZoneCoverage>): Promise<BioclimaticZoneCoverage>;
   deleteBioclimaticZoneCoverage(id: number): Promise<boolean>;
   findBioclimaticZoneForLocation(state: string, city?: string | null): Promise<string | null>;
+  findZonesByCityName(q: string): Promise<Array<{ id: number; code: string; label: string }>>;
 
   // States & Cities
   listStates(): Promise<State[]>;
@@ -708,6 +709,27 @@ export class DatabaseStorage implements IStorage {
       .where(eq(bioclimaticZoneCoverages.zoneId, zoneId));
     (rows as any).sort((a: any, b: any) => ptCollator.compare(String(a.city ?? ''), String(b.city ?? '')));
     return rows as any;
+  }
+
+  async findZonesByCityName(q: string): Promise<Array<{ id: number; code: string; label: string }>> {
+    const query = `%${q}%`;
+    // Join coverages -> zones -> cities to find matching city names
+    const rows = await db
+      .select({ id: bioclimaticZones.id, code: bioclimaticZones.code, label: bioclimaticZones.label })
+      .from(bioclimaticZoneCoverages)
+      .leftJoin(cities, eq(bioclimaticZoneCoverages.cityId, cities.id))
+      .leftJoin(bioclimaticZones, eq(bioclimaticZoneCoverages.zoneId, bioclimaticZones.id))
+      .where(ilike(cities.name, query));
+    // Deduplicate zones
+    const map = new Map<number, { id: number; code: string; label: string }>();
+    for (const r of rows as any[]) {
+      if (r?.id && !map.has(r.id)) {
+        map.set(r.id, { id: r.id, code: (r as any).code, label: (r as any).label });
+      }
+    }
+    const out = Array.from(map.values());
+    out.sort((a, b) => ptCollator.compare(String(a.code ?? ''), String(b.code ?? '')));
+    return out;
   }
 
   async createBioclimaticZoneCoverage(zoneId: number, item: Omit<InsertBioclimaticZoneCoverage, 'zoneId'>): Promise<BioclimaticZoneCoverage> {

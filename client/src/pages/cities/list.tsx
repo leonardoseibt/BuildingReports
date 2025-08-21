@@ -19,7 +19,6 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
    id: number;
    stateId: number;
    name: string;
-   region?: string | null;
    latitude?: string | number | null;
    longitude?: string | number | null;
    altitudeM?: string | number | null;
@@ -46,7 +45,6 @@ export default function CitiesList() {
 
   const [stateId, setStateId] = useState<number | "">("");
   const [cityName, setCityName] = useState("");
-  const [region, setRegion] = useState("");
   const [latitude, setLatitude] = useState("");
   const [longitude, setLongitude] = useState("");
   const [altitudeM, setAltitudeM] = useState("");
@@ -59,7 +57,6 @@ export default function CitiesList() {
   function resetFormFields() {
     setStateId("");
     setCityName("");
-    setRegion("");
     setLatitude("");
     setLongitude("");
     setAltitudeM("");
@@ -70,7 +67,6 @@ export default function CitiesList() {
     setAmplitudeC("");
   }
 
-  const macrorregioes = ["Norte", "Nordeste", "Centro-Oeste", "Sudeste", "Sul"] as const;
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -146,7 +142,6 @@ export default function CitiesList() {
       const body = {
         name: cityName.trim(),
         stateId: stateId === "" ? undefined : Number(stateId),
-        region: region.trim() || undefined,
         latitude: latitude === "" ? undefined : Number(latitude),
         longitude: longitude === "" ? undefined : Number(longitude),
         altitudeM: altitudeM === "" ? undefined : Number(altitudeM),
@@ -218,11 +213,10 @@ export default function CitiesList() {
                 <TableHeader>
                   <TableRow className="bg-slate-100/60">
           <TableHead onClick={() => toggleSort('state')} aria-sort={sortBy === 'state' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} className="w-[10%] cursor-pointer select-none">UF {sortBy === 'state' && (sortDir === 'asc' ? <ArrowUp className="inline-block w-3 h-3 ml-1 opacity-70" /> : <ArrowDown className="inline-block w-3 h-3 ml-1 opacity-70" />)}</TableHead>
-          <TableHead onClick={() => toggleSort('name')} aria-sort={sortBy === 'name' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} className="w-[38%] cursor-pointer select-none">Município {sortBy === 'name' && (sortDir === 'asc' ? <ArrowUp className="inline-block w-3 h-3 ml-1 opacity-70" /> : <ArrowDown className="inline-block w-3 h-3 ml-1 opacity-70" />)}</TableHead>
-          <TableHead className="w-[18%]">Região</TableHead>
-          <TableHead className="w-[12%] text-right">Latitude</TableHead>
-          <TableHead className="w-[12%] text-right">Longitude</TableHead>
-          <TableHead className="w-[10%] text-right">Ações</TableHead>
+          <TableHead onClick={() => toggleSort('name')} aria-sort={sortBy === 'name' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} className="w-[34%] cursor-pointer select-none">Município {sortBy === 'name' && (sortDir === 'asc' ? <ArrowUp className="inline-block w-3 h-3 ml-1 opacity-70" /> : <ArrowDown className="inline-block w-3 h-3 ml-1 opacity-70" />)}</TableHead>
+          <TableHead className="w-[21%] text-right">Latitude</TableHead>
+          <TableHead className="w-[21%] text-right">Longitude</TableHead>
+          <TableHead className="w-[14%] text-right">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -232,12 +226,11 @@ export default function CitiesList() {
                       <TableRow key={t.id}>
                         <TableCell className="font-medium">{uf?.code}</TableCell>
             <TableCell>{t.name}</TableCell>
-            <TableCell>{t.region ?? '-'}</TableCell>
             <TableCell className="text-right">{t.latitude ?? '-'}</TableCell>
             <TableCell className="text-right">{t.longitude ?? '-'}</TableCell>
             <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-1.5">
-                            <Button variant="ghost" size="icon" onClick={() => { setEditItem(t); setStateId(t.stateId); setCityName(t.name); setRegion(t.region ? String(t.region) : ""); setLatitude(t.latitude != null ? String(t.latitude) : ""); setLongitude(t.longitude != null ? String(t.longitude) : ""); setAltitudeM(t.altitudeM != null ? String(t.altitudeM) : ""); setTbsC(t.tbsC != null ? String(t.tbsC) : ""); setUrPercent(t.urPercent != null ? String(t.urPercent) : ""); setRadiacaoWm2(t.radiacaoWm2 != null ? String(t.radiacaoWm2) : ""); setVentoMS(t.ventoMS != null ? String(t.ventoMS) : ""); setAmplitudeC(t.amplitudeC != null ? String(t.amplitudeC) : ""); setOpen(true); }}>
+                            <Button variant="ghost" size="icon" onClick={() => { setEditItem(t); setStateId(t.stateId); setCityName(t.name); setLatitude(t.latitude != null ? String(t.latitude) : ""); setLongitude(t.longitude != null ? String(t.longitude) : ""); setAltitudeM(t.altitudeM != null ? String(t.altitudeM) : ""); setTbsC(t.tbsC != null ? String(t.tbsC) : ""); setUrPercent(t.urPercent != null ? String(t.urPercent) : ""); setRadiacaoWm2(t.radiacaoWm2 != null ? String(t.radiacaoWm2) : ""); setVentoMS(t.ventoMS != null ? String(t.ventoMS) : ""); setAmplitudeC(t.amplitudeC != null ? String(t.amplitudeC) : ""); setOpen(true); }}>
                               <Pencil className="h-4 w-4" />
                             </Button>
                             <Button variant="ghost" size="icon" className="text-rose-600 hover:bg-rose-50 hover:text-rose-700" onClick={() => askDelete(t)} disabled={deleteMutation.isPending && selectedItem?.id === t.id}>
@@ -291,18 +284,6 @@ export default function CitiesList() {
 
             {/* Demais campos do cadastro de municípios (conforme tabela) */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-              <NotchedField label="Região" labelClassName="whitespace-nowrap">
-                <select
-                  value={region}
-                  onChange={(e) => setRegion(e.target.value)}
-                  className="w-full h-9 bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 px-1"
-                >
-                  <option value="">Selecione a região</option>
-                  {macrorregioes.map((r) => (
-                    <option key={r} value={r}>{r}</option>
-                  ))}
-                </select>
-              </NotchedField>
               <NotchedField label="Latitude (°)" labelClassName="whitespace-nowrap">
                 <Input type="number" step="0.000001" value={latitude} onChange={(e) => setLatitude(e.target.value)} placeholder="-30.0346" className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" />
               </NotchedField>

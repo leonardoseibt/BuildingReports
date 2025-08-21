@@ -45,16 +45,38 @@ export default function BioclimaticZonesList() {
   }, [isAuthenticated, isLoading, toast]);
 
   const { data: zones = [], isFetching, isLoading: isLoadingItems } = useQuery<BioclimaticZone[]>({ queryKey: ["/api/bioclimatic-zones"], enabled: isAuthenticated });
+  // Search by city name: query backend for zones that cover a given city
+  const searchTrim = search.trim();
+  const enableCitySearch = isAuthenticated && searchTrim.length >= 2;
+  const { data: zonesByCity = [] } = useQuery<Array<{ id: number; code: string; label: string }>>({
+    queryKey: ["/api/bioclimatic-zones/search-by-city", searchTrim],
+    enabled: enableCitySearch,
+    queryFn: async () => {
+      const res = await fetch(`/api/bioclimatic-zones/search-by-city?q=${encodeURIComponent(searchTrim)}`);
+      if (!res.ok) throw new Error(await res.text());
+      return res.json();
+    }
+  });
   const normText = (v: any) => String(v ?? "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]+/g, "");
   const filtered = useMemo(() => {
     const q = normText(search);
     if (!q) return zones;
-    return zones.filter((z) =>
+    const base = zones.filter((z) =>
       normText(z.code).includes(q) ||
       normText(z.label).includes(q) ||
       normText((z as any).createdAt).includes(q)
     );
-  }, [zones, search]);
+    // If there are zones returned from city search, union them with base filter
+    if ((zonesByCity?.length || 0) > 0) {
+      const ids = new Set(zonesByCity.map((z) => z.id));
+      const byCity = zones.filter((z) => ids.has(z.id));
+      // Union unique by id
+      const map = new Map<number, BioclimaticZone>();
+      for (const it of [...base, ...byCity]) map.set(it.id, it);
+      return Array.from(map.values());
+    }
+    return base;
+  }, [zones, search, zonesByCity]);
   const sorted = useMemo(() => {
     if (!sortBy) return filtered;
     const arr = [...filtered];
@@ -140,7 +162,7 @@ export default function BioclimaticZonesList() {
                   type="text"
                   value={search}
                   onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-                  placeholder="Buscar zonas (código, descrição, data)"
+                  placeholder="Buscar zonas (código, descrição, data ou Município)"
                   className="w-full h-9 rounded-md border px-9 text-sm"
                 />
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />

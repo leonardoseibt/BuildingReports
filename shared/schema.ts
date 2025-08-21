@@ -75,6 +75,7 @@ export const states = pgTable("states", {
   id: integer("id").generatedAlwaysAsIdentity().primaryKey(),
   code: varchar("code", { length: 2 }).notNull().unique(), // UF, e.g., RS
   name: varchar("name", { length: 128 }).notNull(), // e.g., Rio Grande do Sul
+  region: varchar("region", { length: 64 }),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

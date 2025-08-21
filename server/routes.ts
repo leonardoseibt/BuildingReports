@@ -473,6 +473,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try { const id = Number(req.params.id); res.json(await storage.listBioclimaticZoneCoverages(id)); }
     catch { res.status(500).json({ message: 'Failed to fetch coverages' }); }
   });
+  // Find zones by city name (for filtering zones by city search)
+  app.get('/api/bioclimatic-zones/search-by-city', isAuthenticated, async (req, res) => {
+    try {
+      const q = String((req.query.q ?? '') as string).trim();
+      if (!q) return res.json([]);
+      const rows = await storage.findZonesByCityName(q);
+      res.json(rows);
+    } catch {
+      res.status(500).json({ message: 'Failed to search zones by city' });
+    }
+  });
   app.post('/api/bioclimatic-zones/:id/coverages', isAuthenticated, express.json(), async (req, res) => {
     try {
       const id = Number(req.params.id);
