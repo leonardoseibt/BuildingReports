@@ -114,9 +114,11 @@ export const buildings = pgTable("buildings", {
   // New FKs to master tables
   typologyId: integer("typology_id").references(() => typologies.id),
   cep: varchar("cep", { length: 9 }).notNull(),
-  address: text("address").notNull(),
+  street: varchar("street", { length: 255 }).notNull(),
   addressNumber: varchar("address_number", { length: 20 }),
   neighborhood: varchar("neighborhood", { length: 128 }),
+  city: varchar("city", { length: 128 }),
+  state: varchar("state", { length: 2 }),
   bioclimaticZone: varchar("bioclimatic_zone", { length: 16 }).notNull(),
   totalArea: decimal("total_area", { precision: 10, scale: 2 }).notNull(),
   buildingHeight: decimal("building_height", { precision: 10, scale: 2 }),
@@ -356,6 +358,9 @@ export const insertBuildingSchema = createInsertSchema(buildings)
     floors: intInput,
     units: intInput.optional(),
   neighborhood: z.string().optional().nullable().transform(v => v ? v : undefined),
+  street: z.string().min(1, 'Logradouro é obrigatório'),
+  city: z.string().optional().nullable().transform(v => v ? v : undefined),
+  state: z.string().optional().nullable().transform(v => v ? v : undefined),
   });
 
 // Allow partial updates on buildings (no userId changes through API)

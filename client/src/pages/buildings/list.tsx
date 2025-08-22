@@ -316,8 +316,19 @@ export default function BuildingList() {
                       </TableCell>
                       <TableCell className="w-[20%] whitespace-nowrap overflow-hidden text-ellipsis max-sm:whitespace-normal" data-testid={`text-building-location-${building.id}`}>
                         <div className="flex items-center gap-1">
-                          <MapPin className="w-3 h-3" />
-                          {building.bioclimaticZone} • {(building as any).typologyLabel || (building as any).typologyCode || '—'}
+                          <MapPin className="w-3 h-3 shrink-0" />
+                          {(() => {
+                            const zone = building.bioclimaticZone || '—';
+                            const typology = (building as any).typologyLabel || (building as any).typologyCode || '';
+                            const city = (building as any).city || '';
+                            const state = (building as any).state || '';
+                            const cityState = [city, state].filter(Boolean).join('/');
+                            const pieces: string[] = [];
+                            if (zone) pieces.push(zone);
+                            if (typology) pieces.push(typology);
+                            if (cityState) pieces.push(cityState);
+                            return pieces.join(' • ');
+                          })()}
                         </div>
                       </TableCell>
                       <TableCell className="w-[10%] text-right" data-testid={`text-building-area-${building.id}`}>

@@ -270,10 +270,12 @@ export class DatabaseStorage implements IStorage {
       name: building.name,
       userId: building.userId,
       technicianId: (building as any).technicianId,
-      cep: building.cep,
-      address: building.address,
+  cep: building.cep,
+  street: (building as any).street,
   addressNumber: (building as any).addressNumber,
   neighborhood: (building as any).neighborhood,
+  city: (building as any).city,
+  state: (building as any).state,
       bioclimaticZone: building.bioclimaticZone,
       totalArea: building.totalArea,
   buildingHeight: (building as any).buildingHeight,
@@ -307,9 +309,11 @@ export class DatabaseStorage implements IStorage {
         noiseClassId: buildings.noiseClassId,
         aggressivenessClassId: buildings.aggressivenessClassId,
         cep: buildings.cep,
-        address: buildings.address,
+  street: buildings.street,
   addressNumber: buildings.addressNumber,
   neighborhood: buildings.neighborhood,
+  city: buildings.city,
+  state: buildings.state,
         bioclimaticZone: buildings.bioclimaticZone,
         totalArea: buildings.totalArea,
   buildingHeight: buildings.buildingHeight,
@@ -343,9 +347,11 @@ export class DatabaseStorage implements IStorage {
         noiseClassId: buildings.noiseClassId,
         aggressivenessClassId: buildings.aggressivenessClassId,
         cep: buildings.cep,
-        address: buildings.address,
+  street: buildings.street,
   addressNumber: buildings.addressNumber,
   neighborhood: buildings.neighborhood,
+  city: buildings.city,
+  state: buildings.state,
         bioclimaticZone: buildings.bioclimaticZone,
         totalArea: buildings.totalArea,
   buildingHeight: buildings.buildingHeight,
@@ -374,9 +380,12 @@ export class DatabaseStorage implements IStorage {
     if (rest.name != null) updates.name = rest.name;
     if (rest.technicianId !== undefined) updates.technicianId = rest.technicianId;
     if (rest.cep != null) updates.cep = rest.cep;
-    if (rest.address != null) updates.address = rest.address;
+  if (rest.street != null) updates.street = rest.street;
+  // Support legacy payloads carrying "address" but not street
   if (rest.addressNumber !== undefined) updates.addressNumber = rest.addressNumber as any;
   if (rest.neighborhood !== undefined) updates.neighborhood = rest.neighborhood as any;
+  if (rest.city !== undefined) updates.city = rest.city as any;
+  if (rest.state !== undefined) updates.state = rest.state as any;
     if (rest.bioclimaticZone != null) updates.bioclimaticZone = rest.bioclimaticZone;
     if (rest.totalArea != null) updates.totalArea = rest.totalArea;
   if (rest.buildingHeight !== undefined) updates.buildingHeight = rest.buildingHeight as any;
