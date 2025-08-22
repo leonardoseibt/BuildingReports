@@ -68,8 +68,9 @@ export async function setupAuth(app: Express) {
   passport.deserializeUser((user: Express.User, cb) => cb(null, user));
 
   // Local login endpoints
-  // GET /api/login => auto login demo user (for convenience)
+  // GET /api/login => auto login demo user (for convenience in non-production)
   app.get("/api/login", async (req, res) => {
+    if (isProd) return res.status(404).json({ message: "Not found" });
     const email = "dev@example.com";
     const normalizedEmail = email.trim().toLowerCase();
     const dbUser = await storage.ensureUserByEmail(normalizedEmail, "Dev User");
@@ -88,15 +89,6 @@ export async function setupAuth(app: Express) {
         });
       });
     });
-  });
-
-  // POST /api/login => accepts { email, fullName? }
-  app.post("/api/login", express.json(), async (req, res) => {
-    const { email = "dev@example.com", fullName = "Dev User" } = req.body ?? {};
-    const normalizedEmail = email.trim().toLowerCase();
-    if (!normalizedEmail) {
-      return res.status(400).json({ message: "Email é obrigatório" });
-    }
   });
 
   app.get("/api/verify-email", async (req, res) => {
