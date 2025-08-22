@@ -34,6 +34,7 @@
   ,"db:migrate:buildings-address-split": "tsx scripts/run-sql.ts scripts/sql/20250822_split_building_address.sql"
   ,"db:migrate:buildings-address-reparse-fix": "tsx scripts/run-sql.ts scripts/sql/20250822_reparse_building_address_fix.sql"
   ,"db:migrate:buildings-drop-legacy-address": "tsx scripts/run-sql.ts scripts/sql/20250822_drop_legacy_address_buildings.sql"
+  ,"db:migrate:technicians-address-split": "tsx scripts/run-sql.ts scripts/sql/20250822_split_technician_address.sql"
   ,"test": "cross-env NODE_ENV=test tsx --test server/index.test.ts"
   },
   "dependencies": {

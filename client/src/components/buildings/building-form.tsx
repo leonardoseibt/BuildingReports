@@ -121,7 +121,7 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
       technicianId: (building as any).technicianId as any,
       typologyId: (building as any).typologyId ?? undefined,
       cep: building.cep || '',
-      street: (building as any).street || (building as any).address || '',
+  street: (building as any).street || '',
       addressNumber: (building as any).addressNumber || '',
       neighborhood: (building as any).neighborhood || '',
       city: (building as any).city || '',
@@ -386,12 +386,13 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
 
           {/* Localização */}
           <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+              {/* CEP */}
               <FormField
                 control={form.control}
                 name="cep"
                 render={({ field }) => (
-                  <FormItem className="md:col-span-1">
+                  <FormItem className="md:col-span-2">
                     <FormControl>
                       <NotchedField label="CEP" requiredMark>
                         <Input
@@ -420,12 +421,12 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
                   </FormItem>
                 )}
               />
-
+              {/* Logradouro */}
               <FormField
                 control={form.control}
                 name="street"
                 render={({ field }) => (
-                  <FormItem className="md:col-span-2">
+                  <FormItem className="md:col-span-5">
                     <FormControl>
                       <NotchedField label="Logradouro" requiredMark>
                         <Input
@@ -439,12 +440,12 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
                   </FormItem>
                 )}
               />
-
+              {/* Número */}
               <FormField
                 control={form.control}
                 name="addressNumber"
                 render={({ field }) => (
-                  <FormItem className="md:col-span-1">
+                  <FormItem className="md:col-span-2">
                     <FormControl>
                       <NotchedField label="Número">
                         <Input
@@ -459,12 +460,12 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
                   </FormItem>
                 )}
               />
-
+              {/* Zona Bioclimática */}
               <FormField
                 control={form.control}
                 name="bioclimaticZone"
                 render={({ field }) => (
-                  <FormItem className="md:col-span-2">
+                  <FormItem className="md:col-span-3">
                     <FormControl>
                       <NotchedField label="Zona Bioclimática">
                         <Popover open={openZone} onOpenChange={(v) => { if (!zoneLocked) setOpenZone(v); }}>

@@ -36,7 +36,7 @@ const schema = z.object({
   email: z.string().min(1, 'Email é obrigatório').email('Email inválido'),
   phone: z.string().min(1, 'Telefone é obrigatório'),
   company: z.string().optional(),
-  address: z.string().optional(),
+  street: z.string().min(1, 'Logradouro é obrigatório'),
   addressNumber: z.string().optional(),
   neighborhood: z.string().optional(),
   city: z.string().optional(),
@@ -59,9 +59,9 @@ interface TechnicianFormProps {
     | "email"
     | "phone"
     | "company"
-    | "address"
-  | "addressNumber"
-  | "neighborhood"
+    | "street"
+    | "addressNumber"
+    | "neighborhood"
     | "city"
     | "state"
     | "cep"
@@ -81,9 +81,9 @@ export default function TechnicianForm({ onSuccess, onCancel, initialTech }: Tec
       cpfCnpj: initialTech?.cpfCnpj || "",
   email: initialTech?.email || "",
   phone: initialTech?.phone || "",
-      company: initialTech?.company || "",
-  address: initialTech?.address || "",
-  addressNumber: initialTech?.addressNumber || "",
+  company: initialTech?.company || "",
+  street: (initialTech as any)?.street || "",
+  addressNumber: (initialTech as any)?.addressNumber || "",
   neighborhood: (initialTech as any)?.neighborhood || "",
       city: initialTech?.city || "",
       state: initialTech?.state || undefined,
@@ -113,53 +113,7 @@ export default function TechnicianForm({ onSuccess, onCancel, initialTech }: Tec
     return `(${ddd}) ${rest.slice(0, 5)}-${rest.slice(5)}`;
   }, [onlyDigits]);
 
-  // When Número loses focus, insert/replace it right after the street in the address
-  const mergeAddressWithNumber = useCallback((addressRaw: string, numRaw: string) => {
-    const address = (addressRaw || "").trim();
-    const num = (numRaw || "").trim();
-    if (!address && !num) return address;
-
-    // If number is empty: remove any existing number immediately after the street
-    if (!num) {
-      if (!address) return address;
-      const firstCommaIdx = address.indexOf(",");
-      if (firstCommaIdx >= 0) {
-        const street = address.slice(0, firstCommaIdx).trim();
-        let rest = address.slice(firstCommaIdx + 1).trim();
-        const match = rest.match(/^([0-9A-Za-z\/\-]+)(?:\s*,\s*|\s+)(.*)$/);
-        if (match) {
-          const tail = match[2];
-          return tail ? `${street}, ${tail}` : `${street}`;
-        }
-        return address; // no leading number to remove in rest
-      }
-      // No comma: remove a trailing number-like token, if present
-      const withoutNum = address.replace(/(?:,\s*)?[0-9A-Za-z\/\-]+\s*$/, "").trim();
-      return withoutNum;
-    }
-
-    // Split address into street and the remaining (often neighborhood/city)
-    const firstCommaIdx = address.indexOf(",");
-    if (firstCommaIdx >= 0) {
-      const street = address.slice(0, firstCommaIdx).trim();
-      let rest = address.slice(firstCommaIdx + 1).trim();
-
-      // If rest already starts with a number-like token, replace it
-      // Token: letters/numbers with optional - or / (e.g., 123, 123A, 12-3, 10/Bloco B)
-      const match = rest.match(/^([0-9A-Za-z\/\-]+)(?:\s*,\s*|\s+)(.*)$/);
-      if (match) {
-        const _existingNum = match[1];
-        const tail = match[2];
-        return tail ? `${street}, ${num}, ${tail}` : `${street}, ${num}`;
-      }
-      // Otherwise, insert number between street and rest
-      return rest ? `${street}, ${num}, ${rest}` : `${street}, ${num}`;
-    }
-
-    // No comma in address: ensure we don't duplicate a trailing number-ish piece
-    const streetOnly = address.replace(/,?\s*[0-9A-Za-z\/\-]+\s*$/, "").trim();
-    return `${streetOnly}, ${num}`;
-  }, []);
+  // (Removed legacy merge/composition helpers for combined address)
   const formatCpfCnpj = useCallback((v: string) => {
     let d = onlyDigits(v).slice(0, 14);
     if (d.length <= 11) {
@@ -182,29 +136,7 @@ export default function TechnicianForm({ onSuccess, onCancel, initialTech }: Tec
     return `${d.slice(0, 5)}-${d.slice(5)}`;
   }, [onlyDigits]);
 
-  // Compose full address: Rua/Logradouro, Número, Bairro, Cidade, UF
-  const composeFullAddress = useCallback((p: { street?: string; number?: string; neighborhood?: string; city?: string; state?: string; }) => {
-    const parts: string[] = [];
-    const street = p.street?.trim();
-    const number = p.number?.trim();
-    const neighborhood = p.neighborhood?.trim();
-    const city = p.city?.trim();
-    const state = p.state?.trim();
-    if (street) parts.push(street);
-    if (number) parts.push(number);
-    if (neighborhood) parts.push(neighborhood);
-    if (city) parts.push(city);
-    if (state) parts.push(state);
-    return parts.join(', ');
-  }, []);
-
-  // Extract street (first segment before first comma) from current address
-  const extractStreetFromAddress = useCallback((full: string | undefined) => {
-    if (!full) return '';
-    const idx = full.indexOf(',');
-    if (idx === -1) return full.trim();
-    return full.slice(0, idx).trim();
-  }, []);
+  // (Removed composeFullAddress & extractStreetFromAddress – now storing components separately)
 
   const handleCepLookup = async (cep: string) => {
     if (!cep || cep.length < 8) return;
@@ -216,20 +148,10 @@ export default function TechnicianForm({ onSuccess, onCancel, initialTech }: Tec
 
       if (response.ok) {
         const data = await response.json();
-        const currentNum = form.getValues('addressNumber') || '';
-        if (data.neighborhood && !form.getValues('neighborhood')) {
-          form.setValue('neighborhood', data.neighborhood);
-        }
-        if (data.city) form.setValue('city', data.city);
-        if (data.state) form.setValue('state', data.state);
-        const fullAddress = composeFullAddress({
-          street: data.address || extractStreetFromAddress(form.getValues('address')),
-          number: currentNum,
-          neighborhood: form.getValues('neighborhood'),
-          city: form.getValues('city'),
-          state: form.getValues('state'),
-        });
-        form.setValue('address', fullAddress, { shouldDirty: true });
+  if (data.address && !form.getValues('street')) form.setValue('street', data.address);
+  if (data.neighborhood && !form.getValues('neighborhood')) form.setValue('neighborhood', data.neighborhood);
+  if (data.city && !form.getValues('city')) form.setValue('city', data.city);
+  if (data.state && !form.getValues('state')) form.setValue('state', data.state);
         toast({ title: "CEP encontrado", description: `${data.city}/${data.state}` });
       } else {
         toast({
@@ -252,15 +174,6 @@ export default function TechnicianForm({ onSuccess, onCancel, initialTech }: Tec
   const onSubmit = async (data: TechnicianFormData) => {
     try {
       setSubmitting(true);
-      const street = extractStreetFromAddress(data.address);
-      const addressCombined = composeFullAddress({
-        street,
-        number: data.addressNumber,
-        neighborhood: data.neighborhood,
-        city: data.city,
-        state: data.state,
-      }) || undefined;
-
       const payload = {
         fullName: (data.fullName || "").trim(),
         creaCau: (data.creaCau || "").trim(),
@@ -269,7 +182,7 @@ export default function TechnicianForm({ onSuccess, onCancel, initialTech }: Tec
         email: data.email ? data.email.trim().toLowerCase() : undefined,
   phone: data.phone ? onlyDigits(data.phone) : undefined,
         company: data.company ? data.company.trim() : undefined,
-  address: addressCombined,
+  street: data.street ? data.street.trim() : undefined,
   addressNumber: data.addressNumber ? data.addressNumber.trim() : undefined,
         neighborhood: data.neighborhood ? data.neighborhood.trim() : undefined,
         city: data.city ? data.city.trim() : undefined,
@@ -309,22 +222,9 @@ export default function TechnicianForm({ onSuccess, onCancel, initialTech }: Tec
     const cepVal = form.getValues('cep') || '';
     const digits = onlyDigits(cepVal);
     if (digits.length === 8) {
-      handleCepLookup(digits).finally(() => {
-        // Ensure full address composition even if CEP lookup fails
-        const full = composeFullAddress({
-          street: extractStreetFromAddress(form.getValues('address')),
-          number: form.getValues('addressNumber'),
-          neighborhood: form.getValues('neighborhood'),
-          city: form.getValues('city'),
-          state: form.getValues('state'),
-        });
-        if (full && full !== form.getValues('address')) {
-          form.setValue('address', full, { shouldDirty: true });
-        }
-      });
-      setAutoCepRun(true);
+      handleCepLookup(digits).finally(() => setAutoCepRun(true));
     }
-  }, [isEdit, autoCepRun, form, onlyDigits, handleCepLookup, composeFullAddress, extractStreetFromAddress]);
+  }, [isEdit, autoCepRun, form, onlyDigits]);
 
   // Header initials from full name
   const watchName = form.watch("fullName");
@@ -535,30 +435,17 @@ export default function TechnicianForm({ onSuccess, onCancel, initialTech }: Tec
                 )}
               />
               <FormField
-                name="address"
+                name="street"
                 control={form.control}
                 render={({ field }) => (
                   <FormItem className="md:col-span-2">
                     <FormControl>
-                      <NotchedField label="Endereço completo">
+                      <NotchedField label="Logradouro" requiredMark>
                         <Input
                           {...field}
-                          placeholder="Rua, Número, Bairro, Cidade, UF"
-                          autoComplete="street-address"
+                          placeholder="Rua / Avenida"
+                          autoComplete="address-line1"
                           className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
-                          onBlur={(e) => {
-                            field.onBlur();
-                            const full = composeFullAddress({
-                              street: extractStreetFromAddress(e.currentTarget.value),
-                              number: form.getValues('addressNumber'),
-                              neighborhood: form.getValues('neighborhood'),
-                              city: form.getValues('city'),
-                              state: form.getValues('state'),
-                            });
-                            if (full && full !== form.getValues('address')) {
-                              form.setValue('address', full, { shouldDirty: true });
-                            }
-                          }}
                         />
                       </NotchedField>
                     </FormControl>
@@ -581,19 +468,7 @@ export default function TechnicianForm({ onSuccess, onCancel, initialTech }: Tec
                             placeholder="Número"
                             inputMode="numeric"
                             className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
-                            onBlur={(e) => {
-                              field.onBlur();
-                              const full = composeFullAddress({
-                                street: extractStreetFromAddress(form.getValues('address')),
-                                number: e.currentTarget.value,
-                                neighborhood: form.getValues('neighborhood'),
-                                city: form.getValues('city'),
-                                state: form.getValues('state'),
-                              });
-                              if (full && full !== form.getValues('address')) {
-                                form.setValue('address', full, { shouldDirty: true });
-                              }
-                            }}
+                            // removed recomposition logic
                           />
                         </NotchedField>
                       </FormControl>
@@ -612,19 +487,7 @@ export default function TechnicianForm({ onSuccess, onCancel, initialTech }: Tec
                             {...field}
                             autoComplete="address-level2"
                             className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
-                            onBlur={(e) => {
-                              field.onBlur();
-                              const full = composeFullAddress({
-                                street: extractStreetFromAddress(form.getValues('address')),
-                                number: form.getValues('addressNumber'),
-                                neighborhood: form.getValues('neighborhood'),
-                                city: e.currentTarget.value,
-                                state: form.getValues('state'),
-                              });
-                              if (full && full !== form.getValues('address')) {
-                                form.setValue('address', full, { shouldDirty: true });
-                              }
-                            }}
+                            // removed recomposition logic
                           />
                         </NotchedField>
                       </FormControl>
@@ -643,19 +506,7 @@ export default function TechnicianForm({ onSuccess, onCancel, initialTech }: Tec
                             {...field}
                             autoComplete="address-level3"
                             className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
-                            onBlur={(e) => {
-                              field.onBlur();
-                              const full = composeFullAddress({
-                                street: extractStreetFromAddress(form.getValues('address')),
-                                number: form.getValues('addressNumber'),
-                                neighborhood: e.currentTarget.value,
-                                city: form.getValues('city'),
-                                state: form.getValues('state'),
-                              });
-                              if (full && full !== form.getValues('address')) {
-                                form.setValue('address', full, { shouldDirty: true });
-                              }
-                            }}
+                            // removed recomposition logic
                           />
                         </NotchedField>
                       </FormControl>
@@ -673,16 +524,6 @@ export default function TechnicianForm({ onSuccess, onCancel, initialTech }: Tec
                           <Select
                             onValueChange={(val) => {
                               field.onChange(val);
-                              const full = composeFullAddress({
-                                street: extractStreetFromAddress(form.getValues('address')),
-                                number: form.getValues('addressNumber'),
-                                neighborhood: form.getValues('neighborhood'),
-                                city: form.getValues('city'),
-                                state: val,
-                              });
-                              if (full && full !== form.getValues('address')) {
-                                form.setValue('address', full, { shouldDirty: true });
-                              }
                             }}
                             value={field.value}
                           >

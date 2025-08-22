@@ -608,9 +608,9 @@ export class DatabaseStorage implements IStorage {
       email: tech.email,
       phone: tech.phone,
       company: tech.company,
-      address: tech.address,
-  addressNumber: (tech as any).addressNumber,
-  neighborhood: (tech as any).neighborhood,
+      street: (tech as any).street,
+      addressNumber: (tech as any).addressNumber,
+      neighborhood: (tech as any).neighborhood,
       city: tech.city,
       state: tech.state,
       cep: tech.cep,
@@ -629,9 +629,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateTechnician(id: number, tech: Partial<InsertTechnician>): Promise<Technician> {
+    const updateData: any = { updatedAt: new Date() };
+    const allowed = ['fullName','creaCau','licenseState','cpfCnpj','email','phone','company','street','addressNumber','neighborhood','city','state','cep','notes'];
+    for (const k of allowed) {
+      if ((tech as any)[k] !== undefined) updateData[k] = (tech as any)[k];
+    }
     const [row] = await db
       .update(technicians)
-      .set({ ...tech, updatedAt: new Date() })
+      .set(updateData)
       .where(eq(technicians.id, id))
       .returning();
     return row as Technician;

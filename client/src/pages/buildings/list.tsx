@@ -101,12 +101,16 @@ export default function BuildingList() {
       const name = normText(b.name);
       const typology = normText((b as any).typologyLabel || (b as any).typologyCode || "");
       const zone = normText(b.bioclimaticZone || "");
+      const city = normText((b as any).city || "");
+      const state = normText((b as any).state || "");
       const responsible = normText(b.technicianId ? (techNameById[b.technicianId] ?? "") : "");
       const created = normText(b.createdAt as any);
       return (
         name.includes(q) ||
         typology.includes(q) ||
         zone.includes(q) ||
+        city.includes(q) ||
+        state.includes(q) ||
         responsible.includes(q) ||
         created.includes(q)
       );
@@ -263,7 +267,7 @@ export default function BuildingList() {
                   type="text"
                   value={search}
                   onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-                  placeholder="Buscar edificações (nome, localização, responsável, data)"
+                  placeholder="Buscar edificações (nome, localização, cidade, UF, responsável, data)"
                   className="w-full h-9 rounded-md border px-9 text-sm"
                 />
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />

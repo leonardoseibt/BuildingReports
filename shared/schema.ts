@@ -229,7 +229,7 @@ export const technicians = pgTable("technicians", {
   email: varchar("email", { length: 255 }),
   phone: varchar("phone", { length: 32 }),
   company: varchar("company", { length: 255 }),
-  address: text("address"),
+  street: varchar("street", { length: 255 }).notNull(),
   addressNumber: varchar("address_number", { length: 20 }),
   neighborhood: varchar("neighborhood", { length: 128 }),
   city: varchar("city", { length: 128 }),
@@ -394,19 +394,18 @@ export const insertReportSchema = createInsertSchema(reports);
 
 export const insertTechnicianSchema = createInsertSchema(technicians)
   .extend({
-  // required fields
-  cpfCnpj: z.string().min(1, 'CPF/CNPJ é obrigatório'),
-  email: z.string().min(1, 'Email é obrigatório').email('Email inválido'),
-  phone: z.string().min(1, 'Telefone é obrigatório'),
-    company: z.string().optional().nullable().transform((v) => (v ? v : undefined)),
-    address: z.string().optional().nullable().transform((v) => (v ? v : undefined)),
-  addressNumber: z.string().optional().nullable().transform((v) => (v ? v : undefined)),
-  neighborhood: z.string().optional().nullable().transform((v) => (v ? v : undefined)),
-    city: z.string().optional().nullable().transform((v) => (v ? v : undefined)),
-  state: z.string().optional().nullable().transform((v) => (v ? v : undefined)),
-    cep: z.string().optional().nullable().transform((v) => (v ? v : undefined)),
-    notes: z.string().optional().nullable().transform((v) => (v ? v : undefined)),
-  licenseState: z.string().min(1, 'UF do Registro é obrigatória').length(2, 'UF do Registro é obrigatória'),
+    cpfCnpj: z.string().min(1, 'CPF/CNPJ é obrigatório'),
+    email: z.string().min(1, 'Email é obrigatório').email('Email inválido'),
+    phone: z.string().min(1, 'Telefone é obrigatório'),
+    company: z.string().optional().nullable().transform(v => v || undefined),
+    street: z.string().min(1, 'Logradouro é obrigatório'),
+    addressNumber: z.string().optional().nullable().transform(v => v || undefined),
+    neighborhood: z.string().optional().nullable().transform(v => v || undefined),
+    city: z.string().optional().nullable().transform(v => v || undefined),
+    state: z.string().optional().nullable().transform(v => v || undefined),
+    cep: z.string().optional().nullable().transform(v => v || undefined),
+    notes: z.string().optional().nullable().transform(v => v || undefined),
+    licenseState: z.string().min(1, 'UF do Registro é obrigatória').length(2, 'UF do Registro é obrigatória'),
   });
 
 // Insert schemas for master tables
