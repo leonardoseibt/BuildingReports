@@ -107,7 +107,7 @@ export async function setupAuth(app: Express) {
       if (!dbUser || !dbUser.passwordHash) {
         return res.status(401).json({ message: "Credenciais inválidas" });
       }
-      if (!dbUser.emailVerified) {
+      if (isProd && !dbUser.emailVerified) {
         return res.status(401).json({ message: "E-mail não verificado" });
       }
       const match = await bcrypt.compare(password, dbUser.passwordHash);
