@@ -520,26 +520,7 @@ export default function TechnicianForm({ onSuccess, onCancel, initialTech }: Tec
                   </FormItem>
                 )}
               />
-              <FormField
-                name="neighborhood"
-                control={form.control}
-                render={({ field }) => (
-                  <FormItem className="md:col-span-2">
-                    <FormControl>
-                      <NotchedField label="Bairro">
-                        <Input
-                          {...field}
-                          placeholder="Bairro"
-                          autoComplete="address-level3"
-                          className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
-                        />
-                      </NotchedField>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
+              
               {/* Número, Cidade, Bairro e UF na mesma linha */}
               <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-12 gap-4">
                 <FormField
