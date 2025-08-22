@@ -38,6 +38,7 @@ const schema = z.object({
   company: z.string().optional(),
   address: z.string().optional(),
   addressNumber: z.string().optional(),
+  neighborhood: z.string().optional(),
   city: z.string().optional(),
   state: z.string().length(2).optional(),
   cep: z.string().optional(),
@@ -60,6 +61,7 @@ interface TechnicianFormProps {
     | "company"
     | "address"
   | "addressNumber"
+  | "neighborhood"
     | "city"
     | "state"
     | "cep"
@@ -82,6 +84,7 @@ export default function TechnicianForm({ onSuccess, onCancel, initialTech }: Tec
       company: initialTech?.company || "",
   address: initialTech?.address || "",
   addressNumber: initialTech?.addressNumber || "",
+  neighborhood: (initialTech as any)?.neighborhood || "",
       city: initialTech?.city || "",
       state: initialTech?.state || undefined,
       cep: initialTech?.cep || "",
@@ -189,8 +192,13 @@ export default function TechnicianForm({ onSuccess, onCancel, initialTech }: Tec
 
       if (response.ok) {
         const data = await response.json();
-        // Keep addressNumber intact; only update street/city/state
-        form.setValue("address", data.address);
+  // Keep addressNumber intact; update street/city/state and merge number into address
+  const currentNum = form.getValues("addressNumber") || "";
+        const mergedAddress = mergeAddressWithNumber(data.address || "", currentNum);
+        if (data.neighborhood && !form.getValues('neighborhood')) {
+          form.setValue('neighborhood', data.neighborhood);
+        }
+  form.setValue("address", mergedAddress);
         form.setValue("city", data.city);
         form.setValue("state", data.state);
         toast({ title: "CEP encontrado", description: `${data.city}/${data.state}` });
@@ -234,6 +242,7 @@ export default function TechnicianForm({ onSuccess, onCancel, initialTech }: Tec
         company: data.company ? data.company.trim() : undefined,
         address: addressCombined,
   addressNumber: data.addressNumber ? data.addressNumber.trim() : undefined,
+        neighborhood: data.neighborhood ? data.neighborhood.trim() : undefined,
         city: data.city ? data.city.trim() : undefined,
         state: data.state ? data.state.trim().toUpperCase() : undefined,
         cep: data.cep ? onlyDigits(data.cep) : undefined,
@@ -263,6 +272,18 @@ export default function TechnicianForm({ onSuccess, onCancel, initialTech }: Tec
     if (initialTech?.cpfCnpj) form.setValue("cpfCnpj", formatCpfCnpj(initialTech.cpfCnpj));
     if (initialTech?.cep) form.setValue("cep", formatCep(initialTech.cep));
   }, [isEdit, initialTech, form, formatPhoneBR, formatCpfCnpj, formatCep]);
+
+  // Auto-run CEP lookup on edit open (after masks applied) to refresh address/city/state and merge number
+  const [autoCepRun, setAutoCepRun] = useState(false);
+  useEffect(() => {
+    if (!isEdit || autoCepRun) return;
+    const cepVal = form.getValues("cep") || "";
+    const digits = onlyDigits(cepVal);
+    if (digits.length === 8) {
+      handleCepLookup(digits);
+      setAutoCepRun(true);
+    }
+  }, [isEdit, autoCepRun, form, onlyDigits]);
 
   // Header initials from full name
   const watchName = form.watch("fullName");
@@ -499,8 +520,27 @@ export default function TechnicianForm({ onSuccess, onCancel, initialTech }: Tec
                   </FormItem>
                 )}
               />
+              <FormField
+                name="neighborhood"
+                control={form.control}
+                render={({ field }) => (
+                  <FormItem className="md:col-span-2">
+                    <FormControl>
+                      <NotchedField label="Bairro">
+                        <Input
+                          {...field}
+                          placeholder="Bairro"
+                          autoComplete="address-level3"
+                          className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                        />
+                      </NotchedField>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-              {/* Número, Cidade e UF na mesma linha */}
+              {/* Número, Cidade, Bairro e UF na mesma linha */}
               <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-12 gap-4">
                 <FormField
                   name="addressNumber"
@@ -543,10 +583,24 @@ export default function TechnicianForm({ onSuccess, onCancel, initialTech }: Tec
                   name="city"
                   control={form.control}
                   render={({ field }) => (
-                    <FormItem className="md:col-span-8">
+                    <FormItem className="md:col-span-4">
                       <FormControl>
                         <NotchedField label="Cidade">
                           <Input {...field} autoComplete="address-level2" className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" />
+                        </NotchedField>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  name="neighborhood"
+                  control={form.control}
+                  render={({ field }) => (
+                    <FormItem className="md:col-span-4">
+                      <FormControl>
+                        <NotchedField label="Bairro">
+                          <Input {...field} autoComplete="address-level3" className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" />
                         </NotchedField>
                       </FormControl>
                       <FormMessage />

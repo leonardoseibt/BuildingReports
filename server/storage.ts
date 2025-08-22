@@ -597,6 +597,7 @@ export class DatabaseStorage implements IStorage {
       company: tech.company,
       address: tech.address,
   addressNumber: (tech as any).addressNumber,
+  neighborhood: (tech as any).neighborhood,
       city: tech.city,
       state: tech.state,
       cep: tech.cep,

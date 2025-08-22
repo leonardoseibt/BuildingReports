@@ -442,9 +442,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const bioclimaticZone = zoneFromDb || 'ZB3';
       
       res.json({
-        address: `${data.logradouro}, ${data.bairro}, ${data.localidade}, ${data.uf}`,
-        city: data.localidade,
-        state: data.uf,
+        address: data.logradouro || '',
+        neighborhood: data.bairro || '',
+        city: data.localidade || '',
+        state: data.uf || '',
         bioclimaticZone,
       });
     } catch (error) {
