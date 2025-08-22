@@ -30,6 +30,7 @@
   "db:migrate:drop-city-region": "tsx scripts/run-sql.ts scripts/sql/20250820_drop_region_from_cities.sql",
   "db:migrate:region-to-states": "tsx scripts/run-sql.ts scripts/sql/20250821_move_region_to_states.sql"
   ,"db:migrate:technicians-neighborhood": "tsx scripts/run-sql.ts scripts/sql/20250821_add_neighborhood_to_technicians.sql"
+  ,"db:migrate:buildings-neighborhood": "tsx scripts/run-sql.ts scripts/sql/20250822_add_neighborhood_to_buildings.sql"
   ,"test": "cross-env NODE_ENV=test tsx --test server/index.test.ts"
   },
   "dependencies": {

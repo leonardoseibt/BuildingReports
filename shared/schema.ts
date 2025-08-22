@@ -116,6 +116,7 @@ export const buildings = pgTable("buildings", {
   cep: varchar("cep", { length: 9 }).notNull(),
   address: text("address").notNull(),
   addressNumber: varchar("address_number", { length: 20 }),
+  neighborhood: varchar("neighborhood", { length: 128 }),
   bioclimaticZone: varchar("bioclimatic_zone", { length: 16 }).notNull(),
   totalArea: decimal("total_area", { precision: 10, scale: 2 }).notNull(),
   buildingHeight: decimal("building_height", { precision: 10, scale: 2 }),
@@ -354,6 +355,7 @@ export const insertBuildingSchema = createInsertSchema(buildings)
   buildingHeight: decimalInput.optional(),
     floors: intInput,
     units: intInput.optional(),
+  neighborhood: z.string().optional().nullable().transform(v => v ? v : undefined),
   });
 
 // Allow partial updates on buildings (no userId changes through API)

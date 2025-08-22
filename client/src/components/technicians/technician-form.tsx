@@ -182,6 +182,30 @@ export default function TechnicianForm({ onSuccess, onCancel, initialTech }: Tec
     return `${d.slice(0, 5)}-${d.slice(5)}`;
   }, [onlyDigits]);
 
+  // Compose full address: Rua/Logradouro, Número, Bairro, Cidade, UF
+  const composeFullAddress = useCallback((p: { street?: string; number?: string; neighborhood?: string; city?: string; state?: string; }) => {
+    const parts: string[] = [];
+    const street = p.street?.trim();
+    const number = p.number?.trim();
+    const neighborhood = p.neighborhood?.trim();
+    const city = p.city?.trim();
+    const state = p.state?.trim();
+    if (street) parts.push(street);
+    if (number) parts.push(number);
+    if (neighborhood) parts.push(neighborhood);
+    if (city) parts.push(city);
+    if (state) parts.push(state);
+    return parts.join(', ');
+  }, []);
+
+  // Extract street (first segment before first comma) from current address
+  const extractStreetFromAddress = useCallback((full: string | undefined) => {
+    if (!full) return '';
+    const idx = full.indexOf(',');
+    if (idx === -1) return full.trim();
+    return full.slice(0, idx).trim();
+  }, []);
+
   const handleCepLookup = async (cep: string) => {
     if (!cep || cep.length < 8) return;
 
@@ -192,15 +216,20 @@ export default function TechnicianForm({ onSuccess, onCancel, initialTech }: Tec
 
       if (response.ok) {
         const data = await response.json();
-  // Keep addressNumber intact; update street/city/state and merge number into address
-  const currentNum = form.getValues("addressNumber") || "";
-        const mergedAddress = mergeAddressWithNumber(data.address || "", currentNum);
+        const currentNum = form.getValues('addressNumber') || '';
         if (data.neighborhood && !form.getValues('neighborhood')) {
           form.setValue('neighborhood', data.neighborhood);
         }
-  form.setValue("address", mergedAddress);
-        form.setValue("city", data.city);
-        form.setValue("state", data.state);
+        if (data.city) form.setValue('city', data.city);
+        if (data.state) form.setValue('state', data.state);
+        const fullAddress = composeFullAddress({
+          street: data.address || extractStreetFromAddress(form.getValues('address')),
+          number: currentNum,
+          neighborhood: form.getValues('neighborhood'),
+          city: form.getValues('city'),
+          state: form.getValues('state'),
+        });
+        form.setValue('address', fullAddress, { shouldDirty: true });
         toast({ title: "CEP encontrado", description: `${data.city}/${data.state}` });
       } else {
         toast({
@@ -223,14 +252,14 @@ export default function TechnicianForm({ onSuccess, onCancel, initialTech }: Tec
   const onSubmit = async (data: TechnicianFormData) => {
     try {
       setSubmitting(true);
-      const addressCombined = (() => {
-        const base = (data.address || "").trim();
-        const num = (data.addressNumber || "").trim();
-        if (!base && !num) return undefined;
-        if (!num) return base;
-        if (!base) return num;
-        return `${base}, ${num}`;
-      })();
+      const street = extractStreetFromAddress(data.address);
+      const addressCombined = composeFullAddress({
+        street,
+        number: data.addressNumber,
+        neighborhood: data.neighborhood,
+        city: data.city,
+        state: data.state,
+      }) || undefined;
 
       const payload = {
         fullName: (data.fullName || "").trim(),
@@ -240,7 +269,7 @@ export default function TechnicianForm({ onSuccess, onCancel, initialTech }: Tec
         email: data.email ? data.email.trim().toLowerCase() : undefined,
   phone: data.phone ? onlyDigits(data.phone) : undefined,
         company: data.company ? data.company.trim() : undefined,
-        address: addressCombined,
+  address: addressCombined,
   addressNumber: data.addressNumber ? data.addressNumber.trim() : undefined,
         neighborhood: data.neighborhood ? data.neighborhood.trim() : undefined,
         city: data.city ? data.city.trim() : undefined,
@@ -268,22 +297,34 @@ export default function TechnicianForm({ onSuccess, onCancel, initialTech }: Tec
   // Format initial values on edit so masks appear immediately
   useEffect(() => {
     if (!isEdit) return;
-    if (initialTech?.phone) form.setValue("phone", formatPhoneBR(initialTech.phone));
-    if (initialTech?.cpfCnpj) form.setValue("cpfCnpj", formatCpfCnpj(initialTech.cpfCnpj));
-    if (initialTech?.cep) form.setValue("cep", formatCep(initialTech.cep));
+    if (initialTech?.phone) form.setValue('phone', formatPhoneBR(initialTech.phone));
+    if (initialTech?.cpfCnpj) form.setValue('cpfCnpj', formatCpfCnpj(initialTech.cpfCnpj));
+    if (initialTech?.cep) form.setValue('cep', formatCep(initialTech.cep));
   }, [isEdit, initialTech, form, formatPhoneBR, formatCpfCnpj, formatCep]);
 
   // Auto-run CEP lookup on edit open (after masks applied) to refresh address/city/state and merge number
   const [autoCepRun, setAutoCepRun] = useState(false);
   useEffect(() => {
     if (!isEdit || autoCepRun) return;
-    const cepVal = form.getValues("cep") || "";
+    const cepVal = form.getValues('cep') || '';
     const digits = onlyDigits(cepVal);
     if (digits.length === 8) {
-      handleCepLookup(digits);
+      handleCepLookup(digits).finally(() => {
+        // Ensure full address composition even if CEP lookup fails
+        const full = composeFullAddress({
+          street: extractStreetFromAddress(form.getValues('address')),
+          number: form.getValues('addressNumber'),
+          neighborhood: form.getValues('neighborhood'),
+          city: form.getValues('city'),
+          state: form.getValues('state'),
+        });
+        if (full && full !== form.getValues('address')) {
+          form.setValue('address', full, { shouldDirty: true });
+        }
+      });
       setAutoCepRun(true);
     }
-  }, [isEdit, autoCepRun, form, onlyDigits]);
+  }, [isEdit, autoCepRun, form, onlyDigits, handleCepLookup, composeFullAddress, extractStreetFromAddress]);
 
   // Header initials from full name
   const watchName = form.watch("fullName");
@@ -499,18 +540,23 @@ export default function TechnicianForm({ onSuccess, onCancel, initialTech }: Tec
                 render={({ field }) => (
                   <FormItem className="md:col-span-2">
                     <FormControl>
-                      <NotchedField label="Endereço">
+                      <NotchedField label="Endereço completo">
                         <Input
                           {...field}
-                          placeholder="Rua, bairro"
+                          placeholder="Rua, Número, Bairro, Cidade, UF"
                           autoComplete="street-address"
                           className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
                           onBlur={(e) => {
                             field.onBlur();
-                            const num = form.getValues("addressNumber") || "";
-                            const merged = mergeAddressWithNumber(e.currentTarget.value, num);
-                            if (merged !== e.currentTarget.value) {
-                              form.setValue("address", merged, { shouldDirty: true });
+                            const full = composeFullAddress({
+                              street: extractStreetFromAddress(e.currentTarget.value),
+                              number: form.getValues('addressNumber'),
+                              neighborhood: form.getValues('neighborhood'),
+                              city: form.getValues('city'),
+                              state: form.getValues('state'),
+                            });
+                            if (full && full !== form.getValues('address')) {
+                              form.setValue('address', full, { shouldDirty: true });
                             }
                           }}
                         />
@@ -535,22 +581,17 @@ export default function TechnicianForm({ onSuccess, onCancel, initialTech }: Tec
                             placeholder="Número"
                             inputMode="numeric"
                             className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
-                            onChange={(e) => {
-                              field.onChange(e);
-                              const currentNum = e.currentTarget.value;
-                              const currentAddress = form.getValues("address") || "";
-                              const merged = mergeAddressWithNumber(currentAddress, currentNum);
-                              if (merged !== currentAddress) {
-                                form.setValue("address", merged, { shouldDirty: true });
-                              }
-                            }}
                             onBlur={(e) => {
                               field.onBlur();
-                              const currentNum = e.currentTarget.value;
-                              const currentAddress = form.getValues("address") || "";
-                              const merged = mergeAddressWithNumber(currentAddress, currentNum);
-                              if (merged !== currentAddress) {
-                                form.setValue("address", merged, { shouldDirty: true });
+                              const full = composeFullAddress({
+                                street: extractStreetFromAddress(form.getValues('address')),
+                                number: e.currentTarget.value,
+                                neighborhood: form.getValues('neighborhood'),
+                                city: form.getValues('city'),
+                                state: form.getValues('state'),
+                              });
+                              if (full && full !== form.getValues('address')) {
+                                form.setValue('address', full, { shouldDirty: true });
                               }
                             }}
                           />
@@ -567,7 +608,24 @@ export default function TechnicianForm({ onSuccess, onCancel, initialTech }: Tec
                     <FormItem className="md:col-span-4">
                       <FormControl>
                         <NotchedField label="Cidade">
-                          <Input {...field} autoComplete="address-level2" className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" />
+                          <Input
+                            {...field}
+                            autoComplete="address-level2"
+                            className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                            onBlur={(e) => {
+                              field.onBlur();
+                              const full = composeFullAddress({
+                                street: extractStreetFromAddress(form.getValues('address')),
+                                number: form.getValues('addressNumber'),
+                                neighborhood: form.getValues('neighborhood'),
+                                city: e.currentTarget.value,
+                                state: form.getValues('state'),
+                              });
+                              if (full && full !== form.getValues('address')) {
+                                form.setValue('address', full, { shouldDirty: true });
+                              }
+                            }}
+                          />
                         </NotchedField>
                       </FormControl>
                       <FormMessage />
@@ -581,7 +639,24 @@ export default function TechnicianForm({ onSuccess, onCancel, initialTech }: Tec
                     <FormItem className="md:col-span-4">
                       <FormControl>
                         <NotchedField label="Bairro">
-                          <Input {...field} autoComplete="address-level3" className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" />
+                          <Input
+                            {...field}
+                            autoComplete="address-level3"
+                            className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                            onBlur={(e) => {
+                              field.onBlur();
+                              const full = composeFullAddress({
+                                street: extractStreetFromAddress(form.getValues('address')),
+                                number: form.getValues('addressNumber'),
+                                neighborhood: e.currentTarget.value,
+                                city: form.getValues('city'),
+                                state: form.getValues('state'),
+                              });
+                              if (full && full !== form.getValues('address')) {
+                                form.setValue('address', full, { shouldDirty: true });
+                              }
+                            }}
+                          />
                         </NotchedField>
                       </FormControl>
                       <FormMessage />
@@ -595,7 +670,22 @@ export default function TechnicianForm({ onSuccess, onCancel, initialTech }: Tec
                     <FormItem className="md:col-span-2">
                       <FormControl>
                         <NotchedField label="UF">
-                          <Select onValueChange={field.onChange} value={field.value}>
+                          <Select
+                            onValueChange={(val) => {
+                              field.onChange(val);
+                              const full = composeFullAddress({
+                                street: extractStreetFromAddress(form.getValues('address')),
+                                number: form.getValues('addressNumber'),
+                                neighborhood: form.getValues('neighborhood'),
+                                city: form.getValues('city'),
+                                state: val,
+                              });
+                              if (full && full !== form.getValues('address')) {
+                                form.setValue('address', full, { shouldDirty: true });
+                              }
+                            }}
+                            value={field.value}
+                          >
                             <FormControl>
                               <SelectTrigger className="border-0 bg-transparent shadow-none focus:ring-0 focus:ring-offset-0">
                                 <SelectValue placeholder="UF" />

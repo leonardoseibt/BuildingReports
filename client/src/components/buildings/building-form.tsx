@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useRef } from "react";
+import { useEffect, useMemo, useState, useRef, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -31,6 +31,9 @@ const buildingFormSchema = z.object({
     .regex(/^\d{5}-?\d{3}$/, "CEP deve estar no formato 00000-000"),
   address: z.string().min(1, "Endereço é obrigatório"),
   addressNumber: z.string().optional(),
+  neighborhood: z.string().optional(),
+  city: z.string().optional(),
+  state: z.string().length(2, 'UF deve ter 2 letras').optional(),
   bioclimaticZone: z.string().optional(),
   totalArea: z.string()
     .min(1, "Área total é obrigatória")
@@ -70,41 +73,40 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
   const [openTech, setOpenTech] = useState(false);
   const [openZone, setOpenZone] = useState(false);
 
-  // Helper: merge address with number similar to technician form
-  const mergeAddressWithNumber = (addressRaw: string, numRaw: string) => {
-    const address = (addressRaw || "").trim();
-    const num = (numRaw || "").trim();
-    if (!address && !num) return address;
-    if (!num) {
-      if (!address) return address;
-      const firstCommaIdx = address.indexOf(",");
-      if (firstCommaIdx >= 0) {
-        const street = address.slice(0, firstCommaIdx).trim();
-        let rest = address.slice(firstCommaIdx + 1).trim();
-        const match = rest.match(/^([0-9A-Za-z\/\-]+)(?:\s*,\s*|\s+)(.*)$/);
-        if (match) {
-          const tail = match[2];
-          return tail ? `${street}, ${tail}` : `${street}`;
-        }
-        return address;
-      }
-      const withoutNum = address.replace(/(?:,\s*)?[0-9A-Za-z\/\-]+\s*$/, "").trim();
-      return withoutNum;
-    }
-    const firstCommaIdx = address.indexOf(",");
-    if (firstCommaIdx >= 0) {
-      const street = address.slice(0, firstCommaIdx).trim();
-      let rest = address.slice(firstCommaIdx + 1).trim();
-      const match = rest.match(/^([0-9A-Za-z\/\-]+)(?:\s*,\s*|\s+)(.*)$/);
-      if (match) {
-        const tail = match[2];
-        return tail ? `${street}, ${num}, ${tail}` : `${street}, ${num}`;
-      }
-      return rest ? `${street}, ${num}, ${rest}` : `${street}, ${num}`;
-    }
-    const streetOnly = address.replace(/,?\s*[0-9A-Za-z\/\-]+\s*$/, "").trim();
-    return `${streetOnly}, ${num}`;
-  };
+  // Address helpers (paridade com formulário de técnicos)
+  const composeFullAddress = useCallback((p: { street?: string; number?: string; neighborhood?: string; city?: string; state?: string; }) => {
+    const parts: string[] = [];
+    const street = p.street?.trim();
+    const number = p.number?.trim();
+    const neighborhood = p.neighborhood?.trim();
+    const city = p.city?.trim();
+    const state = p.state?.trim();
+    if (street) parts.push(street);
+    if (number) parts.push(number);
+    if (neighborhood) parts.push(neighborhood);
+    if (city) parts.push(city);
+    if (state) parts.push(state);
+    return parts.join(', ');
+  }, []);
+
+  const parseAddressParts = useCallback((full: string | undefined) => {
+    if (!full) return {} as { street?: string; number?: string; neighborhood?: string; city?: string; state?: string; };
+    const parts = full.split(',').map(p => p.trim()).filter(Boolean);
+    return {
+      street: parts[0],
+      number: parts[1],
+      neighborhood: parts[2],
+      city: parts[3],
+      state: parts[4],
+    } as { street?: string; number?: string; neighborhood?: string; city?: string; state?: string; };
+  }, []);
+
+  const extractStreetFromAddress = useCallback((full: string | undefined) => {
+    if (!full) return '';
+    const idx = full.indexOf(',');
+    if (idx === -1) return full.trim();
+    return full.slice(0, idx).trim();
+  }, []);
 
   // Helpers (paridade com outros formulários)
   const onlyDigits = (v: string) => v.replace(/\D/g, "");
@@ -120,9 +122,12 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
       name: '',
   technicianId: undefined as any,
   typologyId: undefined as any,
-      cep: '',
-      address: '',
+    cep: '',
+    address: '',
   addressNumber: '',
+    neighborhood: '',
+    city: '',
+    state: undefined,
       bioclimaticZone: undefined as any,
       totalArea: 0 as any,
   buildingHeight: undefined as any,
@@ -152,6 +157,9 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
       cep: building.cep || '',
     address: building.address || '',
     addressNumber: (building as any).addressNumber || '',
+      neighborhood: (building as any).neighborhood || '',
+      city: (building as any).city || '',
+      state: (building as any).state || undefined,
       bioclimaticZone: (building.bioclimaticZone as any) || undefined,
       totalArea: String(building.totalArea) as any,
     buildingHeight: (building as any).buildingHeight != null ? String((building as any).buildingHeight) as any : undefined,
@@ -187,34 +195,20 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
       const response = await apiRequest('POST', '/api/buildings', data);
       return response.json();
     },
-    onSuccess: (building) => {
-      toast({
-        title: "Sucesso",
-        description: "Edificação cadastrada com sucesso!",
-      });
+    onSuccess: () => {
+      toast({ title: 'Sucesso', description: 'Edificação cadastrada com sucesso!' });
       queryClient.invalidateQueries({ queryKey: ['/api/buildings'] });
       queryClient.invalidateQueries({ queryKey: ['/api/dashboard/stats'] });
       onSuccess?.();
-      navigate(`/buildings`);
+      navigate('/buildings');
     },
     onError: (error) => {
       if (isUnauthorizedError(error as Error)) {
-        toast({
-          title: "Não autorizado",
-          description: "Você foi desconectado. Fazendo login novamente...",
-          variant: "destructive",
-        });
-        setTimeout(() => {
-          window.location.href = "/api/login";
-        }, 500);
+        toast({ title: 'Não autorizado', description: 'Você foi desconectado. Fazendo login novamente...', variant: 'destructive' });
+        setTimeout(() => { window.location.href = '/api/login'; }, 500);
         return;
       }
-      
-      toast({
-        title: "Erro",
-        description: "Erro ao cadastrar edificação. Tente novamente.",
-        variant: "destructive",
-      });
+      toast({ title: 'Erro', description: 'Erro ao cadastrar edificação. Tente novamente.', variant: 'destructive' });
     },
   });
 
@@ -229,8 +223,18 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
       if (response.ok) {
         const data = await response.json();
         const currentNumber = form.getValues('addressNumber') || '';
-        const mergedAddress = mergeAddressWithNumber(data.address, currentNumber);
-        form.setValue('address', mergedAddress);
+        // Compor formato: Rua/Logradouro, Número, Bairro, Cidade, UF
+  const fullAddress = composeFullAddress({
+          street: data.address,
+          number: currentNumber,
+          neighborhood: data.neighborhood,
+          city: data.city,
+          state: data.state,
+        });
+        if (fullAddress) form.setValue('address', fullAddress, { shouldDirty: true });
+  if (data.neighborhood) form.setValue('neighborhood', data.neighborhood);
+  if (data.city) form.setValue('city', data.city);
+  if (data.state) form.setValue('state', data.state);
         form.setValue('bioclimaticZone', data.bioclimaticZone);
         setZoneLocked(true); // lock selection when CEP resolves
         toast({
@@ -480,16 +484,28 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
                             onChange={(e) => {
                               field.onChange(e);
                               const num = e.currentTarget.value;
-                              const addr = form.getValues('address') || '';
-                              const merged = mergeAddressWithNumber(addr, num);
-                              if (merged !== addr) form.setValue('address', merged, { shouldDirty: true });
+                              const parts = parseAddressParts(form.getValues('address'));
+                              const recomposed = composeFullAddress({
+                                street: parts.street || extractStreetFromAddress(form.getValues('address')),
+                                number: num,
+                                neighborhood: parts.neighborhood,
+                                city: parts.city,
+                                state: parts.state,
+                              });
+                              if (recomposed && recomposed !== form.getValues('address')) form.setValue('address', recomposed, { shouldDirty: true });
                             }}
                             onBlur={(e) => {
                               field.onBlur();
                               const num = e.currentTarget.value;
-                              const addr = form.getValues('address') || '';
-                              const merged = mergeAddressWithNumber(addr, num);
-                              if (merged !== addr) form.setValue('address', merged, { shouldDirty: true });
+                              const parts = parseAddressParts(form.getValues('address'));
+                              const recomposed = composeFullAddress({
+                                street: parts.street || extractStreetFromAddress(form.getValues('address')),
+                                number: num,
+                                neighborhood: parts.neighborhood,
+                                city: parts.city,
+                                state: parts.state,
+                              });
+                              if (recomposed && recomposed !== form.getValues('address')) form.setValue('address', recomposed, { shouldDirty: true });
                             }}
                           />
                         </NotchedField>
@@ -569,17 +585,143 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
                     <FormControl>
                         <NotchedField label="Endereço Completo" requiredMark>
                         <Input
-                          placeholder="Rua, número, bairro, cidade, estado"
+                          placeholder="Rua, Número, Bairro, Cidade, UF"
                           {...field}
                           className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
                           data-testid="input-address"
                           onBlur={(e) => {
                             field.onBlur();
-                            const num = form.getValues('addressNumber') || '';
-                            const merged = mergeAddressWithNumber(e.currentTarget.value, num);
-                            if (merged !== e.currentTarget.value) {
-                              form.setValue('address', merged, { shouldDirty: true });
+                            const parts = parseAddressParts(e.currentTarget.value);
+                            const recomposed = composeFullAddress(parts);
+                            if (recomposed && recomposed !== form.getValues('address')) {
+                              form.setValue('address', recomposed, { shouldDirty: true });
                             }
+                          }}
+                        />
+                      </NotchedField>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            {/* Linha: Número, Bairro, Cidade, UF */}
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+              <FormField
+                control={form.control}
+                name="addressNumber"
+                render={({ field }) => (
+                  <FormItem className="md:col-span-2">
+                    <FormControl>
+                      <NotchedField label="Número">
+                        <Input
+                          placeholder="Número"
+                          {...field}
+                          className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                          onBlur={(e) => {
+                            field.onBlur();
+                            const parts = parseAddressParts(form.getValues('address'));
+                            const recomposed = composeFullAddress({
+                              street: parts.street,
+                              number: e.currentTarget.value,
+                              neighborhood: form.getValues('neighborhood'),
+                              city: form.getValues('city'),
+                              state: form.getValues('state'),
+                            });
+                            if (recomposed && recomposed !== form.getValues('address')) form.setValue('address', recomposed, { shouldDirty: true });
+                          }}
+                        />
+                      </NotchedField>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="neighborhood"
+                render={({ field }) => (
+                  <FormItem className="md:col-span-4">
+                    <FormControl>
+                      <NotchedField label="Bairro">
+                        <Input
+                          placeholder="Bairro"
+                          {...field}
+                          className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                          onBlur={(e) => {
+                            field.onBlur();
+                            const parts = parseAddressParts(form.getValues('address'));
+                            const recomposed = composeFullAddress({
+                              street: parts.street,
+                              number: form.getValues('addressNumber'),
+                              neighborhood: e.currentTarget.value,
+                              city: form.getValues('city'),
+                              state: form.getValues('state'),
+                            });
+                            if (recomposed && recomposed !== form.getValues('address')) form.setValue('address', recomposed, { shouldDirty: true });
+                          }}
+                        />
+                      </NotchedField>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="city"
+                render={({ field }) => (
+                  <FormItem className="md:col-span-4">
+                    <FormControl>
+                      <NotchedField label="Cidade">
+                        <Input
+                          placeholder="Cidade"
+                          {...field}
+                          className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                          onBlur={(e) => {
+                            field.onBlur();
+                            const parts = parseAddressParts(form.getValues('address'));
+                            const recomposed = composeFullAddress({
+                              street: parts.street,
+                              number: form.getValues('addressNumber'),
+                              neighborhood: form.getValues('neighborhood'),
+                              city: e.currentTarget.value,
+                              state: form.getValues('state'),
+                            });
+                            if (recomposed && recomposed !== form.getValues('address')) form.setValue('address', recomposed, { shouldDirty: true });
+                          }}
+                        />
+                      </NotchedField>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="state"
+                render={({ field }) => (
+                  <FormItem className="md:col-span-2">
+                    <FormControl>
+                      <NotchedField label="UF">
+                        <Input
+                          placeholder="UF"
+                          maxLength={2}
+                          {...field}
+                          className="uppercase bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                          onChange={(e) => field.onChange(e.target.value.toUpperCase())}
+                          onBlur={(e) => {
+                            field.onBlur();
+                            const parts = parseAddressParts(form.getValues('address'));
+                            const recomposed = composeFullAddress({
+                              street: parts.street,
+                              number: form.getValues('addressNumber'),
+                              neighborhood: form.getValues('neighborhood'),
+                              city: form.getValues('city'),
+                              state: e.currentTarget.value.toUpperCase(),
+                            });
+                            if (recomposed && recomposed !== form.getValues('address')) form.setValue('address', recomposed, { shouldDirty: true });
                           }}
                         />
                       </NotchedField>

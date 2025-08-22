@@ -273,6 +273,7 @@ export class DatabaseStorage implements IStorage {
       cep: building.cep,
       address: building.address,
   addressNumber: (building as any).addressNumber,
+  neighborhood: (building as any).neighborhood,
       bioclimaticZone: building.bioclimaticZone,
       totalArea: building.totalArea,
   buildingHeight: (building as any).buildingHeight,
@@ -308,6 +309,7 @@ export class DatabaseStorage implements IStorage {
         cep: buildings.cep,
         address: buildings.address,
   addressNumber: buildings.addressNumber,
+  neighborhood: buildings.neighborhood,
         bioclimaticZone: buildings.bioclimaticZone,
         totalArea: buildings.totalArea,
   buildingHeight: buildings.buildingHeight,
@@ -343,6 +345,7 @@ export class DatabaseStorage implements IStorage {
         cep: buildings.cep,
         address: buildings.address,
   addressNumber: buildings.addressNumber,
+  neighborhood: buildings.neighborhood,
         bioclimaticZone: buildings.bioclimaticZone,
         totalArea: buildings.totalArea,
   buildingHeight: buildings.buildingHeight,
@@ -373,6 +376,7 @@ export class DatabaseStorage implements IStorage {
     if (rest.cep != null) updates.cep = rest.cep;
     if (rest.address != null) updates.address = rest.address;
   if (rest.addressNumber !== undefined) updates.addressNumber = rest.addressNumber as any;
+  if (rest.neighborhood !== undefined) updates.neighborhood = rest.neighborhood as any;
     if (rest.bioclimaticZone != null) updates.bioclimaticZone = rest.bioclimaticZone;
     if (rest.totalArea != null) updates.totalArea = rest.totalArea;
   if (rest.buildingHeight !== undefined) updates.buildingHeight = rest.buildingHeight as any;
