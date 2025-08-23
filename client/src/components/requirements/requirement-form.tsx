@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { handleCodeUniquenessError } from "@/lib/form-error-handlers";
 import type { Requirement } from "@shared/schema";
 
 const schema = z.object({
@@ -40,7 +41,7 @@ export default function RequirementForm({ initialItem, onSuccess, onCancel }: { 
       queryClient.invalidateQueries({ queryKey: ['/api/requirements'] });
       onSuccess?.();
     },
-    onError: () => { toast({ title: 'Erro', description: 'Falha ao salvar requisito', variant: 'destructive' }); },
+  onError: (error: any) => { handleCodeUniquenessError(error, form as any, toast, 'Falha ao salvar requisito'); },
   });
 
   return (

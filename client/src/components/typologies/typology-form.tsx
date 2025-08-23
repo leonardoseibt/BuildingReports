@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { handleCodeUniquenessError } from "@/lib/form-error-handlers";
 import type { Typology } from "@shared/schema";
 
 const schema = z.object({
@@ -40,7 +41,7 @@ export default function TypologyForm({ initialItem, onSuccess, onCancel }: { ini
       queryClient.invalidateQueries({ queryKey: ['/api/typologies'] });
       onSuccess?.();
     },
-  onError: () => { toast({ title: 'Erro', description: 'Falha ao salvar tipo de uso', variant: 'destructive' }); },
+  onError: (error: any) => { handleCodeUniquenessError(error, form as any, toast, 'Falha ao salvar tipo de uso'); },
   });
 
   return (

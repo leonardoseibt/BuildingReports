@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { handleCodeUniquenessError } from "@/lib/form-error-handlers";
 import type { ConstructiveSystem } from "@shared/schema";
 
 const schema = z.object({
@@ -40,7 +41,7 @@ export default function ConstructiveSystemForm({ initialItem, onSuccess, onCance
       queryClient.invalidateQueries({ queryKey: ['/api/constructive-systems'] });
       onSuccess?.();
     },
-    onError: () => { toast({ title: 'Erro', description: 'Falha ao salvar sistema construtivo', variant: 'destructive' }); },
+  onError: (error: any) => { handleCodeUniquenessError(error, form as any, toast, 'Falha ao salvar sistema'); },
   });
 
   return (
