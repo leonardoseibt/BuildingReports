@@ -2,7 +2,7 @@ import express, { type Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./auth";
-import { insertBuildingSchema, updateBuildingSchema, insertStructuralSystemSchema, insertSealingSystemSchema, insertRoofingSystemSchema, insertPerformanceEvaluationSchema, insertReportSchema, insertTechnicianSchema, updateTechnicianSchema, insertUserSchema, updateUserSchema, insertTypologySchema, insertNoiseClassSchema, insertAggressivenessClassSchema, insertBioclimaticZoneSchema, insertBioclimaticZoneCoverageSchema, insertStateSchema, insertCitySchema, insertConstructiveSystemSchema } from "@shared/schema";
+import { insertBuildingSchema, updateBuildingSchema, insertStructuralSystemSchema, insertSealingSystemSchema, insertRoofingSystemSchema, insertPerformanceEvaluationSchema, insertReportSchema, insertTechnicianSchema, updateTechnicianSchema, insertUserSchema, updateUserSchema, insertTypologySchema, insertNoiseClassSchema, insertAggressivenessClassSchema, insertBioclimaticZoneSchema, insertBioclimaticZoneCoverageSchema, insertStateSchema, insertCitySchema, insertConstructiveSystemSchema, insertRequirementSchema } from "@shared/schema";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 
@@ -690,6 +690,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete('/api/constructive-systems/:id', isAuthenticated, async (req, res) => {
     try { const id = Number(req.params.id); const ok = await storage.deleteConstructiveSystem(id); res.json({ ok }); }
     catch { res.status(500).json({ message: 'Failed to delete constructive system' }); }
+  });
+
+  // Master tables: Requirements
+  app.get('/api/requirements', isAuthenticated, async (_req, res) => {
+    try { res.json(await storage.listRequirements()); } catch (e) { res.status(500).json({ message: 'Failed to fetch requirements' }); }
+  });
+  app.post('/api/requirements', isAuthenticated, express.json(), async (req, res) => {
+    try { const data = insertRequirementSchema.parse(req.body); const row = await storage.createRequirement(data as any); res.json(row); }
+    catch (error) { if (error instanceof z.ZodError) return res.status(400).json({ message: 'Validation error', errors: error.errors }); if ((error as any)?.code === '23505') return res.status(409).json({ message: 'Código já cadastrado.' }); res.status(500).json({ message: 'Failed to create requirement' }); }
+  });
+  app.put('/api/requirements/:id', isAuthenticated, express.json(), async (req, res) => {
+    try { const id = Number(req.params.id); const data = insertRequirementSchema.partial().parse(req.body); const row = await storage.updateRequirement(id, data as any); res.json(row); }
+    catch (error) { if (error instanceof z.ZodError) return res.status(400).json({ message: 'Validation error', errors: error.errors }); if ((error as any)?.code === '23505') return res.status(409).json({ message: 'Código já cadastrado.' }); res.status(500).json({ message: 'Failed to update requirement' }); }
+  });
+  app.delete('/api/requirements/:id', isAuthenticated, async (req, res) => {
+    try { const id = Number(req.params.id); const ok = await storage.deleteRequirement(id); res.json({ ok }); }
+    catch { res.status(500).json({ message: 'Failed to delete requirement' }); }
   });
 
   const httpServer = createServer(app);

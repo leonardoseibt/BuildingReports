@@ -37,6 +37,7 @@
   ,"db:migrate:technicians-address-split": "tsx scripts/run-sql.ts scripts/sql/20250822_split_technician_address.sql"
   ,"db:migrate:constructive-systems": "tsx scripts/run-sql.ts scripts/sql/20250823_create_constructive_systems.sql"
   ,"db:seed:constructive-systems": "tsx scripts/run-sql.ts scripts/sql/20250823_seed_constructive_systems.sql"
+  ,"db:migrate:requirements": "tsx scripts/run-sql.ts scripts/sql/20250823_create_requirements.sql"
   ,"test": "cross-env NODE_ENV=test tsx --test server/index.test.ts"
   },
   "dependencies": {

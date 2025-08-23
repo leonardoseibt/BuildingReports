@@ -15,6 +15,7 @@ import TypologiesList from "@/pages/typologies/list";
 import NoiseClassesList from "@/pages/noise-classes/list";
 import AggressivenessClassesList from "@/pages/aggressiveness-classes/list";
 import ConstructiveSystemsList from "@/pages/constructive-systems/list.tsx";
+import RequirementsList from "@/pages/requirements/list.tsx";
 import UsersList from "@/pages/users/list";
 import BioclimaticZonesList from "@/pages/bioclimatic-zones";
 import StatesList from "@/pages/states/list.tsx";
@@ -46,6 +47,7 @@ function Router() {
       <PrivateRoute path="/noise-classes" component={NoiseClassesList} />
       <PrivateRoute path="/aggressiveness-classes" component={AggressivenessClassesList} />
   <PrivateRoute path="/constructive-systems" component={ConstructiveSystemsList} />
+  <PrivateRoute path="/requirements" component={RequirementsList} />
       <PrivateRoute path="/bioclimatic-zones" component={BioclimaticZonesList} />
       <PrivateRoute path="/states" component={StatesList} />
       <PrivateRoute path="/cities" component={CitiesList} />

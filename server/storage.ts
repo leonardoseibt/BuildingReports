@@ -31,11 +31,14 @@ import {
   type InsertAggressivenessClass,
   type ConstructiveSystem,
   type InsertConstructiveSystem,
+  type Requirement,
+  type InsertRequirement,
   technicians,
   typologies,
   noiseClasses,
   aggressivenessClasses,
   constructiveSystems,
+  requirements,
   bioclimaticZones,
   bioclimaticZoneCoverages,
   states,
@@ -133,6 +136,12 @@ export interface IStorage {
   createConstructiveSystem(item: InsertConstructiveSystem): Promise<ConstructiveSystem>;
   updateConstructiveSystem(id: number, item: Partial<InsertConstructiveSystem>): Promise<ConstructiveSystem>;
   deleteConstructiveSystem(id: number): Promise<boolean>;
+
+  // Requirements
+  listRequirements(): Promise<Requirement[]>;
+  createRequirement(item: InsertRequirement): Promise<Requirement>;
+  updateRequirement(id: number, item: Partial<InsertRequirement>): Promise<Requirement>;
+  deleteRequirement(id: number): Promise<boolean>;
 
   // Bioclimatic zones
   listBioclimaticZones(): Promise<BioclimaticZone[]>;
@@ -739,6 +748,25 @@ export class DatabaseStorage implements IStorage {
   }
   async deleteConstructiveSystem(id: number): Promise<boolean> {
     const deleted = await db.delete(constructiveSystems).where(eq(constructiveSystems.id, id)).returning({ id: constructiveSystems.id });
+    return deleted.length > 0;
+  }
+
+  // Requirements
+  async listRequirements(): Promise<Requirement[]> {
+    const rows = await db.select().from(requirements);
+    rows.sort((a: any, b: any) => ptCollator.compare(String(a.code ?? ''), String(b.code ?? '')));
+    return rows as any;
+  }
+  async createRequirement(item: InsertRequirement): Promise<Requirement> {
+    const [row] = await db.insert(requirements).values({ code: (item as any).code, label: (item as any).label, isActive: (item as any).isActive ?? true }).returning();
+    return row as Requirement;
+  }
+  async updateRequirement(id: number, item: Partial<InsertRequirement>): Promise<Requirement> {
+    const [row] = await db.update(requirements).set({ ...(item as any), updatedAt: new Date() }).where(eq(requirements.id, id)).returning();
+    return row as Requirement;
+  }
+  async deleteRequirement(id: number): Promise<boolean> {
+    const deleted = await db.delete(requirements).where(eq(requirements.id, id)).returning({ id: requirements.id });
     return deleted.length > 0;
   }
 

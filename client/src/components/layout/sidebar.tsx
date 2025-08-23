@@ -315,6 +315,13 @@ export default function Sidebar() {
                         isActive={location === '/constructive-systems'}
                         testId="nav-sistemas-construtivos"
                       />
+                      <NavLink
+                        href="/requirements"
+                        icon={Layers2}
+                        label="Requisitos"
+                        isActive={location === '/requirements'}
+                        testId="nav-requisitos"
+                      />
                     </div>
                   )}
                 </div>
