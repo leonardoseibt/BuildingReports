@@ -18,7 +18,8 @@ import { NotchedField } from "@/components/ui/notched-field";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { IdCard, MapPin, Mail, Phone, Loader2, User2 } from "lucide-react";
-import { UF_OPTIONS } from "@/lib/uf";
+import { useQuery } from "@tanstack/react-query";
+// Estados agora carregados dinamicamente da API
 import type { Technician } from "@shared/schema";
 
 const schema = z.object({
@@ -95,7 +96,16 @@ export default function TechnicianForm({ onSuccess, onCancel, initialTech }: Tec
 
   const [submitting, setSubmitting] = useState(false);
 
-  // UF options centralized in @/lib/uf
+  // Carregar estados dinamicamente
+  const { data: states = [], isLoading: loadingStates } = useQuery<{ id: number; code: string; name: string; region?: string; createdAt?: string; }[]>({
+    queryKey: ["/api/states"],
+    queryFn: async () => {
+      const r = await fetch('/api/states');
+      if (!r.ok) throw new Error('Falha ao carregar estados');
+      return r.json();
+    },
+    staleTime: 1000 * 60 * 60,
+  });
 
   const [isLookingUpCep, setIsLookingUpCep] = useState(false);
 
@@ -327,12 +337,12 @@ export default function TechnicianForm({ onSuccess, onCancel, initialTech }: Tec
       <Select onValueChange={field.onChange} value={field.value}>
               <FormControl>
         <SelectTrigger className="border-0 bg-transparent shadow-none focus:ring-0 focus:ring-offset-0">
-                  <SelectValue placeholder="Selecione a UF" />
+                  <SelectValue placeholder={loadingStates ? 'Carregando...' : 'Selecione a UF'} />
                 </SelectTrigger>
               </FormControl>
               <SelectContent>
-                {UF_OPTIONS.map((uf) => (
-                  <SelectItem key={uf} value={uf}>{uf}</SelectItem>
+                {states.slice().sort((a,b)=>a.code.localeCompare(b.code)).map(st => (
+                  <SelectItem key={st.code} value={st.code}>{st.code} - {st.name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -523,12 +533,12 @@ export default function TechnicianForm({ onSuccess, onCancel, initialTech }: Tec
                           <Select onValueChange={field.onChange} value={field.value}>
                             <FormControl>
                               <SelectTrigger className="border-0 bg-transparent shadow-none focus:ring-0 focus:ring-offset-0">
-                                <SelectValue placeholder="UF" />
+                                <SelectValue placeholder={loadingStates ? 'Carregando...' : 'UF'} />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              {UF_OPTIONS.map((uf) => (
-                                <SelectItem key={uf} value={uf}>{uf}</SelectItem>
+                              {states.slice().sort((a,b)=>a.code.localeCompare(b.code)).map(st => (
+                                <SelectItem key={st.code} value={st.code}>{st.code}</SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
