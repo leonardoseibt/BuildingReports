@@ -104,7 +104,7 @@ export default function Sidebar() {
   return (
     <div
       className={cn(
-        "bg-white shadow-lg border-r border-slate-200 flex flex-col overflow-y-hidden overscroll-none transition-all duration-300",
+        "bg-white shadow-lg border-r border-slate-200 flex flex-col transition-all duration-300",
         isCollapsed ? "w-16" : "w-72"
       )}
       data-testid="sidebar"
@@ -142,7 +142,7 @@ export default function Sidebar() {
 
       {/* Navigation Menu */}
       {!isCollapsed && (
-        <nav className="flex-1 p-4 space-y-4">
+        <nav className="flex-1 p-4 space-y-4 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent">
           {/* Dashboard (standalone) */}
           <div>
             <NavLink
