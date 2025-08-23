@@ -386,8 +386,8 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
 
           {/* Localização */}
           <div className="space-y-4">
+            {/* Linha 1: CEP + Zona Bioclimática */}
             <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
-              {/* CEP */}
               <FormField
                 control={form.control}
                 name="cep"
@@ -405,14 +405,9 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
                             const formatted = formatCep(e.target.value);
                             field.onChange(formatted);
                             const only = formatted.replace(/\D/g, "");
-                            if (only.length < 8) {
-                              setZoneLocked(false);
-                            }
+                            if (only.length < 8) setZoneLocked(false);
                           }}
-                          onBlur={(e) => {
-                            field.onBlur();
-                            handleCepLookup(e.target.value);
-                          }}
+                          onBlur={(e) => { field.onBlur(); handleCepLookup(e.target.value); }}
                           data-testid="input-cep"
                         />
                       </NotchedField>
@@ -421,51 +416,11 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
                   </FormItem>
                 )}
               />
-              {/* Logradouro */}
-              <FormField
-                control={form.control}
-                name="street"
-                render={({ field }) => (
-                  <FormItem className="md:col-span-5">
-                    <FormControl>
-                      <NotchedField label="Logradouro" requiredMark>
-                        <Input
-                          placeholder="Rua / Avenida"
-                          {...field}
-                          className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
-                        />
-                      </NotchedField>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              {/* Número */}
-              <FormField
-                control={form.control}
-                name="addressNumber"
-                render={({ field }) => (
-                  <FormItem className="md:col-span-2">
-                    <FormControl>
-                      <NotchedField label="Número">
-                        <Input
-                          placeholder="Número"
-                          {...field}
-                          inputMode="numeric"
-                          className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
-                        />
-                      </NotchedField>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              {/* Zona Bioclimática */}
               <FormField
                 control={form.control}
                 name="bioclimaticZone"
                 render={({ field }) => (
-                  <FormItem className="md:col-span-3">
+                  <FormItem className="md:col-span-10">
                     <FormControl>
                       <NotchedField label="Zona Bioclimática">
                         <Popover open={openZone} onOpenChange={(v) => { if (!zoneLocked) setOpenZone(v); }}>
@@ -495,10 +450,7 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
                                     <CommandItem
                                       key={z.id}
                                       value={`${z.code} - ${z.label}`}
-                                      onSelect={() => {
-                                        form.setValue('bioclimaticZone', z.code as any, { shouldDirty: true });
-                                        setOpenZone(false);
-                                      }}
+                                      onSelect={() => { form.setValue('bioclimaticZone', z.code as any, { shouldDirty: true }); setOpenZone(false); }}
                                     >
                                       {z.code} - {z.label}
                                       <Check className={cn('ml-auto h-4 w-4', (form.getValues('bioclimaticZone') || '') === z.code ? 'opacity-100' : 'opacity-0')} />
@@ -518,6 +470,46 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
                           ? "Determinada automaticamente pelo CEP (bloqueada)."
                           : "CEP não encontrado — selecione manualmente."}
                     </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            {/* Linha 2: Logradouro + Número */}
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+              <FormField
+                control={form.control}
+                name="street"
+                render={({ field }) => (
+                  <FormItem className="md:col-span-8">
+                    <FormControl>
+                      <NotchedField label="Logradouro" requiredMark>
+                        <Input
+                          placeholder="Rua / Avenida"
+                          {...field}
+                          className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                        />
+                      </NotchedField>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="addressNumber"
+                render={({ field }) => (
+                  <FormItem className="md:col-span-4">
+                    <FormControl>
+                      <NotchedField label="Número">
+                        <Input
+                          placeholder="Número"
+                          {...field}
+                          inputMode="numeric"
+                          className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                        />
+                      </NotchedField>
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}

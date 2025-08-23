@@ -434,33 +434,32 @@ export default function TechnicianForm({ onSuccess, onCancel, initialTech }: Tec
                   </FormItem>
                 )}
               />
-              <FormField
-                name="street"
-                control={form.control}
-                render={({ field }) => (
-                  <FormItem className="md:col-span-2">
-                    <FormControl>
-                      <NotchedField label="Logradouro" requiredMark>
-                        <Input
-                          {...field}
-                          placeholder="Rua / Avenida"
-                          autoComplete="address-line1"
-                          className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
-                        />
-                      </NotchedField>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              {/* Número, Cidade, Bairro e UF na mesma linha */}
+              {/* Linha 1: Logradouro + Número */}
               <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-12 gap-4">
+                <FormField
+                  name="street"
+                  control={form.control}
+                  render={({ field }) => (
+                    <FormItem className="md:col-span-9">
+                      <FormControl>
+                        <NotchedField label="Logradouro" requiredMark>
+                          <Input
+                            {...field}
+                            placeholder="Rua / Avenida"
+                            autoComplete="address-line1"
+                            className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                          />
+                        </NotchedField>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
                 <FormField
                   name="addressNumber"
                   control={form.control}
                   render={({ field }) => (
-                    <FormItem className="md:col-span-2">
+                    <FormItem className="md:col-span-3">
                       <FormControl>
                         <NotchedField label="Número">
                           <Input
@@ -468,7 +467,27 @@ export default function TechnicianForm({ onSuccess, onCancel, initialTech }: Tec
                             placeholder="Número"
                             inputMode="numeric"
                             className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
-                            // removed recomposition logic
+                          />
+                        </NotchedField>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              {/* Linha 2: Bairro + Cidade + UF (UF menor) */}
+              <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-12 gap-4">
+                <FormField
+                  name="neighborhood"
+                  control={form.control}
+                  render={({ field }) => (
+                    <FormItem className="md:col-span-5">
+                      <FormControl>
+                        <NotchedField label="Bairro">
+                          <Input
+                            {...field}
+                            autoComplete="address-level3"
+                            className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
                           />
                         </NotchedField>
                       </FormControl>
@@ -480,33 +499,13 @@ export default function TechnicianForm({ onSuccess, onCancel, initialTech }: Tec
                   name="city"
                   control={form.control}
                   render={({ field }) => (
-                    <FormItem className="md:col-span-4">
+                    <FormItem className="md:col-span-5">
                       <FormControl>
                         <NotchedField label="Cidade">
                           <Input
                             {...field}
                             autoComplete="address-level2"
                             className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
-                            // removed recomposition logic
-                          />
-                        </NotchedField>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  name="neighborhood"
-                  control={form.control}
-                  render={({ field }) => (
-                    <FormItem className="md:col-span-4">
-                      <FormControl>
-                        <NotchedField label="Bairro">
-                          <Input
-                            {...field}
-                            autoComplete="address-level3"
-                            className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
-                            // removed recomposition logic
                           />
                         </NotchedField>
                       </FormControl>
@@ -521,12 +520,7 @@ export default function TechnicianForm({ onSuccess, onCancel, initialTech }: Tec
                     <FormItem className="md:col-span-2">
                       <FormControl>
                         <NotchedField label="UF">
-                          <Select
-                            onValueChange={(val) => {
-                              field.onChange(val);
-                            }}
-                            value={field.value}
-                          >
+                          <Select onValueChange={field.onChange} value={field.value}>
                             <FormControl>
                               <SelectTrigger className="border-0 bg-transparent shadow-none focus:ring-0 focus:ring-offset-0">
                                 <SelectValue placeholder="UF" />
