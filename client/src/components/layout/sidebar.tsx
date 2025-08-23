@@ -376,7 +376,7 @@ export default function Sidebar() {
               >
                 {user?.fullName || user?.email || 'Usuário'}
               </p>
-              <p className="text-xs text-slate-500">Engenheiro Civil</p>
+              {/* Removed static role subtitle */}
             </div>
             <Button
               variant="ghost"

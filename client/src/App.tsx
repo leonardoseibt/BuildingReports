@@ -22,15 +22,25 @@ import StatesList from "@/pages/states/list.tsx";
 import CitiesList from "@/pages/cities/list.tsx";
 
 function PrivateRoute(props: RouteProps) {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, isError } = useAuth();
 
   if (isLoading) {
-    return <></>;
+    return (
+      <div className="min-h-screen flex items-center justify-center text-slate-500">
+        Carregando…
+      </div>
+    );
   }
 
-  if (!isAuthenticated) {
-    return <Redirect to="/login" />;
+  if (isError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-center p-6 text-sm text-red-600">
+        Falha ao verificar autenticação. Recarregue a página ou tente novamente mais tarde.
+      </div>
+    );
   }
+
+  if (!isAuthenticated) return <Redirect to="/login" />;
 
   return <Route {...props} />;
 }

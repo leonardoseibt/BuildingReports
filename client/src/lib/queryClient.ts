@@ -1,8 +1,46 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
+import { toast } from "@/hooks/use-toast";
+
+let csrfToken: string | null = null;
+let lastCsrfFetch = 0;
+const CSRF_TTL_MS = 10 * 60 * 1000; // refresh every 10min
+
+async function ensureCsrfToken(force = false) {
+  const now = Date.now();
+  if (!force && csrfToken && now - lastCsrfFetch < CSRF_TTL_MS) return csrfToken;
+  const cacheBuster = force ? Date.now() : Math.floor(now / CSRF_TTL_MS);
+  try {
+    const res = await fetch(`/api/csrf-token?t=${cacheBuster}` , {
+      credentials: 'include',
+      cache: 'no-store',
+      headers: { 'Cache-Control': 'no-store' },
+    });
+    if (res.status === 200) {
+      let data: any = null;
+      try { data = await res.json(); } catch { /* ignore */ }
+      if (data?.token) {
+        csrfToken = data.token;
+        lastCsrfFetch = now;
+      } else if (force) {
+        csrfToken = null;
+      }
+    } else if (force) {
+      csrfToken = null;
+    }
+  } catch {
+    if (force) csrfToken = null;
+  }
+  return csrfToken;
+}
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
     const text = (await res.text()) || res.statusText;
+    if (res.status === 440) {
+      // sessão expirada -> feedback e redirect
+      toast({ title: 'Sessão expirada', description: 'Faça login novamente.' , variant: 'destructive' });
+      setTimeout(() => { window.location.href = '/login'; }, 150);
+    }
     throw new Error(`${res.status}: ${text}`);
   }
 }
@@ -12,13 +50,38 @@ export async function apiRequest(
   url: string,
   data?: unknown | undefined,
 ): Promise<Response> {
-  const res = await fetch(url, {
-    method,
-    headers: data ? { "Content-Type": "application/json" } : {},
-    body: data ? JSON.stringify(data) : undefined,
-    credentials: "include",
-  });
+  // Attach CSRF token for unsafe methods
+  let headers: Record<string, string> = {};
+  const unsafe = /^(POST|PUT|PATCH|DELETE)$/i.test(method);
+  if (data) headers["Content-Type"] = "application/json";
+  if (unsafe) {
+    const token = await ensureCsrfToken();
+    if (token) headers['csrf-token'] = token;
+  }
+  const attempt = async (): Promise<Response> => {
+    return fetch(url, {
+      method,
+      headers,
+      body: data ? JSON.stringify(data) : undefined,
+      credentials: "include",
+    });
+  };
 
+  let res = await attempt();
+  if (unsafe && res.status === 403) {
+    const text = await res.clone().text();
+    if (/csrf/i.test(text)) {
+      // refresh token & retry once
+      await ensureCsrfToken(true);
+      if (csrfToken) {
+        headers['csrf-token'] = csrfToken;
+        res = await attempt();
+      } else {
+        // no token acquired -> give a clearer error
+        throw new Error('403: Falha CSRF (token indisponível)');
+      }
+    }
+  }
   await throwIfResNotOk(res);
   return res;
 }

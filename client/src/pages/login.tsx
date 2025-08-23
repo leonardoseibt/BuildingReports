@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,6 +13,7 @@ export default function Login() {
   const [, setLocation] = useLocation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -29,6 +31,15 @@ export default function Login() {
         credentials: "include",
       });
       if (res.ok) {
+        toast({ title: "Sucesso", description: "Login realizado" });
+        await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+        await queryClient.refetchQueries({ queryKey: ["/api/auth/user"] });
+        // fallback: caso o roteamento SPA não ocorra (ex: estado interno ainda carregando), força navegação
+        setTimeout(() => {
+          if (window.location.pathname !== "/") {
+            window.location.assign("/");
+          }
+        }, 150);
         setLocation("/");
       } else {
         const data = await res.json().catch(() => ({}));

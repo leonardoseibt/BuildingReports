@@ -4,23 +4,27 @@ import session from "express-session";
 import connectPg from "connect-pg-simple";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
-import { nanoid } from "nanoid";
 import { storage } from "./storage";
+import csurf from "csurf";
 
 const isProd = process.env.NODE_ENV === "production";
+
+// Idle (rolling) and absolute lifetimes
+const SESSION_IDLE_MS = Number(process.env.SESSION_IDLE_MS || 60 * 60 * 1000); // 1h
+const SESSION_TTL_MS = Number(process.env.SESSION_TTL_MS || 7 * 24 * 60 * 60 * 1000); // 7d
 
 const authSchema = z.object({
   email: z.string().email(),
   password: z.string().min(1),
 });
 
-// Simple in-memory rate limiter for login attempts
+// Simple IP-based login attempt limiter
 const loginAttempts = new Map<string, { count: number; first: number }>();
 const MAX_ATTEMPTS = 5;
 const WINDOW_MS = 60_000; // 1 minute
 
 const rateLimit: RequestHandler = (req, res, next) => {
-  const ip = req.ip ?? "";
+  const ip = req.ip || "";
   const now = Date.now();
   const entry = loginAttempts.get(ip);
   if (!entry || now - entry.first > WINDOW_MS) {
@@ -35,33 +39,72 @@ const rateLimit: RequestHandler = (req, res, next) => {
 };
 
 export function getSession() {
-  const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
   const pgStore = connectPg(session);
-  const sessionStore = new pgStore({
+  const store = new pgStore({
     conString: process.env.DATABASE_URL,
     createTableIfMissing: !isProd,
-    ttl: sessionTtl,
+    ttl: SESSION_TTL_MS,
     tableName: "sessions",
   });
   return session({
     secret: process.env.SESSION_SECRET!,
-    store: sessionStore,
+    store,
     resave: false,
     saveUninitialized: false,
+    name: process.env.SESSION_COOKIE_NAME || "sid",
+    rolling: true, // idle timeout refresh
     cookie: {
       httpOnly: true,
       secure: isProd,
-      sameSite: "lax",
-      maxAge: sessionTtl,
+      sameSite: (process.env.SESSION_SAMESITE as any) || (isProd ? "lax" : "lax"),
+      maxAge: Math.min(SESSION_IDLE_MS, SESSION_TTL_MS),
     },
   });
 }
 
 export async function setupAuth(app: Express) {
-  app.set("trust proxy", 1);
+  if (process.env.TRUST_PROXY) app.set("trust proxy", Number(process.env.TRUST_PROXY));
+  else app.set("trust proxy", 1);
   app.use(getSession());
   app.use(passport.initialize());
   app.use(passport.session());
+
+  // Absolute TTL enforcement middleware (independent of rolling idle)
+  app.use((req, res, next) => {
+    const s: any = req.session as any;
+    const now = Date.now();
+    if (!s.createdAt) {
+      s.createdAt = now;
+    } else if (now - s.createdAt > SESSION_TTL_MS) {
+      req.session.destroy(() => {
+        return res.status(440).json({ message: "Sessão expirada" });
+      });
+      return;
+    }
+    next();
+  });
+
+  // CSRF protection: skip login/logout endpoints entirely; apply to all others.
+  const csrfProtection = csurf({ cookie: false });
+  app.use((req, res, next) => {
+    if (req.path.startsWith('/api/login') || req.path.startsWith('/api/logout')) {
+      return next(); // no CSRF required for auth endpoints
+    }
+    return csrfProtection(req, res, next);
+  });
+
+  // Token endpoint must have csrfProtection run (above) to generate secret+token (GET is safe so no validation failure)
+  app.get('/api/csrf-token', (req: any, res) => {
+    try {
+      const token = (req as any).csrfToken?.();
+      res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+      res.set('Pragma', 'no-cache');
+      res.set('Expires', '0');
+      res.json({ token: token || null });
+    } catch {
+      res.status(500).json({ token: null });
+    }
+  });
 
   // Simple (de)serializers storing the full user object in session
   passport.serializeUser((user: Express.User, cb) => cb(null, user));
@@ -114,7 +157,7 @@ export async function setupAuth(app: Express) {
       if (!match) {
         return res.status(401).json({ message: "Credenciais inválidas" });
       }
-      const exp = Math.floor(Date.now() / 1000) + 60 * 60;
+  const exp = Math.floor(Date.now() / 1000) + 60 * 60; // claim expiry (1h)
       const user: any = {
         claims: {
           sub: dbUser.id,
@@ -140,6 +183,9 @@ export async function setupAuth(app: Express) {
     } catch (err) {
       if (err instanceof z.ZodError) {
         return res.status(400).json({ message: "Dados inválidos", errors: err.errors });
+      }
+      if ((err as any)?.code === 'EBADCSRFTOKEN') {
+        return res.status(403).json({ message: 'Falha de verificação CSRF' });
       }
       res.status(500).json({ message: "Login failed" });
     }

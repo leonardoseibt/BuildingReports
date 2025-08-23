@@ -64,9 +64,25 @@ process.on("uncaughtException", (err) => {
 
 const app = express();
 
-// Security: HTTP headers
+// Security: HTTP headers (relax CSP in development for Vite HMR / inline react-refresh)
 app.use(helmet({
-  crossOriginResourcePolicy: { policy: "cross-origin" }, // allow serving static assets if needed
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+  contentSecurityPolicy: process.env.NODE_ENV === 'development'
+    ? false
+    : {
+        useDefaults: true,
+        directives: {
+          "default-src": ["'self'"],
+          "script-src": ["'self'"],
+          "style-src": ["'self'", "https:", "'unsafe-inline'"],
+          "img-src": ["'self'", 'data:'],
+          "font-src": ["'self'", "https:", 'data:'],
+          "connect-src": ["'self'"],
+          "object-src": ["'none'"],
+          "frame-ancestors": ["'self'"],
+          "upgrade-insecure-requests": [],
+        },
+      },
 }));
 
 // CORS restricted (allow env ORIGIN or default localhost during dev)
@@ -114,6 +130,14 @@ app.use(createLoggingMiddleware());
 if (process.env.NODE_ENV !== "test") {
   (async () => {
     const server = await registerRoutes(app);
+
+  // CSRF error handler (placed after routes so csurf can throw)
+  app.use((err: any, _req: Request, res: Response, next: NextFunction) => {
+    if (err && err.code === 'EBADCSRFTOKEN') {
+      return res.status(403).json({ message: 'Token CSRF inválido ou ausente' });
+    }
+    return next(err);
+  });
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
