@@ -1,5 +1,8 @@
 import "dotenv/config";
 import express, { type Request, Response, NextFunction } from "express";
+import helmet from "helmet";
+import cors from "cors";
+import rateLimit from "express-rate-limit";
 import net from "node:net";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
@@ -60,8 +63,51 @@ process.on("uncaughtException", (err) => {
 });
 
 const app = express();
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
+
+// Security: HTTP headers
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" }, // allow serving static assets if needed
+}));
+
+// CORS restricted (allow env ORIGIN or default localhost during dev)
+const allowedOrigins = (process.env.CORS_ORIGINS || process.env.ORIGIN || "http://localhost:5173")
+  .split(/[,;\s]+/)
+  .filter(Boolean);
+app.use(cors({
+  origin: (origin: string | undefined, cb: (err: Error | null, allow?: boolean) => void) => {
+    // Allow non-browser / same-origin requests
+    if (!origin) return cb(null, true);
+
+    // Exact allowed origins from env
+    if (allowedOrigins.includes(origin)) return cb(null, true);
+
+    // Allow any localhost (dev) if explicitly enabled OR typical Vite dev
+    const allowLocalhost = process.env.CORS_ALLOW_LOCALHOST === 'true';
+    if (/^https?:\/\/localhost(?::\d+)?$/i.test(origin) || /^https?:\/\/127\.0\.0\.1(?::\d+)?$/i.test(origin)) {
+      if (allowLocalhost || allowedOrigins.some(o => /localhost/.test(o))) return cb(null, true);
+    }
+
+    // Deny silently (no CORS headers) instead of throwing to avoid noisy logs
+    if (process.env.DEBUG_CORS === 'true') {
+      log(`CORS denied for origin ${origin}`);
+    }
+    return cb(null, false);
+  },
+  credentials: true,
+}));
+
+// Parse bodies
+app.use(express.json({ limit: "1mb" }));
+app.use(express.urlencoded({ extended: false, limit: "1mb" }));
+
+// Basic rate limiter for auth & sensitive write endpoints
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use(["/api/auth", "/api/users", "/api/technicians", "/api/buildings", "/api/reports"], authLimiter);
 
 app.use(createLoggingMiddleware());
 
