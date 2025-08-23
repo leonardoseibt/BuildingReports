@@ -342,7 +342,7 @@ export default function TechnicianForm({ onSuccess, onCancel, initialTech }: Tec
               </FormControl>
               <SelectContent>
                 {states.slice().sort((a,b)=>a.code.localeCompare(b.code)).map(st => (
-                  <SelectItem key={st.code} value={st.code}>{st.code} - {st.name}</SelectItem>
+                  <SelectItem key={st.code} value={st.code}>{st.code}</SelectItem>
                 ))}
               </SelectContent>
             </Select>

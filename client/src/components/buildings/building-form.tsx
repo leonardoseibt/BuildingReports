@@ -70,6 +70,11 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
   const { data: noiseClasses } = useQuery<any[]>({ queryKey: ['/api/noise-classes'] });
   const { data: aggressiveness } = useQuery<any[]>({ queryKey: ['/api/aggressiveness-classes'] });
   const { data: zones = [] } = useQuery<BioclimaticZone[]>({ queryKey: ['/api/bioclimatic-zones'] });
+  const { data: states = [], isLoading: loadingStates } = useQuery<{ id:number; code:string; name:string; region?: string; createdAt?: string; }[]>({
+    queryKey: ['/api/states'],
+    queryFn: async () => { const r = await fetch('/api/states'); if (!r.ok) throw new Error('Falha ao carregar estados'); return r.json(); },
+    staleTime: 1000 * 60 * 60,
+  });
   const [openTech, setOpenTech] = useState(false);
   const [openZone, setOpenZone] = useState(false);
 
@@ -561,13 +566,18 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
                   <FormItem className="md:col-span-2">
                     <FormControl>
                       <NotchedField label="UF">
-                        <Input
-                          placeholder="UF"
-                          maxLength={2}
-                          {...field}
-                          className="uppercase bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
-                          onChange={(e) => field.onChange(e.target.value.toUpperCase())}
-                        />
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger className="border-0 bg-transparent shadow-none focus:ring-0 focus:ring-offset-0">
+                              <SelectValue placeholder={loadingStates ? 'Carregando...' : 'UF'} />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {states.slice().sort((a,b)=>a.code.localeCompare(b.code)).map(st => (
+                              <SelectItem key={st.code} value={st.code}>{st.code}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </NotchedField>
                     </FormControl>
                     <FormMessage />
