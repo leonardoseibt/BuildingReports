@@ -29,10 +29,13 @@ import {
   type InsertNoiseClass,
   type AggressivenessClass,
   type InsertAggressivenessClass,
+  type ConstructiveSystem,
+  type InsertConstructiveSystem,
   technicians,
   typologies,
   noiseClasses,
   aggressivenessClasses,
+  constructiveSystems,
   bioclimaticZones,
   bioclimaticZoneCoverages,
   states,
@@ -124,6 +127,12 @@ export interface IStorage {
   createAggressivenessClass(item: InsertAggressivenessClass): Promise<AggressivenessClass>;
   updateAggressivenessClass(id: number, item: Partial<InsertAggressivenessClass>): Promise<AggressivenessClass>;
   deleteAggressivenessClass(id: number): Promise<boolean>;
+
+  // Constructive systems
+  listConstructiveSystems(): Promise<ConstructiveSystem[]>;
+  createConstructiveSystem(item: InsertConstructiveSystem): Promise<ConstructiveSystem>;
+  updateConstructiveSystem(id: number, item: Partial<InsertConstructiveSystem>): Promise<ConstructiveSystem>;
+  deleteConstructiveSystem(id: number): Promise<boolean>;
 
   // Bioclimatic zones
   listBioclimaticZones(): Promise<BioclimaticZone[]>;
@@ -711,6 +720,25 @@ export class DatabaseStorage implements IStorage {
   }
   async deleteAggressivenessClass(id: number): Promise<boolean> {
     const deleted = await db.delete(aggressivenessClasses).where(eq(aggressivenessClasses.id, id)).returning({ id: aggressivenessClasses.id });
+    return deleted.length > 0;
+  }
+
+  // Constructive systems
+  async listConstructiveSystems(): Promise<ConstructiveSystem[]> {
+    const rows = await db.select().from(constructiveSystems);
+    rows.sort((a: any, b: any) => ptCollator.compare(String(a.code ?? ''), String(b.code ?? '')));
+    return rows as any;
+  }
+  async createConstructiveSystem(item: InsertConstructiveSystem): Promise<ConstructiveSystem> {
+    const [row] = await db.insert(constructiveSystems).values({ code: (item as any).code, label: (item as any).label, isActive: (item as any).isActive ?? true }).returning();
+    return row as ConstructiveSystem;
+  }
+  async updateConstructiveSystem(id: number, item: Partial<InsertConstructiveSystem>): Promise<ConstructiveSystem> {
+    const [row] = await db.update(constructiveSystems).set({ ...(item as any), updatedAt: new Date() }).where(eq(constructiveSystems.id, id)).returning();
+    return row as ConstructiveSystem;
+  }
+  async deleteConstructiveSystem(id: number): Promise<boolean> {
+    const deleted = await db.delete(constructiveSystems).where(eq(constructiveSystems.id, id)).returning({ id: constructiveSystems.id });
     return deleted.length > 0;
   }
 

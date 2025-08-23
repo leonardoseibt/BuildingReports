@@ -2,7 +2,7 @@ import express, { type Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./auth";
-import { insertBuildingSchema, updateBuildingSchema, insertStructuralSystemSchema, insertSealingSystemSchema, insertRoofingSystemSchema, insertPerformanceEvaluationSchema, insertReportSchema, insertTechnicianSchema, updateTechnicianSchema, insertUserSchema, updateUserSchema, insertTypologySchema, insertNoiseClassSchema, insertAggressivenessClassSchema, insertBioclimaticZoneSchema, insertBioclimaticZoneCoverageSchema, insertStateSchema, insertCitySchema } from "@shared/schema";
+import { insertBuildingSchema, updateBuildingSchema, insertStructuralSystemSchema, insertSealingSystemSchema, insertRoofingSystemSchema, insertPerformanceEvaluationSchema, insertReportSchema, insertTechnicianSchema, updateTechnicianSchema, insertUserSchema, updateUserSchema, insertTypologySchema, insertNoiseClassSchema, insertAggressivenessClassSchema, insertBioclimaticZoneSchema, insertBioclimaticZoneCoverageSchema, insertStateSchema, insertCitySchema, insertConstructiveSystemSchema } from "@shared/schema";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 
@@ -673,6 +673,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete('/api/aggressiveness-classes/:id', isAuthenticated, async (req, res) => {
     try { const id = Number(req.params.id); const ok = await storage.deleteAggressivenessClass(id); res.json({ ok }); }
     catch { res.status(500).json({ message: 'Failed to delete aggressiveness class' }); }
+  });
+
+  // Master tables: Constructive systems
+  app.get('/api/constructive-systems', isAuthenticated, async (_req, res) => {
+    try { res.json(await storage.listConstructiveSystems()); } catch (e) { res.status(500).json({ message: 'Failed to fetch constructive systems' }); }
+  });
+  app.post('/api/constructive-systems', isAuthenticated, express.json(), async (req, res) => {
+    try { const data = insertConstructiveSystemSchema.parse(req.body); const row = await storage.createConstructiveSystem(data as any); res.json(row); }
+    catch (error) { if (error instanceof z.ZodError) return res.status(400).json({ message: 'Validation error', errors: error.errors }); if ((error as any)?.code === '23505') return res.status(409).json({ message: 'Código já cadastrado.' }); res.status(500).json({ message: 'Failed to create constructive system' }); }
+  });
+  app.put('/api/constructive-systems/:id', isAuthenticated, express.json(), async (req, res) => {
+    try { const id = Number(req.params.id); const data = insertConstructiveSystemSchema.partial().parse(req.body); const row = await storage.updateConstructiveSystem(id, data as any); res.json(row); }
+    catch (error) { if (error instanceof z.ZodError) return res.status(400).json({ message: 'Validation error', errors: error.errors }); if ((error as any)?.code === '23505') return res.status(409).json({ message: 'Código já cadastrado.' }); res.status(500).json({ message: 'Failed to update constructive system' }); }
+  });
+  app.delete('/api/constructive-systems/:id', isAuthenticated, async (req, res) => {
+    try { const id = Number(req.params.id); const ok = await storage.deleteConstructiveSystem(id); res.json({ ok }); }
+    catch { res.status(500).json({ message: 'Failed to delete constructive system' }); }
   });
 
   const httpServer = createServer(app);
