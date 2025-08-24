@@ -36,13 +36,22 @@ export default function ParametersList() {
   const { data: analyses = [] } = useQuery<Analysis[]>({ queryKey: ['/api/analyses', { criterionId: criterionFilter }], enabled: isAuthenticated, queryFn: async () => {
     const param = criterionFilter !== 'all' ? `?criterionId=${criterionFilter}` : '';
     const res = await fetch(`/api/analyses${param}`, { credentials: 'include' }); if (!res.ok) throw new Error('Erro'); return res.json(); } });
+  const parametersKey = ['/api/parameters', analysisFilter !== 'all' ? `a:${analysisFilter}` : 'a:all', criterionFilter !== 'all' ? `c:${criterionFilter}` : 'c:all'] as const;
   const { data: items = [], isFetching, isLoading: isLoadingItems } = useQuery<Parameter[]>({
-    queryKey: ['/api/parameters', { analysisId: analysisFilter, criterionId: criterionFilter }],
+    queryKey: parametersKey,
     queryFn: async () => {
       const qs: string[] = [];
-      if (analysisFilter !== 'all') qs.push(`analysisId=${analysisFilter}`); else if (criterionFilter !== 'all') qs.push(`criterionId=${criterionFilter}`);
-      const res = await fetch(`/api/parameters${qs.length ? '?' + qs.join('&') : ''}`, { credentials: 'include' }); if (!res.ok) throw new Error('Erro'); return res.json();
-    }, enabled: isAuthenticated,
+      if (analysisFilter !== 'all') {
+        qs.push(`analysisId=${analysisFilter}`);
+      } else if (criterionFilter !== 'all') {
+        qs.push(`criterionId=${criterionFilter}`);
+      }
+      const url = `/api/parameters${qs.length ? '?' + qs.join('&') : ''}`;
+      const res = await fetch(url, { credentials: 'include' });
+      if (!res.ok) throw new Error('Erro');
+  return await res.json();
+    },
+    enabled: isAuthenticated,
   });
 
   const normText = (v: any) => String(v ?? '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]+/g, '');
@@ -52,7 +61,21 @@ export default function ParametersList() {
   const toggleSort = (col: typeof sortBy)=>{ if(col===null)return; if(sortBy!==col){ setSortBy(col); setSortDir('asc'); } else { setSortDir(d=>d==='asc'?'desc':'asc'); } setPage(1); };
 
   async function deleteRequest(id:number){ const res= await fetch(`/api/parameters/${id}`, { method:'DELETE', credentials:'include'}); if(!res.ok) throw new Error(await res.text()); return true; }
-  const deleteMutation = useMutation({ mutationFn: async (t:Parameter)=> deleteRequest(t.id), onMutate: async (t)=>{ await queryClient.cancelQueries({ queryKey: ['/api/parameters']}); const prev = queryClient.getQueryData<Parameter[]>(['/api/parameters', { analysisId: analysisFilter, criterionId: criterionFilter }])||[]; queryClient.setQueryData<Parameter[]>(['/api/parameters', { analysisId: analysisFilter, criterionId: criterionFilter }], prev.filter(x=>x.id!==t.id)); return { prev }; }, onError:(err,_t,ctx)=>{ if(ctx?.prev) queryClient.setQueryData(['/api/parameters', { analysisId: analysisFilter, criterionId: criterionFilter }], ctx.prev); toast({ title:'Erro ao excluir', description:String(err), variant:'destructive'}); }, onSuccess:(_d,t)=> toast({ title:'Parâmetro excluído', description:`${t.label} foi removido.`}), onSettled:()=> queryClient.invalidateQueries({ queryKey: ['/api/parameters']}) });
+  const deleteMutation = useMutation({
+    mutationFn: async (t:Parameter)=> deleteRequest(t.id),
+    onMutate: async (t)=>{
+      await queryClient.cancelQueries({ queryKey: parametersKey });
+      const prev = queryClient.getQueryData<Parameter[]>(parametersKey) || [];
+      queryClient.setQueryData<Parameter[]>(parametersKey, prev.filter(x=>x.id!==t.id));
+      return { prev };
+    },
+    onError:(err,_t,ctx)=>{
+      if(ctx?.prev) queryClient.setQueryData(parametersKey, ctx.prev);
+      toast({ title:'Erro ao excluir', description:String(err), variant:'destructive'});
+    },
+    onSuccess:(_d,t)=> toast({ title:'Parâmetro excluído', description:`${t.label} foi removido.`}),
+    onSettled:()=> queryClient.invalidateQueries({ queryKey: parametersKey })
+  });
   function askDelete(t:Parameter){ setSelectedItem(t); setConfirmOpen(true);} function confirmDelete(){ if(!selectedItem) return; deleteMutation.mutate(selectedItem); setConfirmOpen(false); setSelectedItem(null);} if(isLoading||!isAuthenticated) return null;
 
   return (<div className="flex h-screen bg-slate-50"><Sidebar /><div className="flex-1 flex flex-col overflow-hidden"><Header title="Parâmetros" description="Gerencie os parâmetros das análises" action={<div className="flex items-center gap-2">{isFetching && <Loader2 className="h-4 w-4 animate-spin text-slate-400" aria-label="Atualizando" /> }<Button onClick={()=>{ setEditItem(null); setFormKey(k=>k+1); setOpen(true); }}><Plus className="w-4 h-4 mr-2"/> Novo Parâmetro</Button></div>} />
@@ -68,9 +91,20 @@ export default function ParametersList() {
               <option value="all">Todos os Critérios</option>
               {criteria.map(c=> <option key={c.id} value={c.id}>{c.code} - {c.label}</option>)}
             </select>
-            <select value={analysisFilter} onChange={(e)=>{ const v = e.target.value==='all'?'all':Number(e.target.value); setAnalysisFilter(v); setPage(1); }} className="h-9 text-sm rounded-md border px-2 bg-white">
-              <option value="all">Todas as Análises</option>
-              {analyses.map(a=> <option key={a.id} value={a.id}>{a.label}</option>)}
+            <select
+              value={analysisFilter}
+              disabled={criterionFilter === 'all'}
+              onChange={(e)=>{ const v = e.target.value==='all'?'all':Number(e.target.value); setAnalysisFilter(v); setPage(1); }}
+              className="h-9 text-sm rounded-md border px-2 bg-white disabled:bg-slate-100 disabled:text-slate-400"
+            >
+              {criterionFilter === 'all' ? (
+                <option value="">Selecione um critério</option>
+              ) : (
+                <>
+                  <option value="all">Todas as Análises</option>
+                  {analyses.map(a=> <option key={a.id} value={a.id}>{a.label}</option>)}
+                </>
+              )}
             </select>
           </div>
         </div>

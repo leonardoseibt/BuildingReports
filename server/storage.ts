@@ -862,8 +862,25 @@ export class DatabaseStorage implements IStorage {
     if (analysisId) {
       rows = await db.select().from(parameters).where(eq(parameters.analysisId, analysisId));
     } else if (criterionId) {
-      // join via analyses to filter by criterion
-      rows = await db.execute(sql`SELECT p.* FROM parameters p JOIN analyses a ON a.id = p.analysis_id WHERE a.criterion_id = ${criterionId}`) as any;
+      // Usar join do Drizzle para evitar problemas com sql raw em alguns drivers
+      const joined = await db
+        .select({
+          id: parameters.id,
+            analysisId: parameters.analysisId,
+            label: parameters.label,
+            minimumValue: parameters.minimumValue,
+            intermediateValue: parameters.intermediateValue,
+            superiorValue: parameters.superiorValue,
+            unit: parameters.unit,
+            notes: parameters.notes,
+            isActive: parameters.isActive,
+            createdAt: parameters.createdAt,
+            updatedAt: parameters.updatedAt,
+        })
+        .from(parameters)
+        .innerJoin(analyses, eq(parameters.analysisId, analyses.id))
+        .where(eq(analyses.criterionId, criterionId));
+      rows = joined as any[];
     } else {
       rows = await db.select().from(parameters);
     }

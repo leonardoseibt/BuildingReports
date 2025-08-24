@@ -787,7 +787,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const rows = await storage.listParameters(analysisId, criterionId);
       res.json(rows);
     } catch {
-      res.status(500).json({ message: 'Failed to fetch parameters' });
+  console.error('Erro ao buscar parâmetros', { q: req.query });
+  res.status(500).json({ message: 'Failed to fetch parameters' });
     }
   });
   app.post('/api/parameters', isAuthenticated, express.json(), async (req, res) => {
