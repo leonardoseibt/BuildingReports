@@ -45,6 +45,24 @@ export default function ParameterForm({ onSuccess, onCancel, initialItem }: { on
     }
   });
   const [submitting, setSubmitting] = useState(false);
+  const [criterionId, setCriterionId] = useState<number | ''>(() => {
+    if (initialItem) {
+      const analysis = analyses.find(a => a.id === initialItem.analysisId);
+      return analysis?.criterionId ?? '';
+    }
+    return '';
+  });
+
+  // Filter analyses based on selected criterion
+  const filteredAnalyses = criterionId ? analyses.filter(a => a.criterionId === criterionId) : [];
+
+  // Keep analysis consistent with criterion selection
+  if (criterionId && form.getValues('analysisId')) {
+    const currentAnalysis = analyses.find(a => a.id === form.getValues('analysisId'));
+    if (currentAnalysis && currentAnalysis.criterionId !== criterionId) {
+      form.setValue('analysisId', 0 as any);
+    }
+  }
 
   async function onSubmit(values: ParameterFormData) {
     try {
@@ -70,25 +88,48 @@ export default function ParameterForm({ onSuccess, onCancel, initialItem }: { on
           subtitle={isEdit ? 'Atualize os dados do parâmetro.' : 'Cadastre um novo parâmetro para uma análise.'}
           initials={form.getValues('label')?.substring(0,2) || null}
         />
-        <div className="grid grid-cols-1 md:grid-cols-8 gap-4">
+        {/* Linha 1: Critério & Análise */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="md:col-span-2">
+            <NotchedField label="Critério" requiredMark>
+              <select
+                value={criterionId}
+                onChange={(e) => {
+                  const val = e.target.value ? Number(e.target.value) : '';
+                  setCriterionId(val as any);
+                  if (!val) {
+                    form.setValue('analysisId', 0 as any);
+                  }
+                }}
+                className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 w-full h-9 text-sm"
+              >
+                <option value="">Selecione...</option>
+                {criteria.map(c => <option key={c.id} value={c.id}>{c.code} - {c.label}</option>)}
+              </select>
+            </NotchedField>
+          </div>
           <FormField name="analysisId" control={form.control} render={({ field }) => (
             <FormItem className="md:col-span-2">
               <FormControl>
                 <NotchedField label="Análise" requiredMark>
-                  <select {...field} className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 w-full h-9 text-sm">
-                    <option value="">Selecione...</option>
-                    {analyses.map(a => {
-                      const crit = criteria.find(c => c.id === a.criterionId);
-                      return <option key={a.id} value={a.id}>{crit ? `${crit.code} - ` : ''}{a.label}</option>;
-                    })}
+                  <select
+                    {...field}
+                    disabled={!criterionId}
+                    className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 w-full h-9 text-sm disabled:opacity-50"
+                  >
+                    <option value="">{criterionId ? 'Selecione...' : 'Selecione um critério'}</option>
+                    {filteredAnalyses.map(a => <option key={a.id} value={a.id}>{a.label}</option>)}
                   </select>
                 </NotchedField>
               </FormControl>
               <FormMessage />
             </FormItem>
           )} />
+        </div>
+        {/* Linha 2: Descrição & Unidade */}
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
           <FormField name="label" control={form.control} render={({ field }) => (
-            <FormItem className="md:col-span-3">
+            <FormItem className="md:col-span-4">
               <FormControl>
                 <NotchedField label="Descrição" requiredMark>
                   <Input {...field} placeholder="Descrição" className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" />
@@ -107,8 +148,11 @@ export default function ParameterForm({ onSuccess, onCancel, initialItem }: { on
               <FormMessage />
             </FormItem>
           )} />
+        </div>
+        {/* Linha 3: Mínimo, Intermediário, Superior */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <FormField name="minimumValue" control={form.control} render={({ field }) => (
-            <FormItem className="md:col-span-1">
+            <FormItem>
               <FormControl>
                 <NotchedField label="Mínimo">
                   <Input {...field} placeholder="Min" className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" />
@@ -118,7 +162,7 @@ export default function ParameterForm({ onSuccess, onCancel, initialItem }: { on
             </FormItem>
           )} />
           <FormField name="intermediateValue" control={form.control} render={({ field }) => (
-            <FormItem className="md:col-span-1">
+            <FormItem>
               <FormControl>
                 <NotchedField label="Intermediário">
                   <Input {...field} placeholder="Interm" className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" />
@@ -128,7 +172,7 @@ export default function ParameterForm({ onSuccess, onCancel, initialItem }: { on
             </FormItem>
           )} />
           <FormField name="superiorValue" control={form.control} render={({ field }) => (
-            <FormItem className="md:col-span-1">
+            <FormItem>
               <FormControl>
                 <NotchedField label="Superior">
                   <Input {...field} placeholder="Sup" className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" />
@@ -138,6 +182,7 @@ export default function ParameterForm({ onSuccess, onCancel, initialItem }: { on
             </FormItem>
           )} />
         </div>
+  {/* Linha 4: Observações */}
         <FormField name="notes" control={form.control} render={({ field }) => (
           <FormItem>
             <FormControl>
