@@ -178,6 +178,16 @@ export const requirements = pgTable("requirements", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Criteria (Critérios)
+export const criteria = pgTable("criteria", {
+  id: integer("id").generatedAlwaysAsIdentity().primaryKey(),
+  code: varchar("code", { length: 16 }).notNull().unique(),
+  label: varchar("label", { length: 255 }).notNull(),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Structural Systems
 export const structuralSystems = pgTable("structural_systems", {
   id: integer("id").generatedAlwaysAsIdentity().primaryKey(),
@@ -434,6 +444,7 @@ export const insertNoiseClassSchema = createInsertSchema(noiseClasses);
 export const insertAggressivenessClassSchema = createInsertSchema(aggressivenessClasses);
 export const insertConstructiveSystemSchema = createInsertSchema(constructiveSystems);
 export const insertRequirementSchema = createInsertSchema(requirements);
+export const insertCriterionSchema = createInsertSchema(criteria);
 
 export const insertBioclimaticZoneSchema = createInsertSchema(bioclimaticZones);
 export const insertStateSchema = createInsertSchema(states);
@@ -486,6 +497,8 @@ export type ConstructiveSystem = typeof constructiveSystems.$inferSelect;
 export type InsertConstructiveSystem = z.infer<typeof insertConstructiveSystemSchema>;
 export type Requirement = typeof requirements.$inferSelect;
 export type InsertRequirement = z.infer<typeof insertRequirementSchema>;
+export type Criterion = typeof criteria.$inferSelect;
+export type InsertCriterion = z.infer<typeof insertCriterionSchema>;
 export type BioclimaticZone = typeof bioclimaticZones.$inferSelect;
 export type InsertBioclimaticZone = z.infer<typeof insertBioclimaticZoneSchema>;
 export type BioclimaticZoneCoverage = typeof bioclimaticZoneCoverages.$inferSelect;

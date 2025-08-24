@@ -33,6 +33,9 @@ import {
   type InsertConstructiveSystem,
   type Requirement,
   type InsertRequirement,
+  criteria,
+  type Criterion,
+  type InsertCriterion,
   technicians,
   typologies,
   noiseClasses,
@@ -142,6 +145,13 @@ export interface IStorage {
   createRequirement(item: InsertRequirement): Promise<Requirement>;
   updateRequirement(id: number, item: Partial<InsertRequirement>): Promise<Requirement>;
   deleteRequirement(id: number): Promise<boolean>;
+
+  // Criteria
+  listCriteria(): Promise<Criterion[]>;
+  createCriterion(item: InsertCriterion): Promise<Criterion>;
+  updateCriterion(id: number, item: Partial<InsertCriterion>): Promise<Criterion>;
+  deleteCriterion(id: number): Promise<boolean>;
+
 
   // Bioclimatic zones
   listBioclimaticZones(): Promise<BioclimaticZone[]>;
@@ -770,6 +780,30 @@ export class DatabaseStorage implements IStorage {
     return deleted.length > 0;
   }
 
+  // Criteria
+  async listCriteria(): Promise<Criterion[]> {
+    const rows = await db.select().from(criteria);
+    rows.sort((a: any, b: any) => ptCollator.compare(String(a.code ?? ''), String(b.code ?? '')));
+    return rows as any;
+  }
+  async createCriterion(item: InsertCriterion): Promise<Criterion> {
+    const [row] = await db.insert(criteria).values({ code: (item as any).code, label: (item as any).label, isActive: (item as any).isActive ?? true }).returning();
+    return row as Criterion;
+  }
+  async updateCriterion(id: number, item: Partial<InsertCriterion>): Promise<Criterion> {
+    const [row] = await db.update(criteria).set({ ...(item as any), updatedAt: new Date() }).where(eq(criteria.id, id)).returning();
+    return row as Criterion;
+  }
+  async deleteCriterion(id: number): Promise<boolean> {
+    try {
+      const deleted = await db.delete(criteria).where(eq(criteria.id, id)).returning({ id: criteria.id });
+      return deleted.length > 0;
+    } catch (err: any) {
+      if (err?.code === '23503') { const e = new Error('Não é possível excluir: existem registros relacionados.'); (e as any).status = 409; throw e; }
+      throw err;
+    }
+  }
+
   // Bioclimatic zones
   async listBioclimaticZones(): Promise<BioclimaticZone[]> {
   const rows = await db.select().from(bioclimaticZones);
@@ -945,4 +979,5 @@ export class DatabaseStorage implements IStorage {
   }
 }
 
+// One-time criteria seed helper (call manually if needed)
 export const storage = new DatabaseStorage();

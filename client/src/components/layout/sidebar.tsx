@@ -58,8 +58,7 @@ export default function Sidebar() {
     cadastros: true,
     cadPessoas: true,
     cadLocalizacao: true,
-    cadParametros: true,
-  cadSistemas: true,
+  cadParametros: true,
     administracao: true,
   };
 
@@ -292,22 +291,6 @@ export default function Sidebar() {
                         isActive={location === '/aggressiveness-classes'}
                         testId="nav-classes-de-agressividade"
                       />
-                    </div>
-                  )}
-                </div>
-
-                <div>
-                  <button
-                    className="px-0 w-full text-[11px] text-slate-500 font-medium flex items-center justify-between mb-1 mt-1"
-                    onClick={() => toggleSection('cadSistemas')}
-                  >
-                    <span>Sistemas</span>
-                    <ChevronRight
-                      className={cn("w-4 h-4 transition-transform", open.cadSistemas && "rotate-90")}
-                    />
-                  </button>
-                  {open.cadSistemas && (
-                    <div className="pl-2 space-y-0.5">
                       <NavLink
                         href="/constructive-systems"
                         icon={Layers2}
@@ -321,6 +304,13 @@ export default function Sidebar() {
                         label="Requisitos"
                         isActive={location === '/requirements'}
                         testId="nav-requisitos"
+                      />
+                      <NavLink
+                        href="/criteria"
+                        icon={Layers2}
+                        label="Critérios"
+                        isActive={location === '/criteria'}
+                        testId="nav-criterios"
                       />
                     </div>
                   )}

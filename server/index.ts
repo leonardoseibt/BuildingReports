@@ -5,6 +5,7 @@ import cors from "cors";
 import rateLimit from "express-rate-limit";
 import net from "node:net";
 import { registerRoutes } from "./routes";
+import { storage } from './storage';
 import { setupVite, serveStatic, log } from "./vite";
 
 const SENSITIVE_FIELDS = ["password", "passwordHash", "token", "secret"];
@@ -129,7 +130,7 @@ app.use(createLoggingMiddleware());
 
 if (process.env.NODE_ENV !== "test") {
   (async () => {
-    const server = await registerRoutes(app);
+  const server = await registerRoutes(app);
 
   // CSRF error handler (placed after routes so csurf can throw)
   app.use((err: any, _req: Request, res: Response, next: NextFunction) => {
