@@ -1,0 +1,122 @@
+import { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { useToast } from '@/hooks/use-toast';
+import { apiRequest } from '@/lib/queryClient';
+import { Button } from '@/components/ui/button';
+import FormHeader from '@/components/ui/form-header';
+import { Form, FormField, FormItem, FormControl, FormMessage } from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { NotchedField } from '@/components/ui/notched-field';
+import type { Analysis, Criterion } from '@shared/schema';
+import { useQuery } from '@tanstack/react-query';
+
+const formSchema = z.object({
+  criterionId: z.coerce.number().min(1, 'Critério é obrigatório'),
+  code: z.string().min(1, 'Código é obrigatório').max(32, 'Máx 32 caracteres'),
+  label: z.string().min(1, 'Descrição é obrigatória').max(255, 'Máx 255 caracteres'),
+  isActive: z.boolean().optional().default(true),
+});
+
+export type AnalysisFormData = z.infer<typeof formSchema>;
+
+export default function AnalysisForm({ onSuccess, onCancel, initialItem }: { onSuccess?: () => void; onCancel?: () => void; initialItem?: Analysis | null; }) {
+  const { toast } = useToast();
+  const isEdit = !!initialItem;
+  const { data: criteria = [] } = useQuery<Criterion[]>({ queryKey: ['/api/criteria'] });
+
+  const form = useForm<AnalysisFormData>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      criterionId: initialItem?.criterionId || (criteria[0]?.id ?? 0),
+      code: initialItem?.code || '',
+      label: initialItem?.label || '',
+      isActive: initialItem?.isActive ?? true,
+    }
+  });
+  const [submitting, setSubmitting] = useState(false);
+
+  async function onSubmit(values: AnalysisFormData) {
+    try {
+      setSubmitting(true);
+      const payload = { ...values, code: values.code.trim(), label: values.label.trim() };
+      const method = isEdit ? 'PUT' : 'POST';
+      const url = isEdit ? `/api/analyses/${initialItem!.id}` : '/api/analyses';
+      await apiRequest(method as any, url as any, payload);
+      toast({ title: 'Sucesso', description: isEdit ? 'Análise atualizada.' : 'Análise cadastrada.' });
+      onSuccess?.();
+    } catch (e: any) {
+      if (String(e.message).includes('409')) {
+        toast({ title: 'Duplicado', description: 'Código já cadastrado dentro deste critério.', variant: 'destructive' });
+      } else {
+        toast({ title: 'Erro', description: isEdit ? 'Falha ao atualizar.' : 'Falha ao cadastrar.', variant: 'destructive' });
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6" autoComplete="off">
+        <FormHeader
+          title={isEdit ? 'Editar Análise' : 'Nova Análise'}
+          subtitle={isEdit ? 'Atualize os dados da análise.' : 'Cadastre uma nova análise para um critério.'}
+          initials={form.getValues('code') || null}
+        />
+        <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+          <FormField
+            name="criterionId"
+            control={form.control}
+            render={({ field }) => (
+              <FormItem className="md:col-span-2">
+                <FormControl>
+                  <NotchedField label="Critério" requiredMark>
+                    <select {...field} className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 w-full h-9 text-sm">
+                      <option value="">Selecione...</option>
+                      {criteria.map(c => <option key={c.id} value={c.id}>{c.code} - {c.label}</option>)}
+                    </select>
+                  </NotchedField>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            name="code"
+            control={form.control}
+            render={({ field }) => (
+              <FormItem className="md:col-span-1">
+                <FormControl>
+                  <NotchedField label="Código" requiredMark>
+                    <Input {...field} placeholder="Ex: A1" className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" />
+                  </NotchedField>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            name="label"
+            control={form.control}
+            render={({ field }) => (
+              <FormItem className="md:col-span-3">
+                <FormControl>
+                  <NotchedField label="Descrição" requiredMark>
+                    <Input {...field} placeholder="Descrição da análise" className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" />
+                  </NotchedField>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+        <div className="flex justify-end gap-2 pt-2">
+          <Button type="button" variant="outline" onClick={onCancel}>Cancelar</Button>
+          <Button type="submit" disabled={submitting}>{submitting ? 'Salvando…' : 'Salvar'}</Button>
+        </div>
+      </form>
+    </Form>
+  );
+}

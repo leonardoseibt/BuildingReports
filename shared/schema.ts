@@ -10,6 +10,7 @@ import {
   timestamp,
   boolean,
   pgEnum,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
@@ -187,6 +188,20 @@ export const criteria = pgTable("criteria", {
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
+
+// Analyses (Análises) - dependem de Critérios (1:N)
+export const analyses = pgTable("analyses", {
+  id: integer("id").generatedAlwaysAsIdentity().primaryKey(),
+  criterionId: integer("criterion_id").references(() => criteria.id).notNull(),
+  code: varchar("code", { length: 32 }).notNull(), // único dentro do critério
+  label: varchar("label", { length: 255 }).notNull(),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_analyses_criterion").on(table.criterionId),
+  uniqueIndex("uq_analyses_criterion_code").on(table.criterionId, table.code),
+]);
 
 // Structural Systems
 export const structuralSystems = pgTable("structural_systems", {
@@ -445,6 +460,7 @@ export const insertAggressivenessClassSchema = createInsertSchema(aggressiveness
 export const insertConstructiveSystemSchema = createInsertSchema(constructiveSystems);
 export const insertRequirementSchema = createInsertSchema(requirements);
 export const insertCriterionSchema = createInsertSchema(criteria);
+export const insertAnalysisSchema = createInsertSchema(analyses);
 
 export const insertBioclimaticZoneSchema = createInsertSchema(bioclimaticZones);
 export const insertStateSchema = createInsertSchema(states);
@@ -499,6 +515,8 @@ export type Requirement = typeof requirements.$inferSelect;
 export type InsertRequirement = z.infer<typeof insertRequirementSchema>;
 export type Criterion = typeof criteria.$inferSelect;
 export type InsertCriterion = z.infer<typeof insertCriterionSchema>;
+export type Analysis = typeof analyses.$inferSelect;
+export type InsertAnalysis = z.infer<typeof insertAnalysisSchema>;
 export type BioclimaticZone = typeof bioclimaticZones.$inferSelect;
 export type InsertBioclimaticZone = z.infer<typeof insertBioclimaticZoneSchema>;
 export type BioclimaticZoneCoverage = typeof bioclimaticZoneCoverages.$inferSelect;

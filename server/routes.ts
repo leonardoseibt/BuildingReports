@@ -2,7 +2,7 @@ import express, { type Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./auth";
-import { insertBuildingSchema, updateBuildingSchema, insertStructuralSystemSchema, insertSealingSystemSchema, insertRoofingSystemSchema, insertPerformanceEvaluationSchema, insertReportSchema, insertTechnicianSchema, updateTechnicianSchema, insertUserSchema, updateUserSchema, insertTypologySchema, insertNoiseClassSchema, insertAggressivenessClassSchema, insertBioclimaticZoneSchema, insertBioclimaticZoneCoverageSchema, insertStateSchema, insertCitySchema, insertConstructiveSystemSchema, insertRequirementSchema, insertCriterionSchema } from "@shared/schema";
+import { insertBuildingSchema, updateBuildingSchema, insertStructuralSystemSchema, insertSealingSystemSchema, insertRoofingSystemSchema, insertPerformanceEvaluationSchema, insertReportSchema, insertTechnicianSchema, updateTechnicianSchema, insertUserSchema, updateUserSchema, insertTypologySchema, insertNoiseClassSchema, insertAggressivenessClassSchema, insertBioclimaticZoneSchema, insertBioclimaticZoneCoverageSchema, insertStateSchema, insertCitySchema, insertConstructiveSystemSchema, insertRequirementSchema, insertCriterionSchema, insertAnalysisSchema } from "@shared/schema";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 
@@ -738,6 +738,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete('/api/criteria/:id', isAuthenticated, async (req, res) => {
     try { const id = Number(req.params.id); const ok = await storage.deleteCriterion(id); res.json({ ok }); }
     catch { res.status(500).json({ message: 'Failed to delete criterion' }); }
+  });
+
+  // Analyses endpoints
+  app.get('/api/analyses', isAuthenticated, async (req, res) => {
+    try {
+      const criterionId = req.query.criterionId ? Number(req.query.criterionId) : undefined;
+      const rows = await storage.listAnalyses(criterionId);
+      res.json(rows);
+    } catch {
+      res.status(500).json({ message: 'Failed to fetch analyses' });
+    }
+  });
+  app.post('/api/analyses', isAuthenticated, express.json(), async (req, res) => {
+    try {
+      const data = insertAnalysisSchema.parse(req.body);
+      const row = await storage.createAnalysis(data as any);
+      res.json(row);
+    } catch (error) {
+      if (error instanceof z.ZodError) return res.status(400).json({ message: 'Validation error', errors: error.errors });
+      if ((error as any)?.code === '23505') return res.status(409).json({ message: 'Código já cadastrado.' });
+      res.status(500).json({ message: 'Failed to create analysis' });
+    }
+  });
+  app.put('/api/analyses/:id', isAuthenticated, express.json(), async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      const data = insertAnalysisSchema.partial().parse(req.body);
+      const row = await storage.updateAnalysis(id, data as any);
+      res.json(row);
+    } catch (error) {
+      if (error instanceof z.ZodError) return res.status(400).json({ message: 'Validation error', errors: error.errors });
+      if ((error as any)?.code === '23505') return res.status(409).json({ message: 'Código já cadastrado.' });
+      res.status(500).json({ message: 'Failed to update analysis' });
+    }
+  });
+  app.delete('/api/analyses/:id', isAuthenticated, async (req, res) => {
+    try { const id = Number(req.params.id); const ok = await storage.deleteAnalysis(id); res.json({ ok }); }
+    catch { res.status(500).json({ message: 'Failed to delete analysis' }); }
   });
 
   const httpServer = createServer(app);

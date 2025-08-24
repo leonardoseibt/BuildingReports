@@ -19,6 +19,7 @@ import {
   Target,
   Map,
   Sun,
+  Beaker,
   ChevronRight,
   ChevronLeft
 } from "lucide-react";
@@ -314,6 +315,13 @@ export default function Sidebar() {
                         label="Critérios"
                         isActive={location === '/criteria'}
                         testId="nav-criterios"
+                      />
+                      <NavLink
+                        href="/analyses"
+                        icon={Beaker}
+                        label="Análises"
+                        isActive={location === '/analyses'}
+                        testId="nav-analises"
                       />
                     </div>
                   )}

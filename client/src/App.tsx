@@ -17,6 +17,7 @@ import AggressivenessClassesList from "@/pages/aggressiveness-classes/list";
 import ConstructiveSystemsList from "@/pages/constructive-systems/list.tsx";
 import RequirementsList from "@/pages/requirements/list.tsx";
 import CriteriaList from "@/pages/criteria/list";
+import AnalysesList from "@/pages/analyses/list";
 import UsersList from "@/pages/users/list";
 import BioclimaticZonesList from "@/pages/bioclimatic-zones";
 import StatesList from "@/pages/states/list.tsx";
@@ -60,6 +61,7 @@ function Router() {
   <PrivateRoute path="/constructive-systems" component={ConstructiveSystemsList} />
   <PrivateRoute path="/requirements" component={RequirementsList} />
   <PrivateRoute path="/criteria" component={CriteriaList} />
+  <PrivateRoute path="/analyses" component={AnalysesList} />
       <PrivateRoute path="/bioclimatic-zones" component={BioclimaticZonesList} />
       <PrivateRoute path="/states" component={StatesList} />
       <PrivateRoute path="/cities" component={CitiesList} />

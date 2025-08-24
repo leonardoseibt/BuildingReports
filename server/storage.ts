@@ -36,6 +36,9 @@ import {
   criteria,
   type Criterion,
   type InsertCriterion,
+  analyses,
+  type Analysis,
+  type InsertAnalysis,
   technicians,
   typologies,
   noiseClasses,
@@ -151,6 +154,11 @@ export interface IStorage {
   createCriterion(item: InsertCriterion): Promise<Criterion>;
   updateCriterion(id: number, item: Partial<InsertCriterion>): Promise<Criterion>;
   deleteCriterion(id: number): Promise<boolean>;
+  // Analyses
+  listAnalyses(criterionId?: number): Promise<Analysis[]>;
+  createAnalysis(item: InsertAnalysis): Promise<Analysis>;
+  updateAnalysis(id: number, item: Partial<InsertAnalysis>): Promise<Analysis>;
+  deleteAnalysis(id: number): Promise<boolean>;
 
 
   // Bioclimatic zones
@@ -797,6 +805,42 @@ export class DatabaseStorage implements IStorage {
   async deleteCriterion(id: number): Promise<boolean> {
     try {
       const deleted = await db.delete(criteria).where(eq(criteria.id, id)).returning({ id: criteria.id });
+      return deleted.length > 0;
+    } catch (err: any) {
+      if (err?.code === '23503') { const e = new Error('Não é possível excluir: existem registros relacionados.'); (e as any).status = 409; throw e; }
+      throw err;
+    }
+  }
+
+  // Analyses
+  async listAnalyses(criterionId?: number): Promise<Analysis[]> {
+    const rows = await db.select().from(analyses).where(
+      criterionId ? eq(analyses.criterionId, criterionId) : sql`true`
+    );
+    // sort by criterion then numeric-aware code
+    rows.sort((a: any, b: any) => {
+      const c = (a.criterionId ?? 0) - (b.criterionId ?? 0);
+      if (c !== 0) return c;
+      return ptCollator.compare(String(a.code ?? ''), String(b.code ?? ''));
+    });
+    return rows as any;
+  }
+  async createAnalysis(item: InsertAnalysis): Promise<Analysis> {
+    const [row] = await db.insert(analyses).values({
+      criterionId: (item as any).criterionId,
+      code: (item as any).code,
+      label: (item as any).label,
+      isActive: (item as any).isActive ?? true,
+    }).returning();
+    return row as Analysis;
+  }
+  async updateAnalysis(id: number, item: Partial<InsertAnalysis>): Promise<Analysis> {
+    const [row] = await db.update(analyses).set({ ...(item as any), updatedAt: new Date() }).where(eq(analyses.id, id)).returning();
+    return row as Analysis;
+  }
+  async deleteAnalysis(id: number): Promise<boolean> {
+    try {
+      const deleted = await db.delete(analyses).where(eq(analyses.id, id)).returning({ id: analyses.id });
       return deleted.length > 0;
     } catch (err: any) {
       if (err?.code === '23503') { const e = new Error('Não é possível excluir: existem registros relacionados.'); (e as any).status = 409; throw e; }
