@@ -1,6 +1,5 @@
-import { useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
-import { useToast } from "@/hooks/use-toast";
+import { useAuthRedirect } from "@/hooks/useAuthRedirect";
 import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
 import StatsCards from "@/components/dashboard/stats-cards";
@@ -8,23 +7,8 @@ import RecentProjects from "@/components/dashboard/recent-projects";
 import PerformanceOverview from "@/components/dashboard/performance-overview";
 
 export default function Dashboard() {
-  const { toast } = useToast();
   const { isAuthenticated, isLoading } = useAuth();
-
-  // Redirect to login if not authenticated
-  useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      toast({
-        title: "Não autorizado",
-        description: "Você não está logado. Fazendo login...",
-        variant: "destructive",
-      });
-      setTimeout(() => {
-        window.location.href = "/api/login";
-      }, 500);
-      return;
-    }
-  }, [isAuthenticated, isLoading, toast]);
+  useAuthRedirect();
 
   if (isLoading) {
     return (

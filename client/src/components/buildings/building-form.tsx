@@ -174,8 +174,8 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
     },
     onError: (error) => {
       if (isUnauthorizedError(error as Error)) {
-        toast({ title: 'Não autorizado', description: 'Você foi desconectado. Fazendo login novamente...', variant: 'destructive' });
-        setTimeout(() => { window.location.href = '/api/login'; }, 500);
+        toast({ title: 'Sessão finalizada', description: 'Faça login novamente para continuar.', variant: 'destructive' });
+        setTimeout(() => { window.location.href = '/login'; }, 400);
         return;
       }
       toast({ title: 'Erro', description: 'Erro ao cadastrar edificação. Tente novamente.', variant: 'destructive' });
@@ -236,8 +236,8 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
     },
     onError: (error) => {
       if (isUnauthorizedError(error as Error)) {
-        toast({ title: 'Não autorizado', description: 'Você foi desconectado. Fazendo login novamente...', variant: 'destructive' });
-        setTimeout(() => { window.location.href = '/api/login'; }, 500);
+        toast({ title: 'Sessão finalizada', description: 'Faça login novamente para continuar.', variant: 'destructive' });
+        setTimeout(() => { window.location.href = '/login'; }, 400);
         return;
       }
       toast({ title: 'Erro', description: 'Erro ao atualizar edificação. Tente novamente.', variant: 'destructive' });

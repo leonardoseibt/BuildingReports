@@ -4,6 +4,7 @@ import Sidebar from '@/components/layout/sidebar';
 import Header from '@/components/layout/header';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
+import { useAuthRedirect } from '@/hooks/useAuthRedirect';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { ListChecks, Plus, Loader2, Pencil, Trash2, Search, ArrowUp, ArrowDown } from 'lucide-react';
@@ -30,7 +31,7 @@ export default function ParametersList() {
   const [analysisFilter, setAnalysisFilter] = useState<number | 'all'>('all');
   const pageSize = 15; const [page, setPage] = useState(1);
 
-  useEffect(() => { if (!isLoading && !isAuthenticated) { toast({ title: 'Não autorizado', description: 'Você não está logado. Fazendo login...', variant: 'destructive' }); setTimeout(() => (window.location.href = '/api/login'), 500); } }, [isAuthenticated, isLoading, toast]);
+  useAuthRedirect();
 
   const { data: criteria = [] } = useQuery<Criterion[]>({ queryKey: ['/api/criteria'], enabled: isAuthenticated });
   const { data: analyses = [] } = useQuery<Analysis[]>({ queryKey: ['/api/analyses', { criterionId: criterionFilter }], enabled: isAuthenticated, queryFn: async () => {

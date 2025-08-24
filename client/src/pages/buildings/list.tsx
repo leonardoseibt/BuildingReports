@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { useAuthRedirect } from "@/hooks/useAuthRedirect";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import BuildingForm from "@/components/buildings/building-form";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -45,20 +46,7 @@ export default function BuildingList() {
   const pageSize = 15;
   const [page, setPage] = useState(1);
 
-  // Redirect to login if not authenticated
-  useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
-      toast({
-        title: "Não autorizado",
-        description: "Você não está logado. Fazendo login...",
-        variant: "destructive",
-      });
-      setTimeout(() => {
-        window.location.href = "/api/login";
-      }, 500);
-      return;
-    }
-  }, [isAuthenticated, authLoading, toast]);
+  useAuthRedirect();
 
   const { data: buildings = [], isLoading, isFetching, error } = useQuery<Building[]>({
     queryKey: ['/api/buildings'],
@@ -163,13 +151,9 @@ export default function BuildingList() {
 
   useEffect(() => {
     if (error && isUnauthorizedError(error as Error)) {
-      toast({
-        title: "Não autorizado",
-        description: "Você foi desconectado. Fazendo login novamente...",
-        variant: "destructive",
-      });
+  toast({ title: 'Sessão finalizada', description: 'Faça login novamente para continuar.', variant: 'destructive' });
       setTimeout(() => {
-        window.location.href = "/api/login";
+  window.location.href = "/login";
       }, 500);
     }
   }, [error, toast]);

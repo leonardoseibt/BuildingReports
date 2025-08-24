@@ -33,8 +33,9 @@ export default function CriteriaList() {
   useEffect(() => {
     // Auth redirect pattern unified with other pages (handled globally by PrivateRoute too)
     if (!isLoading && !isAuthenticated) {
-      toast({ title: "Não autorizado", description: "Você não está logado. Fazendo login...", variant: "destructive" });
-      setTimeout(() => (window.location.href = "/api/login"), 500);
+  toast({ title: 'Sessão finalizada', description: 'Faça login novamente para continuar.', variant: 'destructive' });
+  toast({ title: 'Sessão finalizada', description: 'Faça login novamente para continuar.', variant: 'destructive' });
+  setTimeout(() => (window.location.href = "/login"), 400);
     }
   }, [isAuthenticated, isLoading, toast]);
 

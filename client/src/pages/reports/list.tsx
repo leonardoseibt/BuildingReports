@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { useAuthRedirect } from "@/hooks/useAuthRedirect";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { Link } from "wouter";
 import Sidebar from "@/components/layout/sidebar";
@@ -16,20 +17,7 @@ export default function ReportList() {
   const { toast } = useToast();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
 
-  // Redirect to login if not authenticated
-  useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
-      toast({
-        title: "Não autorizado",
-        description: "Você não está logado. Fazendo login...",
-        variant: "destructive",
-      });
-      setTimeout(() => {
-        window.location.href = "/api/login";
-      }, 500);
-      return;
-    }
-  }, [isAuthenticated, authLoading, toast]);
+  useAuthRedirect();
 
   const { data: reports, isLoading, error } = useQuery<Report[]>({
     queryKey: ['/api/reports'],
@@ -38,13 +26,9 @@ export default function ReportList() {
 
   useEffect(() => {
     if (error && isUnauthorizedError(error as Error)) {
-      toast({
-        title: "Não autorizado",
-        description: "Você foi desconectado. Fazendo login novamente...",
-        variant: "destructive",
-      });
+      toast({ title: 'Sessão finalizada', description: 'Faça login novamente para continuar.', variant: 'destructive' });
       setTimeout(() => {
-        window.location.href = "/api/login";
+  window.location.href = "/login";
       }, 500);
     }
   }, [error, toast]);

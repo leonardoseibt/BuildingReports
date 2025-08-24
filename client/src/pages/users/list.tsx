@@ -4,6 +4,7 @@ import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { useAuthRedirect } from "@/hooks/useAuthRedirect";
 import UserForm from "@/components/users/user-form";
 import {
   Dialog,
@@ -69,16 +70,7 @@ export default function UsersList() {
   const pageSize = 15;
   const [page, setPage] = useState(1);
 
-  useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      toast({
-        title: "Não autorizado",
-        description: "Você não está logado. Fazendo login...",
-        variant: "destructive",
-      });
-      setTimeout(() => (window.location.href = "/api/login"), 500);
-    }
-  }, [isAuthenticated, isLoading, toast]);
+  useAuthRedirect();
 
   const { data: users = [], isFetching, isLoading: isLoadingUsers } = useQuery<User[]>({
     queryKey: ["/api/users"],

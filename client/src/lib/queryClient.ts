@@ -38,7 +38,7 @@ async function throwIfResNotOk(res: Response) {
     const text = (await res.text()) || res.statusText;
     if (res.status === 440) {
       // sessão expirada -> feedback e redirect
-      toast({ title: 'Sessão expirada', description: 'Faça login novamente.' , variant: 'destructive' });
+  toast({ title: 'Sessão finalizada', description: 'Faça login novamente para continuar.', variant: 'destructive' });
       setTimeout(() => { window.location.href = '/login'; }, 150);
     }
     throw new Error(`${res.status}: ${text}`);
