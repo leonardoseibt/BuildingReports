@@ -11,9 +11,12 @@ import {
   LogOut,
   Cog,
   IdCard,
-  Layers2,
+  LayoutGrid,
   Volume2,
-  Shield,
+  AlertTriangle,
+  Hammer,
+  ListChecks,
+  Target,
   Map,
   Sun,
   ChevronRight,
@@ -272,7 +275,7 @@ export default function Sidebar() {
                     <div className="pl-2 space-y-0.5">
                       <NavLink
                         href="/typologies"
-                        icon={Layers2}
+                        icon={LayoutGrid}
                         label="Tipos de Uso"
                         isActive={location === '/typologies'}
                         testId="nav-tipos-de-uso"
@@ -286,28 +289,28 @@ export default function Sidebar() {
                       />
                       <NavLink
                         href="/aggressiveness-classes"
-                        icon={Shield}
+                        icon={AlertTriangle}
                         label="Classes de Agressividade"
                         isActive={location === '/aggressiveness-classes'}
                         testId="nav-classes-de-agressividade"
                       />
                       <NavLink
                         href="/constructive-systems"
-                        icon={Layers2}
+                        icon={Hammer}
                         label="Sistemas Construtivos"
                         isActive={location === '/constructive-systems'}
                         testId="nav-sistemas-construtivos"
                       />
                       <NavLink
                         href="/requirements"
-                        icon={Layers2}
+                        icon={ListChecks}
                         label="Requisitos"
                         isActive={location === '/requirements'}
                         testId="nav-requisitos"
                       />
                       <NavLink
                         href="/criteria"
-                        icon={Layers2}
+                        icon={Target}
                         label="Critérios"
                         isActive={location === '/criteria'}
                         testId="nav-criterios"
