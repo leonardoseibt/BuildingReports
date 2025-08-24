@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./auth";
 import { insertBuildingSchema, updateBuildingSchema, insertStructuralSystemSchema, insertSealingSystemSchema, insertRoofingSystemSchema, insertPerformanceEvaluationSchema, insertReportSchema, insertTechnicianSchema, updateTechnicianSchema, insertUserSchema, updateUserSchema, insertTypologySchema, insertNoiseClassSchema, insertAggressivenessClassSchema, insertBioclimaticZoneSchema, insertBioclimaticZoneCoverageSchema, insertStateSchema, insertCitySchema, insertConstructiveSystemSchema, insertRequirementSchema, insertCriterionSchema, insertAnalysisSchema } from "@shared/schema";
+import { insertParameterSchema } from '@shared/schema';
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 
@@ -776,6 +777,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete('/api/analyses/:id', isAuthenticated, async (req, res) => {
     try { const id = Number(req.params.id); const ok = await storage.deleteAnalysis(id); res.json({ ok }); }
     catch { res.status(500).json({ message: 'Failed to delete analysis' }); }
+  });
+
+  // Parameters endpoints
+  app.get('/api/parameters', isAuthenticated, async (req, res) => {
+    try {
+      const analysisId = req.query.analysisId ? Number(req.query.analysisId) : undefined;
+      const criterionId = req.query.criterionId ? Number(req.query.criterionId) : undefined;
+      const rows = await storage.listParameters(analysisId, criterionId);
+      res.json(rows);
+    } catch {
+      res.status(500).json({ message: 'Failed to fetch parameters' });
+    }
+  });
+  app.post('/api/parameters', isAuthenticated, express.json(), async (req, res) => {
+    try {
+      const data = insertParameterSchema.parse(req.body);
+      const row = await storage.createParameter(data as any);
+      res.json(row);
+    } catch (error) {
+      if (error instanceof z.ZodError) return res.status(400).json({ message: 'Validation error', errors: error.errors });
+      res.status(500).json({ message: 'Failed to create parameter' });
+    }
+  });
+  app.put('/api/parameters/:id', isAuthenticated, express.json(), async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      const data = insertParameterSchema.partial().parse(req.body);
+      const row = await storage.updateParameter(id, data as any);
+      res.json(row);
+    } catch (error) {
+      if (error instanceof z.ZodError) return res.status(400).json({ message: 'Validation error', errors: error.errors });
+      res.status(500).json({ message: 'Failed to update parameter' });
+    }
+  });
+  app.delete('/api/parameters/:id', isAuthenticated, async (req, res) => {
+    try { const id = Number(req.params.id); const ok = await storage.deleteParameter(id); res.json({ ok }); }
+    catch { res.status(500).json({ message: 'Failed to delete parameter' }); }
   });
 
   const httpServer = createServer(app);

@@ -203,6 +203,23 @@ export const analyses = pgTable("analyses", {
   uniqueIndex("uq_analyses_criterion_code").on(table.criterionId, table.code),
 ]);
 
+// Parameters (Parâmetros) belonging to an Analysis
+export const parameters = pgTable("parameters", {
+  id: integer("id").generatedAlwaysAsIdentity().primaryKey(),
+  analysisId: integer("analysis_id").references(() => analyses.id).notNull(),
+  label: varchar("label", { length: 255 }).notNull(), // descrição
+  minimumValue: text("minimum_value"),
+  intermediateValue: text("intermediate_value"),
+  superiorValue: text("superior_value"),
+  unit: varchar("unit", { length: 32 }),
+  notes: text("notes"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_parameters_analysis").on(table.analysisId),
+]);
+
 // Structural Systems
 export const structuralSystems = pgTable("structural_systems", {
   id: integer("id").generatedAlwaysAsIdentity().primaryKey(),
@@ -376,6 +393,21 @@ export const techniciansRelations = relations(technicians, ({ one }) => ({
   }),
 }));
 
+export const analysesRelations = relations(analyses, ({ many, one }) => ({
+  criterion: one(criteria, {
+    fields: [analyses.criterionId],
+    references: [criteria.id],
+  }),
+  parameters: many(parameters),
+}));
+
+export const parametersRelations = relations(parameters, ({ one }) => ({
+  analysis: one(analyses, {
+    fields: [parameters.analysisId],
+    references: [analyses.id],
+  }),
+}));
+
 // Insert Schemas
 // Padrão de validação: Mensagens em PT-BR para todos os cadastros.
 // Ao criar novos schemas, utilize min/length/refine/superRefine com mensagens legíveis em português.
@@ -461,6 +493,12 @@ export const insertConstructiveSystemSchema = createInsertSchema(constructiveSys
 export const insertRequirementSchema = createInsertSchema(requirements);
 export const insertCriterionSchema = createInsertSchema(criteria);
 export const insertAnalysisSchema = createInsertSchema(analyses);
+export const insertParameterSchema = createInsertSchema(parameters)
+  .extend({
+    minimumValue: decimalInput.optional(),
+    intermediateValue: decimalInput.optional(),
+    superiorValue: decimalInput.optional(),
+  });
 
 export const insertBioclimaticZoneSchema = createInsertSchema(bioclimaticZones);
 export const insertStateSchema = createInsertSchema(states);
@@ -517,6 +555,8 @@ export type Criterion = typeof criteria.$inferSelect;
 export type InsertCriterion = z.infer<typeof insertCriterionSchema>;
 export type Analysis = typeof analyses.$inferSelect;
 export type InsertAnalysis = z.infer<typeof insertAnalysisSchema>;
+export type Parameter = typeof parameters.$inferSelect;
+export type InsertParameter = z.infer<typeof insertParameterSchema>;
 export type BioclimaticZone = typeof bioclimaticZones.$inferSelect;
 export type InsertBioclimaticZone = z.infer<typeof insertBioclimaticZoneSchema>;
 export type BioclimaticZoneCoverage = typeof bioclimaticZoneCoverages.$inferSelect;

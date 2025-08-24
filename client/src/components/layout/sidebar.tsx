@@ -323,6 +323,13 @@ export default function Sidebar() {
                         isActive={location === '/analyses'}
                         testId="nav-analises"
                       />
+                      <NavLink
+                        href="/parameters"
+                        icon={ListChecks}
+                        label="Parâmetros"
+                        isActive={location === '/parameters'}
+                        testId="nav-parametros"
+                      />
                     </div>
                   )}
                 </div>

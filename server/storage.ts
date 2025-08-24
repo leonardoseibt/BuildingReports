@@ -39,6 +39,9 @@ import {
   analyses,
   type Analysis,
   type InsertAnalysis,
+  parameters,
+  type Parameter,
+  type InsertParameter,
   technicians,
   typologies,
   noiseClasses,
@@ -159,6 +162,11 @@ export interface IStorage {
   createAnalysis(item: InsertAnalysis): Promise<Analysis>;
   updateAnalysis(id: number, item: Partial<InsertAnalysis>): Promise<Analysis>;
   deleteAnalysis(id: number): Promise<boolean>;
+  // Parameters
+  listParameters(analysisId?: number, criterionId?: number): Promise<Parameter[]>;
+  createParameter(item: InsertParameter): Promise<Parameter>;
+  updateParameter(id: number, item: Partial<InsertParameter>): Promise<Parameter>;
+  deleteParameter(id: number): Promise<boolean>;
 
 
   // Bioclimatic zones
@@ -841,6 +849,47 @@ export class DatabaseStorage implements IStorage {
   async deleteAnalysis(id: number): Promise<boolean> {
     try {
       const deleted = await db.delete(analyses).where(eq(analyses.id, id)).returning({ id: analyses.id });
+      return deleted.length > 0;
+    } catch (err: any) {
+      if (err?.code === '23503') { const e = new Error('Não é possível excluir: existem registros relacionados.'); (e as any).status = 409; throw e; }
+      throw err;
+    }
+  }
+
+  // Parameters
+  async listParameters(analysisId?: number, criterionId?: number): Promise<Parameter[]> {
+    let rows: any[] = [];
+    if (analysisId) {
+      rows = await db.select().from(parameters).where(eq(parameters.analysisId, analysisId));
+    } else if (criterionId) {
+      // join via analyses to filter by criterion
+      rows = await db.execute(sql`SELECT p.* FROM parameters p JOIN analyses a ON a.id = p.analysis_id WHERE a.criterion_id = ${criterionId}`) as any;
+    } else {
+      rows = await db.select().from(parameters);
+    }
+    rows.sort((a: any, b: any) => ptCollator.compare(String(a.label ?? ''), String(b.label ?? '')));
+    return rows as any;
+  }
+  async createParameter(item: InsertParameter): Promise<Parameter> {
+    const [row] = await db.insert(parameters).values({
+      analysisId: (item as any).analysisId,
+      label: (item as any).label,
+      minimumValue: (item as any).minimumValue,
+      intermediateValue: (item as any).intermediateValue,
+      superiorValue: (item as any).superiorValue,
+      unit: (item as any).unit,
+      notes: (item as any).notes,
+      isActive: (item as any).isActive ?? true,
+    }).returning();
+    return row as Parameter;
+  }
+  async updateParameter(id: number, item: Partial<InsertParameter>): Promise<Parameter> {
+    const [row] = await db.update(parameters).set({ ...(item as any), updatedAt: new Date() }).where(eq(parameters.id, id)).returning();
+    return row as Parameter;
+  }
+  async deleteParameter(id: number): Promise<boolean> {
+    try {
+      const deleted = await db.delete(parameters).where(eq(parameters.id, id)).returning({ id: parameters.id });
       return deleted.length > 0;
     } catch (err: any) {
       if (err?.code === '23503') { const e = new Error('Não é possível excluir: existem registros relacionados.'); (e as any).status = 409; throw e; }
