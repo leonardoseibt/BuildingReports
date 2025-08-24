@@ -39,6 +39,8 @@
   ,"db:seed:constructive-systems": "tsx scripts/run-sql.ts scripts/sql/20250823_seed_constructive_systems.sql"
   ,"db:migrate:requirements": "tsx scripts/run-sql.ts scripts/sql/20250823_create_requirements.sql"
   ,"db:migrate:performance-evaluations": "tsx scripts/run-sql.ts scripts/sql/20250824_create_performance_evaluations.sql"
+  ,"check:missing-cities": "tsx scripts/check/missing-cities.ts"
+  ,"check:cities-coverages": "tsx scripts/check/cities-without-coverages.ts"
   ,"test": "cross-env NODE_ENV=test tsx --test server/index.test.ts"
   },
   "dependencies": {
