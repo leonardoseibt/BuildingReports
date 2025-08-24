@@ -4,8 +4,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Building2, MoreHorizontal } from "lucide-react";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Building2, Pencil, FileText } from "lucide-react";
+import { useLocation } from "wouter";
 import type { Building } from "@shared/schema";
 
 export default function RecentProjects() {
@@ -40,6 +40,7 @@ export default function RecentProjects() {
   };
 
   const recentBuildings = buildings?.slice(0, 3) || [];
+  const [, setLocation] = useLocation();
 
   return (
     <Card className="shadow-sm border-slate-200" data-testid="card-recent-projects">
@@ -107,7 +108,7 @@ export default function RecentProjects() {
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center space-x-3">
+                <div className="flex items-center gap-2">
                   <Badge 
                     variant="secondary" 
                     className={getStatusColor(building.createdAt!)}
@@ -115,18 +116,28 @@ export default function RecentProjects() {
                   >
                     {getStatusText(building.createdAt!)}
                   </Badge>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm" className="text-slate-400 hover:text-slate-600" data-testid={`button-project-menu-${building.id}`}>
-                        <MoreHorizontal className="w-4 h-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem>Ver Detalhes</DropdownMenuItem>
-                      <DropdownMenuItem>Editar</DropdownMenuItem>
-                      <DropdownMenuItem>Gerar Relatório</DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label="Editar edificação"
+                    title="Editar"
+                    onClick={() => setLocation(`/buildings?edit=${building.id}`)}
+                    data-testid={`button-edit-building-${building.id}`}
+                    className="text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+                  >
+                    <Pencil className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label="Gerar relatório (em breve)"
+                    title="Relatório (em breve)"
+                    disabled
+                    data-testid={`button-report-building-${building.id}`}
+                    className="text-slate-500 hover:text-slate-700 hover:bg-slate-100 disabled:opacity-40"
+                  >
+                    <FileText className="w-4 h-4" />
+                  </Button>
                 </div>
               </div>
             ))}

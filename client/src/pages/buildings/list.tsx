@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useLocation } from "wouter";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -47,6 +48,7 @@ export default function BuildingList() {
   const [page, setPage] = useState(1);
 
   useAuthRedirect();
+  const [location, setLocation] = useLocation();
 
   const { data: buildings = [], isLoading, isFetching, error } = useQuery<Building[]>({
     queryKey: ['/api/buildings'],
@@ -172,6 +174,22 @@ export default function BuildingList() {
   if (!isAuthenticated) {
     return null;
   }
+
+  // Abrir edição direta via query param ?edit=ID
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    const editId = url.searchParams.get('edit');
+    if (editId && buildings.length) {
+      const bId = Number(editId);
+      const b = buildings.find(x => x.id === bId);
+      if (b) {
+        (async () => { await prefetchMasters(); setEditBuilding(b); setFormKey(k => k + 1); setOpen(true); })();
+        // Limpa o parâmetro para evitar reabrir em futuras navegações/back
+        url.searchParams.delete('edit');
+        window.history.replaceState({}, '', url.pathname + (url.search ? '?' + url.searchParams.toString() : ''));
+      }
+    }
+  }, [buildings]);
 
   const getStatusColor = (createdAt: string | Date) => {
     const ts = typeof createdAt === 'string' ? new Date(createdAt).getTime() : createdAt.getTime();
