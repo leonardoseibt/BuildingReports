@@ -171,13 +171,6 @@ export default function Sidebar() {
             {open.operacoes && (
               <>
                 <NavLink
-                  href="/buildings"
-                  icon={Building2}
-                  label="Edificações"
-                  isActive={location === '/buildings'}
-                  testId="nav-edificações"
-                />
-                <NavLink
                   href="/reports"
                   icon={FileText}
                   label="Relatórios"
@@ -206,13 +199,20 @@ export default function Sidebar() {
                     className="px-0 w-full text-[11px] text-slate-500 font-medium flex items-center justify-between mb-1"
                     onClick={() => toggleSection('cadPessoas')}
                   >
-                    <span>Pessoas e Profissionais</span>
+                    <span>Edificações e Profissionais</span>
                     <ChevronRight
                       className={cn("w-4 h-4 transition-transform", open.cadPessoas && "rotate-90")}
                     />
                   </button>
                   {open.cadPessoas && (
-                    <div className="pl-2">
+                    <div className="pl-2 space-y-0.5">
+                      <NavLink
+                        href="/buildings"
+                        icon={Building2}
+                        label="Edificações"
+                        isActive={location === '/buildings'}
+                        testId="nav-edificações"
+                      />
                       <NavLink
                         href="/technicians"
                         icon={IdCard}

@@ -290,32 +290,59 @@ function CoveragesPanel({ zone, onClose }: { zone: BioclimaticZone; onClose: () 
 
   const addMutation = useMutation({
     mutationFn: async (payload: { cityId: number }) => {
-      const res = await fetch(`/api/bioclimatic-zones/${zone.id}/coverages`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-      if (!res.ok) throw new Error(await res.text());
-      return res.json();
+      return apiRequest('POST', `/api/bioclimatic-zones/${zone.id}/coverages`, payload);
     },
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["/api/bioclimatic-zones", zone.id, "coverages"] }); toast({ title: 'Abrangência adicionada' }); },
-    onError: () => { toast({ title: 'Erro', description: 'Falha ao adicionar abrangência', variant: 'destructive' }); },
+    onMutate: async (payload) => {
+      await queryClient.cancelQueries({ queryKey: ["/api/bioclimatic-zones", zone.id, "coverages"] });
+      const prev = queryClient.getQueryData<any[]>(["/api/bioclimatic-zones", zone.id, "coverages"]) || [];
+      // Optimistic placeholder (state/city names filled after refetch)
+      const optimistic = { id: Math.random() * -1, zoneId: zone.id, cityId: payload.cityId, stateId: selectedStateId!, state: states.find(s=>s.id===selectedStateId)?.code ?? '', city: cities.find(c=>c.id===payload.cityId)?.name ?? '' };
+      queryClient.setQueryData(["/api/bioclimatic-zones", zone.id, "coverages"], [...prev, optimistic]);
+      return { prev };
+    },
+    onError: (_e, _vars, ctx) => {
+      if (ctx?.prev) queryClient.setQueryData(["/api/bioclimatic-zones", zone.id, "coverages"], ctx.prev);
+      toast({ title: 'Erro', description: 'Falha ao adicionar abrangência', variant: 'destructive' });
+    },
+    onSuccess: () => { toast({ title: 'Abrangência adicionada' }); },
+    onSettled: () => { queryClient.invalidateQueries({ queryKey: ["/api/bioclimatic-zones", zone.id, "coverages"] }); }
   });
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, payload }: { id: number; payload: { cityId?: number } }) => {
-      const res = await fetch(`/api/bioclimatic-zones/coverages/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-      if (!res.ok) throw new Error(await res.text());
-      return res.json();
+      return apiRequest('PUT', `/api/bioclimatic-zones/coverages/${id}`, payload);
     },
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["/api/bioclimatic-zones", zone.id, "coverages"] }); toast({ title: 'Abrangência atualizada' }); setEditingId(null); },
-    onError: () => { toast({ title: 'Erro', description: 'Falha ao atualizar abrangência', variant: 'destructive' }); },
+    onMutate: async ({ id, payload }) => {
+      await queryClient.cancelQueries({ queryKey: ["/api/bioclimatic-zones", zone.id, "coverages"] });
+      const prev = queryClient.getQueryData<any[]>(["/api/bioclimatic-zones", zone.id, "coverages"]) || [];
+      const next = prev.map(c => c.id === id ? { ...c, cityId: payload.cityId ?? c.cityId, city: (cities.find(x=>x.id===payload.cityId!)?.name) ?? c.city } : c);
+      queryClient.setQueryData(["/api/bioclimatic-zones", zone.id, "coverages"], next);
+      return { prev };
+    },
+    onError: (_e, _vars, ctx) => {
+      if (ctx?.prev) queryClient.setQueryData(["/api/bioclimatic-zones", zone.id, "coverages"], ctx.prev);
+      toast({ title: 'Erro', description: 'Falha ao atualizar abrangência', variant: 'destructive' });
+    },
+    onSuccess: () => { toast({ title: 'Abrangência atualizada' }); setEditingId(null); },
+    onSettled: () => { queryClient.invalidateQueries({ queryKey: ["/api/bioclimatic-zones", zone.id, "coverages"] }); }
   });
 
   const deleteMutation = useMutation({
     mutationFn: async (coverageId: number) => {
-      const res = await fetch(`/api/bioclimatic-zones/coverages/${coverageId}`, { method: 'DELETE' });
-      if (!res.ok) throw new Error(await res.text());
-      return true;
+      return apiRequest('DELETE', `/api/bioclimatic-zones/coverages/${coverageId}`);
     },
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["/api/bioclimatic-zones", zone.id, "coverages"] }); toast({ title: 'Abrangência removida' }); },
-    onError: () => { toast({ title: 'Erro', description: 'Falha ao remover abrangência', variant: 'destructive' }); },
+    onMutate: async (coverageId: number) => {
+      await queryClient.cancelQueries({ queryKey: ["/api/bioclimatic-zones", zone.id, "coverages"] });
+      const prev = queryClient.getQueryData<any[]>(["/api/bioclimatic-zones", zone.id, "coverages"]) || [];
+      queryClient.setQueryData(["/api/bioclimatic-zones", zone.id, "coverages"], prev.filter(c => c.id !== coverageId));
+      return { prev };
+    },
+    onError: (_e, _vars, ctx) => {
+      if (ctx?.prev) queryClient.setQueryData(["/api/bioclimatic-zones", zone.id, "coverages"], ctx.prev);
+      toast({ title: 'Erro', description: 'Falha ao remover abrangência', variant: 'destructive' });
+    },
+    onSuccess: () => { toast({ title: 'Abrangência removida' }); },
+    onSettled: () => { queryClient.invalidateQueries({ queryKey: ["/api/bioclimatic-zones", zone.id, "coverages"] }); }
   });
 
   const [selectedCityId, setSelectedCityId] = useState<number | null>(null);
