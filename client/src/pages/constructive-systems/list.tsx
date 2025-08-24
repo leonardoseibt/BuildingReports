@@ -7,10 +7,12 @@ import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Layers2, Plus, Loader2, Pencil, Trash2, Search, ArrowUp, ArrowDown } from "lucide-react";
+import { ActiveToggleButton } from "@/components/common/active-toggle-button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PaginationSimple as Pagination } from "@/components/ui/pagination";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import type { ConstructiveSystem } from "@shared/schema";
+import { apiRequest } from "@/lib/queryClient";
 import ConstructiveSystemForm from "@/components/constructive-systems/constructive-system-form";
 
 export default function ConstructiveSystemsList() {
@@ -174,6 +176,7 @@ export default function ConstructiveSystemsList() {
                           <Button variant="ghost" size="icon" onClick={() => { setEditItem(t); setFormKey(k => k + 1); setOpen(true); }}>
                             <Pencil className="h-4 w-4" />
                           </Button>
+                          <ActiveToggleButton id={t.id} resource="constructive-systems" isActive={(t as any).isActive} queryKey={["/api/constructive-systems"]} entityLabel="Sistema" />
                           <Button variant="ghost" size="icon" className="text-rose-600 hover:bg-rose-50 hover:text-rose-700" onClick={() => askDelete(t)} disabled={deleteMutation.isPending && selectedItem?.id === t.id}>
                             <Trash2 className="h-4 w-4" />
                           </Button>

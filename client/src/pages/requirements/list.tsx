@@ -7,10 +7,12 @@ import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Layers2, Plus, Loader2, Pencil, Trash2, Search, ArrowUp, ArrowDown } from "lucide-react";
+import { ActiveToggleButton } from "@/components/common/active-toggle-button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PaginationSimple as Pagination } from "@/components/ui/pagination";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import type { Requirement } from "@shared/schema";
+import { apiRequest } from "@/lib/queryClient";
 import RequirementForm from "@/components/requirements/requirement-form";
 
 export default function RequirementsList() {
@@ -174,6 +176,7 @@ export default function RequirementsList() {
                           <Button variant="ghost" size="icon" onClick={() => { setEditItem(t); setFormKey(k => k + 1); setOpen(true); }}>
                             <Pencil className="h-4 w-4" />
                           </Button>
+                          <ActiveToggleButton id={t.id} resource="requirements" isActive={(t as any).isActive} queryKey={["/api/requirements"]} entityLabel="Requisito" />
                           <Button variant="ghost" size="icon" className="text-rose-600 hover:bg-rose-50 hover:text-rose-700" onClick={() => askDelete(t)} disabled={deleteMutation.isPending && selectedItem?.id === t.id}>
                             <Trash2 className="h-4 w-4" />
                           </Button>

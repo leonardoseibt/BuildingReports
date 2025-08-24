@@ -7,11 +7,13 @@ import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Globe2, Plus, Loader2, Pencil, Trash2, MapPin, X, Search, ArrowUp, ArrowDown } from "lucide-react";
+import { ActiveToggleButton } from "@/components/common/active-toggle-button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { NotchedField } from "@/components/ui/notched-field";
 import { PaginationSimple as Pagination } from "@/components/ui/pagination";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import type { BioclimaticZone } from "@shared/schema";
+import { apiRequest } from "@/lib/queryClient";
 import { ZoneForm } from "@/components/bioclimatic-zones";
 
 export default function BioclimaticZonesList() {
@@ -188,10 +190,10 @@ export default function BioclimaticZonesList() {
               <Table className="table-fixed">
                 <TableHeader>
                   <TableRow className="bg-slate-100/60">
-                    <TableHead onClick={() => toggleSort('code')} aria-sort={sortBy === 'code' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} className="w-[12%] cursor-pointer select-none">Código {sortBy === 'code' && (sortDir === 'asc' ? <ArrowUp className="inline-block w-3 h-3 ml-1 opacity-70" /> : <ArrowDown className="inline-block w-3 h-3 ml-1 opacity-70" />)}</TableHead>
-                    <TableHead onClick={() => toggleSort('label')} aria-sort={sortBy === 'label' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} className="w-[40%] cursor-pointer select-none">Descrição {sortBy === 'label' && (sortDir === 'asc' ? <ArrowUp className="inline-block w-3 h-3 ml-1 opacity-70" /> : <ArrowDown className="inline-block w-3 h-3 ml-1 opacity-70" />)}</TableHead>
-                    <TableHead onClick={() => toggleSort('isActive')} aria-sort={sortBy === 'isActive' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} className="w-[10%] cursor-pointer select-none">Ativa {sortBy === 'isActive' && (sortDir === 'asc' ? <ArrowUp className="inline-block w-3 h-3 ml-1 opacity-70" /> : <ArrowDown className="inline-block w-3 h-3 ml-1 opacity-70" />)}</TableHead>
-                    <TableHead className="w-[38%] text-right">Ações</TableHead>
+                    <TableHead onClick={() => toggleSort('code')} aria-sort={sortBy === 'code' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} className="w-[10%] cursor-pointer select-none">Código {sortBy === 'code' && (sortDir === 'asc' ? <ArrowUp className="inline-block w-3 h-3 ml-1 opacity-70" /> : <ArrowDown className="inline-block w-3 h-3 ml-1 opacity-70" />)}</TableHead>
+                    <TableHead onClick={() => toggleSort('label')} aria-sort={sortBy === 'label' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} className="w-[55%] cursor-pointer select-none">Descrição {sortBy === 'label' && (sortDir === 'asc' ? <ArrowUp className="inline-block w-3 h-3 ml-1 opacity-70" /> : <ArrowDown className="inline-block w-3 h-3 ml-1 opacity-70" />)}</TableHead>
+                    <TableHead onClick={() => toggleSort('isActive')} aria-sort={sortBy === 'isActive' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} className="w-[7%] cursor-pointer select-none text-center">Ativa {sortBy === 'isActive' && (sortDir === 'asc' ? <ArrowUp className="inline-block w-3 h-3 ml-1 opacity-70" /> : <ArrowDown className="inline-block w-3 h-3 ml-1 opacity-70" />)}</TableHead>
+                    <TableHead className="w-[28%] text-right">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -199,12 +201,13 @@ export default function BioclimaticZonesList() {
                     <TableRow key={z.id}>
                       <TableCell className="font-medium">{z.code}</TableCell>
                       <TableCell>{z.label}</TableCell>
-                      <TableCell>{(z as any).isActive ? 'Sim' : 'Não'}</TableCell>
+                      <TableCell className="text-center">{(z as any).isActive ? 'Sim' : 'Não'}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1.5">
                           <Button variant="ghost" size="sm" onClick={() => { setCoveragesFor(z); }}>
                             <MapPin className="h-4 w-4 mr-1" /> Abrangências
                           </Button>
+                          <ActiveToggleButton id={z.id} resource="bioclimatic-zones" isActive={(z as any).isActive} queryKey={["/api/bioclimatic-zones"]} entityLabel="Zona" />
                           <Button variant="ghost" size="icon" onClick={() => { setEditItem(z); setFormKey(k => k + 1); setOpen(true); }}>
                             <Pencil className="h-4 w-4" />
                           </Button>
