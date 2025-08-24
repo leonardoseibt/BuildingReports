@@ -4,6 +4,8 @@ import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { useAuthRedirect } from "@/hooks/useAuthRedirect";
+import { apiRequest } from '@/lib/queryClient';
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import FormHeader from "@/components/ui/form-header";
 import { Input } from "@/components/ui/input";
@@ -68,13 +70,8 @@ export default function CitiesList() {
   }
 
 
-  useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-  toast({ title: 'Sessão finalizada', description: 'Faça login novamente para continuar.', variant: 'destructive' });
-  toast({ title: 'Sessão finalizada', description: 'Faça login novamente para continuar.', variant: 'destructive' });
-  setTimeout(() => (window.location.href = "/login"), 400);
-    }
-  }, [isAuthenticated, isLoading, toast]);
+  // Centraliza redirecionamento / toast de sessão expirada
+  useAuthRedirect();
 
   const { data: states = [] } = useQuery<StateRow[]>({ queryKey: ["/api/states"], enabled: isAuthenticated });
   const { data: cities = [], isFetching, isLoading: isLoadingItems } = useQuery<CityRow[]>({ queryKey: ["/api/cities"], enabled: isAuthenticated });
@@ -123,8 +120,8 @@ export default function CitiesList() {
   };
 
   async function deleteRequest(id: number) {
-    const res = await fetch(`/api/cities/${id}`, { method: 'DELETE' });
-    if (!res.ok) throw new Error(await res.text());
+    const res = await apiRequest('DELETE', `/api/cities/${id}`);
+    await res.json().catch(() => ({}));
     return true;
   }
   const deleteMutation = useMutation({
@@ -161,16 +158,14 @@ export default function CitiesList() {
       } as any;
       if (!body.stateId) throw new Error('Selecione uma UF');
       if (editItem) {
-        const res = await fetch(`/api/cities/${editItem.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-        if (!res.ok) throw new Error(await res.text());
+        const res = await apiRequest('PUT', `/api/cities/${editItem.id}`, body);
         return res.json();
       }
-      const res = await fetch(`/api/cities`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-      if (!res.ok) throw new Error(await res.text());
+      const res = await apiRequest('POST', `/api/cities`, body);
       return res.json();
     },
     onSuccess: () => {
-  setOpen(false); setEditItem(null); resetFormFields();
+      setOpen(false); setEditItem(null); resetFormFields();
       queryClient.invalidateQueries({ queryKey: ["/api/cities"] });
       toast({ title: 'Município salvo' });
     },

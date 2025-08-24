@@ -4,6 +4,8 @@ import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { useAuthRedirect } from "@/hooks/useAuthRedirect";
+import { apiRequest } from '@/lib/queryClient';
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import FormHeader from "@/components/ui/form-header";
 import { Input } from "@/components/ui/input";
@@ -31,13 +33,7 @@ export default function StatesList() {
   const pageSize = 15;
   const [page, setPage] = useState(1);
 
-  useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-  toast({ title: 'Sessão finalizada', description: 'Faça login novamente para continuar.', variant: 'destructive' });
-  toast({ title: 'Sessão finalizada', description: 'Faça login novamente para continuar.', variant: 'destructive' });
-  setTimeout(() => (window.location.href = "/login"), 400);
-    }
-  }, [isAuthenticated, isLoading, toast]);
+  useAuthRedirect();
 
   const { data: items = [], isFetching, isLoading: isLoadingItems } = useQuery<StateRow[]>({ queryKey: ["/api/states"], enabled: isAuthenticated });
 
@@ -74,8 +70,8 @@ export default function StatesList() {
   };
 
   async function deleteRequest(id: number) {
-    const res = await fetch(`/api/states/${id}`, { method: 'DELETE' });
-    if (!res.ok) throw new Error(await res.text());
+    const res = await apiRequest('DELETE', `/api/states/${id}`);
+    await res.json().catch(() => ({}));
     return true;
   }
   const deleteMutation = useMutation({
@@ -103,14 +99,12 @@ export default function StatesList() {
 
   const saveMutation = useMutation({
     mutationFn: async () => {
-  const body = { code: code.trim().toUpperCase(), name: name.trim(), region: region.trim() || undefined };
+      const body = { code: code.trim().toUpperCase(), name: name.trim(), region: region.trim() || undefined };
       if (editItem) {
-        const res = await fetch(`/api/states/${editItem.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-        if (!res.ok) throw new Error(await res.text());
+        const res = await apiRequest('PUT', `/api/states/${editItem.id}`, body);
         return res.json();
       }
-      const res = await fetch(`/api/states`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-      if (!res.ok) throw new Error(await res.text());
+      const res = await apiRequest('POST', `/api/states`, body);
       return res.json();
     },
     onSuccess: () => {
