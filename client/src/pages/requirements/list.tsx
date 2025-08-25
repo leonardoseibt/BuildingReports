@@ -13,6 +13,7 @@ import { PaginationSimple as Pagination } from "@/components/ui/pagination";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import type { Requirement } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
+import { comparePt } from "@/lib/utils";
 import RequirementForm from "@/components/requirements/requirement-form";
 
 export default function RequirementsList() {
@@ -32,7 +33,6 @@ export default function RequirementsList() {
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
-  toast({ title: 'Sessão finalizada', description: 'Faça login novamente para continuar.', variant: 'destructive' });
   toast({ title: 'Sessão finalizada', description: 'Faça login novamente para continuar.', variant: 'destructive' });
   setTimeout(() => (window.location.href = "/login"), 400);
     }
@@ -65,7 +65,7 @@ export default function RequirementsList() {
       } else if (sortBy === 'isActive') {
         cmp = Number((a as any).isActive) - Number((b as any).isActive);
       } else {
-        cmp = String(av ?? '').localeCompare(String(bv ?? ''), 'pt-BR', { sensitivity: 'base' });
+        cmp = comparePt(av, bv);
       }
       return sortDir === 'asc' ? cmp : -cmp;
     });

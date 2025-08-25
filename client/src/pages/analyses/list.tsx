@@ -13,6 +13,7 @@ import { PaginationSimple as Pagination } from '@/components/ui/pagination';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import type { Analysis, Criterion } from '@shared/schema';
 import { apiRequest } from '@/lib/queryClient';
+import { comparePt } from '@/lib/utils';
 import AnalysisForm from '@/components/analyses/analysis-form';
 
 export default function AnalysesList() {
@@ -33,7 +34,6 @@ export default function AnalysesList() {
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
-  toast({ title: 'Sessão finalizada', description: 'Faça login novamente para continuar.', variant: 'destructive' });
   toast({ title: 'Sessão finalizada', description: 'Faça login novamente para continuar.', variant: 'destructive' });
   setTimeout(() => (window.location.href = '/login'), 400);
     }
@@ -74,7 +74,7 @@ export default function AnalysesList() {
       } else if (sortBy === 'criterionId') {
         cmp = (a.criterionId ?? 0) - (b.criterionId ?? 0);
       } else {
-        cmp = String(av ?? '').localeCompare(String(bv ?? ''), 'pt-BR', { sensitivity: 'base' });
+        cmp = comparePt(av, bv);
       }
       return sortDir === 'asc' ? cmp : -cmp;
     });

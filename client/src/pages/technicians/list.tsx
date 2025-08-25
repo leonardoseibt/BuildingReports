@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { comparePt } from '@/lib/utils';
 import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
 import { useAuth } from "@/hooks/useAuth";
@@ -123,9 +124,9 @@ export default function TechniciansList() {
       } else if (sortBy === 'creaCau') {
         const aReg = `${a.creaCau ?? ''} ${a.licenseState ?? ''}`;
         const bReg = `${b.creaCau ?? ''} ${b.licenseState ?? ''}`;
-        cmp = aReg.localeCompare(bReg, 'pt-BR', { sensitivity: 'base' });
+  cmp = comparePt(aReg, bReg);
       } else {
-        cmp = String(av ?? '').localeCompare(String(bv ?? ''), 'pt-BR', { sensitivity: 'base' });
+  cmp = comparePt(av, bv);
       }
       return sortDir === 'asc' ? cmp : -cmp;
     });

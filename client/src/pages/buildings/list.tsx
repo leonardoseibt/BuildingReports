@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "wouter";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { comparePt } from '@/lib/utils';
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { useAuthRedirect } from "@/hooks/useAuthRedirect";
@@ -121,15 +122,15 @@ export default function BuildingList() {
       } else if (sortBy === 'technician') {
         const an = a.technicianId ? (techNameById[a.technicianId] ?? '') : '';
         const bn = b.technicianId ? (techNameById[b.technicianId] ?? '') : '';
-        cmp = an.localeCompare(bn, 'pt-BR', { sensitivity: 'base' });
+  cmp = comparePt(an, bn);
       } else if (sortBy === 'location') {
         const al = `${a.bioclimaticZone || ''} ${(a as any).typologyLabel || (a as any).typologyCode || ''}`;
         const bl = `${b.bioclimaticZone || ''} ${(b as any).typologyLabel || (b as any).typologyCode || ''}`;
-        cmp = al.localeCompare(bl, 'pt-BR', { sensitivity: 'base' });
+  cmp = comparePt(al, bl);
       } else {
         const av = (a as any)[sortBy];
         const bv = (b as any)[sortBy];
-        cmp = String(av ?? '').localeCompare(String(bv ?? ''), 'pt-BR', { sensitivity: 'base' });
+  cmp = comparePt(av, bv);
       }
       return sortDir === 'asc' ? cmp : -cmp;
     });

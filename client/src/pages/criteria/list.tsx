@@ -13,6 +13,7 @@ import { PaginationSimple as Pagination } from "@/components/ui/pagination";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import type { Criterion } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
+import { comparePt } from "@/lib/utils";
 import CriterionForm from "@/components/criteria/criterion-form";
 
 export default function CriteriaList() {
@@ -33,7 +34,6 @@ export default function CriteriaList() {
   useEffect(() => {
     // Auth redirect pattern unified with other pages (handled globally by PrivateRoute too)
     if (!isLoading && !isAuthenticated) {
-  toast({ title: 'Sessão finalizada', description: 'Faça login novamente para continuar.', variant: 'destructive' });
   toast({ title: 'Sessão finalizada', description: 'Faça login novamente para continuar.', variant: 'destructive' });
   setTimeout(() => (window.location.href = "/login"), 400);
     }
@@ -66,7 +66,7 @@ export default function CriteriaList() {
       } else if (sortBy === 'isActive') {
         cmp = Number((a as any).isActive) - Number((b as any).isActive);
       } else {
-        cmp = String(av ?? '').localeCompare(String(bv ?? ''), 'pt-BR', { sensitivity: 'base' });
+        cmp = comparePt(av, bv);
       }
       return sortDir === 'asc' ? cmp : -cmp;
     });

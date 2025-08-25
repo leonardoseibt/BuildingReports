@@ -25,7 +25,8 @@ export default function ParametersList() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<Parameter | null>(null);
   const [search, setSearch] = useState('');
-  const [sortBy, setSortBy] = useState<'label' | 'analysisId' | 'isActive' | 'unit' | null>(null);
+  // Ordenação inicial: coluna Análise (por label da análise)
+  const [sortBy, setSortBy] = useState<'label' | 'analysisId' | 'isActive' | 'unit' | null>('analysisId');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
   const [criterionFilter, setCriterionFilter] = useState<number | 'all'>('all');
   const [analysisFilter, setAnalysisFilter] = useState<number | 'all'>('all');
@@ -57,7 +58,37 @@ export default function ParametersList() {
 
   const normText = (v: any) => String(v ?? '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]+/g, '');
   const filtered = useMemo(() => { const q = normText(search); if (!q) return items; return items.filter(t => normText(t.label).includes(q) || normText((t as any).unit).includes(q)); }, [items, search]);
-  const sorted = useMemo(() => { if (!sortBy) return filtered; const arr = [...filtered]; arr.sort((a,b)=>{ const av = (a as any)[sortBy]; const bv = (b as any)[sortBy]; let cmp=0; if(sortBy==='isActive'){ cmp = Number(a.isActive)-Number(b.isActive);} else if(sortBy==='analysisId'){ cmp = (a.analysisId??0)-(b.analysisId??0);} else { cmp= String(av??'').localeCompare(String(bv??''),'pt-BR',{sensitivity:'base'});} return sortDir==='asc'?cmp:-cmp;}); return arr; }, [filtered, sortBy, sortDir]);
+  // Mapa para lookup rápido de labels das análises
+  const analysisLabelById = useMemo(() => {
+    const m = new Map<number, string>();
+    for (const a of analyses) m.set(a.id, a.label);
+    return m;
+  }, [analyses]);
+
+  const sorted = useMemo(() => {
+    if (!sortBy) return filtered;
+    const arr = [...filtered];
+    arr.sort((a, b) => {
+      let cmp = 0;
+      if (sortBy === 'isActive') {
+        cmp = Number(a.isActive) - Number(b.isActive);
+      } else if (sortBy === 'analysisId') {
+        const la = analysisLabelById.get(a.analysisId) || '';
+        const lb = analysisLabelById.get(b.analysisId) || '';
+        cmp = la.localeCompare(lb, 'pt-BR', { sensitivity: 'accent', numeric: true });
+        if (cmp === 0) {
+          // Desempate estável: label do parâmetro
+            cmp = (a.label || '').localeCompare(b.label || '', 'pt-BR', { sensitivity: 'accent', numeric: true });
+        }
+      } else {
+        const av = (a as any)[sortBy];
+        const bv = (b as any)[sortBy];
+        cmp = String(av ?? '').localeCompare(String(bv ?? ''), 'pt-BR', { sensitivity: 'accent', numeric: true });
+      }
+      return sortDir === 'asc' ? cmp : -cmp;
+    });
+    return arr;
+  }, [filtered, sortBy, sortDir, analysisLabelById]);
   const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize)); const pageSafe = Math.min(page, totalPages); const pagedItems = useMemo(()=> sorted.slice((pageSafe-1)*pageSize, pageSafe*pageSize),[sorted,pageSafe]);
   const toggleSort = (col: typeof sortBy)=>{ if(col===null)return; if(sortBy!==col){ setSortBy(col); setSortDir('asc'); } else { setSortDir(d=>d==='asc'?'desc':'asc'); } setPage(1); };
 
