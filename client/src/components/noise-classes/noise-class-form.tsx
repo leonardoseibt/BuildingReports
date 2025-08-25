@@ -47,7 +47,7 @@ export default function NoiseClassForm({ initialItem, onSuccess, onCancel }: { i
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit((data) => mutation.mutate(data))} className="space-y-6" autoComplete="off">
-  <FormHeader title={initialItem ? 'Editar Classe de Ruído' : 'Nova Classe de Ruído'} subtitle={initialItem ? 'Atualize os dados da classe de ruído.' : 'Cadastre uma nova classe de ruído.'} initials={initialItem?.code ?? null} />
+  <FormHeader title={initialItem ? 'Editar Classe de Ruído do Entorno' : 'Nova Classe de Ruído do Entorno'} subtitle={initialItem ? 'Atualize os dados da classe de ruído.' : 'Cadastre uma nova classe de ruído.'} initials={initialItem?.code ?? null} />
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <FormField name="code" control={form.control} render={({ field }) => (

@@ -41,7 +41,6 @@ export default function NoiseClassesList() {
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
   toast({ title: 'Sessão finalizada', description: 'Faça login novamente para continuar.', variant: 'destructive' });
-  toast({ title: 'Sessão finalizada', description: 'Faça login novamente para continuar.', variant: 'destructive' });
   setTimeout(() => (window.location.href = "/login"), 400);
     }
   }, [isAuthenticated, isLoading, toast]);
@@ -122,7 +121,7 @@ export default function NoiseClassesList() {
       <Sidebar />
       <div className="flex-1 flex flex-col overflow-hidden">
         <Header
-          title="Classes de Ruído"
+          title="Classes de Ruído do Entorno"
           description="Gerencie as classes de ruído do entorno"
           action={
             <div className="flex items-center gap-2">
