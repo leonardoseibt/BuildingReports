@@ -697,7 +697,7 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
                               <SelectValue placeholder="Selecione a classe">
                                 {(() => {
                                   const sel = (noiseClasses || []).find((t:any) => String(t.id) === String(field.value));
-                                  return sel ? `${sel.code} - ${sel.label}` : undefined;
+                                  return sel ? `${sel.code} - ${sel.label}${sel.risk ? ' ('+ sel.risk +')' : ''}` : undefined;
                                 })()}
                               </SelectValue>
                             </SelectTrigger>
@@ -735,7 +735,7 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
                           </FormControl>
                           <SelectContent>
                             {(aggressiveness || []).filter((t:any)=>t.isActive!==false).map((t:any)=> (
-                              <SelectItem key={t.id} value={String(t.id)}>{`${t.code} - ${t.label}`}</SelectItem>
+                              <SelectItem key={t.id} value={String(t.id)}>{`${t.code} - ${t.label}${t.risk ? ' ('+ t.risk +')' : ''}`}</SelectItem>
                             ))}
                           </SelectContent>
                         </Select>

@@ -63,6 +63,14 @@ export const evaluationStatusEnum = pgEnum('evaluation_status', [
   'pending', 'in_progress', 'completed', 'approved'
 ]);
 
+// Aggressiveness risk enum
+export const aggressivenessRiskEnum = pgEnum('aggressiveness_risk', [
+  'Insignificante',
+  'Pequeno',
+  'Grande',
+  'Elevado'
+]);
+
 // Bioclimatic Zones master tables
 export const bioclimaticZones = pgTable("bioclimatic_zones", {
   id: integer("id").generatedAlwaysAsIdentity().primaryKey(),
@@ -154,6 +162,7 @@ export const aggressivenessClasses = pgTable("aggressiveness_classes", {
   id: integer("id").generatedAlwaysAsIdentity().primaryKey(),
   code: varchar("code", { length: 64 }).notNull().unique(),
   label: varchar("label", { length: 255 }).notNull(),
+  risk: aggressivenessRiskEnum('risk').notNull().default('Insignificante'),
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),

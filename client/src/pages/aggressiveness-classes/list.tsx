@@ -26,7 +26,7 @@ export default function AggressivenessClassesList() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<AggressivenessClass | null>(null);
   const [search, setSearch] = useState("");
-  const [sortBy, setSortBy] = useState<"code" | "label" | "isActive" | "createdAt" | null>(null);
+  const [sortBy, setSortBy] = useState<"code" | "label" | "risk" | "isActive" | "createdAt" | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const pageSize = 15;
   const [page, setPage] = useState(1);
@@ -54,6 +54,7 @@ export default function AggressivenessClassesList() {
     return items.filter((t) =>
       normText(t.code).includes(q) ||
       normText(t.label).includes(q) ||
+      normText((t as any).risk).includes(q) ||
       normText((t as any).createdAt).includes(q)
     );
   }, [items, search]);
@@ -70,6 +71,8 @@ export default function AggressivenessClassesList() {
         cmp = ad - bd;
       } else if (sortBy === 'isActive') {
         cmp = Number((a as any).isActive) - Number((b as any).isActive);
+      } else if (sortBy === 'risk') {
+        cmp = comparePt((a as any).risk, (b as any).risk);
       } else {
   cmp = comparePt(av, bv);
       }
@@ -142,7 +145,7 @@ export default function AggressivenessClassesList() {
                   type="text"
                   value={search}
                   onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-                  placeholder="Buscar classes (código, descrição, data)"
+                  placeholder="Buscar classes (código, descrição, risco, data)"
                   className="w-full h-9 rounded-md border px-9 text-sm"
                 />
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
@@ -166,7 +169,8 @@ export default function AggressivenessClassesList() {
                 <TableHeader>
                   <TableRow className="bg-slate-100/60">
                     <TableHead onClick={() => toggleSort('code')} aria-sort={sortBy === 'code' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} className="w-[18%] cursor-pointer select-none">Código {sortBy === 'code' && (sortDir === 'asc' ? <ArrowUp className="inline-block w-3 h-3 ml-1 opacity-70" /> : <ArrowDown className="inline-block w-3 h-3 ml-1 opacity-70" />)}</TableHead>
-                    <TableHead onClick={() => toggleSort('label')} aria-sort={sortBy === 'label' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} className="w-[50%] cursor-pointer select-none">Descrição {sortBy === 'label' && (sortDir === 'asc' ? <ArrowUp className="inline-block w-3 h-3 ml-1 opacity-70" /> : <ArrowDown className="inline-block w-3 h-3 ml-1 opacity-70" />)}</TableHead>
+                    <TableHead onClick={() => toggleSort('label')} aria-sort={sortBy === 'label' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} className="w-[38%] cursor-pointer select-none">Descrição {sortBy === 'label' && (sortDir === 'asc' ? <ArrowUp className="inline-block w-3 h-3 ml-1 opacity-70" /> : <ArrowDown className="inline-block w-3 h-3 ml-1 opacity-70" />)}</TableHead>
+                    <TableHead onClick={() => toggleSort('risk')} aria-sort={sortBy === 'risk' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} className="w-[12%] cursor-pointer select-none">Risco {sortBy === 'risk' && (sortDir === 'asc' ? <ArrowUp className="inline-block w-3 h-3 ml-1 opacity-70" /> : <ArrowDown className="inline-block w-3 h-3 ml-1 opacity-70" />)}</TableHead>
                     <TableHead onClick={() => toggleSort('isActive')} aria-sort={sortBy === 'isActive' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} className="w-[10%] cursor-pointer select-none">Ativa {sortBy === 'isActive' && (sortDir === 'asc' ? <ArrowUp className="inline-block w-3 h-3 ml-1 opacity-70" /> : <ArrowDown className="inline-block w-3 h-3 ml-1 opacity-70" />)}</TableHead>
                     <TableHead className="w-[22%] text-right">Ações</TableHead>
                   </TableRow>
@@ -176,6 +180,7 @@ export default function AggressivenessClassesList() {
                     <TableRow key={t.id}>
                       <TableCell className="font-medium">{t.code}</TableCell>
                       <TableCell>{t.label}</TableCell>
+                      <TableCell>{(t as any).risk}</TableCell>
                       <TableCell>{(t as any).isActive ? 'Sim' : 'Não'}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1.5">

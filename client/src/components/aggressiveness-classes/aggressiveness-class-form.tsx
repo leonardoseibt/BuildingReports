@@ -15,6 +15,7 @@ import type { AggressivenessClass } from "@shared/schema";
 const schema = z.object({
   code: z.string().min(1, 'Código é obrigatório'),
   label: z.string().min(1, 'Descrição é obrigatória'),
+  risk: z.enum(['Insignificante','Pequeno','Grande','Elevado'], { required_error: 'Risco é obrigatório'}),
   isActive: z.boolean().optional(),
 });
 
@@ -25,7 +26,7 @@ export default function AggressivenessClassForm({ initialItem, onSuccess, onCanc
   const queryClient = useQueryClient();
   const form = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: initialItem ? { code: initialItem.code, label: initialItem.label, isActive: (initialItem as any).isActive ?? true } : { code: '', label: '', isActive: true },
+  defaultValues: initialItem ? { code: initialItem.code, label: initialItem.label, risk: (initialItem as any).risk ?? 'Insignificante', isActive: (initialItem as any).isActive ?? true } : { code: '', label: '', risk: 'Insignificante', isActive: true },
     mode: 'onSubmit',
   });
 
@@ -49,7 +50,7 @@ export default function AggressivenessClassForm({ initialItem, onSuccess, onCanc
       <form onSubmit={form.handleSubmit((data) => mutation.mutate(data))} className="space-y-6" autoComplete="off">
   <FormHeader title={initialItem ? 'Editar Classe de Agressividade' : 'Nova Classe de Agressividade'} subtitle={initialItem ? 'Atualize os dados da classe.' : 'Cadastre uma nova classe de agressividade.'} initials={initialItem?.code ?? null} />
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <FormField name="code" control={form.control} render={({ field }) => (
             <FormItem className="md:col-span-1">
               <FormControl>
@@ -65,6 +66,21 @@ export default function AggressivenessClassForm({ initialItem, onSuccess, onCanc
               <FormControl>
                 <NotchedField label="Descrição" requiredMark>
                   <Input placeholder="CAA 1" {...field} className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" />
+                </NotchedField>
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )} />
+          <FormField name="risk" control={form.control} render={({ field }) => (
+            <FormItem className="md:col-span-1">
+              <FormControl>
+                <NotchedField label="Risco" requiredMark>
+                  <select {...field} className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 w-full h-9 text-sm">
+                    <option value="Insignificante">Insignificante</option>
+                    <option value="Pequeno">Pequeno</option>
+                    <option value="Grande">Grande</option>
+                    <option value="Elevado">Elevado</option>
+                  </select>
                 </NotchedField>
               </FormControl>
               <FormMessage />
