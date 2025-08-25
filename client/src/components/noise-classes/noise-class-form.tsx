@@ -16,10 +16,12 @@ const schema = z.object({
   code: z.string().min(1, 'Código é obrigatório'),
   label: z.string().min(1, 'Descrição é obrigatória'),
   dayMinDb: z.coerce.number().int().min(0).max(140),
-  dayMaxDb: z.union([z.coerce.number().int().min(0).max(140), z.literal(''), z.null()]).optional()
+  dayMaxDb: z.union([z.literal(''), z.null(), z.coerce.number().int().min(0).max(140)])
+    .optional()
     .transform(v => v === '' ? null : v as any),
   nightMinDb: z.coerce.number().int().min(0).max(140),
-  nightMaxDb: z.union([z.coerce.number().int().min(0).max(140), z.literal(''), z.null()]).optional()
+  nightMaxDb: z.union([z.literal(''), z.null(), z.coerce.number().int().min(0).max(140)])
+    .optional()
     .transform(v => v === '' ? null : v as any),
   isActive: z.boolean().optional(),
 }).superRefine((data, ctx) => {
