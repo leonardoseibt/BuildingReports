@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -52,6 +52,16 @@ export default function ParameterForm({ onSuccess, onCancel, initialItem }: { on
     }
     return '';
   });
+
+  // When editing: analyses may arrive after first render; set criterionId then
+  useEffect(() => {
+    if (initialItem && analyses.length && criterionId === '') {
+      const analysis = analyses.find(a => a.id === initialItem.analysisId);
+      if (analysis) {
+        setCriterionId(analysis.criterionId);
+      }
+    }
+  }, [initialItem, analyses, criterionId]);
 
   // Filter analyses based on selected criterion
   const filteredAnalyses = criterionId ? analyses.filter(a => a.criterionId === criterionId) : [];
