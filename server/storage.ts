@@ -309,35 +309,50 @@ export class DatabaseStorage implements IStorage {
 
   // Building operations
   async createBuilding(building: InsertBuilding): Promise<Building> {
-    // Normalize: assign provided values and ensure FK ids exist
+    // Fetch optional foreign keys in parallel. These lookups can be avoided if
+    // relying solely on database FK constraints.
+    const [[t], [n], [a]] = await Promise.all([
+      (building as any).typologyId
+        ? db
+            .select()
+            .from(typologies)
+            .where(eq(typologies.id, (building as any).typologyId))
+        : Promise.resolve<[undefined]>([undefined]),
+      (building as any).noiseClassId
+        ? db
+            .select()
+            .from(noiseClasses)
+            .where(eq(noiseClasses.id, (building as any).noiseClassId))
+        : Promise.resolve<[undefined]>([undefined]),
+      (building as any).aggressivenessClassId
+        ? db
+            .select()
+            .from(aggressivenessClasses)
+            .where(eq(aggressivenessClasses.id, (building as any).aggressivenessClassId))
+        : Promise.resolve<[undefined]>([undefined]),
+    ]);
+
+    // Build insert values after resolving lookups
     const values: any = {
       name: building.name,
       userId: building.userId,
       technicianId: (building as any).technicianId,
-  cep: building.cep,
-  street: (building as any).street,
-  addressNumber: (building as any).addressNumber,
-  neighborhood: (building as any).neighborhood,
-  city: (building as any).city,
-  state: (building as any).state,
+      cep: building.cep,
+      street: (building as any).street,
+      addressNumber: (building as any).addressNumber,
+      neighborhood: (building as any).neighborhood,
+      city: (building as any).city,
+      state: (building as any).state,
       bioclimaticZone: building.bioclimaticZone,
       totalArea: building.totalArea,
-  buildingHeight: (building as any).buildingHeight,
+      buildingHeight: (building as any).buildingHeight,
       floors: building.floors,
       units: building.units,
     };
-    if ((building as any).typologyId) {
-      const [t] = await db.select().from(typologies).where(eq(typologies.id, (building as any).typologyId));
-      if (t) { values.typologyId = t.id; }
-    }
-    if ((building as any).noiseClassId) {
-      const [n] = await db.select().from(noiseClasses).where(eq(noiseClasses.id, (building as any).noiseClassId));
-      if (n) { values.noiseClassId = n.id; }
-    }
-    if ((building as any).aggressivenessClassId) {
-      const [a] = await db.select().from(aggressivenessClasses).where(eq(aggressivenessClasses.id, (building as any).aggressivenessClassId));
-      if (a) { values.aggressivenessClassId = a.id; }
-    }
+    if (t) values.typologyId = t.id;
+    if (n) values.noiseClassId = n.id;
+    if (a) values.aggressivenessClassId = a.id;
+
     const [newBuilding] = await db.insert(buildings).values(values).returning();
     return newBuilding;
   }
