@@ -54,7 +54,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { limit, offset, page } = getPaginationParams(req.query);
       const { items, total } = await storage.listUsers(limit, offset);
-      res.json({ data: items, total, page });
+  // Frontend atualmente espera um array simples. Para paginação futura, alterar client antes.
+  res.json(items);
     } catch (error) {
       console.error('Error fetching users:', error);
       res.status(500).json({ message: 'Failed to fetch users' });
@@ -587,7 +588,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId: number = Number(req.user.claims.sub);
       const { limit, offset, page } = getPaginationParams(req.query);
       const { items, total } = await storage.listTechnicians(userId, limit, offset);
-      res.json({ data: items, total, page });
+  res.json(items);
     } catch (error) {
       console.error('Error fetching technicians', error);
       res.status(500).json({ message: 'Failed to fetch technicians' });
