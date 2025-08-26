@@ -36,9 +36,13 @@ async function ensureCsrfToken(force = false) {
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
     const text = (await res.text()) || res.statusText;
-    if (res.status === 440) {
-      // sessão expirada -> feedback e redirect
-  toast({ title: 'Sessão finalizada', description: 'Faça login novamente para continuar.', variant: 'destructive' });
+    const path = window.location.pathname;
+    const shouldRedirect = !path.startsWith('/login') && (res.status === 440 || res.status === 401);
+    if (shouldRedirect) {
+      // Distinguish messages slightly
+      const expired = res.status === 440 || /expirad/i.test(text);
+      toast({ title: 'Sessão finalizada', description: expired ? 'Faça login novamente para continuar.' : 'Autenticação necessária.', variant: 'destructive' });
+      // Small timeout so toast can render
       setTimeout(() => { window.location.href = '/login'; }, 150);
     }
     throw new Error(`${res.status}: ${text}`);

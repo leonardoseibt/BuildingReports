@@ -201,11 +201,23 @@ export async function setupAuth(app: Express) {
 export const isAuthenticated: RequestHandler = async (req, res, next) => {
   const user: any = req.user as any;
   const sessionUser = (req as any).session?.passport?.user;
+  // If user object exists in session, enforce per-claim expiration (soft TTL distinct from absolute SESSION_TTL_MS)
+  if (sessionUser?.expires_at && Date.now() / 1000 > sessionUser.expires_at) {
+    // Destroy session and signal client to re-authenticate
+    return req.session.destroy(() => {
+      res.status(401).json({ message: 'Sessão expirada' });
+    });
+  }
   if (sessionUser) {
     (req as any).user = sessionUser;
     return next();
   }
   if (req.isAuthenticated() && user?.expires_at) {
+    if (Date.now() / 1000 > user.expires_at) {
+      return req.session.destroy(() => {
+        res.status(401).json({ message: 'Sessão expirada' });
+      });
+    }
     return next();
   }
   return res.status(401).json({ message: "Unauthorized" });
