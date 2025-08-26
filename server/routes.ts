@@ -427,7 +427,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId: number = Number(req.user.claims.sub);
       const { limit, offset, page } = getPaginationParams(req.query);
       const { items, total } = await storage.getReportsByUser(userId, limit, offset);
-      res.json({ data: items, total, page });
+  // Temporarily return a plain array to align with current frontend expectations.
+  // (Pagination metadata suppressed until client is updated to consume it.)
+  res.json(items);
     } catch (error) {
       console.error("Error fetching reports:", error);
       res.status(500).json({ message: "Failed to fetch reports" });
