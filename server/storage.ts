@@ -280,8 +280,8 @@ export class DatabaseStorage implements IStorage {
       })
       .from(users)
       .orderBy(desc(users.createdAt));
-    if (limit !== undefined) query = query.limit(limit);
-    if (offset !== undefined) query = query.offset(offset);
+    if (limit !== undefined) query = (query as any).limit(limit);
+    if (offset !== undefined) query = (query as any).offset(offset);
     const items = await query;
     return { items, total };
   }
@@ -401,8 +401,8 @@ export class DatabaseStorage implements IStorage {
       .leftJoin(aggressivenessClasses, eq(buildings.aggressivenessClassId, aggressivenessClasses.id))
       .where(eq(buildings.userId, userId))
       .orderBy(desc(buildings.createdAt));
-    if (limit !== undefined) query = query.limit(limit);
-    if (offset !== undefined) query = query.offset(offset);
+    if (limit !== undefined) query = (query as any).limit(limit);
+    if (offset !== undefined) query = (query as any).offset(offset);
     const items = await query as any;
     return { items, total };
   }
@@ -633,8 +633,8 @@ export class DatabaseStorage implements IStorage {
         eq(reports.isActive, true)
       ))
       .orderBy(desc(reports.generatedAt));
-    if (limit !== undefined) query = query.limit(limit);
-    if (offset !== undefined) query = query.offset(offset);
+    if (limit !== undefined) query = (query as any).limit(limit);
+    if (offset !== undefined) query = (query as any).offset(offset);
     const items = await query;
     return { items, total };
   }
@@ -711,8 +711,8 @@ export class DatabaseStorage implements IStorage {
       .from(technicians)
       .where(eq(technicians.userId, userId))
       .orderBy(desc(technicians.createdAt));
-    if (limit !== undefined) query = query.limit(limit);
-    if (offset !== undefined) query = query.offset(offset);
+    if (limit !== undefined) query = (query as any).limit(limit);
+    if (offset !== undefined) query = (query as any).offset(offset);
     const items = await query;
     return { items, total };
   }
