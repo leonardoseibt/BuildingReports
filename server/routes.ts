@@ -189,7 +189,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId: number = Number(req.user.claims.sub);
       const { limit, offset, page } = getPaginationParams(req.query);
       const { items, total } = await storage.getBuildingsByUser(userId, limit, offset);
-      res.json({ data: items, total, page });
+  // Client expects a plain array (was breaking when wrapped). If pagination needed later, adapt client first.
+  res.json(items);
     } catch (error) {
       console.error("Error fetching buildings:", error);
       res.status(500).json({ message: "Failed to fetch buildings" });
