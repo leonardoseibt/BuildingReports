@@ -54,6 +54,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/users/:id', isAuthenticated, async (req: any, res) => {
     try {
       const id = Number(req.params.id);
+  if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' });
       const user = await storage.getUser(id);
       if (!user) return res.status(404).json({ message: 'Usuário não encontrado' });
       res.json(user);
@@ -92,6 +93,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put('/api/users/:id', isAuthenticated, express.json(), async (req, res) => {
     try {
       const id = Number(req.params.id);
+  if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' });
       const data = updateUserSchema.parse(req.body);
       let update: any = { email: data.email.trim().toLowerCase(), fullName: data.fullName, phone: data.phone };
       if (data.password) {
@@ -186,6 +188,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/buildings/:id', isAuthenticated, async (req: any, res) => {
     try {
       const id = Number(req.params.id);
+  if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' });
       const building = await storage.getBuilding(id);
       if (!building) {
         return res.status(404).json({ message: "Building not found" });
@@ -206,6 +209,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put('/api/buildings/:id', isAuthenticated, express.json(), async (req: any, res) => {
     try {
       const id = Number(req.params.id);
+  if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' });
       const existing = await storage.getBuilding(id);
       if (!existing) return res.status(404).json({ message: 'Edificação não encontrada' });
       if (existing.userId !== Number(req.user.claims.sub)) return res.status(403).json({ message: 'Access denied' });
@@ -244,6 +248,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete('/api/buildings/:id', isAuthenticated, async (req: any, res) => {
     try {
       const id = Number(req.params.id);
+  if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' });
       const existing = await storage.getBuilding(id);
       if (!existing) return res.status(404).json({ message: 'Edificação não encontrada' });
       if (existing.userId !== Number(req.user.claims.sub)) return res.status(403).json({ message: 'Access denied' });
@@ -262,6 +267,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/buildings/:id/structural-system', isAuthenticated, async (req: any, res) => {
     try {
       const buildingId = Number(req.params.id);
+  if (!Number.isFinite(buildingId)) return res.status(400).json({ message: 'ID inválido' });
       const building = await storage.getBuilding(buildingId);
       
   if (!building || building.userId !== Number(req.user.claims.sub)) {
@@ -287,6 +293,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/buildings/:id/sealing-system', isAuthenticated, async (req: any, res) => {
     try {
       const buildingId = Number(req.params.id);
+  if (!Number.isFinite(buildingId)) return res.status(400).json({ message: 'ID inválido' });
       const building = await storage.getBuilding(buildingId);
       
   if (!building || building.userId !== Number(req.user.claims.sub)) {
@@ -312,6 +319,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/buildings/:id/roofing-system', isAuthenticated, async (req: any, res) => {
     try {
       const buildingId = Number(req.params.id);
+  if (!Number.isFinite(buildingId)) return res.status(400).json({ message: 'ID inválido' });
       const building = await storage.getBuilding(buildingId);
       
   if (!building || building.userId !== Number(req.user.claims.sub)) {
@@ -338,6 +346,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/buildings/:id/evaluation', isAuthenticated, async (req: any, res) => {
     try {
       const buildingId = Number(req.params.id);
+  if (!Number.isFinite(buildingId)) return res.status(400).json({ message: 'ID inválido' });
       const building = await storage.getBuilding(buildingId);
       
   if (!building || building.userId !== Number(req.user.claims.sub)) {
@@ -363,6 +372,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/buildings/:id/evaluation', isAuthenticated, async (req: any, res) => {
     try {
       const buildingId = Number(req.params.id);
+  if (!Number.isFinite(buildingId)) return res.status(400).json({ message: 'ID inválido' });
       const building = await storage.getBuilding(buildingId);
       
   if (!building || building.userId !== Number(req.user.claims.sub)) {
@@ -413,6 +423,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/reports/:id', isAuthenticated, async (req: any, res) => {
     try {
       const id = Number(req.params.id);
+  if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' });
       const report = await storage.getReport(id);
       if (!report) {
         return res.status(404).json({ message: "Report not found" });
@@ -469,16 +480,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     catch (error) { if (error instanceof z.ZodError) return res.status(400).json({ message: 'Validation error', errors: error.errors }); if ((error as any)?.code === '23505') return res.status(409).json({ message: 'Código já cadastrado.' }); res.status(500).json({ message: 'Failed to create zone' }); }
   });
   app.put('/api/bioclimatic-zones/:id', isAuthenticated, express.json(), async (req, res) => {
-    try { const id = Number(req.params.id); const data = insertBioclimaticZoneSchema.partial().parse(req.body); const row = await storage.updateBioclimaticZone(id, data as any); res.json(row); }
+    try { const id = Number(req.params.id); if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' }); const data = insertBioclimaticZoneSchema.partial().parse(req.body); const row = await storage.updateBioclimaticZone(id, data as any); res.json(row); }
     catch (error) { if (error instanceof z.ZodError) return res.status(400).json({ message: 'Validation error', errors: error.errors }); if ((error as any)?.code === '23505') return res.status(409).json({ message: 'Código já cadastrado.' }); res.status(500).json({ message: 'Failed to update zone' }); }
   });
   app.delete('/api/bioclimatic-zones/:id', isAuthenticated, async (req, res) => {
-    try { const id = Number(req.params.id); const ok = await storage.deleteBioclimaticZone(id); res.json({ ok }); }
+    try { const id = Number(req.params.id); if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' }); const ok = await storage.deleteBioclimaticZone(id); res.json({ ok }); }
     catch (error: any) { const status = (error as any)?.status || 500; const message = (error as any)?.message || 'Failed to delete zone'; res.status(status).json({ message }); }
   });
   // Coverages
   app.get('/api/bioclimatic-zones/:id/coverages', isAuthenticated, async (req, res) => {
-    try { const id = Number(req.params.id); res.json(await storage.listBioclimaticZoneCoverages(id)); }
+    try { const id = Number(req.params.id); if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' }); res.json(await storage.listBioclimaticZoneCoverages(id)); }
     catch { res.status(500).json({ message: 'Failed to fetch coverages' }); }
   });
   // Find zones by city name (for filtering zones by city search)
@@ -495,6 +506,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/bioclimatic-zones/:id/coverages', isAuthenticated, express.json(), async (req, res) => {
     try {
       const id = Number(req.params.id);
+  if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' });
       const payload = insertBioclimaticZoneCoverageSchema.pick({ cityId: true }).required({ cityId: true }).parse(req.body as any);
       const row = await storage.createBioclimaticZoneCoverage(id, { cityId: (payload as any).cityId } as any);
       res.json(row);
@@ -506,6 +518,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put('/api/bioclimatic-zones/coverages/:coverageId', isAuthenticated, express.json(), async (req, res) => {
     try {
       const coverageId = Number(req.params.coverageId);
+  if (!Number.isFinite(coverageId)) return res.status(400).json({ message: 'ID inválido' });
       const payload = insertBioclimaticZoneCoverageSchema.pick({ cityId: true }).partial().parse(req.body as any);
       const row = await storage.updateBioclimaticZoneCoverage(coverageId, payload as any);
       res.json(row);
@@ -515,7 +528,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   app.delete('/api/bioclimatic-zones/coverages/:coverageId', isAuthenticated, async (req, res) => {
-    try { const coverageId = Number(req.params.coverageId); const ok = await storage.deleteBioclimaticZoneCoverage(coverageId); res.json({ ok }); }
+    try { const coverageId = Number(req.params.coverageId); if (!Number.isFinite(coverageId)) return res.status(400).json({ message: 'ID inválido' }); const ok = await storage.deleteBioclimaticZoneCoverage(coverageId); res.json({ ok }); }
     catch { res.status(500).json({ message: 'Failed to delete coverage' }); }
   });
 
@@ -528,15 +541,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     catch (error) { if (error instanceof z.ZodError) return res.status(400).json({ message: 'Validation error', errors: error.errors }); res.status(500).json({ message: 'Failed to create state' }); }
   });
   app.put('/api/states/:id', isAuthenticated, express.json(), async (req, res) => {
-    try { const id = Number(req.params.id); const row = await storage.updateState(id, insertStateSchema.partial().parse(req.body) as any); res.json(row); }
+    try { const id = Number(req.params.id); if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' }); const row = await storage.updateState(id, insertStateSchema.partial().parse(req.body) as any); res.json(row); }
     catch (error) { if (error instanceof z.ZodError) return res.status(400).json({ message: 'Validation error', errors: error.errors }); res.status(500).json({ message: 'Failed to update state' }); }
   });
   app.delete('/api/states/:id', isAuthenticated, async (req, res) => {
-    try { const id = Number(req.params.id); const ok = await storage.deleteState(id); res.json({ ok }); }
+    try { const id = Number(req.params.id); if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' }); const ok = await storage.deleteState(id); res.json({ ok }); }
     catch { res.status(500).json({ message: 'Failed to delete state' }); }
   });
   app.get('/api/states/:stateId/cities', isAuthenticated, async (req, res) => {
-    try { const stateId = Number(req.params.stateId); res.json(await storage.listCitiesByState(stateId)); }
+    try { const stateId = Number(req.params.stateId); if (!Number.isFinite(stateId)) return res.status(400).json({ message: 'ID inválido' }); res.json(await storage.listCitiesByState(stateId)); }
     catch { res.status(500).json({ message: 'Failed to fetch cities' }); }
   });
   app.get('/api/cities', isAuthenticated, async (_req, res) => {
@@ -547,11 +560,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     catch (error) { if (error instanceof z.ZodError) return res.status(400).json({ message: 'Validation error', errors: error.errors }); res.status(500).json({ message: 'Failed to create city' }); }
   });
   app.put('/api/cities/:id', isAuthenticated, express.json(), async (req, res) => {
-    try { const id = Number(req.params.id); const row = await storage.updateCity(id, insertCitySchema.partial().parse(req.body) as any); res.json(row); }
+    try { const id = Number(req.params.id); if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' }); const row = await storage.updateCity(id, insertCitySchema.partial().parse(req.body) as any); res.json(row); }
     catch (error) { if (error instanceof z.ZodError) return res.status(400).json({ message: 'Validation error', errors: error.errors }); res.status(500).json({ message: 'Failed to update city' }); }
   });
   app.delete('/api/cities/:id', isAuthenticated, async (req, res) => {
-    try { const id = Number(req.params.id); const ok = await storage.deleteCity(id); res.json({ ok }); }
+    try { const id = Number(req.params.id); if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' }); const ok = await storage.deleteCity(id); res.json({ ok }); }
     catch { res.status(500).json({ message: 'Failed to delete city' }); }
   });
 
@@ -586,6 +599,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/technicians/:id', isAuthenticated, async (req: any, res) => {
     try {
       const id = Number(req.params.id);
+  if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' });
       const row = await storage.getTechnician(id);
       if (!row) return res.status(404).json({ message: 'Responsável técnico não encontrado' });
       if (row.userId !== Number(req.user.claims.sub)) return res.status(403).json({ message: 'Access denied' });
@@ -599,6 +613,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put('/api/technicians/:id', isAuthenticated, express.json(), async (req: any, res) => {
     try {
       const id = Number(req.params.id);
+  if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' });
       const existing = await storage.getTechnician(id);
       if (!existing) return res.status(404).json({ message: 'Responsável técnico não encontrado' });
       if (existing.userId !== Number(req.user.claims.sub)) return res.status(403).json({ message: 'Access denied' });
@@ -618,6 +633,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete('/api/technicians/:id', isAuthenticated, async (req: any, res) => {
     try {
       const id = Number(req.params.id);
+  if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' });
       const existing = await storage.getTechnician(id);
       if (!existing) return res.status(404).json({ message: 'Responsável técnico não encontrado' });
       if (existing.userId !== Number(req.user.claims.sub)) return res.status(403).json({ message: 'Access denied' });
@@ -639,11 +655,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     catch (error) { if (error instanceof z.ZodError) return res.status(400).json({ message: 'Validation error', errors: error.errors }); if ((error as any)?.code === '23505') return res.status(409).json({ message: 'Código já cadastrado.' }); res.status(500).json({ message: 'Failed to create typology' }); }
   });
   app.put('/api/typologies/:id', isAuthenticated, express.json(), async (req, res) => {
-    try { const id = Number(req.params.id); const data = insertTypologySchema.partial().parse(req.body); const row = await storage.updateTypology(id, data as any); res.json(row); }
+    try { const id = Number(req.params.id); if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' }); const data = insertTypologySchema.partial().parse(req.body); const row = await storage.updateTypology(id, data as any); res.json(row); }
     catch (error) { if (error instanceof z.ZodError) return res.status(400).json({ message: 'Validation error', errors: error.errors }); if ((error as any)?.code === '23505') return res.status(409).json({ message: 'Código já cadastrado.' }); res.status(500).json({ message: 'Failed to update typology' }); }
   });
   app.delete('/api/typologies/:id', isAuthenticated, async (req, res) => {
-    try { const id = Number(req.params.id); const ok = await storage.deleteTypology(id); res.json({ ok }); }
+    try { const id = Number(req.params.id); if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' }); const ok = await storage.deleteTypology(id); res.json({ ok }); }
     catch { res.status(500).json({ message: 'Failed to delete typology' }); }
   });
 
@@ -656,11 +672,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     catch (error) { if (error instanceof z.ZodError) return res.status(400).json({ message: 'Validation error', errors: error.errors }); if ((error as any)?.code === '23505') return res.status(409).json({ message: 'Código já cadastrado.' }); res.status(500).json({ message: 'Failed to create noise class' }); }
   });
   app.put('/api/noise-classes/:id', isAuthenticated, express.json(), async (req, res) => {
-    try { const id = Number(req.params.id); const data = insertNoiseClassSchema.partial().parse(req.body); const row = await storage.updateNoiseClass(id, data as any); res.json(row); }
+    try { const id = Number(req.params.id); if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' }); const data = insertNoiseClassSchema.partial().parse(req.body); const row = await storage.updateNoiseClass(id, data as any); res.json(row); }
     catch (error) { if (error instanceof z.ZodError) return res.status(400).json({ message: 'Validation error', errors: error.errors }); if ((error as any)?.code === '23505') return res.status(409).json({ message: 'Código já cadastrado.' }); res.status(500).json({ message: 'Failed to update noise class' }); }
   });
   app.delete('/api/noise-classes/:id', isAuthenticated, async (req, res) => {
-    try { const id = Number(req.params.id); const ok = await storage.deleteNoiseClass(id); res.json({ ok }); }
+    try { const id = Number(req.params.id); if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' }); const ok = await storage.deleteNoiseClass(id); res.json({ ok }); }
     catch { res.status(500).json({ message: 'Failed to delete noise class' }); }
   });
 
@@ -673,11 +689,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     catch (error) { if (error instanceof z.ZodError) return res.status(400).json({ message: 'Validation error', errors: error.errors }); if ((error as any)?.code === '23505') return res.status(409).json({ message: 'Código já cadastrado.' }); res.status(500).json({ message: 'Failed to create aggressiveness class' }); }
   });
   app.put('/api/aggressiveness-classes/:id', isAuthenticated, express.json(), async (req, res) => {
-    try { const id = Number(req.params.id); const data = insertAggressivenessClassSchema.partial().parse(req.body); const row = await storage.updateAggressivenessClass(id, data as any); res.json(row); }
+    try { const id = Number(req.params.id); if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' }); const data = insertAggressivenessClassSchema.partial().parse(req.body); const row = await storage.updateAggressivenessClass(id, data as any); res.json(row); }
     catch (error) { if (error instanceof z.ZodError) return res.status(400).json({ message: 'Validation error', errors: error.errors }); if ((error as any)?.code === '23505') return res.status(409).json({ message: 'Código já cadastrado.' }); res.status(500).json({ message: 'Failed to update aggressiveness class' }); }
   });
   app.delete('/api/aggressiveness-classes/:id', isAuthenticated, async (req, res) => {
-    try { const id = Number(req.params.id); const ok = await storage.deleteAggressivenessClass(id); res.json({ ok }); }
+    try { const id = Number(req.params.id); if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' }); const ok = await storage.deleteAggressivenessClass(id); res.json({ ok }); }
     catch { res.status(500).json({ message: 'Failed to delete aggressiveness class' }); }
   });
 
@@ -690,11 +706,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     catch (error) { if (error instanceof z.ZodError) return res.status(400).json({ message: 'Validation error', errors: error.errors }); if ((error as any)?.code === '23505') return res.status(409).json({ message: 'Código já cadastrado.' }); res.status(500).json({ message: 'Failed to create constructive system' }); }
   });
   app.put('/api/constructive-systems/:id', isAuthenticated, express.json(), async (req, res) => {
-    try { const id = Number(req.params.id); const data = insertConstructiveSystemSchema.partial().parse(req.body); const row = await storage.updateConstructiveSystem(id, data as any); res.json(row); }
+    try { const id = Number(req.params.id); if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' }); const data = insertConstructiveSystemSchema.partial().parse(req.body); const row = await storage.updateConstructiveSystem(id, data as any); res.json(row); }
     catch (error) { if (error instanceof z.ZodError) return res.status(400).json({ message: 'Validation error', errors: error.errors }); if ((error as any)?.code === '23505') return res.status(409).json({ message: 'Código já cadastrado.' }); res.status(500).json({ message: 'Failed to update constructive system' }); }
   });
   app.delete('/api/constructive-systems/:id', isAuthenticated, async (req, res) => {
-    try { const id = Number(req.params.id); const ok = await storage.deleteConstructiveSystem(id); res.json({ ok }); }
+    try { const id = Number(req.params.id); if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' }); const ok = await storage.deleteConstructiveSystem(id); res.json({ ok }); }
     catch { res.status(500).json({ message: 'Failed to delete constructive system' }); }
   });
 
@@ -707,11 +723,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     catch (error) { if (error instanceof z.ZodError) return res.status(400).json({ message: 'Validation error', errors: error.errors }); if ((error as any)?.code === '23505') return res.status(409).json({ message: 'Código já cadastrado.' }); res.status(500).json({ message: 'Failed to create requirement' }); }
   });
   app.put('/api/requirements/:id', isAuthenticated, express.json(), async (req, res) => {
-    try { const id = Number(req.params.id); const data = insertRequirementSchema.partial().parse(req.body); const row = await storage.updateRequirement(id, data as any); res.json(row); }
+    try { const id = Number(req.params.id); if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' }); const data = insertRequirementSchema.partial().parse(req.body); const row = await storage.updateRequirement(id, data as any); res.json(row); }
     catch (error) { if (error instanceof z.ZodError) return res.status(400).json({ message: 'Validation error', errors: error.errors }); if ((error as any)?.code === '23505') return res.status(409).json({ message: 'Código já cadastrado.' }); res.status(500).json({ message: 'Failed to update requirement' }); }
   });
   app.delete('/api/requirements/:id', isAuthenticated, async (req, res) => {
-    try { const id = Number(req.params.id); const ok = await storage.deleteRequirement(id); res.json({ ok }); }
+    try { const id = Number(req.params.id); if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' }); const ok = await storage.deleteRequirement(id); res.json({ ok }); }
     catch { res.status(500).json({ message: 'Failed to delete requirement' }); }
   });
 
@@ -733,6 +749,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put('/api/criteria/:id', isAuthenticated, express.json(), async (req, res) => {
     try {
       const id = Number(req.params.id);
+  if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' });
       const row = await storage.updateCriterion(id, insertCriterionSchema.partial().parse(req.body) as any);
       res.json(row);
     } catch (error) {
@@ -742,7 +759,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   app.delete('/api/criteria/:id', isAuthenticated, async (req, res) => {
-    try { const id = Number(req.params.id); const ok = await storage.deleteCriterion(id); res.json({ ok }); }
+    try { const id = Number(req.params.id); if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' }); const ok = await storage.deleteCriterion(id); res.json({ ok }); }
     catch { res.status(500).json({ message: 'Failed to delete criterion' }); }
   });
 
@@ -770,6 +787,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put('/api/analyses/:id', isAuthenticated, express.json(), async (req, res) => {
     try {
       const id = Number(req.params.id);
+  if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' });
       const data = insertAnalysisSchema.partial().parse(req.body);
       const row = await storage.updateAnalysis(id, data as any);
       res.json(row);
@@ -780,7 +798,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   app.delete('/api/analyses/:id', isAuthenticated, async (req, res) => {
-    try { const id = Number(req.params.id); const ok = await storage.deleteAnalysis(id); res.json({ ok }); }
+    try { const id = Number(req.params.id); if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' }); const ok = await storage.deleteAnalysis(id); res.json({ ok }); }
     catch { res.status(500).json({ message: 'Failed to delete analysis' }); }
   });
 
@@ -809,6 +827,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put('/api/parameters/:id', isAuthenticated, express.json(), async (req, res) => {
     try {
       const id = Number(req.params.id);
+  if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' });
       const data = insertParameterSchema.partial().parse(req.body);
       const row = await storage.updateParameter(id, data as any);
       res.json(row);
@@ -818,7 +837,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   app.delete('/api/parameters/:id', isAuthenticated, async (req, res) => {
-    try { const id = Number(req.params.id); const ok = await storage.deleteParameter(id); res.json({ ok }); }
+    try { const id = Number(req.params.id); if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' }); const ok = await storage.deleteParameter(id); res.json({ ok }); }
     catch { res.status(500).json({ message: 'Failed to delete parameter' }); }
   });
 
