@@ -7,6 +7,15 @@ import { insertParameterSchema } from '@shared/schema';
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 
+function getPaginationParams(query: any) {
+  const limit = Math.min(parseInt(query?.limit as string) || 10, 100);
+  const offset = query?.offset !== undefined ? parseInt(query.offset as string) || 0 : undefined;
+  const pageParam = query?.page !== undefined ? parseInt(query.page as string) || 1 : undefined;
+  const computedOffset = offset ?? ((pageParam && pageParam > 0 ? pageParam - 1 : 0) * limit);
+  const currentPage = pageParam ?? Math.floor(computedOffset / limit) + 1;
+  return { limit, offset: computedOffset, page: currentPage };
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
   await setupAuth(app);
@@ -41,10 +50,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // User management routes
-  app.get('/api/users', isAuthenticated, async (_req, res) => {
+  app.get('/api/users', isAuthenticated, async (req: any, res) => {
     try {
-      const list = await storage.listUsers();
-      res.json(list);
+      const { limit, offset, page } = getPaginationParams(req.query);
+      const { items, total } = await storage.listUsers(limit, offset);
+      res.json({ data: items, total, page });
     } catch (error) {
       console.error('Error fetching users:', error);
       res.status(500).json({ message: 'Failed to fetch users' });
@@ -177,8 +187,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/buildings', isAuthenticated, async (req: any, res) => {
     try {
       const userId: number = Number(req.user.claims.sub);
-      const buildings = await storage.getBuildingsByUser(userId);
-      res.json(buildings);
+      const { limit, offset, page } = getPaginationParams(req.query);
+      const { items, total } = await storage.getBuildingsByUser(userId, limit, offset);
+      res.json({ data: items, total, page });
     } catch (error) {
       console.error("Error fetching buildings:", error);
       res.status(500).json({ message: "Failed to fetch buildings" });
@@ -412,8 +423,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/reports', isAuthenticated, async (req: any, res) => {
     try {
       const userId: number = Number(req.user.claims.sub);
-      const reports = await storage.getReportsByUser(userId);
-      res.json(reports);
+      const { limit, offset, page } = getPaginationParams(req.query);
+      const { items, total } = await storage.getReportsByUser(userId, limit, offset);
+      res.json({ data: items, total, page });
     } catch (error) {
       console.error("Error fetching reports:", error);
       res.status(500).json({ message: "Failed to fetch reports" });
@@ -572,8 +584,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/technicians', isAuthenticated, async (req: any, res) => {
     try {
       const userId: number = Number(req.user.claims.sub);
-      const list = await storage.listTechnicians(userId);
-      res.json(list);
+      const { limit, offset, page } = getPaginationParams(req.query);
+      const { items, total } = await storage.listTechnicians(userId, limit, offset);
+      res.json({ data: items, total, page });
     } catch (error) {
       console.error('Error fetching technicians', error);
       res.status(500).json({ message: 'Failed to fetch technicians' });
