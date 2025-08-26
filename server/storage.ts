@@ -62,7 +62,7 @@ import {
   type InsertCity,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and, asc, isNull, sql } from "drizzle-orm";
+import { eq, desc, and, asc, isNull, sql, count } from "drizzle-orm";
 
 // Use a single Portuguese (Brazil) collator for accent-aware, numeric-friendly sorting
 const ptCollator = new Intl.Collator('pt-BR', { usage: 'sort', sensitivity: 'accent', numeric: true, ignorePunctuation: true });
@@ -75,13 +75,13 @@ export interface IStorage {
   createUser(user: UpsertUser): Promise<User>;
   getUserByEmail(email: string): Promise<User | undefined>;
   verifyUserByToken(token: string): Promise<User | undefined>;
-  listUsers(): Promise<PublicUser[]>;
+  listUsers(limit?: number, offset?: number): Promise<{ items: PublicUser[]; total: number }>;
   deleteUser(id: number): Promise<boolean>;
   updateUser(id: number, data: Partial<UpsertUser>): Promise<User>;
   
   // Building operations
   createBuilding(building: InsertBuilding): Promise<Building>;
-  getBuildingsByUser(userId: number): Promise<Building[]>;
+  getBuildingsByUser(userId: number, limit?: number, offset?: number): Promise<{ items: Building[]; total: number }>;
   getBuilding(id: number): Promise<Building | undefined>;
   updateBuilding(id: number, building: Partial<InsertBuilding>): Promise<Building>;
   deleteBuilding(id: number): Promise<boolean>;
@@ -103,7 +103,7 @@ export interface IStorage {
   // Report operations
   createReport(report: InsertReport): Promise<Report>;
   getReportsByBuilding(buildingId: number): Promise<Report[]>;
-  getReportsByUser(userId: number): Promise<Report[]>;
+  getReportsByUser(userId: number, limit?: number, offset?: number): Promise<{ items: Report[]; total: number }>;
   getReport(id: number): Promise<Report | undefined>;
   
   // Dashboard statistics
@@ -116,7 +116,7 @@ export interface IStorage {
 
   // Technicians
   createTechnician(tech: InsertTechnician): Promise<Technician>;
-  listTechnicians(userId: number): Promise<Technician[]>;
+  listTechnicians(userId: number, limit?: number, offset?: number): Promise<{ items: Technician[]; total: number }>;
   getTechnician(id: number): Promise<Technician | undefined>;
   updateTechnician(id: number, tech: Partial<InsertTechnician>): Promise<Technician>;
   deleteTechnician(id: number): Promise<boolean>;
@@ -265,8 +265,10 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
-  async listUsers(): Promise<PublicUser[]> {
-    return await db
+  async listUsers(limit?: number, offset?: number): Promise<{ items: PublicUser[]; total: number }> {
+    const totalRes = await db.select({ value: count() }).from(users);
+    const total = Number(totalRes[0]?.value ?? 0);
+    let query = db
       .select({
         id: users.id,
         email: users.email,
@@ -278,6 +280,10 @@ export class DatabaseStorage implements IStorage {
       })
       .from(users)
       .orderBy(desc(users.createdAt));
+    if (limit !== undefined) query = query.limit(limit);
+    if (offset !== undefined) query = query.offset(offset);
+    const items = await query;
+    return { items, total };
   }
 
   async deleteUser(id: number): Promise<boolean> {
@@ -357,8 +363,10 @@ export class DatabaseStorage implements IStorage {
     return newBuilding;
   }
 
-  async getBuildingsByUser(userId: number): Promise<Building[]> {
-    return await db
+  async getBuildingsByUser(userId: number, limit?: number, offset?: number): Promise<{ items: Building[]; total: number }> {
+    const totalRes = await db.select({ value: count() }).from(buildings).where(eq(buildings.userId, userId));
+    const total = Number(totalRes[0]?.value ?? 0);
+    let query = db
       .select({
         id: buildings.id,
         userId: buildings.userId,
@@ -392,7 +400,11 @@ export class DatabaseStorage implements IStorage {
       .leftJoin(noiseClasses, eq(buildings.noiseClassId, noiseClasses.id))
       .leftJoin(aggressivenessClasses, eq(buildings.aggressivenessClassId, aggressivenessClasses.id))
       .where(eq(buildings.userId, userId))
-      .orderBy(desc(buildings.createdAt)) as any;
+      .orderBy(desc(buildings.createdAt));
+    if (limit !== undefined) query = query.limit(limit);
+    if (offset !== undefined) query = query.offset(offset);
+    const items = await query as any;
+    return { items, total };
   }
 
   async getBuilding(id: number): Promise<Building | undefined> {
@@ -596,8 +608,14 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(reports.generatedAt));
   }
 
-  async getReportsByUser(userId: number): Promise<Report[]> {
-    return await db
+  async getReportsByUser(userId: number, limit?: number, offset?: number): Promise<{ items: Report[]; total: number }> {
+    const totalRes = await db
+      .select({ value: count() })
+      .from(reports)
+      .leftJoin(buildings, eq(reports.buildingId, buildings.id))
+      .where(and(eq(buildings.userId, userId), eq(reports.isActive, true)));
+    const total = Number(totalRes[0]?.value ?? 0);
+    let query = db
       .select({
         id: reports.id,
         buildingId: reports.buildingId,
@@ -615,6 +633,10 @@ export class DatabaseStorage implements IStorage {
         eq(reports.isActive, true)
       ))
       .orderBy(desc(reports.generatedAt));
+    if (limit !== undefined) query = query.limit(limit);
+    if (offset !== undefined) query = query.offset(offset);
+    const items = await query;
+    return { items, total };
   }
 
   async getReport(id: number): Promise<Report | undefined> {
@@ -632,8 +654,8 @@ export class DatabaseStorage implements IStorage {
     pendingEvaluations: number;
     recentBuildings: Building[];
   }> {
-    const userBuildings = await this.getBuildingsByUser(userId);
-    const userReports = await this.getReportsByUser(userId);
+    const { items: userBuildings } = await this.getBuildingsByUser(userId);
+    const { items: userReports } = await this.getReportsByUser(userId);
     
     // Get pending evaluations count
   const buildingIds = userBuildings.map(b => b.id);
@@ -678,8 +700,21 @@ export class DatabaseStorage implements IStorage {
     return row;
   }
 
-  async listTechnicians(userId: number): Promise<Technician[]> {
-    return await db.select().from(technicians).where(eq(technicians.userId, userId)).orderBy(desc(technicians.createdAt));
+  async listTechnicians(userId: number, limit?: number, offset?: number): Promise<{ items: Technician[]; total: number }> {
+    const totalRes = await db
+      .select({ value: count() })
+      .from(technicians)
+      .where(eq(technicians.userId, userId));
+    const total = Number(totalRes[0]?.value ?? 0);
+    let query = db
+      .select()
+      .from(technicians)
+      .where(eq(technicians.userId, userId))
+      .orderBy(desc(technicians.createdAt));
+    if (limit !== undefined) query = query.limit(limit);
+    if (offset !== undefined) query = query.offset(offset);
+    const items = await query;
+    return { items, total };
   }
 
   async getTechnician(id: number): Promise<Technician | undefined> {
