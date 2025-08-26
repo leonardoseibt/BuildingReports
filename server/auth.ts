@@ -10,8 +10,12 @@ import csurf from "csurf";
 const isProd = process.env.NODE_ENV === "production";
 
 // Idle (rolling) and absolute lifetimes
-const SESSION_IDLE_MS = Number(process.env.SESSION_IDLE_MS || 60 * 60 * 1000); // 1h
-const SESSION_TTL_MS = Number(process.env.SESSION_TTL_MS || 7 * 24 * 60 * 60 * 1000); // 7d
+const SESSION_IDLE_MS = Number(process.env.SESSION_IDLE_MS || 60 * 60 * 1000); // 1h cookie idle auto-refresh window
+const SESSION_TTL_MS = Number(process.env.SESSION_TTL_MS || 7 * 24 * 60 * 60 * 1000); // 7d absolute
+// Per-user claim lifetime (logical auth expiry separate from cookie idle)
+const CLAIM_LIFETIME_SEC = Number(process.env.CLAIM_LIFETIME_SEC || 60 * 60); // 1h logical token expiry
+// If remaining lifetime is below this window, we extend (rolling logic)
+const ROLLING_RENEW_WINDOW_SEC = Number(process.env.ROLLING_RENEW_WINDOW_SEC || 5 * 60); // 5m
 
 const authSchema = z.object({
   email: z.string().email(),
@@ -71,7 +75,7 @@ export async function setupAuth(app: Express) {
 
   // Absolute TTL enforcement middleware (independent of rolling idle)
   app.use((req, res, next) => {
-    const s: any = req.session as any;
+  const s: any = req.session as any;
     const now = Date.now();
     if (!s.createdAt) {
       s.createdAt = now;
@@ -117,7 +121,7 @@ export async function setupAuth(app: Express) {
     const email = "dev@example.com";
     const normalizedEmail = email.trim().toLowerCase();
     const dbUser = await storage.ensureUserByEmail(normalizedEmail, "Dev User");
-    const exp = Math.floor(Date.now() / 1000) + 60 * 60;
+    const exp = Math.floor(Date.now() / 1000) + CLAIM_LIFETIME_SEC;
     const user: any = {
       claims: { sub: dbUser.id, email: normalizedEmail, full_name: dbUser.fullName, exp },
       expires_at: exp,
@@ -157,7 +161,7 @@ export async function setupAuth(app: Express) {
       if (!match) {
         return res.status(401).json({ message: "Credenciais inválidas" });
       }
-  const exp = Math.floor(Date.now() / 1000) + 60 * 60; // claim expiry (1h)
+  const exp = Math.floor(Date.now() / 1000) + CLAIM_LIFETIME_SEC; // claim expiry
       const user: any = {
         claims: {
           sub: dbUser.id,
@@ -208,17 +212,44 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
       res.status(401).json({ message: 'Sessão expirada' });
     });
   }
-  if (sessionUser) {
-    (req as any).user = sessionUser;
-    return next();
-  }
-  if (req.isAuthenticated() && user?.expires_at) {
-    if (Date.now() / 1000 > user.expires_at) {
-      return req.session.destroy(() => {
-        res.status(401).json({ message: 'Sessão expirada' });
-      });
+  const nowSec = Math.floor(Date.now() / 1000);
+  const activeUser = sessionUser || (req.isAuthenticated() ? user : null);
+  if (activeUser?.expires_at) {
+    // Rolling renewal: extend if within window but not yet expired
+    const remaining = activeUser.expires_at - nowSec;
+    if (remaining > 0 && remaining < ROLLING_RENEW_WINDOW_SEC) {
+      const newExp = nowSec + CLAIM_LIFETIME_SEC;
+      activeUser.expires_at = newExp;
+      if (activeUser.claims) activeUser.claims.exp = newExp;
+      // Persist updated user in session if present
+      if ((req as any).session?.passport?.user) {
+        (req as any).session.passport.user = activeUser;
+        try { await new Promise(r => (req.session as any).save(r)); } catch { /* ignore save errors */ }
+      }
     }
+    (req as any).user = activeUser;
     return next();
   }
   return res.status(401).json({ message: "Unauthorized" });
+};
+
+// Explicit refresh helper for client: extends claim if still valid (not expired)
+export const refreshSession: RequestHandler = async (req, res) => {
+  const sessionUser = (req as any).session?.passport?.user;
+  const nowSec = Math.floor(Date.now() / 1000);
+  if (!sessionUser?.expires_at) {
+    return res.status(401).json({ message: 'Unauthorized' });
+  }
+  if (nowSec >= sessionUser.expires_at) {
+    return res.status(401).json({ message: 'Sessão expirada' });
+  }
+  const remaining = sessionUser.expires_at - nowSec;
+  // Only refresh if in renewal window (avoid unbounded extension by spamming)
+  if (remaining < ROLLING_RENEW_WINDOW_SEC) {
+    const newExp = nowSec + CLAIM_LIFETIME_SEC;
+    sessionUser.expires_at = newExp;
+    if (sessionUser.claims) sessionUser.claims.exp = newExp;
+    try { await new Promise(r => (req.session as any).save(r)); } catch { /* ignore */ }
+  }
+  res.json({ expires_at: sessionUser.expires_at, now: nowSec });
 };

@@ -122,3 +122,9 @@ export const queryClient = new QueryClient({
     },
   },
 });
+
+// Expose helpers for auth utilities
+export function clearCsrfToken() {
+  csrfToken = null;
+  lastCsrfFetch = 0;
+}

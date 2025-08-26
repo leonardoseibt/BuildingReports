@@ -1,7 +1,7 @@
 import express, { type Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { setupAuth, isAuthenticated } from "./auth";
+import { setupAuth, isAuthenticated, refreshSession } from "./auth";
 import { insertBuildingSchema, updateBuildingSchema, insertStructuralSystemSchema, insertSealingSystemSchema, insertRoofingSystemSchema, insertPerformanceEvaluationSchema, insertReportSchema, insertTechnicianSchema, updateTechnicianSchema, insertUserSchema, updateUserSchema, insertTypologySchema, insertNoiseClassSchema, insertAggressivenessClassSchema, insertBioclimaticZoneSchema, insertBioclimaticZoneCoverageSchema, insertStateSchema, insertCitySchema, insertConstructiveSystemSchema, insertRequirementSchema, insertCriterionSchema, insertAnalysisSchema } from "@shared/schema";
 import { insertParameterSchema } from '@shared/schema';
 import bcrypt from "bcryptjs";
@@ -16,12 +16,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId: number = Number(req.user.claims.sub);
       const user = await storage.getUser(userId);
-      res.json(user);
+      // Attach expiry info (non-sensitive) so client can display timeout / proactive refresh if desired
+      const expires_at = (req as any).user?.expires_at;
+      res.json({ ...user, expires_at });
     } catch (error) {
       console.error("Error fetching user:", error);
       res.status(500).json({ message: "Failed to fetch user" });
     }
   });
+
+  // Refresh endpoint (rolling renewal) – guarded by auth, returns current/new expiry
+  app.post('/api/auth/refresh', isAuthenticated, refreshSession);
 
   // Dashboard routes
   app.get('/api/dashboard/stats', isAuthenticated, async (req: any, res) => {
