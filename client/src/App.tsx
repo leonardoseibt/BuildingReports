@@ -23,6 +23,7 @@ import UsersList from "@/pages/users/list";
 import BioclimaticZonesList from "@/pages/bioclimatic-zones";
 import StatesList from "@/pages/states/list.tsx";
 import CitiesList from "@/pages/cities/list.tsx";
+import SettingsPlaceholder from "@/pages/settings";
 
 function PrivateRoute(props: RouteProps) {
   const { isAuthenticated, isLoading, isError } = useAuth();
@@ -68,6 +69,7 @@ function Router() {
       <PrivateRoute path="/states" component={StatesList} />
       <PrivateRoute path="/cities" component={CitiesList} />
       <PrivateRoute path="/users" component={UsersList} />
+  <PrivateRoute path="/settings" component={SettingsPlaceholder} />
       <Route component={NotFound} />
     </Switch>
   );
