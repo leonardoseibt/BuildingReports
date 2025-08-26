@@ -64,6 +64,17 @@ process.on("uncaughtException", (err) => {
 });
 
 const app = express();
+// Disable ETag to prevent 304 Not Modified on API JSON responses (which led to empty bodies and client parse issues)
+app.set('etag', false);
+// Add no-store caching headers for API routes to avoid conditional requests generating 304
+app.use((req, res, next) => {
+  if (req.path.startsWith('/api/')) {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+  }
+  next();
+});
 
 // Security: HTTP headers (relax CSP in development for Vite HMR / inline react-refresh)
 app.use(helmet({
