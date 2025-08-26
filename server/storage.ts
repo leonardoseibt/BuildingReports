@@ -712,8 +712,10 @@ export class DatabaseStorage implements IStorage {
     return row as any;
   }
   async listTypologies(): Promise<Typology[]> {
-    const rows = await db.select().from(typologies);
-    rows.sort((a: any, b: any) => ptCollator.compare(String(a.code ?? ''), String(b.code ?? '')));
+    const rows = await db
+      .select()
+      .from(typologies)
+      .orderBy(sql`${typologies.code} collate "pt-BR-x-icu"`);
     return rows as any;
   }
   async createTypology(item: InsertTypology): Promise<Typology> {
@@ -734,8 +736,10 @@ export class DatabaseStorage implements IStorage {
     return row as any;
   }
   async listNoiseClasses(): Promise<NoiseClass[]> {
-    const rows = await db.select().from(noiseClasses);
-    rows.sort((a: any, b: any) => ptCollator.compare(String(a.code ?? ''), String(b.code ?? '')));
+    const rows = await db
+      .select()
+      .from(noiseClasses)
+      .orderBy(sql`${noiseClasses.code} collate "pt-BR-x-icu"`);
     return rows as any;
   }
   async createNoiseClass(item: InsertNoiseClass): Promise<NoiseClass> {
@@ -756,8 +760,10 @@ export class DatabaseStorage implements IStorage {
     return row as any;
   }
   async listAggressivenessClasses(): Promise<AggressivenessClass[]> {
-    const rows = await db.select().from(aggressivenessClasses);
-    rows.sort((a: any, b: any) => ptCollator.compare(String(a.code ?? ''), String(b.code ?? '')));
+    const rows = await db
+      .select()
+      .from(aggressivenessClasses)
+      .orderBy(sql`${aggressivenessClasses.code} collate "pt-BR-x-icu"`);
     return rows as any;
   }
   async createAggressivenessClass(item: InsertAggressivenessClass): Promise<AggressivenessClass> {
@@ -775,8 +781,10 @@ export class DatabaseStorage implements IStorage {
 
   // Constructive systems
   async listConstructiveSystems(): Promise<ConstructiveSystem[]> {
-    const rows = await db.select().from(constructiveSystems);
-    rows.sort((a: any, b: any) => ptCollator.compare(String(a.code ?? ''), String(b.code ?? '')));
+    const rows = await db
+      .select()
+      .from(constructiveSystems)
+      .orderBy(sql`${constructiveSystems.code} collate "pt-BR-x-icu"`);
     return rows as any;
   }
   async createConstructiveSystem(item: InsertConstructiveSystem): Promise<ConstructiveSystem> {
@@ -794,8 +802,10 @@ export class DatabaseStorage implements IStorage {
 
   // Requirements
   async listRequirements(): Promise<Requirement[]> {
-    const rows = await db.select().from(requirements);
-    rows.sort((a: any, b: any) => ptCollator.compare(String(a.code ?? ''), String(b.code ?? '')));
+    const rows = await db
+      .select()
+      .from(requirements)
+      .orderBy(sql`${requirements.code} collate "pt-BR-x-icu"`);
     return rows as any;
   }
   async createRequirement(item: InsertRequirement): Promise<Requirement> {
@@ -813,8 +823,10 @@ export class DatabaseStorage implements IStorage {
 
   // Criteria
   async listCriteria(): Promise<Criterion[]> {
-    const rows = await db.select().from(criteria);
-    rows.sort((a: any, b: any) => ptCollator.compare(String(a.code ?? ''), String(b.code ?? '')));
+    const rows = await db
+      .select()
+      .from(criteria)
+      .orderBy(sql`${criteria.code} collate "pt-BR-x-icu"`);
     return rows as any;
   }
   async createCriterion(item: InsertCriterion): Promise<Criterion> {
@@ -837,15 +849,14 @@ export class DatabaseStorage implements IStorage {
 
   // Analyses
   async listAnalyses(criterionId?: number): Promise<Analysis[]> {
-    const rows = await db.select().from(analyses).where(
-      criterionId ? eq(analyses.criterionId, criterionId) : sql`true`
-    );
-    // sort by criterion then numeric-aware code
-    rows.sort((a: any, b: any) => {
-      const c = (a.criterionId ?? 0) - (b.criterionId ?? 0);
-      if (c !== 0) return c;
-      return ptCollator.compare(String(a.code ?? ''), String(b.code ?? ''));
-    });
+    const rows = await db
+      .select()
+      .from(analyses)
+      .where(criterionId ? eq(analyses.criterionId, criterionId) : sql`true`)
+      .orderBy(
+        asc(analyses.criterionId),
+        sql`${analyses.code} collate "pt-BR-x-icu"`
+      );
     return rows as any;
   }
   async createAnalysis(item: InsertAnalysis): Promise<Analysis> {
@@ -875,7 +886,11 @@ export class DatabaseStorage implements IStorage {
   async listParameters(analysisId?: number, criterionId?: number): Promise<Parameter[]> {
     let rows: any[] = [];
     if (analysisId) {
-      rows = await db.select().from(parameters).where(eq(parameters.analysisId, analysisId));
+      rows = await db
+        .select()
+        .from(parameters)
+        .where(eq(parameters.analysisId, analysisId))
+        .orderBy(sql`${parameters.label} collate "pt-BR-x-icu"`);
     } else if (criterionId) {
       // Usar join do Drizzle para evitar problemas com sql raw em alguns drivers
       const joined = await db
@@ -894,12 +909,15 @@ export class DatabaseStorage implements IStorage {
         })
         .from(parameters)
         .innerJoin(analyses, eq(parameters.analysisId, analyses.id))
-        .where(eq(analyses.criterionId, criterionId));
+        .where(eq(analyses.criterionId, criterionId))
+        .orderBy(sql`${parameters.label} collate "pt-BR-x-icu"`);
       rows = joined as any[];
     } else {
-      rows = await db.select().from(parameters);
+      rows = await db
+        .select()
+        .from(parameters)
+        .orderBy(sql`${parameters.label} collate "pt-BR-x-icu"`);
     }
-    rows.sort((a: any, b: any) => ptCollator.compare(String(a.label ?? ''), String(b.label ?? '')));
     return rows as any;
   }
   async createParameter(item: InsertParameter): Promise<Parameter> {
@@ -931,8 +949,10 @@ export class DatabaseStorage implements IStorage {
 
   // Bioclimatic zones
   async listBioclimaticZones(): Promise<BioclimaticZone[]> {
-  const rows = await db.select().from(bioclimaticZones);
-  rows.sort((a: any, b: any) => ptCollator.compare(String(a.code ?? ''), String(b.code ?? '')));
+  const rows = await db
+    .select()
+    .from(bioclimaticZones)
+    .orderBy(sql`${bioclimaticZones.code} collate "pt-BR-x-icu"`);
   return rows as any;
   }
 
@@ -983,8 +1003,8 @@ export class DatabaseStorage implements IStorage {
       .from(bioclimaticZoneCoverages)
       .leftJoin(cities, eq(bioclimaticZoneCoverages.cityId, cities.id))
       .leftJoin(states, eq(cities.stateId, states.id))
-      .where(eq(bioclimaticZoneCoverages.zoneId, zoneId));
-    (rows as any).sort((a: any, b: any) => ptCollator.compare(String(a.city ?? ''), String(b.city ?? '')));
+      .where(eq(bioclimaticZoneCoverages.zoneId, zoneId))
+      .orderBy(sql`${cities.name} collate "pt-BR-x-icu"`);
     return rows as any;
   }
 
@@ -1064,8 +1084,10 @@ export class DatabaseStorage implements IStorage {
 
   // States & Cities
   async listStates(): Promise<State[]> {
-  const rows = await db.select().from(states);
-  rows.sort((a: any, b: any) => ptCollator.compare(String(a.code ?? ''), String(b.code ?? '')));
+  const rows = await db
+    .select()
+    .from(states)
+    .orderBy(sql`${states.code} collate "pt-BR-x-icu"`);
   return rows as any;
   }
   async createState(item: InsertState): Promise<State> {
@@ -1081,13 +1103,18 @@ export class DatabaseStorage implements IStorage {
     return deleted.length > 0;
   }
   async listCitiesByState(stateId: number): Promise<City[]> {
-  const rows = await db.select().from(cities).where(eq(cities.stateId, stateId));
-  rows.sort((a: any, b: any) => ptCollator.compare(String(a.name ?? ''), String(b.name ?? '')));
+  const rows = await db
+    .select()
+    .from(cities)
+    .where(eq(cities.stateId, stateId))
+    .orderBy(sql`${cities.name} collate "pt-BR-x-icu"`);
   return rows as any;
   }
   async listCities(): Promise<City[]> {
-  const rows = await db.select().from(cities);
-  rows.sort((a: any, b: any) => ptCollator.compare(String(a.name ?? ''), String(b.name ?? '')));
+  const rows = await db
+    .select()
+    .from(cities)
+    .orderBy(sql`${cities.name} collate "pt-BR-x-icu"`);
   return rows as any;
   }
   async createCity(item: InsertCity): Promise<City> {
