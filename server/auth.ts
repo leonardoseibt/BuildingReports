@@ -6,6 +6,8 @@ import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { storage } from "./storage";
 import csurf from "csurf";
+import rateLimit from "express-rate-limit";
+import { createRequire } from "module";
 
 const isProd = process.env.NODE_ENV === "production";
 
@@ -22,25 +24,51 @@ const authSchema = z.object({
   password: z.string().min(1),
 });
 
-// Simple IP-based login attempt limiter
-const loginAttempts = new Map<string, { count: number; first: number }>();
+const require = createRequire(import.meta.url);
 const MAX_ATTEMPTS = 5;
 const WINDOW_MS = 60_000; // 1 minute
 
-const rateLimit: RequestHandler = (req, res, next) => {
-  const ip = req.ip || "";
-  const now = Date.now();
-  const entry = loginAttempts.get(ip);
-  if (!entry || now - entry.first > WINDOW_MS) {
-    loginAttempts.set(ip, { count: 1, first: now });
-    return next();
+let loginRateLimit: RequestHandler;
+try {
+  const redisUrl = process.env.RATE_LIMIT_REDIS_URL || process.env.REDIS_URL;
+  let store: any;
+  if (redisUrl) {
+    const { createClient } = require("redis");
+    const { RedisStore } = require("rate-limit-redis");
+    const client = createClient({ url: redisUrl });
+    client.on("error", (err: unknown) => {
+      console.error("Redis error", err);
+    });
+    client.connect().catch((err: unknown) => {
+      console.error("Redis connection error", err);
+    });
+    store = new RedisStore({
+      sendCommand: (...args: string[]) => client.sendCommand(args),
+    });
   }
-  if (entry.count >= MAX_ATTEMPTS) {
-    return res.status(429).json({ message: "Muitas tentativas. Tente novamente mais tarde." });
-  }
-  entry.count++;
-  next();
-};
+
+  loginRateLimit = rateLimit({
+    windowMs: WINDOW_MS,
+    limit: MAX_ATTEMPTS,
+    standardHeaders: true,
+    legacyHeaders: false,
+    handler: (_req, res) => {
+      res.status(429).json({ message: "Muitas tentativas. Tente novamente mais tarde." });
+    },
+    ...(store ? { store } : {}),
+  });
+} catch (err) {
+  console.error("Failed to initialize rate limiter", err);
+  loginRateLimit = rateLimit({
+    windowMs: WINDOW_MS,
+    limit: MAX_ATTEMPTS,
+    standardHeaders: true,
+    legacyHeaders: false,
+    handler: (_req, res) => {
+      res.status(429).json({ message: "Muitas tentativas. Tente novamente mais tarde." });
+    },
+  });
+}
 
 export function getSession() {
   const pgStore = connectPg(session);
@@ -146,7 +174,7 @@ export async function setupAuth(app: Express) {
     res.redirect("/login?verified=1");
   });
 
-  app.post("/api/login", rateLimit, express.json(), async (req, res) => {
+  app.post("/api/login", loginRateLimit, express.json(), async (req, res) => {
     try {
       const { email, password } = authSchema.parse(req.body);
       const normalizedEmail = email.trim().toLowerCase();
