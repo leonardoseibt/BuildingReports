@@ -750,7 +750,10 @@ export class DatabaseStorage implements IStorage {
     const rows = await db
       .select()
       .from(typologies)
-      .orderBy(sql`${typologies.code} collate "pt-BR-x-icu"`);
+      .orderBy(
+        sql`length(${typologies.code})`,
+        sql`${typologies.code} collate "pt-BR-x-icu"`
+      );
     return rows as any;
   }
   async createTypology(item: InsertTypology): Promise<Typology> {
@@ -774,7 +777,10 @@ export class DatabaseStorage implements IStorage {
     const rows = await db
       .select()
       .from(noiseClasses)
-      .orderBy(sql`${noiseClasses.code} collate "pt-BR-x-icu"`);
+      .orderBy(
+        sql`length(${noiseClasses.code})`,
+        sql`${noiseClasses.code} collate "pt-BR-x-icu"`
+      );
     return rows as any;
   }
   async createNoiseClass(item: InsertNoiseClass): Promise<NoiseClass> {
@@ -798,7 +804,10 @@ export class DatabaseStorage implements IStorage {
     const rows = await db
       .select()
       .from(aggressivenessClasses)
-      .orderBy(sql`${aggressivenessClasses.code} collate "pt-BR-x-icu"`);
+      .orderBy(
+        sql`length(${aggressivenessClasses.code})`,
+        sql`${aggressivenessClasses.code} collate "pt-BR-x-icu"`
+      );
     return rows as any;
   }
   async createAggressivenessClass(item: InsertAggressivenessClass): Promise<AggressivenessClass> {
@@ -819,7 +828,10 @@ export class DatabaseStorage implements IStorage {
     const rows = await db
       .select()
       .from(constructiveSystems)
-      .orderBy(sql`${constructiveSystems.code} collate "pt-BR-x-icu"`);
+      .orderBy(
+        sql`length(${constructiveSystems.code})`,
+        sql`${constructiveSystems.code} collate "pt-BR-x-icu"`
+      );
     return rows as any;
   }
   async createConstructiveSystem(item: InsertConstructiveSystem): Promise<ConstructiveSystem> {
@@ -840,7 +852,10 @@ export class DatabaseStorage implements IStorage {
     const rows = await db
       .select()
       .from(requirements)
-      .orderBy(sql`${requirements.code} collate "pt-BR-x-icu"`);
+      .orderBy(
+        sql`length(${requirements.code})`,
+        sql`${requirements.code} collate "pt-BR-x-icu"`
+      );
     return rows as any;
   }
   async createRequirement(item: InsertRequirement): Promise<Requirement> {
@@ -861,7 +876,10 @@ export class DatabaseStorage implements IStorage {
     const rows = await db
       .select()
       .from(criteria)
-      .orderBy(sql`${criteria.code} collate "pt-BR-x-icu"`);
+      .orderBy(
+        sql`length(${criteria.code})`,
+        sql`${criteria.code} collate "pt-BR-x-icu"`
+      );
     return rows as any;
   }
   async createCriterion(item: InsertCriterion): Promise<Criterion> {
@@ -890,6 +908,7 @@ export class DatabaseStorage implements IStorage {
       .where(criterionId ? eq(analyses.criterionId, criterionId) : sql`true`)
       .orderBy(
         asc(analyses.criterionId),
+        sql`length(${analyses.code})`,
         sql`${analyses.code} collate "pt-BR-x-icu"`
       );
     return rows as any;
@@ -987,7 +1006,10 @@ export class DatabaseStorage implements IStorage {
   const rows = await db
     .select()
     .from(bioclimaticZones)
-    .orderBy(sql`${bioclimaticZones.code} collate "pt-BR-x-icu"`);
+    .orderBy(
+      sql`length(${bioclimaticZones.code})`,
+      sql`${bioclimaticZones.code} collate "pt-BR-x-icu"`
+    );
   return rows as any;
   }
 
@@ -1122,7 +1144,10 @@ export class DatabaseStorage implements IStorage {
   const rows = await db
     .select()
     .from(states)
-    .orderBy(sql`${states.code} collate "pt-BR-x-icu"`);
+    .orderBy(
+      sql`length(${states.code})`,
+      sql`${states.code} collate "pt-BR-x-icu"`
+    );
   return rows as any;
   }
   async createState(item: InsertState): Promise<State> {
