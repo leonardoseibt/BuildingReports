@@ -116,13 +116,9 @@ export default function BioclimaticZonesList() {
     setPage(1);
   };
 
-  async function deleteRequest(id: number) {
-    const res = await fetch(`/api/bioclimatic-zones/${id}`, { method: 'DELETE' });
-    if (!res.ok) throw new Error(await res.text());
-    return true;
-  }
+  // Delete zone (uses apiRequest to ensure CSRF header on unsafe method)
   const deleteMutation = useMutation({
-    mutationFn: async (z: BioclimaticZone) => deleteRequest(z.id),
+    mutationFn: async (z: BioclimaticZone) => apiRequest('DELETE', `/api/bioclimatic-zones/${z.id}`),
     onMutate: async (z) => {
       await queryClient.cancelQueries({ queryKey: ["/api/bioclimatic-zones"] });
       const prev = queryClient.getQueryData<BioclimaticZone[]>(["/api/bioclimatic-zones"]) || [];

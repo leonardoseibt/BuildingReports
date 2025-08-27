@@ -44,9 +44,13 @@ const buildingFormSchema = z.object({
     .min(1, "Número de pavimentos é obrigatório")
     .transform((val) => parseInt(val, 10))
     .refine((val) => val > 0, "Número de pavimentos deve ser maior que zero"),
-  units: z.string()
+  units: z.union([z.string(), z.number()])
     .optional()
-    .transform((val) => val ? parseInt(val, 10) : 1),
+    .transform((val) => {
+      if (val === undefined || val === null || val === '') return 1; // default
+      return typeof val === 'string' ? parseInt(val, 10) : val;
+    })
+    .refine((val) => typeof val === 'number' && !Number.isNaN(val) && val >= 1, 'Número de unidades deve ser >= 1'),
   noiseClassId: z.union([z.string(), z.number()]).transform((v)=> typeof v==='string'? Number(v): v).optional(),
   aggressivenessClassId: z.union([z.string(), z.number()]).transform((v)=> typeof v==='string'? Number(v): v).optional(),
 });
