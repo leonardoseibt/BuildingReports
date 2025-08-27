@@ -310,12 +310,7 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
                       <Select onValueChange={field.onChange} value={field.value ? String(field.value) : undefined}>
                         <FormControl>
                           <SelectTrigger data-testid="select-typology" className="border-0 bg-transparent shadow-none focus:ring-0 focus:ring-offset-0">
-                            <SelectValue placeholder="Selecione o tipo de uso">
-                              {(() => {
-                                const sel = (typologies || []).find((t:any) => String(t.id) === String(field.value));
-                                return sel ? sel.label : undefined;
-                              })()}
-                            </SelectValue>
+                            <SelectValue placeholder="Selecione o tipo de uso" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
@@ -694,12 +689,7 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
                         <Select onValueChange={field.onChange} value={field.value ? String(field.value) : undefined}>
                           <FormControl>
                             <SelectTrigger data-testid="select-noise-class" className="border-0 bg-transparent shadow-none focus:ring-0 focus:ring-offset-0">
-                              <SelectValue placeholder="Selecione a classe">
-                                {(() => {
-                                  const sel = (noiseClasses || []).find((t:any) => String(t.id) === String(field.value));
-                                  return sel ? `${sel.code} - ${sel.label}${sel.risk ? ' ('+ sel.risk +')' : ''}` : undefined;
-                                })()}
-                              </SelectValue>
+                              <SelectValue placeholder="Selecione a classe" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
@@ -725,12 +715,7 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
                         <Select onValueChange={field.onChange} value={field.value ? String(field.value) : undefined}>
                           <FormControl>
                             <SelectTrigger data-testid="select-aggressiveness-class" className="border-0 bg-transparent shadow-none focus:ring-0 focus:ring-offset-0">
-                              <SelectValue placeholder="Selecione a classe">
-                                {(() => {
-                                  const sel = (aggressiveness || []).find((t:any) => String(t.id) === String(field.value));
-                                  return sel ? `${sel.code} - ${sel.label}` : undefined;
-                                })()}
-                              </SelectValue>
+                              <SelectValue placeholder="Selecione a classe" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
