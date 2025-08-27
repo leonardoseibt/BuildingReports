@@ -29,6 +29,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
    radiacaoWm2?: string | number | null;
    ventoMS?: string | number | null;
    amplitudeC?: string | number | null;
+  ventoBasicoMS?: string | number | null;
  };
 
 export default function CitiesList() {
@@ -55,6 +56,7 @@ export default function CitiesList() {
   const [radiacaoWm2, setRadiacaoWm2] = useState("");
   const [ventoMS, setVentoMS] = useState("");
   const [amplitudeC, setAmplitudeC] = useState("");
+  const [ventoBasicoMS, setVentoBasicoMS] = useState("");
 
   function resetFormFields() {
     setStateId("");
@@ -67,6 +69,7 @@ export default function CitiesList() {
     setRadiacaoWm2("");
     setVentoMS("");
     setAmplitudeC("");
+  setVentoBasicoMS("");
   }
 
 
@@ -155,6 +158,7 @@ export default function CitiesList() {
         radiacaoWm2: radiacaoWm2 === "" ? undefined : Number(radiacaoWm2),
         ventoMS: ventoMS === "" ? undefined : Number(ventoMS),
         amplitudeC: amplitudeC === "" ? undefined : Number(amplitudeC),
+  ventoBasicoMS: ventoBasicoMS === "" ? undefined : Number(ventoBasicoMS),
       } as any;
       if (!body.stateId) throw new Error('Selecione uma UF');
       if (editItem) {
@@ -235,7 +239,7 @@ export default function CitiesList() {
             <TableCell className="text-right">{t.longitude ?? '-'}</TableCell>
             <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-1.5">
-                            <Button variant="ghost" size="icon" onClick={() => { setEditItem(t); setStateId(t.stateId); setCityName(t.name); setLatitude(t.latitude != null ? String(t.latitude) : ""); setLongitude(t.longitude != null ? String(t.longitude) : ""); setAltitudeM(t.altitudeM != null ? String(t.altitudeM) : ""); setTbsC(t.tbsC != null ? String(t.tbsC) : ""); setUrPercent(t.urPercent != null ? String(t.urPercent) : ""); setRadiacaoWm2(t.radiacaoWm2 != null ? String(t.radiacaoWm2) : ""); setVentoMS(t.ventoMS != null ? String(t.ventoMS) : ""); setAmplitudeC(t.amplitudeC != null ? String(t.amplitudeC) : ""); setOpen(true); }}>
+                            <Button variant="ghost" size="icon" onClick={() => { setEditItem(t); setStateId(t.stateId); setCityName(t.name); setLatitude(t.latitude != null ? String(t.latitude) : ""); setLongitude(t.longitude != null ? String(t.longitude) : ""); setAltitudeM(t.altitudeM != null ? String(t.altitudeM) : ""); setTbsC(t.tbsC != null ? String(t.tbsC) : ""); setUrPercent(t.urPercent != null ? String(t.urPercent) : ""); setRadiacaoWm2(t.radiacaoWm2 != null ? String(t.radiacaoWm2) : ""); setVentoMS(t.ventoMS != null ? String(t.ventoMS) : ""); setAmplitudeC(t.amplitudeC != null ? String(t.amplitudeC) : ""); setVentoBasicoMS(t.ventoBasicoMS != null ? String(t.ventoBasicoMS) : ""); setOpen(true); }}>
                               <Pencil className="h-4 w-4" />
                             </Button>
                             <Button variant="ghost" size="icon" className="text-rose-600 hover:bg-rose-50 hover:text-rose-700" onClick={() => askDelete(t)} disabled={deleteMutation.isPending && selectedItem?.id === t.id}>
@@ -288,6 +292,7 @@ export default function CitiesList() {
             </div>
 
             {/* Demais campos do cadastro de municípios (conforme tabela) */}
+            {/* Linha 2: Latitude, Longitude, Altitude */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
               <NotchedField label="Latitude (°)" labelClassName="whitespace-nowrap">
                 <Input type="number" step="0.000001" value={latitude} onChange={(e) => setLatitude(e.target.value)} placeholder="-30.0346" className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" />
@@ -295,18 +300,23 @@ export default function CitiesList() {
               <NotchedField label="Longitude (°)" labelClassName="whitespace-nowrap">
                 <Input type="number" step="0.000001" value={longitude} onChange={(e) => setLongitude(e.target.value)} placeholder="-51.2177" className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" />
               </NotchedField>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
               <NotchedField label="Altitude (m)" labelClassName="whitespace-nowrap">
                 <Input type="number" step="0.01" value={altitudeM} onChange={(e) => setAltitudeM(e.target.value)} placeholder="100.00" className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" />
               </NotchedField>
+            </div>
+            {/* Linha 3: TBS, UR, Amplitude */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
               <NotchedField label="Temperatura de bulbo seco média anual (°C)" labelClassName="whitespace-nowrap">
                 <Input type="number" step="0.01" value={tbsC} onChange={(e) => setTbsC(e.target.value)} placeholder="24.50" className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" />
               </NotchedField>
               <NotchedField label="Umidade relativa média anual (%)" labelClassName="whitespace-nowrap">
                 <Input type="number" step="0.01" value={urPercent} onChange={(e) => setUrPercent(e.target.value)} placeholder="65.00" className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" />
               </NotchedField>
+              <NotchedField label="Média anual da amplitude térmica (°C)" labelClassName="whitespace-nowrap">
+                <Input type="number" step="0.01" value={amplitudeC} onChange={(e) => setAmplitudeC(e.target.value)} placeholder="10.00" className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" />
+              </NotchedField>
             </div>
+            {/* Linha 4: Radiação, Vento médio, Vento básico */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
               <NotchedField label="Média anual da radiação global diária (W/m²)" labelClassName="whitespace-nowrap">
                 <Input type="number" step="0.01" value={radiacaoWm2} onChange={(e) => setRadiacaoWm2(e.target.value)} placeholder="500.00" className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" />
@@ -314,8 +324,8 @@ export default function CitiesList() {
               <NotchedField label="Velocidade do vento média anual (m/s)" labelClassName="whitespace-nowrap">
                 <Input type="number" step="0.01" value={ventoMS} onChange={(e) => setVentoMS(e.target.value)} placeholder="2.50" className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" />
               </NotchedField>
-              <NotchedField label="Média anual da amplitude térmica (°C)" labelClassName="whitespace-nowrap">
-                <Input type="number" step="0.01" value={amplitudeC} onChange={(e) => setAmplitudeC(e.target.value)} placeholder="10.00" className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" />
+              <NotchedField label="Velocidade básica do vento (m/s)" labelClassName="whitespace-nowrap">
+                <Input type="number" step="0.01" value={ventoBasicoMS} onChange={(e) => setVentoBasicoMS(e.target.value)} placeholder="30.00" className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" />
               </NotchedField>
             </div>
             <div className="flex items-center justify-end gap-3">

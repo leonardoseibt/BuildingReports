@@ -103,6 +103,8 @@ export const cities = pgTable("cities", {
   radiacaoWm2: decimal("radiacao_wm2", { precision: 10, scale: 2 }),
   ventoMS: decimal("vento_m_s", { precision: 10, scale: 2 }),
   amplitudeC: decimal("amplitude_c", { precision: 10, scale: 2 }),
+  // Basic wind speed (isopletas) in m/s
+  ventoBasicoMS: decimal("vento_basico_m_s", { precision: 5, scale: 2 }),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
