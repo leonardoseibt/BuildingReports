@@ -63,13 +63,21 @@ export default function Sidebar() {
     cadPessoas: true,
     cadLocalizacao: true,
   cadParametros: true,
+  cadAuxiliares: true,
     administracao: true,
   };
 
   const [open, setOpen] = useState(() => {
     if (typeof window !== "undefined") {
       const stored = localStorage.getItem("sidebar-open");
-      return stored ? JSON.parse(stored) : initialOpen;
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          return { ...initialOpen, ...parsed };
+        } catch {
+          return initialOpen;
+        }
+      }
     }
     return initialOpen;
   });
@@ -265,14 +273,14 @@ export default function Sidebar() {
                 <div>
                   <button
                     className="px-0 w-full text-[11px] text-slate-500 font-medium flex items-center justify-between mb-1 mt-1"
-                    onClick={() => toggleSection('cadParametros')}
+                    onClick={() => toggleSection('cadAuxiliares')}
                   >
-                    <span>Parâmetros</span>
+                    <span>Auxiliares</span>
                     <ChevronRight
-                      className={cn("w-4 h-4 transition-transform", open.cadParametros && "rotate-90")}
+                      className={cn("w-4 h-4 transition-transform", open.cadAuxiliares && "rotate-90")}
                     />
                   </button>
-                  {open.cadParametros && (
+                  {open.cadAuxiliares && (
                     <div className="pl-2 space-y-0.5">
                       <NavLink
                         href="/typologies"
@@ -309,6 +317,22 @@ export default function Sidebar() {
                         isActive={location === '/requirements'}
                         testId="nav-requisitos"
                       />
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <button
+                    className="px-0 w-full text-[11px] text-slate-500 font-medium flex items-center justify-between mb-1 mt-1"
+                    onClick={() => toggleSection('cadParametros')}
+                  >
+                    <span>Parâmetros</span>
+                    <ChevronRight
+                      className={cn("w-4 h-4 transition-transform", open.cadParametros && "rotate-90")}
+                    />
+                  </button>
+                  {open.cadParametros && (
+                    <div className="pl-2 space-y-0.5">
                       <NavLink
                         href="/criteria"
                         icon={Target}
