@@ -5,6 +5,7 @@ import Header from "@/components/layout/header";
 import StatsCards from "@/components/dashboard/stats-cards";
 import RecentProjects from "@/components/dashboard/recent-projects";
 import PerformanceOverview from "@/components/dashboard/performance-overview";
+import { ExtendedInsights } from "@/components/dashboard/extended-insights";
 
 export default function Dashboard() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -47,6 +48,8 @@ export default function Dashboard() {
           <div className="mt-8">
             <RecentProjects />
           </div>
+
+          <ExtendedInsights />
         </main>
       </div>
     </div>

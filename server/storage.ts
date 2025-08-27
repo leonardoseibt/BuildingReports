@@ -694,6 +694,164 @@ export class DatabaseStorage implements IStorage {
     };
   }
 
+  // Extended dashboard statistics (aggregations & distributions)
+  async getUserExtendedStats(userId: number): Promise<any> {
+    // Basic counts reuse existing helper to avoid duplication
+    const base = await this.getUserStats(userId);
+
+    // Buildings created & reports generated last 30 days
+    const [{ value: buildingsLast30 } = { value: 0 }] = await db
+      .select({ value: count() })
+      .from(buildings)
+      .where(and(eq(buildings.userId, userId), sql`created_at >= now() - interval '30 days'`));
+    const [{ value: reportsLast30 } = { value: 0 }] = await db
+      .select({ value: count() })
+      .from(reports)
+      .leftJoin(buildings, eq(reports.buildingId, buildings.id))
+      .where(and(eq(buildings.userId, userId), sql`reports.generated_at >= now() - interval '30 days'`));
+
+    // Distribution by typology
+    const typologyRows = await db.execute(sql`SELECT b.typology_id as "typologyId", t.code, t.label, COUNT(*)::int as count
+      FROM buildings b
+      LEFT JOIN typologies t ON t.id = b.typology_id
+      WHERE b.user_id = ${userId}
+      GROUP BY b.typology_id, t.code, t.label
+      ORDER BY count DESC NULLS LAST`);
+
+    // Distribution by noise & aggressiveness classes
+    const noiseRows = await db.execute(sql`SELECT b.noise_class_id as "noiseClassId", n.code, n.label, COUNT(*)::int as count
+      FROM buildings b
+      LEFT JOIN noise_classes n ON n.id = b.noise_class_id
+      WHERE b.user_id = ${userId}
+      GROUP BY b.noise_class_id, n.code, n.label
+      ORDER BY count DESC NULLS LAST`);
+    const aggressRows = await db.execute(sql`SELECT b.aggressiveness_class_id as "aggressivenessClassId", a.code, a.label, COUNT(*)::int as count
+      FROM buildings b
+      LEFT JOIN aggressiveness_classes a ON a.id = b.aggressiveness_class_id
+      WHERE b.user_id = ${userId}
+      GROUP BY b.aggressiveness_class_id, a.code, a.label
+      ORDER BY count DESC NULLS LAST`);
+
+    // Weekly activity (last 8 weeks including current)
+    const weekly = await db.execute(sql`WITH weeks AS (
+        SELECT generate_series(date_trunc('week', now()) - interval '7 weeks', date_trunc('week', now()), interval '1 week') AS week_start
+      ),
+      b AS (
+        SELECT date_trunc('week', created_at) wk, count(*) cnt
+        FROM buildings
+        WHERE user_id = ${userId}
+        GROUP BY 1
+      ),
+      r AS (
+        SELECT date_trunc('week', reports.generated_at) wk, count(*) cnt
+        FROM reports
+        JOIN buildings b2 ON b2.id = reports.building_id
+        WHERE b2.user_id = ${userId} AND reports.is_active = true
+        GROUP BY 1
+      )
+      SELECT to_char(w.week_start, 'IYYY-IW') as label,
+             COALESCE(b.cnt,0)::int AS buildings,
+             COALESCE(r.cnt,0)::int AS reports
+      FROM weeks w
+      LEFT JOIN b ON b.wk = w.week_start
+      LEFT JOIN r ON r.wk = w.week_start
+      ORDER BY w.week_start;`);
+
+    // Data quality / alerts
+    const [{ value: incompleteBuildings } = { value: 0 }] = await db
+      .select({ value: count() })
+      .from(buildings)
+      .where(and(eq(buildings.userId, userId), sql`(technician_id IS NULL OR total_area <= 0 OR bioclimatic_zone IS NULL)`));
+    const [{ value: buildingsWithoutEvaluation } = { value: 0 }] = await db
+      .select({ value: count() })
+      .from(buildings)
+      .leftJoin(performanceEvaluations, eq(performanceEvaluations.buildingId, buildings.id))
+      .where(and(eq(buildings.userId, userId), isNull(performanceEvaluations.id)));
+
+    const typologyArr = (typologyRows as any).rows ?? (typologyRows as any);
+    const noiseArr = (noiseRows as any).rows ?? (noiseRows as any);
+    const aggressArr = (aggressRows as any).rows ?? (aggressRows as any);
+    const weeklyArr = (weekly as any).rows ?? (weekly as any);
+
+    // Technician ranking (top 5 by number of buildings)
+    const techRankRows = await db.execute(sql`SELECT b.technician_id as "technicianId", t.full_name as name, COUNT(*)::int as count
+      FROM buildings b
+      LEFT JOIN technicians t ON t.id = b.technician_id
+      WHERE b.user_id = ${userId} AND b.technician_id IS NOT NULL
+      GROUP BY b.technician_id, t.full_name
+      ORDER BY count DESC
+      LIMIT 5`);
+    const techRankArr = (techRankRows as any).rows ?? (techRankRows as any);
+
+    // Forecast for current month (reports)
+  const forecastRow = await db.execute(sql`WITH today AS (
+    SELECT date_trunc('month', now()) AS month_start,
+         (EXTRACT(EPOCH FROM (date_trunc('day', now()) - date_trunc('month', now()))) / 86400)::int + 1 AS days_so_far,
+         date_trunc('month', now()) + interval '1 month' - interval '1 day' AS month_end
+      ), counts AS (
+        SELECT COUNT(r.*)::int AS total_so_far
+        FROM reports r
+        JOIN buildings b ON b.id = r.building_id
+        WHERE b.user_id = ${userId} AND r.generated_at >= (SELECT month_start FROM today)
+          AND r.generated_at < date_trunc('month', now()) + interval '1 month'
+      )
+      SELECT total_so_far, days_so_far, extract(day from month_end)::int AS days_in_month
+      FROM today CROSS JOIN counts;`);
+    const fRow = ((forecastRow as any).rows ?? [])[0];
+    let forecast: any = null;
+    if (fRow) {
+      const totalSoFar = Number(fRow.total_so_far || 0);
+      const daysSoFar = Number(fRow.days_so_far || 1);
+      const daysInMonth = Number(fRow.days_in_month || daysSoFar);
+      const avgPerDay = totalSoFar / daysSoFar;
+      const projected = Math.round(avgPerDay * daysInMonth);
+      forecast = {
+        reportsCurrentMonth: totalSoFar,
+        daysSoFar,
+        daysInMonth,
+        averagePerDay: Number(avgPerDay.toFixed(2)),
+        projectedTotal: projected,
+        progressPercent: daysInMonth ? Math.min(100, Math.round((totalSoFar / projected) * 100)) : 0,
+      };
+    }
+
+    // Average report lead time (building creation -> report generated)
+    const leadTimeRows = await db.execute(sql`SELECT AVG(EXTRACT(EPOCH FROM (r.generated_at - b.created_at))/3600)::numeric(10,2) AS hours
+      FROM reports r JOIN buildings b ON b.id = r.building_id
+      WHERE b.user_id = ${userId}`);
+    const avgLeadTimeHours = Number(((leadTimeRows as any).rows ?? [])[0]?.hours ?? 0);
+
+    // Distribution by state (UF)
+    const stateRows = await db.execute(sql`SELECT b.state, COUNT(*)::int as count
+      FROM buildings b
+      WHERE b.user_id = ${userId} AND b.state IS NOT NULL
+      GROUP BY b.state
+      ORDER BY count DESC`);
+    const stateArr = (stateRows as any).rows ?? (stateRows as any);
+    const totalStateCount = stateArr.reduce((acc: number, r: any) => acc + Number(r.count || 0), 0) || 1;
+
+    return {
+      ...base,
+      buildingsLast30: Number(buildingsLast30 || 0),
+      reportsLast30: Number(reportsLast30 || 0),
+      distributions: {
+        typologies: typologyArr.map((r: any) => ({ ...r })),
+        noiseClasses: noiseArr.map((r: any) => ({ ...r })),
+        aggressivenessClasses: aggressArr.map((r: any) => ({ ...r })),
+        states: stateArr.map((r: any) => ({ ...r, percent: Number(((r.count || 0) / totalStateCount * 100).toFixed(1)) })),
+      },
+      weeklyActivity: weeklyArr.map((r: any) => ({ ...r })),
+      alerts: {
+        incompleteBuildings: Number(incompleteBuildings || 0),
+        buildingsWithoutEvaluation: Number(buildingsWithoutEvaluation || 0),
+        pendingEvaluations: base.pendingEvaluations,
+      },
+      technicians: techRankArr.map((r: any) => ({ ...r })),
+      forecast,
+      avgReportLeadTimeHours: avgLeadTimeHours,
+    };
+  }
+
   // Technicians
   async createTechnician(tech: InsertTechnician): Promise<Technician> {
     const [row] = await db.insert(technicians).values({

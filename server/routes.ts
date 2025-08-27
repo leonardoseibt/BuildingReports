@@ -49,6 +49,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get('/api/dashboard/extended-stats', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId: number = Number(req.user.claims.sub);
+      const stats = await storage.getUserExtendedStats(userId);
+      res.json(stats);
+    } catch (error) {
+      console.error('Error fetching extended dashboard stats:', error);
+      res.status(500).json({ message: 'Failed to fetch extended dashboard stats' });
+    }
+  });
+
   // User management routes
   app.get('/api/users', isAuthenticated, async (req: any, res) => {
     try {
