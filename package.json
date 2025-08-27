@@ -39,6 +39,7 @@
   ,"db:seed:constructive-systems": "tsx scripts/run-sql.ts scripts/sql/20250823_seed_constructive_systems.sql"
   ,"db:migrate:requirements": "tsx scripts/run-sql.ts scripts/sql/20250823_create_requirements.sql"
   ,"db:migrate:performance-evaluations": "tsx scripts/run-sql.ts scripts/sql/20250824_create_performance_evaluations.sql"
+  ,"db:migrate:building-systems": "tsx scripts/run-sql.ts scripts/sql/20250826_create_building_systems.sql"
   ,"check:missing-cities": "tsx scripts/check/missing-cities.ts"
   ,"check:cities-coverages": "tsx scripts/check/cities-without-coverages.ts"
   ,"db:migrate:fks-criteria-analyses-parameters": "tsx scripts/run-sql.ts scripts/sql/20250826_add_fk_criteria_analyses_parameters.sql"

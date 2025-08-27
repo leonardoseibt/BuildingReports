@@ -483,20 +483,15 @@ export class DatabaseStorage implements IStorage {
     // Guard: block deletion if dependent records exist (systems, evaluations, reports)
     try {
       return await db.transaction(async (tx) => {
+        // Only check dependent entities that are actually implemented / have tables.
         const depCounts = await Promise.all([
-          tx.select({ value: count() }).from(structuralSystems).where(eq(structuralSystems.buildingId, id)),
-          tx.select({ value: count() }).from(sealingSystems).where(eq(sealingSystems.buildingId, id)),
-          tx.select({ value: count() }).from(roofingSystems).where(eq(roofingSystems.buildingId, id)),
           tx.select({ value: count() }).from(performanceEvaluations).where(eq(performanceEvaluations.buildingId, id)),
           tx.select({ value: count() }).from(reports).where(eq(reports.buildingId, id)),
         ]);
-        const [structuralC, sealingC, roofingC, evalC, reportsC] = depCounts.map(r => Number(r[0]?.value ?? 0));
-        const total = structuralC + sealingC + roofingC + evalC + reportsC;
+        const [evalC, reportsC] = depCounts.map(r => Number(r[0]?.value ?? 0));
+        const total = evalC + reportsC;
         if (total > 0) {
           const parts: string[] = [];
-          if (structuralC) parts.push(`${structuralC} sistema(s) estrutural(is)`);
-          if (sealingC) parts.push(`${sealingC} vedação(ões)`);
-          if (roofingC) parts.push(`${roofingC} cobertura(s)`);
           if (evalC) parts.push(`${evalC} avaliação(ões)`);
           if (reportsC) parts.push(`${reportsC} relatório(s)`);
           const e: any = new Error(`Não é possível excluir: existem ${parts.join(', ')} vinculados à edificação.`);
