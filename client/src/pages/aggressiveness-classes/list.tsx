@@ -26,7 +26,8 @@ export default function AggressivenessClassesList() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<AggressivenessClass | null>(null);
   const [search, setSearch] = useState("");
-  const [sortBy, setSortBy] = useState<"code" | "label" | "risk" | "isActive" | "createdAt" | null>(null);
+  // Inicializa já ordenado por código (asc) para refletir ordenação padrão desejada
+  const [sortBy, setSortBy] = useState<"code" | "label" | "risk" | "isActive" | "createdAt" | null>('code');
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const pageSize = 15;
   const [page, setPage] = useState(1);

@@ -26,7 +26,8 @@ export default function ConstructiveSystemsList() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<ConstructiveSystem | null>(null);
   const [search, setSearch] = useState("");
-  const [sortBy, setSortBy] = useState<"code" | "label" | "isActive" | "createdAt" | null>(null);
+  // Inicializa já ordenado por código (asc) para refletir ordenação padrão desejada
+  const [sortBy, setSortBy] = useState<"code" | "label" | "isActive" | "createdAt" | null>('code');
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const pageSize = 15;
   const [page, setPage] = useState(1);
