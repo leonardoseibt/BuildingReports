@@ -480,13 +480,34 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteBuilding(id: number): Promise<boolean> {
+    // Guard: block deletion if dependent records exist (systems, evaluations, reports)
     try {
-      const deleted = await db
-        .delete(buildings)
-        .where(eq(buildings.id, id))
-        .returning({ id: buildings.id });
-      return deleted.length > 0;
+      return await db.transaction(async (tx) => {
+        const depCounts = await Promise.all([
+          tx.select({ value: count() }).from(structuralSystems).where(eq(structuralSystems.buildingId, id)),
+          tx.select({ value: count() }).from(sealingSystems).where(eq(sealingSystems.buildingId, id)),
+          tx.select({ value: count() }).from(roofingSystems).where(eq(roofingSystems.buildingId, id)),
+          tx.select({ value: count() }).from(performanceEvaluations).where(eq(performanceEvaluations.buildingId, id)),
+          tx.select({ value: count() }).from(reports).where(eq(reports.buildingId, id)),
+        ]);
+        const [structuralC, sealingC, roofingC, evalC, reportsC] = depCounts.map(r => Number(r[0]?.value ?? 0));
+        const total = structuralC + sealingC + roofingC + evalC + reportsC;
+        if (total > 0) {
+          const parts: string[] = [];
+          if (structuralC) parts.push(`${structuralC} sistema(s) estrutural(is)`);
+          if (sealingC) parts.push(`${sealingC} vedação(ões)`);
+          if (roofingC) parts.push(`${roofingC} cobertura(s)`);
+          if (evalC) parts.push(`${evalC} avaliação(ões)`);
+          if (reportsC) parts.push(`${reportsC} relatório(s)`);
+          const e: any = new Error(`Não é possível excluir: existem ${parts.join(', ')} vinculados à edificação.`);
+          e.status = 409;
+          throw e;
+        }
+        const deleted = await tx.delete(buildings).where(eq(buildings.id, id)).returning({ id: buildings.id });
+        return deleted.length > 0;
+      });
     } catch (err: any) {
+      if (err?.status === 409) throw err;
       if (err?.code === '23503') {
         const e = new Error('Não é possível excluir: existem registros relacionados.');
         (e as any).status = 409;
@@ -737,8 +758,23 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteTechnician(id: number): Promise<boolean> {
-    const deleted = await db.delete(technicians).where(eq(technicians.id, id)).returning({ id: technicians.id });
-    return deleted.length > 0;
+    try {
+      return await db.transaction(async (tx) => {
+        const countRes = await tx.select({ value: count() }).from(buildings).where(eq(buildings.technicianId, id));
+        const c = Number(countRes[0]?.value ?? 0);
+        if (c > 0) {
+          const e: any = new Error(`Não é possível excluir: existem ${c} edificação(ões) vinculadas a este responsável técnico.`);
+            e.status = 409;
+          throw e;
+        }
+        const deleted = await tx.delete(technicians).where(eq(technicians.id, id)).returning({ id: technicians.id });
+        return deleted.length > 0;
+      });
+    } catch (err: any) {
+      if (err?.status === 409) throw err;
+      if (err?.code === '23503') { const e: any = new Error('Não é possível excluir: existem registros relacionados.'); e.status = 409; throw e; }
+      throw err;
+    }
   }
 
   // Master tables
@@ -765,8 +801,24 @@ export class DatabaseStorage implements IStorage {
     return row as Typology;
   }
   async deleteTypology(id: number): Promise<boolean> {
-    const deleted = await db.delete(typologies).where(eq(typologies.id, id)).returning({ id: typologies.id });
-    return deleted.length > 0;
+    // Guard: prevent deletion if buildings reference this typology
+    try {
+      return await db.transaction(async (tx) => {
+        const countRes = await tx.select({ value: count() }).from(buildings).where(eq(buildings.typologyId, id));
+        const c = Number(countRes[0]?.value ?? 0);
+        if (c > 0) {
+          const e: any = new Error(`Não é possível excluir: existem ${c} edificação(ões) vinculadas a este tipo de uso.`);
+          e.status = 409;
+          throw e;
+        }
+        const deleted = await tx.delete(typologies).where(eq(typologies.id, id)).returning({ id: typologies.id });
+        return deleted.length > 0;
+      });
+    } catch (err: any) {
+      if (err?.status === 409) throw err;
+      if (err?.code === '23503') { const e: any = new Error('Não é possível excluir: existem registros relacionados.'); e.status = 409; throw e; }
+      throw err;
+    }
   }
 
   async getNoiseClass(id: number): Promise<NoiseClass | undefined> {
@@ -792,8 +844,23 @@ export class DatabaseStorage implements IStorage {
     return row as NoiseClass;
   }
   async deleteNoiseClass(id: number): Promise<boolean> {
-    const deleted = await db.delete(noiseClasses).where(eq(noiseClasses.id, id)).returning({ id: noiseClasses.id });
-    return deleted.length > 0;
+    try {
+      return await db.transaction(async (tx) => {
+        const countRes = await tx.select({ value: count() }).from(buildings).where(eq(buildings.noiseClassId, id));
+        const c = Number(countRes[0]?.value ?? 0);
+        if (c > 0) {
+          const e: any = new Error(`Não é possível excluir: existem ${c} edificação(ões) vinculadas a esta classe de ruído.`);
+          e.status = 409;
+          throw e;
+        }
+        const deleted = await tx.delete(noiseClasses).where(eq(noiseClasses.id, id)).returning({ id: noiseClasses.id });
+        return deleted.length > 0;
+      });
+    } catch (err: any) {
+      if (err?.status === 409) throw err;
+      if (err?.code === '23503') { const e: any = new Error('Não é possível excluir: existem registros relacionados.'); e.status = 409; throw e; }
+      throw err;
+    }
   }
 
   async getAggressivenessClass(id: number): Promise<AggressivenessClass | undefined> {
@@ -819,8 +886,23 @@ export class DatabaseStorage implements IStorage {
     return row as AggressivenessClass;
   }
   async deleteAggressivenessClass(id: number): Promise<boolean> {
-    const deleted = await db.delete(aggressivenessClasses).where(eq(aggressivenessClasses.id, id)).returning({ id: aggressivenessClasses.id });
-    return deleted.length > 0;
+    try {
+      return await db.transaction(async (tx) => {
+        const countRes = await tx.select({ value: count() }).from(buildings).where(eq(buildings.aggressivenessClassId, id));
+        const c = Number(countRes[0]?.value ?? 0);
+        if (c > 0) {
+          const e: any = new Error(`Não é possível excluir: existem ${c} edificação(ões) vinculadas a esta classe de agressividade.`);
+          e.status = 409;
+          throw e;
+        }
+        const deleted = await tx.delete(aggressivenessClasses).where(eq(aggressivenessClasses.id, id)).returning({ id: aggressivenessClasses.id });
+        return deleted.length > 0;
+      });
+    } catch (err: any) {
+      if (err?.status === 409) throw err;
+      if (err?.code === '23503') { const e: any = new Error('Não é possível excluir: existem registros relacionados.'); e.status = 409; throw e; }
+      throw err;
+    }
   }
 
   // Constructive systems

@@ -650,16 +650,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete('/api/technicians/:id', isAuthenticated, async (req: any, res) => {
     try {
       const id = Number(req.params.id);
-  if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' });
+      if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' });
       const existing = await storage.getTechnician(id);
       if (!existing) return res.status(404).json({ message: 'Responsável técnico não encontrado' });
       if (existing.userId !== Number(req.user.claims.sub)) return res.status(403).json({ message: 'Access denied' });
-
       const ok = await storage.deleteTechnician(id);
       res.json({ ok });
-    } catch (error) {
-      console.error('Error deleting technician', error);
-      res.status(500).json({ message: 'Failed to delete technician' });
+    } catch (error: any) {
+      const status = (error as any)?.status || 500;
+      const message = (error as any)?.message || 'Falha ao excluir responsável técnico';
+      res.status(status).json({ message });
     }
   });
 
@@ -675,9 +675,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try { const id = Number(req.params.id); if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' }); const data = insertTypologySchema.partial().parse(req.body); const row = await storage.updateTypology(id, data as any); res.json(row); }
     catch (error) { if (error instanceof z.ZodError) return res.status(400).json({ message: 'Validation error', errors: error.errors }); if ((error as any)?.code === '23505') return res.status(409).json({ message: 'Código já cadastrado.' }); res.status(500).json({ message: 'Failed to update typology' }); }
   });
-  app.delete('/api/typologies/:id', isAuthenticated, async (req, res) => {
-    try { const id = Number(req.params.id); if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' }); const ok = await storage.deleteTypology(id); res.json({ ok }); }
-    catch { res.status(500).json({ message: 'Failed to delete typology' }); }
+  app.delete('/api/typologies/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const id = Number(req.params.id);
+      if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' });
+      const ok = await storage.deleteTypology(id);
+      res.json({ ok });
+    } catch (error: any) {
+      const status = (error as any)?.status || 500;
+      const message = (error as any)?.message || 'Falha ao excluir tipo de uso';
+      res.status(status).json({ message });
+    }
   });
 
   // Master tables: Noise classes
@@ -692,9 +700,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try { const id = Number(req.params.id); if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' }); const data = insertNoiseClassSchema.partial().parse(req.body); const row = await storage.updateNoiseClass(id, data as any); res.json(row); }
     catch (error) { if (error instanceof z.ZodError) return res.status(400).json({ message: 'Validation error', errors: error.errors }); if ((error as any)?.code === '23505') return res.status(409).json({ message: 'Código já cadastrado.' }); res.status(500).json({ message: 'Failed to update noise class' }); }
   });
-  app.delete('/api/noise-classes/:id', isAuthenticated, async (req, res) => {
-    try { const id = Number(req.params.id); if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' }); const ok = await storage.deleteNoiseClass(id); res.json({ ok }); }
-    catch { res.status(500).json({ message: 'Failed to delete noise class' }); }
+  app.delete('/api/noise-classes/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const id = Number(req.params.id);
+      if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' });
+      const ok = await storage.deleteNoiseClass(id);
+      res.json({ ok });
+    } catch (error: any) {
+      const status = (error as any)?.status || 500;
+      const message = (error as any)?.message || 'Falha ao excluir classe de ruído';
+      res.status(status).json({ message });
+    }
   });
 
   // Master tables: Aggressiveness classes
@@ -709,9 +725,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try { const id = Number(req.params.id); if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' }); const data = insertAggressivenessClassSchema.partial().parse(req.body); const row = await storage.updateAggressivenessClass(id, data as any); res.json(row); }
     catch (error) { if (error instanceof z.ZodError) return res.status(400).json({ message: 'Validation error', errors: error.errors }); if ((error as any)?.code === '23505') return res.status(409).json({ message: 'Código já cadastrado.' }); res.status(500).json({ message: 'Failed to update aggressiveness class' }); }
   });
-  app.delete('/api/aggressiveness-classes/:id', isAuthenticated, async (req, res) => {
-    try { const id = Number(req.params.id); if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' }); const ok = await storage.deleteAggressivenessClass(id); res.json({ ok }); }
-    catch { res.status(500).json({ message: 'Failed to delete aggressiveness class' }); }
+  app.delete('/api/aggressiveness-classes/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const id = Number(req.params.id);
+      if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' });
+      const ok = await storage.deleteAggressivenessClass(id);
+      res.json({ ok });
+    } catch (error: any) {
+      const status = (error as any)?.status || 500;
+      const message = (error as any)?.message || 'Falha ao excluir classe de agressividade';
+      res.status(status).json({ message });
+    }
   });
 
   // Master tables: Constructive systems
