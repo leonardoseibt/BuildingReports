@@ -40,6 +40,7 @@ export default function AggressivenessClassForm({ initialItem, onSuccess, onCanc
     onSuccess: () => {
       toast({ title: 'Sucesso', description: `Classe ${initialItem ? 'atualizada' : 'cadastrada'} com sucesso!` });
       queryClient.invalidateQueries({ queryKey: ['/api/aggressiveness-classes'] });
+  queryClient.invalidateQueries({ queryKey: ['/api/dashboard/extended-stats'] });
       onSuccess?.();
     },
   onError: (error: any) => { handleCodeUniquenessError(error, form as any, toast, 'Falha ao salvar classe'); },

@@ -169,9 +169,7 @@ export default function TechniciansList() {
     onSuccess: (_data, t) => {
       toast({ title: 'Responsável técnico excluído', description: `${t.fullName} foi removido.` });
     },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/technicians"], refetchType: 'inactive' });
-    }
+  onSettled: () => { queryClient.invalidateQueries({ queryKey: ["/api/technicians"], refetchType: 'inactive' }); queryClient.invalidateQueries({ queryKey: ['/api/dashboard/extended-stats'] }); }
   });
 
   function askDelete(t: Technician) { setSelectedTech(t); setConfirmOpen(true); }

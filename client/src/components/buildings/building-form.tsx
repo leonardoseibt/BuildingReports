@@ -17,6 +17,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { cn } from "@/lib/utils";
 import { z } from "zod";
+import { invalidateDashboard } from '../../lib/invalidateDashboard';
 
 // Form schema (normalized address fields)
 const buildingFormSchema = z.object({
@@ -171,8 +172,8 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
     },
     onSuccess: () => {
       toast({ title: 'Sucesso', description: 'Edificação cadastrada com sucesso!' });
-      queryClient.invalidateQueries({ queryKey: ['/api/buildings'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/dashboard/stats'] });
+  queryClient.invalidateQueries({ queryKey: ['/api/buildings'] });
+  invalidateDashboard(queryClient);
       onSuccess?.();
       navigate('/buildings');
     },
@@ -234,8 +235,8 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
     },
     onSuccess: () => {
       toast({ title: 'Sucesso', description: 'Edificação atualizada com sucesso!' });
-      queryClient.invalidateQueries({ queryKey: ['/api/buildings'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/dashboard/stats'] });
+  queryClient.invalidateQueries({ queryKey: ['/api/buildings'] });
+  invalidateDashboard(queryClient);
       onSuccess?.();
     },
     onError: (error) => {

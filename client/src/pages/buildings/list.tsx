@@ -33,6 +33,7 @@ import {
 import { PaginationSimple as Pagination } from "@/components/ui/pagination";
 import type { Building, Technician } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
+import { invalidateDashboard } from '../../lib/invalidateDashboard';
 
 export default function BuildingList() {
   const { toast } = useToast();
@@ -232,10 +233,12 @@ export default function BuildingList() {
       toast({ title: 'Erro ao excluir', description: String(err), variant: 'destructive' });
     },
     onSuccess: (_data, b) => {
-      toast({ title: 'Edificação excluída', description: `${b.name} foi removida.` });
+  toast({ title: 'Edificação excluída', description: `${b.name} foi removida.` });
+  invalidateDashboard(queryClient);
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/buildings"], refetchType: 'inactive' });
+  queryClient.invalidateQueries({ queryKey: ["/api/buildings"], refetchType: 'inactive' });
+  invalidateDashboard(queryClient);
     }
   });
 
@@ -390,7 +393,7 @@ export default function BuildingList() {
   <Dialog open={open} onOpenChange={(v) => { if (v) setFormKey(k => k + 1); if (!v) setEditBuilding(null); setOpen(v); }}>
         <DialogContent className="max-w-4xl max-h-[90vh] p-0 overflow-hidden">
           <div className="max-h-[calc(90vh-1rem)] overflow-y-auto my-7 px-7">
-    <BuildingForm key={formKey} building={editBuilding} onSuccess={() => { setEditBuilding(null); setOpen(false); queryClient.invalidateQueries({ queryKey: ["/api/buildings"] }); }} onCancel={() => setOpen(false)} />
+  <BuildingForm key={formKey} building={editBuilding} onSuccess={() => { setEditBuilding(null); setOpen(false); queryClient.invalidateQueries({ queryKey: ["/api/buildings"] }); invalidateDashboard(queryClient); }} onCancel={() => setOpen(false)} />
           </div>
         </DialogContent>
       </Dialog>

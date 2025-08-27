@@ -39,6 +39,8 @@ export default function TypologyForm({ initialItem, onSuccess, onCancel }: { ini
     onSuccess: () => {
   toast({ title: 'Sucesso', description: `Tipo de Uso ${initialItem ? 'atualizado' : 'cadastrado'} com sucesso!` });
       queryClient.invalidateQueries({ queryKey: ['/api/typologies'] });
+  queryClient.invalidateQueries({ queryKey: ['/api/dashboard/extended-stats'] });
+  queryClient.invalidateQueries({ queryKey: ['/api/dashboard/stats'] });
       onSuccess?.();
     },
   onError: (error: any) => { handleCodeUniquenessError(error, form as any, toast, 'Falha ao salvar tipo de uso'); },

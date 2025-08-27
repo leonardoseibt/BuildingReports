@@ -62,6 +62,7 @@ export default function NoiseClassForm({ initialItem, onSuccess, onCancel }: { i
     onSuccess: () => {
       toast({ title: 'Sucesso', description: `Classe ${initialItem ? 'atualizada' : 'cadastrada'} com sucesso!` });
       queryClient.invalidateQueries({ queryKey: ['/api/noise-classes'] });
+  queryClient.invalidateQueries({ queryKey: ['/api/dashboard/extended-stats'] });
       onSuccess?.();
     },
   onError: (error: any) => { handleCodeUniquenessError(error, form as any, toast, 'Falha ao salvar classe'); },

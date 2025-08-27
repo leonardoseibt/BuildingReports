@@ -107,7 +107,7 @@ export default function NoiseClassesList() {
       toast({ title: 'Erro ao excluir', description: String(err), variant: 'destructive' });
     },
     onSuccess: (_data, t) => { toast({ title: 'Classe de ruído excluída', description: `${t.label} foi removida.` }); },
-    onSettled: () => { queryClient.invalidateQueries({ queryKey: ["/api/noise-classes"], refetchType: 'inactive' }); }
+  onSettled: () => { queryClient.invalidateQueries({ queryKey: ["/api/noise-classes"], refetchType: 'inactive' }); queryClient.invalidateQueries({ queryKey: ['/api/dashboard/extended-stats'] }); }
   });
 
   function askDelete(t: NoiseClass) { setSelectedItem(t); setConfirmOpen(true); }

@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
+import { useQueryClient } from '@tanstack/react-query';
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -72,6 +73,7 @@ interface TechnicianFormProps {
 
 export default function TechnicianForm({ onSuccess, onCancel, initialTech }: TechnicianFormProps = {}) {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const isEdit = !!initialTech?.id;
   const form = useForm<TechnicianFormData>({
     resolver: zodResolver(schema),
@@ -204,8 +206,10 @@ export default function TechnicianForm({ onSuccess, onCancel, initialTech }: Tec
       await (isEdit
         ? apiRequest("PUT", `/api/technicians/${initialTech!.id}` as const, payload)
         : apiRequest("POST", "/api/technicians", payload));
-      toast({ title: "Sucesso", description: isEdit ? "Responsável técnico atualizado." : "Responsável técnico cadastrado." });
-      onSuccess?.();
+  toast({ title: "Sucesso", description: isEdit ? "Responsável técnico atualizado." : "Responsável técnico cadastrado." });
+  queryClient.invalidateQueries({ queryKey: ['/api/technicians'] });
+  queryClient.invalidateQueries({ queryKey: ['/api/dashboard/extended-stats'] });
+  onSuccess?.();
     } catch (e) {
       toast({
         title: "Erro",

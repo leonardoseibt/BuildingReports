@@ -4,7 +4,6 @@ import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
 import StatsCards from "@/components/dashboard/stats-cards";
 import RecentProjects from "@/components/dashboard/recent-projects";
-import PerformanceOverview from "@/components/dashboard/performance-overview";
 import { ExtendedInsights } from "@/components/dashboard/extended-insights";
 
 export default function Dashboard() {
@@ -39,10 +38,7 @@ export default function Dashboard() {
         <main className="flex-1 overflow-y-auto p-6">
           <StatsCards />
 
-          {/* Quick Actions below stats */}
-          <div className="mt-6">
-            <PerformanceOverview />
-          </div>
+          {/* Quick Actions removidas */}
 
           {/* Recent Projects as the last card */}
           <div className="mt-8">

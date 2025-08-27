@@ -111,7 +111,7 @@ export default function AggressivenessClassesList() {
       toast({ title: 'Erro ao excluir', description: String(err), variant: 'destructive' });
     },
     onSuccess: (_data, t) => { toast({ title: 'Classe de agressividade excluída', description: `${t.label} foi removida.` }); },
-    onSettled: () => { queryClient.invalidateQueries({ queryKey: ["/api/aggressiveness-classes"], refetchType: 'inactive' }); }
+  onSettled: () => { queryClient.invalidateQueries({ queryKey: ["/api/aggressiveness-classes"], refetchType: 'inactive' }); queryClient.invalidateQueries({ queryKey: ['/api/dashboard/extended-stats'] }); }
   });
 
   function askDelete(t: AggressivenessClass) { setSelectedItem(t); setConfirmOpen(true); }

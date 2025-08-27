@@ -23,7 +23,11 @@ interface ExtendedStats {
 }
 
 export function ExtendedInsights() {
-  const { data, isLoading } = useQuery<ExtendedStats>({ queryKey: ['/api/dashboard/extended-stats'] });
+  const { data, isLoading } = useQuery<ExtendedStats>({
+    queryKey: ['/api/dashboard/extended-stats'],
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: false,
+  });
 
   if (isLoading) return <div className="text-slate-500 text-sm">Carregando insights...</div>;
   if (!data) return null;

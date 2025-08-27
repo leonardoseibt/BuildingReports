@@ -112,7 +112,7 @@ export default function TypologiesList() {
       toast({ title: 'Erro ao excluir', description: String(err), variant: 'destructive' });
     },
   onSuccess: (_data, t) => { toast({ title: 'Tipo de Uso excluído', description: `${t.label} foi removido.` }); },
-    onSettled: () => { queryClient.invalidateQueries({ queryKey: ["/api/typologies"], refetchType: 'inactive' }); }
+  onSettled: () => { queryClient.invalidateQueries({ queryKey: ["/api/typologies"], refetchType: 'inactive' }); queryClient.invalidateQueries({ queryKey: ['/api/dashboard/extended-stats'] }); }
   });
 
   function askDelete(t: Typology) { setSelectedItem(t); setConfirmOpen(true); }
