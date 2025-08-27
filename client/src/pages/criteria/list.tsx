@@ -89,8 +89,7 @@ export default function CriteriaList() {
   };
 
   async function deleteRequest(id: number) {
-    const res = await fetch(`/api/criteria/${id}`, { method: 'DELETE' });
-    if (!res.ok) throw new Error(await res.text());
+    await apiRequest('DELETE', `/api/criteria/${id}`);
     return true;
   }
   const deleteMutation = useMutation({

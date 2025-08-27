@@ -95,8 +95,7 @@ export default function AggressivenessClassesList() {
   };
 
   async function deleteRequest(id: number) {
-    const res = await fetch(`/api/aggressiveness-classes/${id}`, { method: 'DELETE' });
-    if (!res.ok) throw new Error(await res.text());
+    await apiRequest('DELETE', `/api/aggressiveness-classes/${id}`);
     return true;
   }
   const deleteMutation = useMutation({

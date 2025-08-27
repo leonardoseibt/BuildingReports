@@ -96,8 +96,7 @@ export default function TypologiesList() {
   };
 
   async function deleteRequest(id: number) {
-    const res = await fetch(`/api/typologies/${id}`, { method: 'DELETE' });
-    if (!res.ok) throw new Error(await res.text());
+    const res = await apiRequest('DELETE', `/api/typologies/${id}`);
     return true;
   }
   const deleteMutation = useMutation({

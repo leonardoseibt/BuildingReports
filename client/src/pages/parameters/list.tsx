@@ -13,6 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { PaginationSimple as Pagination } from '@/components/ui/pagination';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import type { Parameter, Analysis, Criterion } from '@shared/schema';
+import { apiRequest } from '@/lib/queryClient';
 import ParameterForm from '@/components/parameters/parameter-form';
 
 export default function ParametersList() {
@@ -92,7 +93,7 @@ export default function ParametersList() {
   const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize)); const pageSafe = Math.min(page, totalPages); const pagedItems = useMemo(()=> sorted.slice((pageSafe-1)*pageSize, pageSafe*pageSize),[sorted,pageSafe]);
   const toggleSort = (col: typeof sortBy)=>{ if(col===null)return; if(sortBy!==col){ setSortBy(col); setSortDir('asc'); } else { setSortDir(d=>d==='asc'?'desc':'asc'); } setPage(1); };
 
-  async function deleteRequest(id:number){ const res= await fetch(`/api/parameters/${id}`, { method:'DELETE', credentials:'include'}); if(!res.ok) throw new Error(await res.text()); return true; }
+  async function deleteRequest(id:number){ await apiRequest('DELETE', `/api/parameters/${id}`); return true; }
   const deleteMutation = useMutation({
     mutationFn: async (t:Parameter)=> deleteRequest(t.id),
     onMutate: async (t)=>{

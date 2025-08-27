@@ -35,6 +35,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import type { Technician } from "@shared/schema";
+import { apiRequest } from "@/lib/queryClient";
 
 function formatPhoneBRDisplay(v?: string | null) {
   if (!v) return "-";
@@ -150,8 +151,7 @@ export default function TechniciansList() {
 
   // Delete mutation with optimistic update
   async function deleteTechRequest(id: number) {
-    const res = await fetch(`/api/technicians/${id}`, { method: 'DELETE' });
-    if (!res.ok) throw new Error(await res.text());
+    await apiRequest('DELETE', `/api/technicians/${id}`);
     return true;
   }
   const deleteMutation = useMutation({

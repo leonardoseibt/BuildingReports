@@ -88,8 +88,7 @@ export default function RequirementsList() {
   };
 
   async function deleteRequest(id: number) {
-    const res = await fetch(`/api/requirements/${id}`, { method: 'DELETE' });
-    if (!res.ok) throw new Error(await res.text());
+    await apiRequest('DELETE', `/api/requirements/${id}`);
     return true;
   }
   const deleteMutation = useMutation({

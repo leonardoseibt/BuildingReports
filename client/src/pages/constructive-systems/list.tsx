@@ -88,8 +88,7 @@ export default function ConstructiveSystemsList() {
   };
 
   async function deleteRequest(id: number) {
-    const res = await fetch(`/api/constructive-systems/${id}`, { method: 'DELETE' });
-    if (!res.ok) throw new Error(await res.text());
+    await apiRequest('DELETE', `/api/constructive-systems/${id}`);
     return true;
   }
   const deleteMutation = useMutation({

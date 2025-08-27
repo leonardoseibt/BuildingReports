@@ -41,7 +41,9 @@
   ,"db:migrate:performance-evaluations": "tsx scripts/run-sql.ts scripts/sql/20250824_create_performance_evaluations.sql"
   ,"check:missing-cities": "tsx scripts/check/missing-cities.ts"
   ,"check:cities-coverages": "tsx scripts/check/cities-without-coverages.ts"
+  ,"db:migrate:fks-criteria-analyses-parameters": "tsx scripts/run-sql.ts scripts/sql/20250826_add_fk_criteria_analyses_parameters.sql"
   ,"test": "cross-env NODE_ENV=test tsx --test server/index.test.ts"
+  ,"db:check:fks-criteria-analyses-parameters": "tsx scripts/check/fks_criteria_analyses_parameters.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

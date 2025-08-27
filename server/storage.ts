@@ -891,11 +891,46 @@ export class DatabaseStorage implements IStorage {
     return row as Criterion;
   }
   async deleteCriterion(id: number): Promise<boolean> {
+    // App-level guard to avoid deleting a Criterion still referenced by Analyses / Parameters
     try {
-      const deleted = await db.delete(criteria).where(eq(criteria.id, id)).returning({ id: criteria.id });
-      return deleted.length > 0;
+      return await db.transaction(async (tx) => {
+        const analysisCountRes = await tx
+          .select({ value: count() })
+          .from(analyses)
+          .where(eq(analyses.criterionId, id));
+        const analysisCount = Number(analysisCountRes[0]?.value ?? 0);
+
+        let paramCount = 0;
+        if (analysisCount > 0) {
+          const paramCountRes = await tx
+            .select({ value: count() })
+            .from(parameters)
+            .innerJoin(analyses, eq(parameters.analysisId, analyses.id))
+            .where(eq(analyses.criterionId, id));
+          paramCount = Number(paramCountRes[0]?.value ?? 0);
+        }
+
+        if (analysisCount > 0 || paramCount > 0) {
+          const e: any = new Error(
+            `Não é possível excluir: existem ${analysisCount} análise(s) e ${paramCount} parâmetro(s) vinculados ao critério.`
+          );
+            e.status = 409;
+          throw e;
+        }
+
+        const deleted = await tx
+          .delete(criteria)
+          .where(eq(criteria.id, id))
+          .returning({ id: criteria.id });
+        return deleted.length > 0;
+      });
     } catch (err: any) {
-      if (err?.code === '23503') { const e = new Error('Não é possível excluir: existem registros relacionados.'); (e as any).status = 409; throw e; }
+      if (err?.status === 409) throw err;
+      if (err?.code === '23503') {
+        const e: any = new Error('Não é possível excluir: existem registros relacionados.');
+        e.status = 409;
+        throw e;
+      }
       throw err;
     }
   }
@@ -927,11 +962,22 @@ export class DatabaseStorage implements IStorage {
     return row as Analysis;
   }
   async deleteAnalysis(id: number): Promise<boolean> {
+    // Guard: block deletion if parameters exist for this analysis
     try {
-      const deleted = await db.delete(analyses).where(eq(analyses.id, id)).returning({ id: analyses.id });
-      return deleted.length > 0;
+      return await db.transaction(async (tx) => {
+        const paramCountRes = await tx.select({ value: count() }).from(parameters).where(eq(parameters.analysisId, id));
+        const paramCount = Number(paramCountRes[0]?.value ?? 0);
+        if (paramCount > 0) {
+          const e: any = new Error(`Não é possível excluir: existem ${paramCount} parâmetro(s) vinculados a esta análise.`);
+          e.status = 409;
+          throw e;
+        }
+        const deleted = await tx.delete(analyses).where(eq(analyses.id, id)).returning({ id: analyses.id });
+        return deleted.length > 0;
+      });
     } catch (err: any) {
-      if (err?.code === '23503') { const e = new Error('Não é possível excluir: existem registros relacionados.'); (e as any).status = 409; throw e; }
+      if (err?.status === 409) throw err;
+      if (err?.code === '23503') { const e: any = new Error('Não é possível excluir: existem registros relacionados.'); e.status = 409; throw e; }
       throw err;
     }
   }

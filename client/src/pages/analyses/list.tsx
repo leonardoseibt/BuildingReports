@@ -92,8 +92,7 @@ export default function AnalysesList() {
   };
 
   async function deleteRequest(id: number) {
-    const res = await fetch(`/api/analyses/${id}`, { method: 'DELETE', credentials: 'include' });
-    if (!res.ok) throw new Error(await res.text());
+    await apiRequest('DELETE', `/api/analyses/${id}`);
     return true;
   }
   const deleteMutation = useMutation({

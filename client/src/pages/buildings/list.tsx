@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/table";
 import { PaginationSimple as Pagination } from "@/components/ui/pagination";
 import type { Building, Technician } from "@shared/schema";
+import { apiRequest } from "@/lib/queryClient";
 
 export default function BuildingList() {
   const { toast } = useToast();
@@ -215,8 +216,7 @@ export default function BuildingList() {
 
   // Delete mutation with optimistic update
   async function deleteBuildingRequest(id: number) {
-    const res = await fetch(`/api/buildings/${id}`, { method: 'DELETE' });
-    if (!res.ok) throw new Error(await res.text());
+    await apiRequest('DELETE', `/api/buildings/${id}`);
     return true;
   }
   const deleteMutation = useMutation({

@@ -91,8 +91,7 @@ export default function NoiseClassesList() {
   };
 
   async function deleteRequest(id: number) {
-    const res = await fetch(`/api/noise-classes/${id}`, { method: 'DELETE' });
-    if (!res.ok) throw new Error(await res.text());
+    await apiRequest('DELETE', `/api/noise-classes/${id}`);
     return true;
   }
   const deleteMutation = useMutation({

@@ -776,8 +776,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   app.delete('/api/criteria/:id', isAuthenticated, async (req, res) => {
-    try { const id = Number(req.params.id); if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' }); const ok = await storage.deleteCriterion(id); res.json({ ok }); }
-    catch { res.status(500).json({ message: 'Failed to delete criterion' }); }
+    try {
+      const id = Number(req.params.id);
+      if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' });
+      const ok = await storage.deleteCriterion(id);
+      res.json({ ok });
+    } catch (error: any) {
+      if (error?.status === 409) return res.status(409).json({ message: error.message });
+      res.status(500).json({ message: 'Failed to delete criterion' });
+    }
   });
 
   // Analyses endpoints
@@ -815,8 +822,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   app.delete('/api/analyses/:id', isAuthenticated, async (req, res) => {
-    try { const id = Number(req.params.id); if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' }); const ok = await storage.deleteAnalysis(id); res.json({ ok }); }
-    catch { res.status(500).json({ message: 'Failed to delete analysis' }); }
+    try {
+      const id = Number(req.params.id);
+      if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' });
+      const ok = await storage.deleteAnalysis(id);
+      res.json({ ok });
+    } catch (error: any) {
+      if (error?.status === 409) return res.status(409).json({ message: error.message });
+      res.status(500).json({ message: 'Failed to delete analysis' });
+    }
   });
 
   // Parameters endpoints
