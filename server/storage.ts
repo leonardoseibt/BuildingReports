@@ -1211,9 +1211,12 @@ export class DatabaseStorage implements IStorage {
 
   // Analyses
   async listAnalyses(criterionId?: number, requirementId?: number): Promise<Analysis[]> {
-    let q: any = db.select().from(analyses);
-    if (criterionId) q = q.where(eq(analyses.criterionId, criterionId));
-    if (requirementId) q = q.where(eq(analyses.requirementId, requirementId));
+  let q: any = db.select().from(analyses);
+  const conditions: any[] = [];
+  if (criterionId) conditions.push(eq(analyses.criterionId, criterionId));
+  if (requirementId) conditions.push(eq(analyses.requirementId, requirementId));
+  if (conditions.length === 1) q = q.where(conditions[0]);
+  else if (conditions.length > 1) q = q.where(and(...conditions));
     const rows = await q.orderBy(sql`length(${analyses.code})`, sql`${analyses.code} collate "pt-BR-x-icu"`);
     return rows as any;
   }
