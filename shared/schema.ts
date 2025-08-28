@@ -527,6 +527,7 @@ export const insertCitySchema = createInsertSchema(cities)
     radiacaoWm2: decimalInput.optional(),
     ventoMS: decimalInput.optional(),
     amplitudeC: decimalInput.optional(),
+  ventoBasicoMS: decimalInput.optional(), // permitir número ou string
   });
 
 export const insertBioclimaticZoneCoverageSchema = createInsertSchema(bioclimaticZoneCoverages);
