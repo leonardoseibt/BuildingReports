@@ -11,7 +11,7 @@ import { ActiveToggleButton } from '@/components/common/active-toggle-button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { PaginationSimple as Pagination } from '@/components/ui/pagination';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import type { Analysis, Criterion } from '@shared/schema';
+import type { Analysis, Criterion, Requirement } from '@shared/schema';
 import { apiRequest } from '@/lib/queryClient';
 import { comparePt } from '@/lib/utils';
 import AnalysisForm from '@/components/analyses/analysis-form';
@@ -29,6 +29,7 @@ export default function AnalysesList() {
   const [sortBy, setSortBy] = useState<'code' | 'label' | 'isActive' | 'criterionId' | 'createdAt' | null>(null);
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
   const [criterionFilter, setCriterionFilter] = useState<number | 'all'>('all');
+  const [requirementFilter, setRequirementFilter] = useState<number | 'all'>('all');
   const pageSize = 15;
   const [page, setPage] = useState(1);
 
@@ -40,11 +41,16 @@ export default function AnalysesList() {
   }, [isAuthenticated, isLoading, toast]);
 
   const { data: criteria = [] } = useQuery<Criterion[]>({ queryKey: ['/api/criteria'], enabled: isAuthenticated });
+  const { data: requirements = [] } = useQuery<Requirement[]>({ queryKey: ['/api/requirements'], enabled: isAuthenticated });
+  const analysesQueryKey: any = ['/api/analyses', { criterionId: criterionFilter, requirementId: requirementFilter }];
   const { data: items = [], isFetching, isLoading: isLoadingItems } = useQuery<Analysis[]>({
-    queryKey: ['/api/analyses', { criterionId: criterionFilter }],
+    queryKey: analysesQueryKey,
     queryFn: async () => {
-      const param = criterionFilter !== 'all' ? `?criterionId=${criterionFilter}` : '';
-      const res = await fetch(`/api/analyses${param}`, { credentials: 'include' });
+      const params = new URLSearchParams();
+      if (criterionFilter !== 'all') params.append('criterionId', String(criterionFilter));
+      if (requirementFilter !== 'all') params.append('requirementId', String(requirementFilter));
+      const qs = params.toString();
+      const res = await fetch(`/api/analyses${qs ? `?${qs}` : ''}`, { credentials: 'include' });
       if (!res.ok) throw new Error('Erro ao carregar análises');
       return res.json();
     },
@@ -98,13 +104,13 @@ export default function AnalysesList() {
   const deleteMutation = useMutation({
     mutationFn: async (t: Analysis) => deleteRequest(t.id),
     onMutate: async (t) => {
-      await queryClient.cancelQueries({ queryKey: ['/api/analyses', { criterionId: criterionFilter }] });
-      const prev = queryClient.getQueryData<Analysis[]>(['/api/analyses', { criterionId: criterionFilter }]) || [];
-      queryClient.setQueryData<Analysis[]>(['/api/analyses', { criterionId: criterionFilter }], prev.filter(x => x.id !== t.id));
+      await queryClient.cancelQueries({ queryKey: analysesQueryKey });
+      const prev = queryClient.getQueryData<Analysis[]>(analysesQueryKey) || [];
+      queryClient.setQueryData<Analysis[]>(analysesQueryKey, prev.filter(x => x.id !== t.id));
       return { prev };
     },
     onError: (err, _t, ctx) => {
-      if (ctx?.prev) queryClient.setQueryData(['/api/analyses', { criterionId: criterionFilter }], ctx.prev);
+      if (ctx?.prev) queryClient.setQueryData(analysesQueryKey, ctx.prev);
       toast({ title: 'Erro ao excluir', description: String(err), variant: 'destructive' });
     },
     onSuccess: (_data, t) => { toast({ title: 'Análise excluída', description: `${t.label} foi removida.` }); },
@@ -140,6 +146,10 @@ export default function AnalysesList() {
                   <input type="text" value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} placeholder="Buscar análises" className="w-full h-9 rounded-md border px-9 text-sm" />
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
                 </div>
+                <select value={requirementFilter} onChange={(e) => { const v = e.target.value === 'all' ? 'all' : Number(e.target.value); setRequirementFilter(v); setPage(1); }} className="h-9 text-sm rounded-md border px-2 bg-white">
+                  <option value="all">Todos os Requisitos</option>
+                  {requirements.map(r => <option key={r.id} value={r.id}>{r.code} - {r.label}</option>)}
+                </select>
                 <select value={criterionFilter} onChange={(e) => { const v = e.target.value === 'all' ? 'all' : Number(e.target.value); setCriterionFilter(v); setPage(1); }} className="h-9 text-sm rounded-md border px-2 bg-white">
                   <option value="all">Todos os Critérios</option>
                   {criteria.map(c => <option key={c.id} value={c.id}>{c.code} - {c.label}</option>)}
@@ -163,19 +173,22 @@ export default function AnalysesList() {
               <Table className="table-fixed">
                 <TableHeader>
                   <TableRow className="bg-slate-100/60">
-                    <TableHead onClick={() => toggleSort('criterionId')} aria-sort={sortBy === 'criterionId' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} className="w-[24%] cursor-pointer select-none">Critério {sortBy === 'criterionId' && (sortDir === 'asc' ? <ArrowUp className="inline-block w-3 h-3 ml-1 opacity-70" /> : <ArrowDown className="inline-block w-3 h-3 ml-1 opacity-70" />)}</TableHead>
-                    <TableHead onClick={() => toggleSort('code')} aria-sort={sortBy === 'code' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} className="w-[12%] cursor-pointer select-none">Código {sortBy === 'code' && (sortDir === 'asc' ? <ArrowUp className="inline-block w-3 h-3 ml-1 opacity-70" /> : <ArrowDown className="inline-block w-3 h-3 ml-1 opacity-70" />)}</TableHead>
-                    <TableHead onClick={() => toggleSort('label')} aria-sort={sortBy === 'label' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} className="w-[34%] cursor-pointer select-none">Descrição {sortBy === 'label' && (sortDir === 'asc' ? <ArrowUp className="inline-block w-3 h-3 ml-1 opacity-70" /> : <ArrowDown className="inline-block w-3 h-3 ml-1 opacity-70" />)}</TableHead>
-                    <TableHead onClick={() => toggleSort('isActive')} aria-sort={sortBy === 'isActive' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} className="w-[10%] cursor-pointer select-none">Ativa {sortBy === 'isActive' && (sortDir === 'asc' ? <ArrowUp className="inline-block w-3 h-3 ml-1 opacity-70" /> : <ArrowDown className="inline-block w-3 h-3 ml-1 opacity-70" />)}</TableHead>
-                    <TableHead className="w-[20%] text-right">Ações</TableHead>
+          <TableHead className="w-[18%]">Requisito</TableHead>
+          <TableHead onClick={() => toggleSort('criterionId')} aria-sort={sortBy === 'criterionId' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} className="w-[18%] cursor-pointer select-none">Critério {sortBy === 'criterionId' && (sortDir === 'asc' ? <ArrowUp className="inline-block w-3 h-3 ml-1 opacity-70" /> : <ArrowDown className="inline-block w-3 h-3 ml-1 opacity-70" />)}</TableHead>
+          <TableHead onClick={() => toggleSort('code')} aria-sort={sortBy === 'code' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} className="w-[10%] cursor-pointer select-none">Código {sortBy === 'code' && (sortDir === 'asc' ? <ArrowUp className="inline-block w-3 h-3 ml-1 opacity-70" /> : <ArrowDown className="inline-block w-3 h-3 ml-1 opacity-70" />)}</TableHead>
+          <TableHead onClick={() => toggleSort('label')} aria-sort={sortBy === 'label' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} className="w-[32%] cursor-pointer select-none">Descrição {sortBy === 'label' && (sortDir === 'asc' ? <ArrowUp className="inline-block w-3 h-3 ml-1 opacity-70" /> : <ArrowDown className="inline-block w-3 h-3 ml-1 opacity-70" />)}</TableHead>
+          <TableHead onClick={() => toggleSort('isActive')} aria-sort={sortBy === 'isActive' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} className="w-[8%] cursor-pointer select-none">Ativa {sortBy === 'isActive' && (sortDir === 'asc' ? <ArrowUp className="inline-block w-3 h-3 ml-1 opacity-70" /> : <ArrowDown className="inline-block w-3 h-3 ml-1 opacity-70" />)}</TableHead>
+          <TableHead className="w-[14%] text-right">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {pagedItems.map(t => {
                     const crit = criteria.find(c => c.id === t.criterionId);
+          const req = requirements.find(r => r.id === (crit as any)?.requirementId || r.id === (t as any).requirementId);
                     return (
                       <TableRow key={t.id}>
-                        <TableCell className="font-medium">{crit ? crit.label : t.criterionId}</TableCell>
+            <TableCell className="font-medium">{req ? req.label : (t as any).requirementId || '-'}</TableCell>
+            <TableCell>{crit ? crit.label : t.criterionId}</TableCell>
                         <TableCell>{t.code}</TableCell>
                         <TableCell>{t.label}</TableCell>
                         <TableCell>{(t as any).isActive ? 'Sim' : 'Não'}</TableCell>
@@ -184,7 +197,7 @@ export default function AnalysesList() {
                             <Button variant="ghost" size="icon" onClick={() => { setEditItem(t); setFormKey(k => k + 1); setOpen(true); }}>
                               <Pencil className="h-4 w-4" />
                             </Button>
-                            <ActiveToggleButton id={t.id} resource="analyses" isActive={(t as any).isActive} queryKey={['/api/analyses', { criterionId: criterionFilter }]} entityLabel="Análise" />
+                            <ActiveToggleButton id={t.id} resource="analyses" isActive={(t as any).isActive} queryKey={analysesQueryKey} entityLabel="Análise" />
                             <Button variant="ghost" size="icon" className="text-rose-600 hover:bg-rose-50 hover:text-rose-700" onClick={() => askDelete(t)} disabled={deleteMutation.isPending && selectedItem?.id === t.id}>
                               <Trash2 className="h-4 w-4" />
                             </Button>

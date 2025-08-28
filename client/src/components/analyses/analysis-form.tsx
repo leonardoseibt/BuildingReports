@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -26,21 +26,14 @@ export default function AnalysisForm({ onSuccess, onCancel, initialItem }: { onS
   const { toast } = useToast();
   const isEdit = !!initialItem;
   const { data: requirements = [] } = useQuery<Requirement[]>({ queryKey: ['/api/requirements'] });
-  const [selectedRequirement, setSelectedRequirement] = useState<number | ''>('');
-  const { data: criteria = [] } = useQuery<Criterion[]>({
-    queryKey: ['/api/criteria', selectedRequirement],
-    enabled: !!selectedRequirement,
-    queryFn: async () => {
-      const res = await fetch(`/api/criteria?requirementId=${selectedRequirement}`);
-      return res.json();
-    }
-  });
+  // Load all criteria independent of requirement
+  const { data: criteria = [] } = useQuery<Criterion[]>({ queryKey: ['/api/criteria'], queryFn: async () => { const r = await fetch('/api/criteria'); if (!r.ok) throw new Error('Erro'); return r.json(); } });
 
   const form = useForm<AnalysisFormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      requirementId: initialItem ? (initialItem as any).requirementId : 0,
-      criterionId: initialItem?.criterionId || 0,
+  requirementId: initialItem ? (initialItem as any).requirementId : 0,
+  criterionId: initialItem?.criterionId || 0,
       code: initialItem?.code || '',
       label: initialItem?.label || '',
       isActive: initialItem?.isActive ?? true,
@@ -76,12 +69,12 @@ export default function AnalysisForm({ onSuccess, onCancel, initialItem }: { onS
           subtitle={isEdit ? 'Atualize os dados da análise.' : 'Cadastre uma nova análise para um critério.'}
           initials={form.getValues('code') || null}
         />
-        <div className="grid grid-cols-1 md:grid-cols-8 gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-8 gap-4">
           <FormField
             name="requirementId"
             control={form.control}
             render={({ field }) => (
-              <FormItem className="md:col-span-2">
+      <FormItem className="md:col-span-4">
                 <FormControl>
                   <NotchedField label="Requisito" requiredMark>
                     <select
@@ -89,8 +82,7 @@ export default function AnalysisForm({ onSuccess, onCancel, initialItem }: { onS
                       onChange={(e) => {
                         const val = Number(e.target.value);
                         field.onChange(val);
-                        setSelectedRequirement(val || '');
-                        form.setValue('criterionId', 0 as any);
+                        form.setValue('criterionId', 0 as any); // reset criterion to force explicit choice (optional)
                       }}
                       className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 w-full h-9 text-sm"
                     >
@@ -107,11 +99,11 @@ export default function AnalysisForm({ onSuccess, onCancel, initialItem }: { onS
             name="criterionId"
             control={form.control}
             render={({ field }) => (
-              <FormItem className="md:col-span-2">
+              <FormItem className="md:col-span-4">
                 <FormControl>
                   <NotchedField label="Critério" requiredMark>
-                    <select {...field} disabled={!form.getValues('requirementId')} className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 w-full h-9 text-sm disabled:opacity-50">
-                      <option value="">{form.getValues('requirementId') ? 'Selecione...' : 'Selecione um requisito'}</option>
+                    <select {...field} className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 w-full h-9 text-sm">
+                      <option value="">Selecione...</option>
                       {criteria.map(c => <option key={c.id} value={c.id}>{c.code} - {c.label}</option>)}
                     </select>
                   </NotchedField>
@@ -124,7 +116,7 @@ export default function AnalysisForm({ onSuccess, onCancel, initialItem }: { onS
             name="code"
             control={form.control}
             render={({ field }) => (
-              <FormItem className="md:col-span-1">
+              <FormItem className="md:col-span-2">
                 <FormControl>
                   <NotchedField label="Código" requiredMark>
                     <Input {...field} placeholder="Ex: A1" className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" />
@@ -138,7 +130,7 @@ export default function AnalysisForm({ onSuccess, onCancel, initialItem }: { onS
             name="label"
             control={form.control}
             render={({ field }) => (
-              <FormItem className="md:col-span-3">
+              <FormItem className="md:col-span-6">
                 <FormControl>
                   <NotchedField label="Descrição" requiredMark>
                     <Input {...field} placeholder="Descrição da análise" className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" />
