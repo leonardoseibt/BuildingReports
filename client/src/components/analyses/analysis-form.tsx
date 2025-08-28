@@ -9,10 +9,11 @@ import FormHeader from '@/components/ui/form-header';
 import { Form, FormField, FormItem, FormControl, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { NotchedField } from '@/components/ui/notched-field';
-import type { Analysis, Criterion } from '@shared/schema';
+import type { Analysis, Criterion, Requirement } from '@shared/schema';
 import { useQuery } from '@tanstack/react-query';
 
 const formSchema = z.object({
+  requirementId: z.coerce.number().min(1, 'Requisito é obrigatório'),
   criterionId: z.coerce.number().min(1, 'Critério é obrigatório'),
   code: z.string().min(1, 'Código é obrigatório').max(32, 'Máx 32 caracteres'),
   label: z.string().min(1, 'Descrição é obrigatória').max(255, 'Máx 255 caracteres'),
@@ -24,12 +25,22 @@ export type AnalysisFormData = z.infer<typeof formSchema>;
 export default function AnalysisForm({ onSuccess, onCancel, initialItem }: { onSuccess?: () => void; onCancel?: () => void; initialItem?: Analysis | null; }) {
   const { toast } = useToast();
   const isEdit = !!initialItem;
-  const { data: criteria = [] } = useQuery<Criterion[]>({ queryKey: ['/api/criteria'] });
+  const { data: requirements = [] } = useQuery<Requirement[]>({ queryKey: ['/api/requirements'] });
+  const [selectedRequirement, setSelectedRequirement] = useState<number | ''>('');
+  const { data: criteria = [] } = useQuery<Criterion[]>({
+    queryKey: ['/api/criteria', selectedRequirement],
+    enabled: !!selectedRequirement,
+    queryFn: async () => {
+      const res = await fetch(`/api/criteria?requirementId=${selectedRequirement}`);
+      return res.json();
+    }
+  });
 
   const form = useForm<AnalysisFormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      criterionId: initialItem?.criterionId || (criteria[0]?.id ?? 0),
+      requirementId: initialItem ? (initialItem as any).requirementId : 0,
+      criterionId: initialItem?.criterionId || 0,
       code: initialItem?.code || '',
       label: initialItem?.label || '',
       isActive: initialItem?.isActive ?? true,
@@ -40,7 +51,7 @@ export default function AnalysisForm({ onSuccess, onCancel, initialItem }: { onS
   async function onSubmit(values: AnalysisFormData) {
     try {
       setSubmitting(true);
-      const payload = { ...values, code: values.code.trim(), label: values.label.trim() };
+  const payload = { ...values, code: values.code.trim(), label: values.label.trim() };
       const method = isEdit ? 'PUT' : 'POST';
       const url = isEdit ? `/api/analyses/${initialItem!.id}` : '/api/analyses';
       await apiRequest(method as any, url as any, payload);
@@ -65,7 +76,33 @@ export default function AnalysisForm({ onSuccess, onCancel, initialItem }: { onS
           subtitle={isEdit ? 'Atualize os dados da análise.' : 'Cadastre uma nova análise para um critério.'}
           initials={form.getValues('code') || null}
         />
-        <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-8 gap-4">
+          <FormField
+            name="requirementId"
+            control={form.control}
+            render={({ field }) => (
+              <FormItem className="md:col-span-2">
+                <FormControl>
+                  <NotchedField label="Requisito" requiredMark>
+                    <select
+                      {...field}
+                      onChange={(e) => {
+                        const val = Number(e.target.value);
+                        field.onChange(val);
+                        setSelectedRequirement(val || '');
+                        form.setValue('criterionId', 0 as any);
+                      }}
+                      className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 w-full h-9 text-sm"
+                    >
+                      <option value="">Selecione...</option>
+                      {requirements.map(r => <option key={r.id} value={r.id}>{r.code} - {r.label}</option>)}
+                    </select>
+                  </NotchedField>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
           <FormField
             name="criterionId"
             control={form.control}
@@ -73,8 +110,8 @@ export default function AnalysisForm({ onSuccess, onCancel, initialItem }: { onS
               <FormItem className="md:col-span-2">
                 <FormControl>
                   <NotchedField label="Critério" requiredMark>
-                    <select {...field} className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 w-full h-9 text-sm">
-                      <option value="">Selecione...</option>
+                    <select {...field} disabled={!form.getValues('requirementId')} className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 w-full h-9 text-sm disabled:opacity-50">
+                      <option value="">{form.getValues('requirementId') ? 'Selecione...' : 'Selecione um requisito'}</option>
                       {criteria.map(c => <option key={c.id} value={c.id}>{c.code} - {c.label}</option>)}
                     </select>
                   </NotchedField>

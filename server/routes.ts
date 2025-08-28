@@ -2,7 +2,7 @@ import express, { type Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated, refreshSession } from "./auth";
-import { insertBuildingSchema, updateBuildingSchema, insertStructuralSystemSchema, insertSealingSystemSchema, insertRoofingSystemSchema, insertPerformanceEvaluationSchema, insertReportSchema, insertTechnicianSchema, updateTechnicianSchema, insertUserSchema, updateUserSchema, insertTypologySchema, insertNoiseClassSchema, insertAggressivenessClassSchema, insertBioclimaticZoneSchema, insertBioclimaticZoneCoverageSchema, insertStateSchema, insertCitySchema, insertConstructiveSystemSchema, insertRequirementSchema, insertCriterionSchema, insertAnalysisSchema } from "@shared/schema";
+import { insertBuildingSchema, updateBuildingSchema, insertStructuralSystemSchema, insertSealingSystemSchema, insertRoofingSystemSchema, insertPerformanceEvaluationSchema, insertReportSchema, insertTechnicianSchema, updateTechnicianSchema, insertUserSchema, updateUserSchema, insertTypologySchema, insertNoiseClassSchema, insertAggressivenessClassSchema, insertBioclimaticZoneSchema, insertBioclimaticZoneCoverageSchema, insertStateSchema, insertCitySchema, insertConstructiveSystemSchema, insertRequirementSchema, insertCriterionSchema, insertAnalysisSchema, insertIsoplethSchema } from "@shared/schema";
 import { insertParameterSchema } from '@shared/schema';
 import bcrypt from "bcryptjs";
 import { z } from "zod";
@@ -559,6 +559,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     catch { res.status(500).json({ message: 'Failed to delete coverage' }); }
   });
 
+  // Isopleths (Isopletas) API
+  app.get('/api/isopleths', isAuthenticated, async (_req, res) => {
+    try { res.json(await storage.listIsopleths()); } catch { res.status(500).json({ message: 'Failed to fetch isopletas' }); }
+  });
+  app.post('/api/isopleths', isAuthenticated, express.json(), async (req, res) => {
+    try { const data = insertIsoplethSchema.parse(req.body); const row = await storage.createIsopleth(data as any); res.json(row); }
+    catch (error) { if (error instanceof z.ZodError) return res.status(400).json({ message: 'Validation error', errors: error.errors }); if ((error as any)?.code === '23505') return res.status(409).json({ message: 'Código já cadastrado.' }); res.status(500).json({ message: 'Failed to create isopleth' }); }
+  });
+  app.put('/api/isopleths/:id', isAuthenticated, express.json(), async (req, res) => {
+    try { const id = Number(req.params.id); if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' }); const data = insertIsoplethSchema.partial().parse(req.body); const row = await storage.updateIsopleth(id, data as any); res.json(row); }
+    catch (error) { if (error instanceof z.ZodError) return res.status(400).json({ message: 'Validation error', errors: error.errors }); if ((error as any)?.code === '23505') return res.status(409).json({ message: 'Código já cadastrado.' }); res.status(500).json({ message: 'Failed to update isopleth' }); }
+  });
+  app.delete('/api/isopleths/:id', isAuthenticated, async (req, res) => {
+    try { const id = Number(req.params.id); if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' }); const ok = await storage.deleteIsopleth(id); res.json({ ok }); }
+    catch { res.status(500).json({ message: 'Failed to delete isopleth' }); }
+  });
+
+  // Isopleths coverages
+  app.get('/api/isopleths/:id/coverages', isAuthenticated, async (req, res) => {
+    try { const id = Number(req.params.id); if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' }); res.json(await storage.listIsoplethCoverages(id)); }
+    catch { res.status(500).json({ message: 'Failed to fetch isopleth coverages' }); }
+  });
+  app.get('/api/isopleths/coverages-index', isAuthenticated, async (_req, res) => {
+    try { res.json(await storage.listIsoplethsCoveragesIndex()); } catch { res.status(500).json({ message: 'Failed to fetch isopleth coverages index' }); }
+  });
+  app.post('/api/isopleths/:id/coverages', isAuthenticated, express.json(), async (req, res) => {
+    try { const id = Number(req.params.id); if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' }); const payload = { cityId: Number((req.body as any).cityId) }; const row = await storage.createIsoplethCoverage(id, payload as any); res.json(row); }
+    catch (error) { if (error instanceof z.ZodError) return res.status(400).json({ message: 'Validation error', errors: error.errors }); res.status(500).json({ message: 'Failed to create isopleth coverage' }); }
+  });
+  app.delete('/api/isopleths/coverages/:coverageId', isAuthenticated, async (req, res) => {
+    try { const coverageId = Number(req.params.coverageId); if (!Number.isFinite(coverageId)) return res.status(400).json({ message: 'ID inválido' }); const ok = await storage.deleteIsoplethCoverage(coverageId); res.json({ ok }); }
+    catch { res.status(500).json({ message: 'Failed to delete isopleth coverage' }); }
+  });
+
   // States & Cities endpoints
   app.get('/api/states', isAuthenticated, async (_req, res) => {
     try { res.json(await storage.listStates()); } catch { res.status(500).json({ message: 'Failed to fetch states' }); }
@@ -784,8 +818,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Criteria (Critérios) endpoints
-  app.get('/api/criteria', isAuthenticated, async (_req, res) => {
-    try { res.json(await storage.listCriteria()); } catch { res.status(500).json({ message: 'Failed to fetch criteria' }); }
+  app.get('/api/criteria', isAuthenticated, async (req, res) => {
+    try {
+      const requirementId = req.query.requirementId ? Number(req.query.requirementId) : undefined;
+      res.json(await storage.listCriteria(requirementId));
+    } catch { res.status(500).json({ message: 'Failed to fetch criteria' }); }
+  });
+  app.post('/api/requirements/:requirementId/criteria/:criterionId', isAuthenticated, async (req, res) => {
+    try {
+      const requirementId = Number(req.params.requirementId);
+      const criterionId = Number(req.params.criterionId);
+      if (!Number.isFinite(requirementId) || !Number.isFinite(criterionId)) return res.status(400).json({ message: 'IDs inválidos' });
+      await storage.linkCriterionToRequirement(requirementId, criterionId);
+      res.json({ ok: true });
+    } catch { res.status(500).json({ message: 'Failed to link criterion to requirement' }); }
+  });
+  app.delete('/api/requirements/:requirementId/criteria/:criterionId', isAuthenticated, async (req, res) => {
+    try {
+      const requirementId = Number(req.params.requirementId);
+      const criterionId = Number(req.params.criterionId);
+      if (!Number.isFinite(requirementId) || !Number.isFinite(criterionId)) return res.status(400).json({ message: 'IDs inválidos' });
+      const ok = await storage.unlinkCriterionFromRequirement(requirementId, criterionId);
+      res.json({ ok });
+    } catch { res.status(500).json({ message: 'Failed to unlink criterion from requirement' }); }
   });
   app.post('/api/criteria', isAuthenticated, express.json(), async (req, res) => {
     try {
@@ -826,7 +881,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/analyses', isAuthenticated, async (req, res) => {
     try {
       const criterionId = req.query.criterionId ? Number(req.query.criterionId) : undefined;
-      const rows = await storage.listAnalyses(criterionId);
+      const requirementId = req.query.requirementId ? Number(req.query.requirementId) : undefined;
+      const rows = await storage.listAnalyses(criterionId, requirementId);
       res.json(rows);
     } catch {
       res.status(500).json({ message: 'Failed to fetch analyses' });

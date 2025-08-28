@@ -48,14 +48,20 @@ import {
   aggressivenessClasses,
   constructiveSystems,
   requirements,
+  requirementsCriteria,
   bioclimaticZones,
   bioclimaticZoneCoverages,
+  isopleths,
+  isoplethCoverages,
   states,
   cities,
   type BioclimaticZone,
   type InsertBioclimaticZone,
   type BioclimaticZoneCoverage,
   type InsertBioclimaticZoneCoverage,
+  type Isopleth,
+  type InsertIsopleth,
+  type InsertIsoplethCoverage,
   type State,
   type InsertState,
   type City,
@@ -153,12 +159,14 @@ export interface IStorage {
   deleteRequirement(id: number): Promise<boolean>;
 
   // Criteria
-  listCriteria(): Promise<Criterion[]>;
+  listCriteria(requirementId?: number): Promise<Criterion[]>;
   createCriterion(item: InsertCriterion): Promise<Criterion>;
   updateCriterion(id: number, item: Partial<InsertCriterion>): Promise<Criterion>;
   deleteCriterion(id: number): Promise<boolean>;
+  linkCriterionToRequirement(requirementId: number, criterionId: number): Promise<boolean>;
+  unlinkCriterionFromRequirement(requirementId: number, criterionId: number): Promise<boolean>;
   // Analyses
-  listAnalyses(criterionId?: number): Promise<Analysis[]>;
+  listAnalyses(criterionId?: number, requirementId?: number): Promise<Analysis[]>;
   createAnalysis(item: InsertAnalysis): Promise<Analysis>;
   updateAnalysis(id: number, item: Partial<InsertAnalysis>): Promise<Analysis>;
   deleteAnalysis(id: number): Promise<boolean>;
@@ -174,6 +182,16 @@ export interface IStorage {
   createBioclimaticZone(item: InsertBioclimaticZone): Promise<BioclimaticZone>;
   updateBioclimaticZone(id: number, item: Partial<InsertBioclimaticZone>): Promise<BioclimaticZone>;
   deleteBioclimaticZone(id: number): Promise<boolean>;
+  // Isopleths
+  listIsopleths(): Promise<Isopleth[]>;
+  createIsopleth(item: InsertIsopleth): Promise<Isopleth>;
+  updateIsopleth(id: number, item: Partial<InsertIsopleth>): Promise<Isopleth>;
+  deleteIsopleth(id: number): Promise<boolean>;
+  // Isopleth coverages
+  listIsoplethCoverages(isoplethId: number): Promise<any[]>;
+  listIsoplethsCoveragesIndex(): Promise<{ isoplethId: number; city: string; state: string }[]>;
+  createIsoplethCoverage(isoplethId: number, item: Omit<InsertIsoplethCoverage, 'isoplethId'>): Promise<any>;
+  deleteIsoplethCoverage(id: number): Promise<boolean>;
   listBioclimaticZoneCoverages(zoneId: number): Promise<BioclimaticZoneCoverage[]>;
   createBioclimaticZoneCoverage(zoneId: number, item: Omit<InsertBioclimaticZoneCoverage, 'zoneId'>): Promise<BioclimaticZoneCoverage>;
   updateBioclimaticZoneCoverage(id: number, item: Partial<InsertBioclimaticZoneCoverage>): Promise<BioclimaticZoneCoverage>;
@@ -1107,14 +1125,27 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Criteria
-  async listCriteria(): Promise<Criterion[]> {
+  async listCriteria(requirementId?: number): Promise<Criterion[]> {
+    if (requirementId) {
+      const rows = await db
+        .select({
+          id: criteria.id,
+          code: criteria.code,
+          label: criteria.label,
+          isActive: criteria.isActive,
+          createdAt: criteria.createdAt,
+          updatedAt: criteria.updatedAt,
+        })
+        .from(criteria)
+        .innerJoin(requirementsCriteria, eq(criteria.id, requirementsCriteria.criterionId))
+        .where(eq(requirementsCriteria.requirementId, requirementId))
+        .orderBy(sql`length(${criteria.code})`, sql`${criteria.code} collate "pt-BR-x-icu"`);
+      return rows as any;
+    }
     const rows = await db
       .select()
       .from(criteria)
-      .orderBy(
-        sql`length(${criteria.code})`,
-        sql`${criteria.code} collate "pt-BR-x-icu"`
-      );
+      .orderBy(sql`length(${criteria.code})`, sql`${criteria.code} collate "pt-BR-x-icu"`);
     return rows as any;
   }
   async createCriterion(item: InsertCriterion): Promise<Criterion> {
@@ -1124,6 +1155,14 @@ export class DatabaseStorage implements IStorage {
   async updateCriterion(id: number, item: Partial<InsertCriterion>): Promise<Criterion> {
     const [row] = await db.update(criteria).set({ ...(item as any), updatedAt: new Date() }).where(eq(criteria.id, id)).returning();
     return row as Criterion;
+  }
+  async linkCriterionToRequirement(requirementId: number, criterionId: number): Promise<boolean> {
+    await db.insert(requirementsCriteria).values({ requirementId, criterionId }).onConflictDoNothing();
+    return true;
+  }
+  async unlinkCriterionFromRequirement(requirementId: number, criterionId: number): Promise<boolean> {
+    const deleted = await db.delete(requirementsCriteria).where(and(eq(requirementsCriteria.requirementId, requirementId), eq(requirementsCriteria.criterionId, criterionId))).returning({ requirementId: requirementsCriteria.requirementId });
+    return deleted.length > 0;
   }
   async deleteCriterion(id: number): Promise<boolean> {
     // App-level guard to avoid deleting a Criterion still referenced by Analyses / Parameters
@@ -1171,20 +1210,16 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Analyses
-  async listAnalyses(criterionId?: number): Promise<Analysis[]> {
-    const rows = await db
-      .select()
-      .from(analyses)
-      .where(criterionId ? eq(analyses.criterionId, criterionId) : sql`true`)
-      .orderBy(
-        asc(analyses.criterionId),
-        sql`length(${analyses.code})`,
-        sql`${analyses.code} collate "pt-BR-x-icu"`
-      );
+  async listAnalyses(criterionId?: number, requirementId?: number): Promise<Analysis[]> {
+    let q: any = db.select().from(analyses);
+    if (criterionId) q = q.where(eq(analyses.criterionId, criterionId));
+    if (requirementId) q = q.where(eq(analyses.requirementId, requirementId));
+    const rows = await q.orderBy(sql`length(${analyses.code})`, sql`${analyses.code} collate "pt-BR-x-icu"`);
     return rows as any;
   }
   async createAnalysis(item: InsertAnalysis): Promise<Analysis> {
     const [row] = await db.insert(analyses).values({
+      requirementId: (item as any).requirementId,
       criterionId: (item as any).criterionId,
       code: (item as any).code,
       label: (item as any).label,
@@ -1325,6 +1360,78 @@ export class DatabaseStorage implements IStorage {
       }
       throw err;
     }
+  }
+
+  // Isopleths
+  async listIsopleths(): Promise<Isopleth[]> {
+    const rows = await db
+      .select()
+      .from(isopleths)
+      .orderBy(sql`length(${isopleths.code})`, sql`${isopleths.code} collate "pt-BR-x-icu"`);
+    return rows as any;
+  }
+  async createIsopleth(item: InsertIsopleth): Promise<Isopleth> {
+    const [row] = await db.insert(isopleths).values({
+      code: (item as any).code,
+      label: (item as any).label,
+      windMinMS: (item as any).windMinMS,
+      windMaxMS: (item as any).windMaxMS,
+      isActive: (item as any).isActive ?? true,
+    }).returning();
+    return row as Isopleth;
+  }
+  async updateIsopleth(id: number, item: Partial<InsertIsopleth>): Promise<Isopleth> {
+    const [row] = await db.update(isopleths)
+      .set({ ...(item as any), updatedAt: new Date() })
+      .where(eq(isopleths.id, id))
+      .returning();
+    return row as Isopleth;
+  }
+  async deleteIsopleth(id: number): Promise<boolean> {
+    const deleted = await db.delete(isopleths)
+      .where(eq(isopleths.id, id))
+      .returning({ id: isopleths.id });
+    return deleted.length > 0;
+  }
+
+  async listIsoplethCoverages(isoplethId: number): Promise<any[]> {
+    const rows = await db.select({
+      id: isoplethCoverages.id,
+      isoplethId: isoplethCoverages.isoplethId,
+      cityId: cities.id,
+      city: cities.name,
+      stateId: states.id,
+      state: states.code,
+    })
+      .from(isoplethCoverages)
+      .leftJoin(cities, eq(isoplethCoverages.cityId, cities.id))
+      .leftJoin(states, eq(cities.stateId, states.id))
+      .where(eq(isoplethCoverages.isoplethId, isoplethId))
+      .orderBy(sql`${cities.name} collate "pt-BR-x-icu"`);
+    return rows as any;
+  }
+  async listIsoplethsCoveragesIndex(): Promise<{ isoplethId: number; city: string; state: string }[]> {
+    const rows = await db
+      .select({
+        isoplethId: isoplethCoverages.isoplethId,
+        city: cities.name,
+        state: states.code,
+      })
+      .from(isoplethCoverages)
+      .leftJoin(cities, eq(isoplethCoverages.cityId, cities.id))
+      .leftJoin(states, eq(cities.stateId, states.id));
+    return rows as any;
+  }
+  async createIsoplethCoverage(isoplethId: number, item: Omit<InsertIsoplethCoverage, 'isoplethId'>): Promise<any> {
+    const [row] = await db.insert(isoplethCoverages).values({
+      isoplethId,
+      cityId: (item as any).cityId,
+    }).returning();
+    return row as any;
+  }
+  async deleteIsoplethCoverage(id: number): Promise<boolean> {
+    const deleted = await db.delete(isoplethCoverages).where(eq(isoplethCoverages.id, id)).returning({ id: isoplethCoverages.id });
+    return deleted.length > 0;
   }
 
   async listBioclimaticZoneCoverages(zoneId: number): Promise<BioclimaticZoneCoverage[]> {

@@ -11,6 +11,7 @@ import {
   boolean,
   pgEnum,
   uniqueIndex,
+  primaryKey,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
@@ -21,7 +22,12 @@ const decimalInput = z.union([z.string(), z.number()]).transform((v) =>
   typeof v === "number" ? String(v) : v
 );
 const intInput = z.coerce.number().int();
+export const insertIsoplethCoverageSchema = z.object({
+  isoplethId: z.coerce.number().int().positive().optional(), // Provided via route param usually
+  cityId: z.coerce.number().int().positive(),
+});
 
+export type InsertIsoplethCoverage = z.infer<typeof insertIsoplethCoverageSchema>;
 // Session storage table for express-session (connect-pg-simple)
 export const sessions = pgTable(
   "sessions",
@@ -81,6 +87,18 @@ export const bioclimaticZones = pgTable("bioclimatic_zones", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Isopletas (faixas de velocidade básica do vento)
+export const isopleths = pgTable("isopleths", {
+  id: integer("id").generatedAlwaysAsIdentity().primaryKey(),
+  code: varchar("code", { length: 16 }).notNull().unique(),
+  label: varchar("label", { length: 255 }).notNull(),
+  windMinMS: decimal("wind_min_m_s", { precision: 6, scale: 2 }),
+  windMaxMS: decimal("wind_max_m_s", { precision: 6, scale: 2 }),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // New normalized location tables
 export const states = pgTable("states", {
   id: integer("id").generatedAlwaysAsIdentity().primaryKey(),
@@ -112,6 +130,14 @@ export const cities = pgTable("cities", {
 export const bioclimaticZoneCoverages = pgTable("bioclimatic_zone_coverages", {
   id: integer("id").generatedAlwaysAsIdentity().primaryKey(),
   zoneId: integer("zone_id").references(() => bioclimaticZones.id).notNull(),
+  cityId: integer("city_id").references(() => cities.id).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Isopleth coverages (city linked to isopleth)
+export const isoplethCoverages = pgTable("isopleth_coverages", {
+  id: integer("id").generatedAlwaysAsIdentity().primaryKey(),
+  isoplethId: integer("isopleth_id").references(() => isopleths.id).notNull(),
   cityId: integer("city_id").references(() => cities.id).notNull(),
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -194,7 +220,7 @@ export const requirements = pgTable("requirements", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// Criteria (Critérios)
+// Criteria (Critérios) - agora desacoplados; relação M:N via requirementsCriteria
 export const criteria = pgTable("criteria", {
   id: integer("id").generatedAlwaysAsIdentity().primaryKey(),
   code: varchar("code", { length: 16 }).notNull().unique(),
@@ -204,18 +230,30 @@ export const criteria = pgTable("criteria", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Pivot Requisitos <-> Critérios (M:N)
+export const requirementsCriteria = pgTable("requirements_criteria", {
+  requirementId: integer("requirement_id").references(() => requirements.id, { onDelete: 'cascade' }).notNull(),
+  criterionId: integer("criterion_id").references(() => criteria.id, { onDelete: 'cascade' }).notNull(),
+}, (table) => [
+  primaryKey({ columns: [table.requirementId, table.criterionId] }),
+  index("idx_reqcrit_requirement").on(table.requirementId),
+  index("idx_reqcrit_criterion").on(table.criterionId)
+]);
+
 // Analyses (Análises) - dependem de Critérios (1:N)
 export const analyses = pgTable("analyses", {
   id: integer("id").generatedAlwaysAsIdentity().primaryKey(),
+  requirementId: integer("requirement_id").references(() => requirements.id).notNull(),
   criterionId: integer("criterion_id").references(() => criteria.id).notNull(),
-  code: varchar("code", { length: 32 }).notNull(), // único dentro do critério
+  code: varchar("code", { length: 32 }).notNull(), // único dentro do par (requisito, critério)
   label: varchar("label", { length: 255 }).notNull(),
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => [
+  index("idx_analyses_requirement").on(table.requirementId),
   index("idx_analyses_criterion").on(table.criterionId),
-  uniqueIndex("uq_analyses_criterion_code").on(table.criterionId, table.code),
+  uniqueIndex("uq_analyses_req_crit_code").on(table.requirementId, table.criterionId, table.code),
 ]);
 
 // Parameters (Parâmetros) belonging to an Analysis
@@ -409,6 +447,10 @@ export const techniciansRelations = relations(technicians, ({ one }) => ({
 }));
 
 export const analysesRelations = relations(analyses, ({ many, one }) => ({
+  requirement: one(requirements, {
+    fields: [analyses.requirementId],
+    references: [requirements.id],
+  }),
   criterion: one(criteria, {
     fields: [analyses.criterionId],
     references: [criteria.id],
@@ -420,6 +462,22 @@ export const parametersRelations = relations(parameters, ({ one }) => ({
   analysis: one(analyses, {
     fields: [parameters.analysisId],
     references: [analyses.id],
+  }),
+}));
+
+export const criteriaRelations = relations(criteria, ({ many }) => ({
+  analyses: many(analyses),
+  requirementLinks: many(requirementsCriteria),
+}));
+
+export const requirementsCriteriaRelations = relations(requirementsCriteria, ({ one }) => ({
+  requirement: one(requirements, {
+    fields: [requirementsCriteria.requirementId],
+    references: [requirements.id],
+  }),
+  criterion: one(criteria, {
+    fields: [requirementsCriteria.criterionId],
+    references: [criteria.id],
   }),
 }));
 
@@ -507,7 +565,18 @@ export const insertAggressivenessClassSchema = createInsertSchema(aggressiveness
 export const insertConstructiveSystemSchema = createInsertSchema(constructiveSystems);
 export const insertRequirementSchema = createInsertSchema(requirements);
 export const insertCriterionSchema = createInsertSchema(criteria);
-export const insertAnalysisSchema = createInsertSchema(analyses);
+export const insertAnalysisSchema = createInsertSchema(analyses)
+  .extend({
+    requirementId: z.coerce.number().min(1, 'Requisito é obrigatório'),
+    criterionId: z.coerce.number().min(1, 'Critério é obrigatório'),
+  });
+export const insertIsoplethSchema = createInsertSchema(isopleths)
+  .extend({
+    windMinMS: decimalInput.optional(),
+    windMaxMS: decimalInput.optional(),
+  });
+export type Isopleth = typeof isopleths.$inferSelect;
+export type InsertIsopleth = z.infer<typeof insertIsoplethSchema>;
 export const insertParameterSchema = createInsertSchema(parameters)
   .extend({
     minimumValue: decimalInput.optional(),

@@ -60,12 +60,12 @@ export default function CriterionForm({ onSuccess, onCancel, initialItem }: { on
           subtitle={isEdit ? 'Atualize os dados do critério.' : 'Cadastre um novo critério de desempenho.'}
           initials={form.getValues('code') || null}
         />
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
           <FormField
             name="code"
             control={form.control}
             render={({ field }) => (
-              <FormItem className="md:col-span-2">
+      <FormItem className="md:col-span-2">
                 <FormControl>
                   <NotchedField label="Código" requiredMark>
                     <Input {...field} placeholder="Ex: 1" className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" />
@@ -79,7 +79,7 @@ export default function CriterionForm({ onSuccess, onCancel, initialItem }: { on
             name="label"
             control={form.control}
             render={({ field }) => (
-              <FormItem className="md:col-span-3">
+      <FormItem className="md:col-span-3">
                 <FormControl>
                   <NotchedField label="Descrição" requiredMark>
                     <Input {...field} placeholder="Descrição do critério" className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" />

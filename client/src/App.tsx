@@ -21,6 +21,7 @@ import AnalysesList from "@/pages/analyses/list";
 import ParametersList from "@/pages/parameters/list";
 import UsersList from "@/pages/users/list";
 import BioclimaticZonesList from "@/pages/bioclimatic-zones";
+import IsoplethsList from "@/pages/isopleths/list";
 import StatesList from "@/pages/states/list.tsx";
 import CitiesList from "@/pages/cities/list.tsx";
 import SettingsPlaceholder from "@/pages/settings";
@@ -66,6 +67,7 @@ function Router() {
   <PrivateRoute path="/analyses" component={AnalysesList} />
   <PrivateRoute path="/parameters" component={ParametersList} />
       <PrivateRoute path="/bioclimatic-zones" component={BioclimaticZonesList} />
+  <PrivateRoute path="/isopleths" component={IsoplethsList} />
       <PrivateRoute path="/states" component={StatesList} />
       <PrivateRoute path="/cities" component={CitiesList} />
       <PrivateRoute path="/users" component={UsersList} />

@@ -1,0 +1,235 @@
+{
+  "generatedAt": "2025-08-28T12:25:09.390Z",
+  "totalCitiesWithWind": 5456,
+  "unmatchedCount": 38,
+  "unmatched": [
+    {
+      "id": 246,
+      "name": "Maravilha",
+      "stateId": 24,
+      "ventoBasicoMS": 50
+    },
+    {
+      "id": 288,
+      "name": "Saudades",
+      "stateId": 24,
+      "ventoBasicoMS": 50
+    },
+    {
+      "id": 376,
+      "name": "Bom Jesus do Oeste",
+      "stateId": 24,
+      "ventoBasicoMS": 50
+    },
+    {
+      "id": 465,
+      "name": "Bandeirante",
+      "stateId": 24,
+      "ventoBasicoMS": 50
+    },
+    {
+      "id": 428,
+      "name": "Caibi",
+      "stateId": 24,
+      "ventoBasicoMS": 50
+    },
+    {
+      "id": 488,
+      "name": "Dionísio Cerqueira",
+      "stateId": 24,
+      "ventoBasicoMS": 50
+    },
+    {
+      "id": 518,
+      "name": "Iraceminha",
+      "stateId": 24,
+      "ventoBasicoMS": 50
+    },
+    {
+      "id": 590,
+      "name": "Santa Terezinha do Progresso",
+      "stateId": 24,
+      "ventoBasicoMS": 50
+    },
+    {
+      "id": 635,
+      "name": "Tigrinhos",
+      "stateId": 24,
+      "ventoBasicoMS": 50
+    },
+    {
+      "id": 983,
+      "name": "Anchieta",
+      "stateId": 24,
+      "ventoBasicoMS": 50
+    },
+    {
+      "id": 1057,
+      "name": "Modelo",
+      "stateId": 24,
+      "ventoBasicoMS": 50
+    },
+    {
+      "id": 1075,
+      "name": "São João do Oeste",
+      "stateId": 24,
+      "ventoBasicoMS": 50
+    },
+    {
+      "id": 1144,
+      "name": "Itapiranga",
+      "stateId": 24,
+      "ventoBasicoMS": 50
+    },
+    {
+      "id": 1278,
+      "name": "Descanso",
+      "stateId": 24,
+      "ventoBasicoMS": 50
+    },
+    {
+      "id": 1241,
+      "name": "Guaraciaba",
+      "stateId": 24,
+      "ventoBasicoMS": 50
+    },
+    {
+      "id": 1266,
+      "name": "Serra Alta",
+      "stateId": 24,
+      "ventoBasicoMS": 50
+    },
+    {
+      "id": 1339,
+      "name": "Belmonte",
+      "stateId": 24,
+      "ventoBasicoMS": 50
+    },
+    {
+      "id": 1386,
+      "name": "Guarujá do Sul",
+      "stateId": 24,
+      "ventoBasicoMS": 50
+    },
+    {
+      "id": 1706,
+      "name": "Romelândia",
+      "stateId": 24,
+      "ventoBasicoMS": 50
+    },
+    {
+      "id": 1822,
+      "name": "Mondaí",
+      "stateId": 24,
+      "ventoBasicoMS": 50
+    },
+    {
+      "id": 2105,
+      "name": "Campo Erê",
+      "stateId": 24,
+      "ventoBasicoMS": 50
+    },
+    {
+      "id": 2215,
+      "name": "São Miguel da Boa Vista",
+      "stateId": 24,
+      "ventoBasicoMS": 50
+    },
+    {
+      "id": 2614,
+      "name": "Riqueza",
+      "stateId": 24,
+      "ventoBasicoMS": 50
+    },
+    {
+      "id": 2870,
+      "name": "Palmitos",
+      "stateId": 24,
+      "ventoBasicoMS": 50
+    },
+    {
+      "id": 2921,
+      "name": "Cunha Porã",
+      "stateId": 24,
+      "ventoBasicoMS": 50
+    },
+    {
+      "id": 3000,
+      "name": "Princesa",
+      "stateId": 24,
+      "ventoBasicoMS": 50
+    },
+    {
+      "id": 3074,
+      "name": "Saltinho",
+      "stateId": 24,
+      "ventoBasicoMS": 50
+    },
+    {
+      "id": 3338,
+      "name": "Santa Helena",
+      "stateId": 24,
+      "ventoBasicoMS": 50
+    },
+    {
+      "id": 3926,
+      "name": "São Miguel do Oeste",
+      "stateId": 24,
+      "ventoBasicoMS": 50
+    },
+    {
+      "id": 4460,
+      "name": "Palma Sola",
+      "stateId": 24,
+      "ventoBasicoMS": 50
+    },
+    {
+      "id": 4568,
+      "name": "São José do Cedro",
+      "stateId": 24,
+      "ventoBasicoMS": 50
+    },
+    {
+      "id": 4922,
+      "name": "Cunhataí",
+      "stateId": 24,
+      "ventoBasicoMS": 50
+    },
+    {
+      "id": 4912,
+      "name": "Paraíso",
+      "stateId": 24,
+      "ventoBasicoMS": 50
+    },
+    {
+      "id": 4962,
+      "name": "Iporã do Oeste",
+      "stateId": 24,
+      "ventoBasicoMS": 50
+    },
+    {
+      "id": 4931,
+      "name": "Tunápolis",
+      "stateId": 24,
+      "ventoBasicoMS": 50
+    },
+    {
+      "id": 5268,
+      "name": "Flor do Sertão",
+      "stateId": 24,
+      "ventoBasicoMS": 50
+    },
+    {
+      "id": 5363,
+      "name": "São Carlos",
+      "stateId": 24,
+      "ventoBasicoMS": 50
+    },
+    {
+      "id": 5412,
+      "name": "Barra Bonita",
+      "stateId": 24,
+      "ventoBasicoMS": 50
+    }
+  ]
+}

@@ -9,7 +9,7 @@ import FormHeader from '@/components/ui/form-header';
 import { Form, FormField, FormItem, FormControl, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { NotchedField } from '@/components/ui/notched-field';
-import type { Parameter, Analysis, Criterion } from '@shared/schema';
+import type { Parameter, Analysis, Criterion, Requirement } from '@shared/schema';
 import { useQuery } from '@tanstack/react-query';
 
 const formSchema = z.object({
@@ -28,8 +28,17 @@ export type ParameterFormData = z.infer<typeof formSchema>;
 export default function ParameterForm({ onSuccess, onCancel, initialItem }: { onSuccess?: () => void; onCancel?: () => void; initialItem?: Parameter | null; }) {
   const { toast } = useToast();
   const isEdit = !!initialItem;
+  const { data: requirements = [] } = useQuery<Requirement[]>({ queryKey: ['/api/requirements'] });
+  const [selectedRequirement, setSelectedRequirement] = useState<number | ''>('');
+  const { data: criteria = [] } = useQuery<Criterion[]>({
+    queryKey: ['/api/criteria', selectedRequirement],
+    enabled: !!selectedRequirement,
+    queryFn: async () => {
+      const res = await fetch(`/api/criteria?requirementId=${selectedRequirement}`);
+      return res.json();
+    }
+  });
   const { data: analyses = [] } = useQuery<Analysis[]>({ queryKey: ['/api/analyses'] });
-  const { data: criteria = [] } = useQuery<Criterion[]>({ queryKey: ['/api/criteria'] });
 
   const form = useForm<ParameterFormData>({
     resolver: zodResolver(formSchema),
@@ -52,6 +61,7 @@ export default function ParameterForm({ onSuccess, onCancel, initialItem }: { on
     }
     return '';
   });
+  const [requirementId, setRequirementId] = useState<number | ''>('');
 
   // When editing: analyses may arrive after first render; set criterionId then
   useEffect(() => {
@@ -65,6 +75,7 @@ export default function ParameterForm({ onSuccess, onCancel, initialItem }: { on
 
   // Filter analyses based on selected criterion
   const filteredAnalyses = criterionId ? analyses.filter(a => a.criterionId === criterionId) : [];
+  const filteredCriteria = requirementId ? criteria : [];
 
   // Keep analysis consistent with criterion selection
   if (criterionId && form.getValues('analysisId')) {
@@ -99,22 +110,38 @@ export default function ParameterForm({ onSuccess, onCancel, initialItem }: { on
           initials={form.getValues('label')?.substring(0,2) || null}
         />
         {/* Linha 1: Critério & Análise */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
           <div className="md:col-span-2">
-            <NotchedField label="Critério" requiredMark>
+            <NotchedField label="Requisito" requiredMark>
               <select
-                value={criterionId}
+                value={requirementId}
                 onChange={(e) => {
                   const val = e.target.value ? Number(e.target.value) : '';
-                  setCriterionId(val as any);
-                  if (!val) {
-                    form.setValue('analysisId', 0 as any);
-                  }
+                  setRequirementId(val as any);
+                  setCriterionId('');
+                  form.setValue('analysisId', 0 as any);
                 }}
                 className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 w-full h-9 text-sm"
               >
                 <option value="">Selecione...</option>
-                {criteria.map(c => <option key={c.id} value={c.id}>{c.code} - {c.label}</option>)}
+                {requirements.map(r => <option key={r.id} value={r.id}>{r.code} - {r.label}</option>)}
+              </select>
+            </NotchedField>
+          </div>
+          <div className="md:col-span-2">
+            <NotchedField label="Critério" requiredMark>
+              <select
+                value={criterionId}
+                disabled={!requirementId}
+                onChange={(e) => {
+                  const val = e.target.value ? Number(e.target.value) : '';
+                  setCriterionId(val as any);
+                  form.setValue('analysisId', 0 as any);
+                }}
+                className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 w-full h-9 text-sm disabled:opacity-50"
+              >
+                <option value="">{requirementId ? 'Selecione...' : 'Selecione um requisito'}</option>
+                {filteredCriteria.map(c => <option key={c.id} value={c.id}>{c.code} - {c.label}</option>)}
               </select>
             </NotchedField>
           </div>

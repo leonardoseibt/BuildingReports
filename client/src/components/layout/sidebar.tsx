@@ -19,6 +19,7 @@ import {
   Target,
   Map,
   Sun,
+  Wind,
   Beaker,
   ChevronRight,
   ChevronLeft
@@ -265,6 +266,13 @@ export default function Sidebar() {
                         label="Zonas Bioclimáticas"
                         isActive={location === '/bioclimatic-zones'}
                         testId="nav-zonas-bioclimáticas"
+                      />
+                      <NavLink
+                        href="/isopleths"
+                        icon={Wind}
+                        label="Isopletas"
+                        isActive={location === '/isopleths'}
+                        testId="nav-isopletas"
                       />
                     </div>
                   )}
