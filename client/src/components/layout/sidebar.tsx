@@ -310,13 +310,6 @@ export default function Sidebar() {
                         isActive={location === '/constructive-systems'}
                         testId="nav-sistemas-construtivos"
                       />
-                      <NavLink
-                        href="/requirements"
-                        icon={ListChecks}
-                        label="Requisitos"
-                        isActive={location === '/requirements'}
-                        testId="nav-requisitos"
-                      />
                     </div>
                   )}
                 </div>
@@ -333,6 +326,13 @@ export default function Sidebar() {
                   </button>
                   {open.cadParametros && (
                     <div className="pl-2 space-y-0.5">
+                      <NavLink
+                        href="/requirements"
+                        icon={ListChecks}
+                        label="Requisitos"
+                        isActive={location === '/requirements'}
+                        testId="nav-requisitos-parametros"
+                      />
                       <NavLink
                         href="/criteria"
                         icon={Target}
