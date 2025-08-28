@@ -48,6 +48,7 @@
   ,"db:check:fks-criteria-analyses-parameters": "tsx scripts/check/fks_criteria_analyses_parameters.ts"
   ,"import:isopletas": "tsx scripts/import/update-cities-wind.ts"
   ,"analyze:isopletas": "tsx scripts/check/analyze-isopletas-csv.ts"
+  ,"check:missing-wind": "tsx scripts/check/cities-missing-wind.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
