@@ -46,6 +46,8 @@
   ,"db:migrate:fks-buildings-masters": "tsx scripts/run-sql.ts scripts/sql/20250826_add_fk_buildings_master_refs.sql"
   ,"test": "cross-env NODE_ENV=test tsx --test server/index.test.ts"
   ,"db:check:fks-criteria-analyses-parameters": "tsx scripts/check/fks_criteria_analyses_parameters.ts"
+  ,"import:isopletas": "tsx scripts/import/update-cities-wind.ts"
+  ,"analyze:isopletas": "tsx scripts/check/analyze-isopletas-csv.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
