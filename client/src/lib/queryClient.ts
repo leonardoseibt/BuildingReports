@@ -33,7 +33,7 @@ async function ensureCsrfToken(force = false) {
   return csrfToken;
 }
 
-async function throwIfResNotOk(res: Response) {
+export async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
     const text = (await res.text()) || res.statusText;
     const path = window.location.pathname;
