@@ -67,7 +67,12 @@ export default function ParametersList() {
   });
 
   const normText = (v: any) => String(v ?? '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]+/g, '');
-  const filtered = useMemo(() => { const q = normText(search); if (!q) return items; return items.filter(t => normText(t.label).includes(q) || normText((t as any).unit).includes(q)); }, [items, search]);
+  // Aplicar busca textual client-side (server já filtrou por requirement/criterion). Caso futura paginação server-side seja adotada, mover filtro textual para backend.
+  const filtered = useMemo(() => {
+    const q = normText(search);
+    if (!q) return items;
+    return items.filter(t => normText(t.label).includes(q) || normText((t as any).unit).includes(q));
+  }, [items, search]);
   // Mapa para lookup rápido de labels das análises
   const analysisLabelById = useMemo(() => {
     const m = new Map<number, string>();

@@ -929,11 +929,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const analysisId = req.query.analysisId ? Number(req.query.analysisId) : undefined;
       const criterionId = req.query.criterionId ? Number(req.query.criterionId) : undefined;
-      const rows = await storage.listParameters(analysisId, criterionId);
+      const requirementId = req.query.requirementId ? Number(req.query.requirementId) : undefined;
+      const rows = await storage.listParameters(analysisId, criterionId, requirementId);
       res.json(rows);
     } catch {
-  console.error('Erro ao buscar parâmetros', { q: req.query });
-  res.status(500).json({ message: 'Failed to fetch parameters' });
+      console.error('Erro ao buscar parâmetros', { q: req.query });
+      res.status(500).json({ message: 'Failed to fetch parameters' });
     }
   });
   app.post('/api/parameters', isAuthenticated, express.json(), async (req, res) => {

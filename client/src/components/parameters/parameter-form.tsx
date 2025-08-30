@@ -31,12 +31,7 @@ export default function ParameterForm({ onSuccess, onCancel, initialItem }: { on
   const { data: requirements = [] } = useQuery<Requirement[]>({ queryKey: ['/api/requirements'] });
   const [selectedRequirement, setSelectedRequirement] = useState<number | ''>('');
   const { data: criteria = [] } = useQuery<Criterion[]>({
-    queryKey: ['/api/criteria', selectedRequirement],
-    enabled: !!selectedRequirement,
-    queryFn: async () => {
-      const res = await fetch(`/api/criteria?requirementId=${selectedRequirement}`);
-      return res.json();
-    }
+    queryKey: ['/api/criteria'],
   });
   const { data: analyses = [] } = useQuery<Analysis[]>({ queryKey: ['/api/analyses'] });
 
@@ -54,28 +49,24 @@ export default function ParameterForm({ onSuccess, onCancel, initialItem }: { on
     }
   });
   const [submitting, setSubmitting] = useState(false);
-  const [criterionId, setCriterionId] = useState<number | ''>(() => {
-    if (initialItem) {
-      const analysis = analyses.find(a => a.id === initialItem.analysisId);
-      return analysis?.criterionId ?? '';
-    }
-    return '';
-  });
+  const [criterionId, setCriterionId] = useState<number | ''>('');
   const [requirementId, setRequirementId] = useState<number | ''>('');
 
   // When editing: analyses may arrive after first render; set criterionId then
   useEffect(() => {
-    if (initialItem && analyses.length && criterionId === '') {
+    if (initialItem && analyses.length && (criterionId === '' || requirementId === '')) {
       const analysis = analyses.find(a => a.id === initialItem.analysisId);
       if (analysis) {
         setCriterionId(analysis.criterionId);
+        setRequirementId((analysis as any).requirementId);
       }
     }
-  }, [initialItem, analyses, criterionId]);
+  }, [initialItem, analyses, criterionId, requirementId]);
 
-  // Filter analyses based on selected criterion
-  const filteredAnalyses = criterionId ? analyses.filter(a => a.criterionId === criterionId) : [];
-  const filteredCriteria = requirementId ? criteria : [];
+  // Filter analyses only when both requirement & criterion selected
+  const filteredAnalyses = requirementId && criterionId
+    ? analyses.filter(a => a.criterionId === criterionId && (a as any).requirementId === requirementId)
+    : [];
 
   // Keep analysis consistent with criterion selection
   if (criterionId && form.getValues('analysisId')) {
@@ -101,6 +92,12 @@ export default function ParameterForm({ onSuccess, onCancel, initialItem }: { on
     }
   }
 
+  // Converte operadores digitados para símbolos matemáticos ("<=" -> "≤", ">=" -> "≥")
+  function normalizeIneq(value: any) {
+    if (typeof value !== 'string') return value;
+    return value.replace(/<=/g, '≤').replace(/>=/g, '≥');
+  }
+
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6" autoComplete="off">
@@ -118,7 +115,6 @@ export default function ParameterForm({ onSuccess, onCancel, initialItem }: { on
                 onChange={(e) => {
                   const val = e.target.value ? Number(e.target.value) : '';
                   setRequirementId(val as any);
-                  setCriterionId('');
                   form.setValue('analysisId', 0 as any);
                 }}
                 className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 w-full h-9 text-sm"
@@ -132,16 +128,15 @@ export default function ParameterForm({ onSuccess, onCancel, initialItem }: { on
             <NotchedField label="Critério" requiredMark>
               <select
                 value={criterionId}
-                disabled={!requirementId}
                 onChange={(e) => {
                   const val = e.target.value ? Number(e.target.value) : '';
                   setCriterionId(val as any);
                   form.setValue('analysisId', 0 as any);
                 }}
-                className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 w-full h-9 text-sm disabled:opacity-50"
+                className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 w-full h-9 text-sm"
               >
-                <option value="">{requirementId ? 'Selecione...' : 'Selecione um requisito'}</option>
-                {filteredCriteria.map(c => <option key={c.id} value={c.id}>{c.code} - {c.label}</option>)}
+                <option value="">Selecione...</option>
+                {criteria.map(c => <option key={c.id} value={c.id}>{c.code} - {c.label}</option>)}
               </select>
             </NotchedField>
           </div>
@@ -151,10 +146,10 @@ export default function ParameterForm({ onSuccess, onCancel, initialItem }: { on
                 <NotchedField label="Análise" requiredMark>
                   <select
                     {...field}
-                    disabled={!criterionId}
+                    disabled={!(requirementId && criterionId) || filteredAnalyses.length === 0}
                     className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 w-full h-9 text-sm disabled:opacity-50"
                   >
-                    <option value="">{criterionId ? 'Selecione...' : 'Selecione um critério'}</option>
+          <option value="">{requirementId && criterionId ? (filteredAnalyses.length ? 'Selecione...' : 'Sem análises') : 'Selecione Requisito e Critério'}</option>
                     {filteredAnalyses.map(a => <option key={a.id} value={a.id}>{a.label}</option>)}
                   </select>
                 </NotchedField>
@@ -192,7 +187,13 @@ export default function ParameterForm({ onSuccess, onCancel, initialItem }: { on
             <FormItem>
               <FormControl>
                 <NotchedField label="Mínimo">
-                  <Input {...field} placeholder="Min" className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" />
+                  <Input
+                    {...field}
+                    value={field.value ?? ''}
+                    onChange={(e) => field.onChange(normalizeIneq(e.target.value))}
+                    placeholder="Min"
+                    className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                  />
                 </NotchedField>
               </FormControl>
               <FormMessage />
@@ -202,7 +203,13 @@ export default function ParameterForm({ onSuccess, onCancel, initialItem }: { on
             <FormItem>
               <FormControl>
                 <NotchedField label="Intermediário">
-                  <Input {...field} placeholder="Interm" className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" />
+                  <Input
+                    {...field}
+                    value={field.value ?? ''}
+                    onChange={(e) => field.onChange(normalizeIneq(e.target.value))}
+                    placeholder="Interm"
+                    className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                  />
                 </NotchedField>
               </FormControl>
               <FormMessage />
@@ -212,7 +219,13 @@ export default function ParameterForm({ onSuccess, onCancel, initialItem }: { on
             <FormItem>
               <FormControl>
                 <NotchedField label="Superior">
-                  <Input {...field} placeholder="Sup" className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" />
+                  <Input
+                    {...field}
+                    value={field.value ?? ''}
+                    onChange={(e) => field.onChange(normalizeIneq(e.target.value))}
+                    placeholder="Sup"
+                    className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                  />
                 </NotchedField>
               </FormControl>
               <FormMessage />

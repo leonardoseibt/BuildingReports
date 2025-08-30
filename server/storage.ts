@@ -171,7 +171,7 @@ export interface IStorage {
   updateAnalysis(id: number, item: Partial<InsertAnalysis>): Promise<Analysis>;
   deleteAnalysis(id: number): Promise<boolean>;
   // Parameters
-  listParameters(analysisId?: number, criterionId?: number): Promise<Parameter[]>;
+  listParameters(analysisId?: number, criterionId?: number, requirementId?: number): Promise<Parameter[]>;
   createParameter(item: InsertParameter): Promise<Parameter>;
   updateParameter(id: number, item: Partial<InsertParameter>): Promise<Parameter>;
   deleteParameter(id: number): Promise<boolean>;
@@ -1256,41 +1256,31 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Parameters
-  async listParameters(analysisId?: number, criterionId?: number): Promise<Parameter[]> {
-    let rows: any[] = [];
-    if (analysisId) {
-      rows = await db
-        .select()
-        .from(parameters)
-        .where(eq(parameters.analysisId, analysisId))
-        .orderBy(sql`${parameters.label} collate "pt-BR-x-icu"`);
-    } else if (criterionId) {
-      // Usar join do Drizzle para evitar problemas com sql raw em alguns drivers
-      const joined = await db
-        .select({
-          id: parameters.id,
-            analysisId: parameters.analysisId,
-            label: parameters.label,
-            minimumValue: parameters.minimumValue,
-            intermediateValue: parameters.intermediateValue,
-            superiorValue: parameters.superiorValue,
-            unit: parameters.unit,
-            notes: parameters.notes,
-            isActive: parameters.isActive,
-            createdAt: parameters.createdAt,
-            updatedAt: parameters.updatedAt,
-        })
-        .from(parameters)
-        .innerJoin(analyses, eq(parameters.analysisId, analyses.id))
-        .where(eq(analyses.criterionId, criterionId))
-        .orderBy(sql`${parameters.label} collate "pt-BR-x-icu"`);
-      rows = joined as any[];
-    } else {
-      rows = await db
-        .select()
-        .from(parameters)
-        .orderBy(sql`${parameters.label} collate "pt-BR-x-icu"`);
-    }
+  async listParameters(analysisId?: number, criterionId?: number, requirementId?: number): Promise<Parameter[]> {
+    // Join sempre para permitir múltiplos filtros (analysisId / criterionId / requirementId)
+    const conditions: any[] = [];
+    if (analysisId) conditions.push(eq(parameters.analysisId, analysisId));
+    if (criterionId) conditions.push(eq(analyses.criterionId, criterionId));
+    if (requirementId) conditions.push(eq(analyses.requirementId, requirementId));
+
+    const selectShape = {
+      id: parameters.id,
+      analysisId: parameters.analysisId,
+      label: parameters.label,
+      minimumValue: parameters.minimumValue,
+      intermediateValue: parameters.intermediateValue,
+      superiorValue: parameters.superiorValue,
+      unit: parameters.unit,
+      notes: parameters.notes,
+      isActive: parameters.isActive,
+      createdAt: parameters.createdAt,
+      updatedAt: parameters.updatedAt,
+    } as const;
+
+    let q: any = db.select(selectShape).from(parameters).innerJoin(analyses, eq(parameters.analysisId, analyses.id));
+    if (conditions.length === 1) q = q.where(conditions[0]);
+    else if (conditions.length > 1) q = q.where(and(...conditions));
+    const rows = await q.orderBy(sql`${parameters.label} collate "pt-BR-x-icu"`);
     return rows as any;
   }
   async createParameter(item: InsertParameter): Promise<Parameter> {
