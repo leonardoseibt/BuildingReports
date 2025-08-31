@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
 import { useAuth } from "@/hooks/useAuth";
+import { useAuthRedirect } from '@/hooks/useAuthRedirect';
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -31,13 +32,7 @@ export default function CriteriaList() {
   const pageSize = 15;
   const [page, setPage] = useState(1);
 
-  useEffect(() => {
-    // Auth redirect pattern unified with other pages (handled globally by PrivateRoute too)
-    if (!isLoading && !isAuthenticated) {
-  toast({ title: 'Sessão finalizada', description: 'Faça login novamente para continuar.', variant: 'destructive' });
-  setTimeout(() => (window.location.href = "/login"), 400);
-    }
-  }, [isAuthenticated, isLoading, toast]);
+  useAuthRedirect();
 
   const { data: items = [], isFetching, isLoading: isLoadingItems } = useQuery<Criterion[]>({ queryKey: ["/api/criteria"], enabled: isAuthenticated });
 
