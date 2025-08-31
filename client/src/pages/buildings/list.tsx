@@ -45,7 +45,7 @@ export default function BuildingList() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [selectedBuilding, setSelectedBuilding] = useState<Building | null>(null);
   const [search, setSearch] = useState("");
-  const [sortBy, setSortBy] = useState<"name" | "location" | "totalArea" | "floors" | "technician" | "createdAt" | null>(null);
+  const [sortBy, setSortBy] = useState<"name" | "location" | "totalArea" | "height" | "floors" | "technician" | "createdAt" | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const pageSize = 15;
   const [page, setPage] = useState(1);
@@ -119,16 +119,16 @@ export default function BuildingList() {
         const ad = a.createdAt ? new Date(a.createdAt as any).getTime() : 0;
         const bd = b.createdAt ? new Date(b.createdAt as any).getTime() : 0;
         cmp = ad - bd;
-      } else if (sortBy === 'totalArea' || sortBy === 'floors') {
+  } else if (sortBy === 'totalArea' || sortBy === 'floors' || sortBy === 'height') {
         cmp = Number((a as any)[sortBy] ?? 0) - Number((b as any)[sortBy] ?? 0);
       } else if (sortBy === 'technician') {
         const an = a.technicianId ? (techNameById[a.technicianId] ?? '') : '';
         const bn = b.technicianId ? (techNameById[b.technicianId] ?? '') : '';
   cmp = comparePt(an, bn);
       } else if (sortBy === 'location') {
-        const al = `${a.bioclimaticZone || ''} ${(a as any).typologyLabel || (a as any).typologyCode || ''}`;
-        const bl = `${b.bioclimaticZone || ''} ${(b as any).typologyLabel || (b as any).typologyCode || ''}`;
-  cmp = comparePt(al, bl);
+        const al = `${(a as any).city || ''} ${ (a as any).state || ''}`.trim();
+        const bl = `${(b as any).city || ''} ${ (b as any).state || ''}`.trim();
+        cmp = comparePt(al, bl);
       } else {
         const av = (a as any)[sortBy];
         const bv = (b as any)[sortBy];
@@ -310,11 +310,12 @@ export default function BuildingList() {
               <Table className="table-fixed">
                 <TableHeader>
                   <TableRow className="bg-slate-100/60">
-                    <TableHead onClick={() => toggleSort('name')} aria-sort={sortBy === 'name' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} className="w-[20%] whitespace-nowrap max-sm:whitespace-normal cursor-pointer select-none">Nome {sortBy === 'name' && (sortDir === 'asc' ? <ArrowUp className="inline-block w-3 h-3 ml-1 opacity-70" /> : <ArrowDown className="inline-block w-3 h-3 ml-1 opacity-70" />)}</TableHead>
-                    <TableHead onClick={() => toggleSort('location')} aria-sort={sortBy === 'location' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} className="w-[20%] whitespace-nowrap max-sm:whitespace-normal cursor-pointer select-none">Localização {sortBy === 'location' && (sortDir === 'asc' ? <ArrowUp className="inline-block w-3 h-3 ml-1 opacity-70" /> : <ArrowDown className="inline-block w-3 h-3 ml-1 opacity-70" />)}</TableHead>
+                    <TableHead onClick={() => toggleSort('name')} aria-sort={sortBy === 'name' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} className="w-[19%] whitespace-nowrap max-sm:whitespace-normal cursor-pointer select-none">Nome {sortBy === 'name' && (sortDir === 'asc' ? <ArrowUp className="inline-block w-3 h-3 ml-1 opacity-70" /> : <ArrowDown className="inline-block w-3 h-3 ml-1 opacity-70" />)}</TableHead>
+                    <TableHead onClick={() => toggleSort('location')} aria-sort={sortBy === 'location' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} className="w-[16%] whitespace-nowrap max-sm:whitespace-normal cursor-pointer select-none">Localização {sortBy === 'location' && (sortDir === 'asc' ? <ArrowUp className="inline-block w-3 h-3 ml-1 opacity-70" /> : <ArrowDown className="inline-block w-3 h-3 ml-1 opacity-70" />)}</TableHead>
                     <TableHead onClick={() => toggleSort('totalArea')} aria-sort={sortBy === 'totalArea' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} className="w-[10%] text-right whitespace-nowrap cursor-pointer select-none">Área {sortBy === 'totalArea' && (sortDir === 'asc' ? <ArrowUp className="inline-block w-3 h-3 ml-1 opacity-70" /> : <ArrowDown className="inline-block w-3 h-3 ml-1 opacity-70" />)}</TableHead>
-                    <TableHead onClick={() => toggleSort('floors')} aria-sort={sortBy === 'floors' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} className="w-[8%] text-right whitespace-nowrap cursor-pointer select-none">Pav. {sortBy === 'floors' && (sortDir === 'asc' ? <ArrowUp className="inline-block w-3 h-3 ml-1 opacity-70" /> : <ArrowDown className="inline-block w-3 h-3 ml-1 opacity-70" />)}</TableHead>
-                    <TableHead onClick={() => toggleSort('technician')} aria-sort={sortBy === 'technician' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} className="w-[20%] whitespace-nowrap max-sm:whitespace-normal cursor-pointer select-none">Responsável {sortBy === 'technician' && (sortDir === 'asc' ? <ArrowUp className="inline-block w-3 h-3 ml-1 opacity-70" /> : <ArrowDown className="inline-block w-3 h-3 ml-1 opacity-70" />)}</TableHead>
+                    <TableHead onClick={() => toggleSort('height')} aria-sort={sortBy === 'height' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} className="w-[9%] text-right whitespace-nowrap cursor-pointer select-none">Altura {sortBy === 'height' && (sortDir === 'asc' ? <ArrowUp className="inline-block w-3 h-3 ml-1 opacity-70" /> : <ArrowDown className="inline-block w-3 h-3 ml-1 opacity-70" />)}</TableHead>
+                    <TableHead onClick={() => toggleSort('floors')} aria-sort={sortBy === 'floors' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} className="w-[7%] text-right whitespace-nowrap cursor-pointer select-none">Pav. {sortBy === 'floors' && (sortDir === 'asc' ? <ArrowUp className="inline-block w-3 h-3 ml-1 opacity-70" /> : <ArrowDown className="inline-block w-3 h-3 ml-1 opacity-70" />)}</TableHead>
+                    <TableHead onClick={() => toggleSort('technician')} aria-sort={sortBy === 'technician' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} className="w-[17%] whitespace-nowrap max-sm:whitespace-normal cursor-pointer select-none">Responsável {sortBy === 'technician' && (sortDir === 'asc' ? <ArrowUp className="inline-block w-3 h-3 ml-1 opacity-70" /> : <ArrowDown className="inline-block w-3 h-3 ml-1 opacity-70" />)}</TableHead>
                     <TableHead className="w-[14%] text-right whitespace-nowrap">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -328,26 +329,23 @@ export default function BuildingList() {
                         <div className="flex items-center gap-1">
                           <MapPin className="w-3 h-3 shrink-0" />
                           {(() => {
-                            const zone = building.bioclimaticZone || '—';
-                            const typology = (building as any).typologyLabel || (building as any).typologyCode || '';
-                            const city = (building as any).city || '';
-                            const state = (building as any).state || '';
-                            const cityState = [city, state].filter(Boolean).join('/');
-                            const pieces: string[] = [];
-                            if (zone) pieces.push(zone);
-                            if (typology) pieces.push(typology);
-                            if (cityState) pieces.push(cityState);
-                            return pieces.join(' • ');
+                            const city = (building as any).city?.trim() || '';
+                            const state = (building as any).state?.trim() || '';
+                            if (!city && !state) return '—';
+                            return [city, state].filter(Boolean).join('/');
                           })()}
                         </div>
                       </TableCell>
                       <TableCell className="w-[10%] text-right" data-testid={`text-building-area-${building.id}`}>
                         {building.totalArea}m²
                       </TableCell>
-                      <TableCell className="w-[8%] text-right" data-testid={`text-building-floors-${building.id}`}>
+                      <TableCell className="w-[9%] text-right" data-testid={`text-building-height-${building.id}`}>
+                        { (building as any).buildingHeight != null ? `${(building as any).buildingHeight}m` : '—' }
+                      </TableCell>
+                      <TableCell className="w-[7%] text-right" data-testid={`text-building-floors-${building.id}`}>
                         {building.floors}
                       </TableCell>
-                      <TableCell className="w-[20%] whitespace-nowrap overflow-hidden text-ellipsis max-sm:whitespace-normal" data-testid={`text-building-responsible-${building.id}`}>
+                      <TableCell className="w-[17%] whitespace-nowrap overflow-hidden text-ellipsis max-sm:whitespace-normal" data-testid={`text-building-responsible-${building.id}`}>
                         {building.technicianId ? (techNameById[building.technicianId] ?? "—") : "—"}
                       </TableCell>
                       <TableCell className="w-[14%] text-right">

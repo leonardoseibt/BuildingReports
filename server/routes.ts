@@ -469,7 +469,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // CEP lookup route for bioclimatic zone determination
+  // CEP lookup route for bioclimatic zone + isopleth determination
   app.get('/api/cep/:cep', isAuthenticated, async (req, res) => {
     try {
       const cep = req.params.cep.replace(/\D/g, '');
@@ -481,9 +481,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (data.erro) {
         return res.status(404).json({ message: "CEP not found" });
       }
-      // Determine bioclimatic zone based on DB coverages (city first, then UF)
-      const zoneFromDb = await storage.findBioclimaticZoneForLocation(data.uf, data.localidade);
-      const bioclimaticZone = zoneFromDb || 'ZB3';
+  // Determine bioclimatic zone & isopleth code based on DB coverages (city first, then UF)
+  const zoneFromDb = await storage.findBioclimaticZoneForLocation(data.uf, data.localidade);
+  const bioclimaticZone = zoneFromDb || 'ZB3';
+  const isoplethCode = await storage.findIsoplethForLocation(data.uf, data.localidade);
       
       res.json({
         address: data.logradouro || '',
@@ -491,6 +492,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         city: data.localidade || '',
         state: data.uf || '',
         bioclimaticZone,
+        isoplethCode: isoplethCode || null,
       });
     } catch (error) {
       console.error("Error looking up CEP:", error);

@@ -197,6 +197,7 @@ export interface IStorage {
   updateBioclimaticZoneCoverage(id: number, item: Partial<InsertBioclimaticZoneCoverage>): Promise<BioclimaticZoneCoverage>;
   deleteBioclimaticZoneCoverage(id: number): Promise<boolean>;
   findBioclimaticZoneForLocation(state: string, city?: string | null): Promise<string | null>;
+  findIsoplethForLocation(state: string, city?: string | null): Promise<string | null>;
   findZonesByCityName(q: string): Promise<Array<{ id: number; code: string; label: string }>>;
 
   // States & Cities
@@ -1525,6 +1526,34 @@ export class DatabaseStorage implements IStorage {
     if (!cov) return null;
     const [zone] = await db.select({ code: bioclimaticZones.code }).from(bioclimaticZones).where(eq(bioclimaticZones.id, cov.zoneId)).limit(1);
     return zone?.code ?? null;
+  }
+
+  async findIsoplethForLocation(state: string, city?: string | null): Promise<string | null> {
+    const uf = (state || '').toUpperCase();
+    const cityName = (city || '').trim();
+    if (!uf || !cityName) return null;
+    const [st] = await db.select().from(states).where(eq(states.code, uf)).limit(1);
+    if (!st) return null;
+    const src = 'áàâãäéèêëíìîïóòôõöúùûüçñ';
+    const dst = 'aaaaaeeeeiiiiooooouuuucn';
+    const cityLower = cityName.toLowerCase();
+    const [ci] = await db
+      .select()
+      .from(cities)
+      .where(and(
+        eq(cities.stateId, (st as any).id),
+        sql`translate(lower(${cities.name}), ${src}, ${dst}) = translate(lower(${cityLower}), ${src}, ${dst})`
+      ))
+      .limit(1);
+    if (!ci) return null;
+    // find isopleth coverage for city
+    const coverage = await db.select({ isoplethId: isoplethCoverages.isoplethId })
+      .from(isoplethCoverages)
+      .where(eq(isoplethCoverages.cityId, (ci as any).id))
+      .limit(1);
+    if (!coverage.length) return null;
+    const [iso] = await db.select({ code: isopleths.code }).from(isopleths).where(eq(isopleths.id, coverage[0].isoplethId)).limit(1);
+    return iso?.code || null;
   }
 
   // States & Cities

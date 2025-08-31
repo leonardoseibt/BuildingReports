@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
-import { insertBuildingSchema, type Technician, type Building, type BioclimaticZone } from "@shared/schema";
+import { insertBuildingSchema, type Technician, type Building, type BioclimaticZone, type Isopleth } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
@@ -36,6 +36,7 @@ const buildingFormSchema = z.object({
   city: z.string().optional(),
   state: z.string().length(2, 'UF deve ter 2 letras').optional(),
   bioclimaticZone: z.string().optional(),
+  isoplethCode: z.string().optional(),
   totalArea: z.string()
     .min(1, "Área total é obrigatória")
     .transform((val) => parseFloat(val))
@@ -68,6 +69,7 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
   const [, navigate] = useLocation();
   const [isLookingUpCep, setIsLookingUpCep] = useState(false);
   const [zoneLocked, setZoneLocked] = useState(false);
+  const [isoplethLocked, setIsoplethLocked] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { data: technicians } = useQuery<Technician[]>({ queryKey: ['/api/technicians'] });
@@ -75,6 +77,7 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
   const { data: noiseClasses } = useQuery<any[]>({ queryKey: ['/api/noise-classes'] });
   const { data: aggressiveness } = useQuery<any[]>({ queryKey: ['/api/aggressiveness-classes'] });
   const { data: zones = [] } = useQuery<BioclimaticZone[]>({ queryKey: ['/api/bioclimatic-zones'] });
+  const { data: isopleths = [] } = useQuery<Isopleth[]>({ queryKey: ['/api/isopleths'] });
   const { data: states = [], isLoading: loadingStates } = useQuery<{ id:number; code:string; name:string; region?: string; createdAt?: string; }[]>({
     queryKey: ['/api/states'],
     queryFn: async () => { const r = await fetch('/api/states'); if (!r.ok) throw new Error('Falha ao carregar estados'); return r.json(); },
@@ -104,6 +107,7 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
       city: '',
       state: undefined,
       bioclimaticZone: undefined as any,
+  isoplethCode: undefined as any,
       totalArea: 0 as any,
       buildingHeight: undefined as any,
       floors: 0 as any,
@@ -121,6 +125,7 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
         name: '', technicianId: undefined as any, typologyId: undefined as any,
         cep: '', street: '', addressNumber: '', neighborhood: '', city: '', state: undefined,
         bioclimaticZone: undefined as any,
+  isoplethCode: undefined as any,
         totalArea: 0 as any, buildingHeight: undefined as any, floors: 0 as any, units: 1 as any,
         noiseClassId: undefined as any, aggressivenessClassId: undefined as any,
       });
@@ -137,6 +142,7 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
       city: (building as any).city || '',
       state: (building as any).state || undefined,
       bioclimaticZone: (building.bioclimaticZone as any) || undefined,
+  isoplethCode: (building as any).isoplethCode || undefined,
       totalArea: String(building.totalArea) as any,
       buildingHeight: (building as any).buildingHeight != null ? String((building as any).buildingHeight) as any : undefined,
       floors: String(building.floors) as any,
@@ -203,12 +209,19 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
         if (data.state) form.setValue('state', data.state);
         form.setValue('bioclimaticZone', data.bioclimaticZone);
         setZoneLocked(true);
+        if (data.isoplethCode) {
+          form.setValue('isoplethCode', data.isoplethCode);
+          setIsoplethLocked(true);
+        } else {
+          setIsoplethLocked(false);
+        }
         toast({
           title: "CEP encontrado",
-          description: `Zona bioclimática: ${data.bioclimaticZone}`,
+          description: `Zona: ${data.bioclimaticZone}${data.isoplethCode ? ' • Isopleta: '+data.isoplethCode : ''}`,
         });
       } else {
-        setZoneLocked(false);
+  setZoneLocked(false);
+  setIsoplethLocked(false);
         toast({
           title: "CEP não encontrado",
           description: "Verifique o CEP informado.",
@@ -340,10 +353,10 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
                     <NotchedField label="Responsável Técnico" requiredMark>
                       <Popover open={openTech} onOpenChange={setOpenTech}>
                         <PopoverTrigger asChild>
-                          <Button
+                            <Button
                             variant="outline"
                             role="combobox"
-                            className="w-full justify-between border-0 bg-transparent shadow-none"
+                            className="w-full justify-between border-0 bg-transparent shadow-none h-8 px-2"
                             data-testid="input-technical-responsible"
                           >
                             {field.value
@@ -391,7 +404,7 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
 
           {/* Localização */}
           <div className="space-y-4">
-            {/* Linha 1: CEP + Zona Bioclimática */}
+            {/* Linha 1: CEP (2) + Zona Bioclimática (5) + Isopleta (5) => total 12 */}
             <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
               <FormField
                 control={form.control}
@@ -425,7 +438,7 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
                 control={form.control}
                 name="bioclimaticZone"
                 render={({ field }) => (
-                  <FormItem className="md:col-span-10">
+                  <FormItem className="md:col-span-5">
                     <FormControl>
                       <NotchedField label="Zona Bioclimática">
                         <Popover open={openZone} onOpenChange={(v) => { if (!zoneLocked) setOpenZone(v); }}>
@@ -433,7 +446,7 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
                             <Button
                               variant="outline"
                               role="combobox"
-                              className="w-full justify-between border-0 bg-transparent shadow-none"
+                              className="w-full justify-between border-0 bg-transparent shadow-none h-8 px-2 text-left font-normal"
                               data-testid="input-bioclimatic-zone"
                               disabled={zoneLocked}
                             >
@@ -468,14 +481,49 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
                         </Popover>
                       </NotchedField>
                     </FormControl>
-                    <FormDescription>
-                      {isLookingUpCep
-                        ? "Buscando informações..."
-                        : zoneLocked
-                          ? "Determinada automaticamente pelo CEP (bloqueada)."
-                          : "CEP não encontrado — selecione manualmente."}
-                    </FormDescription>
                     <FormMessage />
+                    {isLookingUpCep && <p className="text-xs text-slate-500 mt-1">Buscando informações...</p>}
+                    {(!isLookingUpCep && zoneLocked) && <p className="text-xs text-slate-500 mt-1">Determinada pelo CEP.</p>}
+                    {(!isLookingUpCep && !zoneLocked) && <p className="text-xs text-slate-500 mt-1">Selecione manualmente se necessário.</p>}
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="isoplethCode"
+                render={({ field }) => (
+                  <FormItem className="md:col-span-5">
+                    <FormControl>
+                      <NotchedField label="Isopleta">
+                        <Select onValueChange={field.onChange} value={field.value ? String(field.value) : undefined} disabled={isoplethLocked}>
+                          <FormControl>
+                            <SelectTrigger className="border-0 bg-transparent shadow-none focus:ring-0 focus:ring-offset-0 h-8 px-2" data-testid="select-isopleth">
+                              <SelectValue placeholder="Selecione a isopleta" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {(isopleths || []).slice().sort((a:any,b:any)=> String(a.code).localeCompare(String(b.code),'pt-BR',{numeric:true})).map((i:any)=> {
+                              const min = i.windMinMS != null ? parseFloat(i.windMinMS as any) : null;
+                              const max = i.windMaxMS != null ? parseFloat(i.windMaxMS as any) : null;
+                              const fmt = (v:number|null) => v == null || Number.isNaN(v) ? null : v.toFixed(2).replace(/\.00$/,'');
+                              const range = (() => {
+                                const fmin = fmt(min);
+                                const fmax = fmt(max);
+                                if (fmin && fmax) return ` (${fmin}–${fmax} m/s)`;
+                                if (fmin) return ` (≥ ${fmin} m/s)`;
+                                if (fmax) return ` (≤ ${fmax} m/s)`;
+                                return '';
+                              })();
+                              return (
+                                <SelectItem key={i.id} value={i.code}>{`${i.code} - ${i.label}${range}`}</SelectItem>
+                              );
+                            })}
+                          </SelectContent>
+                        </Select>
+                      </NotchedField>
+                    </FormControl>
+                    <FormMessage />
+                    {isoplethLocked && <p className="text-xs text-slate-500 mt-1">Determinada pelo CEP.</p>}
                   </FormItem>
                 )}
               />
