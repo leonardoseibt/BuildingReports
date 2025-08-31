@@ -12,14 +12,18 @@ import { NotchedField } from '@/components/ui/notched-field';
 import type { Parameter, Analysis, Criterion, Requirement } from '@shared/schema';
 import { useQuery } from '@tanstack/react-query';
 
+// Observação: precisamos enviar strings vazias / null nos updates para que o backend sobrescreva valores antigos.
+// Novos campos minLimit / maxLimit (limites de avaliação condicionada à edificação) são opcionais.
 const formSchema = z.object({
   analysisId: z.coerce.number().min(1, 'Análise é obrigatória'),
   label: z.string().min(1, 'Descrição é obrigatória').max(255, 'Máx 255 caracteres'),
-  minimumValue: z.union([z.string(), z.number()]).optional().transform(v => v === '' ? undefined : v),
-  intermediateValue: z.union([z.string(), z.number()]).optional().transform(v => v === '' ? undefined : v),
-  superiorValue: z.union([z.string(), z.number()]).optional().transform(v => v === '' ? undefined : v),
-  unit: z.string().optional().nullable().transform(v => v || undefined),
-  notes: z.string().optional().nullable().transform(v => v || undefined),
+  minLimit: z.union([z.string(), z.number()]).optional(),
+  maxLimit: z.union([z.string(), z.number()]).optional(),
+  minimumValue: z.union([z.string(), z.number()]).optional(),
+  intermediateValue: z.union([z.string(), z.number()]).optional(),
+  superiorValue: z.union([z.string(), z.number()]).optional(),
+  unit: z.string().optional().nullable().transform(v => v === null ? '' : (v ?? '')),
+  notes: z.string().optional().nullable().transform(v => v === null ? '' : (v ?? '')),
   isActive: z.boolean().optional().default(true),
 });
 
@@ -40,9 +44,11 @@ export default function ParameterForm({ onSuccess, onCancel, initialItem }: { on
     defaultValues: {
       analysisId: initialItem?.analysisId || (analyses[0]?.id ?? 0),
       label: initialItem?.label || '',
-      minimumValue: (initialItem as any)?.minimumValue ?? '',
-      intermediateValue: (initialItem as any)?.intermediateValue ?? '',
-      superiorValue: (initialItem as any)?.superiorValue ?? '',
+  minLimit: (initialItem as any)?.minLimit ?? '',
+  maxLimit: (initialItem as any)?.maxLimit ?? '',
+  minimumValue: (initialItem as any)?.minimumValue ?? '',
+  intermediateValue: (initialItem as any)?.intermediateValue ?? '',
+  superiorValue: (initialItem as any)?.superiorValue ?? '',
       unit: (initialItem as any)?.unit || '',
       notes: (initialItem as any)?.notes || '',
       isActive: initialItem?.isActive ?? true,
@@ -79,7 +85,20 @@ export default function ParameterForm({ onSuccess, onCancel, initialItem }: { on
   async function onSubmit(values: ParameterFormData) {
     try {
       setSubmitting(true);
-      const payload = { ...values };
+      // Para limpar no banco: enviar null para os campos de valores quando string vazia
+      const clean = (v: any) => (v === '' ? null : v);
+      const payload: any = {
+        analysisId: values.analysisId,
+        label: values.label,
+        minLimit: clean(values.minLimit),
+        maxLimit: clean(values.maxLimit),
+        minimumValue: clean(values.minimumValue),
+        intermediateValue: clean(values.intermediateValue),
+        superiorValue: clean(values.superiorValue),
+        unit: values.unit === '' ? null : values.unit,
+        notes: values.notes === '' ? null : values.notes,
+        isActive: values.isActive,
+      };
       const method = isEdit ? 'PUT' : 'POST';
       const url = isEdit ? `/api/parameters/${initialItem!.id}` : '/api/parameters';
       await apiRequest(method as any, url as any, payload);
@@ -106,9 +125,9 @@ export default function ParameterForm({ onSuccess, onCancel, initialItem }: { on
           subtitle={isEdit ? 'Atualize os dados do parâmetro.' : 'Cadastre um novo parâmetro para uma análise.'}
           initials={form.getValues('label')?.substring(0,2) || null}
         />
-        {/* Linha 1: Critério & Análise */}
-        <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
-          <div className="md:col-span-2">
+        {/* Linha 1: Requisito & Critério */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
             <NotchedField label="Requisito" requiredMark>
               <select
                 value={requirementId}
@@ -124,7 +143,7 @@ export default function ParameterForm({ onSuccess, onCancel, initialItem }: { on
               </select>
             </NotchedField>
           </div>
-          <div className="md:col-span-2">
+          <div>
             <NotchedField label="Critério" requiredMark>
               <select
                 value={criterionId}
@@ -140,6 +159,9 @@ export default function ParameterForm({ onSuccess, onCancel, initialItem }: { on
               </select>
             </NotchedField>
           </div>
+        </div>
+        {/* Linha 2: Análise (50%), Limite Mínimo (25%), Limite Máximo (25%) */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <FormField name="analysisId" control={form.control} render={({ field }) => (
             <FormItem className="md:col-span-2">
               <FormControl>
@@ -149,7 +171,7 @@ export default function ParameterForm({ onSuccess, onCancel, initialItem }: { on
                     disabled={!(requirementId && criterionId) || filteredAnalyses.length === 0}
                     className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 w-full h-9 text-sm disabled:opacity-50"
                   >
-          <option value="">{requirementId && criterionId ? (filteredAnalyses.length ? 'Selecione...' : 'Sem análises') : 'Selecione Requisito e Critério'}</option>
+                    <option value="">{requirementId && criterionId ? (filteredAnalyses.length ? 'Selecione...' : 'Sem análises') : 'Selecione Requisito e Critério'}</option>
                     {filteredAnalyses.map(a => <option key={a.id} value={a.id}>{a.label}</option>)}
                   </select>
                 </NotchedField>
@@ -157,11 +179,31 @@ export default function ParameterForm({ onSuccess, onCancel, initialItem }: { on
               <FormMessage />
             </FormItem>
           )} />
+          <FormField name="minLimit" control={form.control} render={({ field }) => (
+            <FormItem>
+              <FormControl>
+                <NotchedField label="Limite Mínimo">
+                  <Input {...field} value={field.value ?? ''} onChange={(e)=> field.onChange(e.target.value)} placeholder="Ex: 0" className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" />
+                </NotchedField>
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )} />
+          <FormField name="maxLimit" control={form.control} render={({ field }) => (
+            <FormItem>
+              <FormControl>
+                <NotchedField label="Limite Máximo">
+                  <Input {...field} value={field.value ?? ''} onChange={(e)=> field.onChange(e.target.value)} placeholder="Ex: 100" className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" />
+                </NotchedField>
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )} />
         </div>
-        {/* Linha 2: Descrição & Unidade */}
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+        {/* Linha 3: Descrição & Unidade */}
+        <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
           <FormField name="label" control={form.control} render={({ field }) => (
-            <FormItem className="md:col-span-4">
+            <FormItem className="md:col-span-5">
               <FormControl>
                 <NotchedField label="Descrição" requiredMark>
                   <Input {...field} placeholder="Descrição" className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" />
@@ -171,7 +213,7 @@ export default function ParameterForm({ onSuccess, onCancel, initialItem }: { on
             </FormItem>
           )} />
           <FormField name="unit" control={form.control} render={({ field }) => (
-            <FormItem className="md:col-span-1">
+            <FormItem>
               <FormControl>
                 <NotchedField label="Unidade">
                   <Input {...field} placeholder="Ex: dB" className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" />
@@ -181,7 +223,7 @@ export default function ParameterForm({ onSuccess, onCancel, initialItem }: { on
             </FormItem>
           )} />
         </div>
-        {/* Linha 3: Mínimo, Intermediário, Superior */}
+        {/* Linha 4: Mínimo, Intermediário, Superior */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <FormField name="minimumValue" control={form.control} render={({ field }) => (
             <FormItem>
@@ -232,7 +274,7 @@ export default function ParameterForm({ onSuccess, onCancel, initialItem }: { on
             </FormItem>
           )} />
         </div>
-  {/* Linha 4: Observações */}
+  {/* Linha 5: Observações */}
         <FormField name="notes" control={form.control} render={({ field }) => (
           <FormItem>
             <FormControl>
