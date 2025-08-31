@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { comparePt } from '@/lib/utils';
 import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
 import { useAuth } from "@/hooks/useAuth";
+import { useAuthRedirect } from '@/hooks/useAuthRedirect';
 import { useToast } from "@/hooks/use-toast";
 import TechnicianForm from "@/components/technicians/technician-form";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -69,13 +70,7 @@ export default function TechniciansList() {
   const pageSize = 15;
   const [page, setPage] = useState(1);
 
-  useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-  toast({ title: 'Sessão finalizada', description: 'Faça login novamente para continuar.', variant: 'destructive' });
-  toast({ title: 'Sessão finalizada', description: 'Faça login novamente para continuar.', variant: 'destructive' });
-  setTimeout(() => (window.location.href = "/login"), 400);
-    }
-  }, [isAuthenticated, isLoading, toast]);
+  useAuthRedirect();
 
   const { data: technicians = [], isFetching, isLoading: isLoadingTechs } = useQuery<Technician[]>({ queryKey: ["/api/technicians"], enabled: isAuthenticated });
 

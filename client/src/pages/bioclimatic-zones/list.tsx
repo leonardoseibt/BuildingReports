@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
 import { useAuth } from "@/hooks/useAuth";
+import { useAuthRedirect } from '@/hooks/useAuthRedirect';
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -39,12 +40,7 @@ export default function BioclimaticZonesList() {
     return d.toLocaleDateString('pt-BR');
   };
 
-  useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      toast({ title: 'Sessão finalizada', description: 'Faça login novamente para continuar.', variant: 'destructive' });
-      setTimeout(() => (window.location.href = '/login'), 400);
-    }
-  }, [isAuthenticated, isLoading, toast]);
+  useAuthRedirect();
 
   const { data: zones = [], isFetching, isLoading: isLoadingItems } = useQuery<BioclimaticZone[]>({ queryKey: ["/api/bioclimatic-zones"], enabled: isAuthenticated });
   // Search by city name: query backend for zones that cover a given city

@@ -1,4 +1,6 @@
 import Sidebar from "@/components/layout/sidebar";
+import { useAuthRedirect } from '@/hooks/useAuthRedirect';
+import { useAuth } from '@/hooks/useAuth';
 import Header from "@/components/layout/header";
 import { AlertCircle, FileText, Plus } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -7,6 +9,10 @@ import { Link } from "wouter";
 
 // Placeholder page for Reports until full feature implementation
 export default function ReportList() {
+  const { isAuthenticated, isLoading } = useAuth();
+  useAuthRedirect();
+  if (isLoading) return null;
+  if (!isAuthenticated) return null;
   return (
     <div className="flex h-screen bg-slate-50" data-testid="reports-placeholder-layout">
       <Sidebar />

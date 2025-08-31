@@ -1,9 +1,15 @@
 import Sidebar from "@/components/layout/sidebar";
+import { useAuthRedirect } from '@/hooks/useAuthRedirect';
+import { useAuth } from '@/hooks/useAuth';
 import Header from "@/components/layout/header";
 import { AlertCircle } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 
 export default function SettingsPlaceholder() {
+  const { isAuthenticated, isLoading } = useAuth();
+  useAuthRedirect();
+  if (isLoading) return null;
+  if (!isAuthenticated) return null;
   return (
     <div className="flex h-screen bg-slate-50" data-testid="settings-layout">
       <Sidebar />

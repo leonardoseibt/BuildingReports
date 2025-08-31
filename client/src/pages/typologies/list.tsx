@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { comparePt } from '@/lib/utils';
 import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
 import { useAuth } from "@/hooks/useAuth";
+import { useAuthRedirect } from '@/hooks/useAuthRedirect';
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -38,13 +39,7 @@ export default function TypologiesList() {
     return d.toLocaleDateString('pt-BR');
   };
 
-  useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-  toast({ title: 'Sessão finalizada', description: 'Faça login novamente para continuar.', variant: 'destructive' });
-  toast({ title: 'Sessão finalizada', description: 'Faça login novamente para continuar.', variant: 'destructive' });
-  setTimeout(() => (window.location.href = "/login"), 400);
-    }
-  }, [isAuthenticated, isLoading, toast]);
+  useAuthRedirect();
 
   const { data: items = [], isFetching, isLoading: isLoadingItems } = useQuery<Typology[]>({ queryKey: ["/api/typologies"], enabled: isAuthenticated });
 
