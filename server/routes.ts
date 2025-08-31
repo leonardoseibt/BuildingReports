@@ -932,8 +932,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const requirementId = req.query.requirementId ? Number(req.query.requirementId) : undefined;
       const rows = await storage.listParameters(analysisId, criterionId, requirementId);
       res.json(rows);
-    } catch {
-      console.error('Erro ao buscar parâmetros', { q: req.query });
+    } catch (err:any) {
+      console.error('Erro ao buscar parâmetros', { q: req.query, error: err?.message, stack: err?.stack });
       res.status(500).json({ message: 'Failed to fetch parameters' });
     }
   });

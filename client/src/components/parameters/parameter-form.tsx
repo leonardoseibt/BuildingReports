@@ -83,6 +83,15 @@ export default function ParameterForm({ onSuccess, onCancel, initialItem }: { on
   }
 
   async function onSubmit(values: ParameterFormData) {
+    // Basic validation: ensure numeric ordering if both provided
+    if(values.minLimit && values.maxLimit) {
+      const a = Number(values.minLimit)
+      const b = Number(values.maxLimit)
+      if(!isNaN(a) && !isNaN(b) && a > b) {
+        form.setError('maxLimit', { message: 'Máx deve ser >= Mín' })
+        return;
+      }
+    }
     try {
       setSubmitting(true);
       // Para limpar no banco: enviar null para os campos de valores quando string vazia
@@ -182,10 +191,11 @@ export default function ParameterForm({ onSuccess, onCancel, initialItem }: { on
           <FormField name="minLimit" control={form.control} render={({ field }) => (
             <FormItem>
               <FormControl>
-                <NotchedField label="Limite Mínimo (texto)">
+                <NotchedField label="Limite Mínimo">
                   <Input {...field} value={field.value ?? ''}
                     onChange={(e)=> field.onChange(e.target.value)}
-                    placeholder="Ex: >= 10 e < 20" className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" />
+                    onBlur={(e)=> { const v = e.target.value.trim(); if(v===''){return;} const num = Number(v.replace(',', '.')); if(!isNaN(num)) field.onChange(num.toFixed(2)); }}
+                    placeholder="Ex: 0" className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" />
                 </NotchedField>
               </FormControl>
               <FormMessage />
@@ -194,10 +204,11 @@ export default function ParameterForm({ onSuccess, onCancel, initialItem }: { on
           <FormField name="maxLimit" control={form.control} render={({ field }) => (
             <FormItem>
               <FormControl>
-                <NotchedField label="Limite Máximo (texto)">
+                <NotchedField label="Limite Máximo">
                   <Input {...field} value={field.value ?? ''}
                     onChange={(e)=> field.onChange(e.target.value)}
-                    placeholder="Ex: <= 50" className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" />
+                    onBlur={(e)=> { const v = e.target.value.trim(); if(v===''){return;} const num = Number(v.replace(',', '.')); if(!isNaN(num)) field.onChange(num.toFixed(2)); }}
+                    placeholder="Ex: 100" className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" />
                 </NotchedField>
               </FormControl>
               <FormMessage />

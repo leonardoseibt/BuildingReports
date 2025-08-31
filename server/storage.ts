@@ -1270,13 +1270,16 @@ export class DatabaseStorage implements IStorage {
       minimumValue: parameters.minimumValue,
       intermediateValue: parameters.intermediateValue,
       superiorValue: parameters.superiorValue,
-  minLimit: parameters.minLimit,
-  maxLimit: parameters.maxLimit,
+      minLimit: parameters.minLimit,
+      maxLimit: parameters.maxLimit,
       unit: parameters.unit,
       notes: parameters.notes,
       isActive: parameters.isActive,
       createdAt: parameters.createdAt,
       updatedAt: parameters.updatedAt,
+      // Extra fields from analyses to stabilize join & potential filtering
+      _analysisRequirementId: analyses.requirementId,
+      _analysisCriterionId: analyses.criterionId,
     } as const;
 
     let q: any = db.select(selectShape).from(parameters).innerJoin(analyses, eq(parameters.analysisId, analyses.id));
