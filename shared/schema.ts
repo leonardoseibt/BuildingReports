@@ -264,9 +264,9 @@ export const parameters = pgTable("parameters", {
   minimumValue: text("minimum_value"),
   intermediateValue: text("intermediate_value"),
   superiorValue: text("superior_value"),
-  // Ajustado para 2 casas decimais (antes scale:4)
-  minLimit: decimal("min_limit", { precision: 12, scale: 2 }),
-  maxLimit: decimal("max_limit", { precision: 12, scale: 2 }),
+  // Alterado para texto para permitir expressões variáveis
+  minLimit: text("min_limit"),
+  maxLimit: text("max_limit"),
   unit: varchar("unit", { length: 32 }),
   notes: text("notes"),
   isActive: boolean("is_active").default(true),
@@ -586,8 +586,9 @@ export const insertParameterSchema = createInsertSchema(parameters)
     minimumValue: decimalInput.optional().nullable(),
     intermediateValue: decimalInput.optional().nullable(),
     superiorValue: decimalInput.optional().nullable(),
-  minLimit: decimalInput.optional().nullable(),
-  maxLimit: decimalInput.optional().nullable(),
+  // Agora texto livre
+  minLimit: z.string().optional().nullable(),
+  maxLimit: z.string().optional().nullable(),
     unit: z.string().max(32).optional().nullable(),
     notes: z.string().optional().nullable(),
   });
