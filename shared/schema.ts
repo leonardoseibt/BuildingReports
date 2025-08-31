@@ -264,8 +264,9 @@ export const parameters = pgTable("parameters", {
   minimumValue: text("minimum_value"),
   intermediateValue: text("intermediate_value"),
   superiorValue: text("superior_value"),
-  minLimit: decimal("min_limit", { precision: 12, scale: 4 }),
-  maxLimit: decimal("max_limit", { precision: 12, scale: 4 }),
+  // Ajustado para 2 casas decimais (antes scale:4)
+  minLimit: decimal("min_limit", { precision: 12, scale: 2 }),
+  maxLimit: decimal("max_limit", { precision: 12, scale: 2 }),
   unit: varchar("unit", { length: 32 }),
   notes: text("notes"),
   isActive: boolean("is_active").default(true),

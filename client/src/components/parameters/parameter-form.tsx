@@ -183,7 +183,14 @@ export default function ParameterForm({ onSuccess, onCancel, initialItem }: { on
             <FormItem>
               <FormControl>
                 <NotchedField label="Limite Mínimo">
-                  <Input {...field} value={field.value ?? ''} onChange={(e)=> field.onChange(e.target.value)} placeholder="Ex: 0" className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" />
+                  <Input {...field} value={field.value ?? ''}
+                    onChange={(e)=> field.onChange(e.target.value)}
+                    onBlur={(e)=> {
+                      const v = e.target.value.trim();
+                      if(v === '') return; const num = Number(v.replace(',', '.'));
+                      if(!isNaN(num)) field.onChange(num.toFixed(2));
+                    }}
+                    placeholder="Ex: 0" className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" />
                 </NotchedField>
               </FormControl>
               <FormMessage />
@@ -193,7 +200,14 @@ export default function ParameterForm({ onSuccess, onCancel, initialItem }: { on
             <FormItem>
               <FormControl>
                 <NotchedField label="Limite Máximo">
-                  <Input {...field} value={field.value ?? ''} onChange={(e)=> field.onChange(e.target.value)} placeholder="Ex: 100" className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" />
+                  <Input {...field} value={field.value ?? ''}
+                    onChange={(e)=> field.onChange(e.target.value)}
+                    onBlur={(e)=> {
+                      const v = e.target.value.trim();
+                      if(v === '') return; const num = Number(v.replace(',', '.'));
+                      if(!isNaN(num)) field.onChange(num.toFixed(2));
+                    }}
+                    placeholder="Ex: 100" className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" />
                 </NotchedField>
               </FormControl>
               <FormMessage />
