@@ -302,7 +302,7 @@ export default function TechniciansList() {
                 cep: editTech.cep || "",
                 notes: editTech.notes || "",
               } : null}
-              onSuccess={() => { setEditTech(null); setOpen(false); queryClient.invalidateQueries({ queryKey: ["/api/technicians"] }); }}
+              onSuccess={() => { queryClient.invalidateQueries({ queryKey: ["/api/technicians"] }); if (editTech) { setEditTech(null); setOpen(false); } }}
               onCancel={() => setOpen(false)}
             />
           </div>
