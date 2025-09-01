@@ -1275,6 +1275,9 @@ export class DatabaseStorage implements IStorage {
       maxLimit: parameters.maxLimit,
       unit: parameters.unit,
       notes: parameters.notes,
+  attributeTable: parameters.attributeTable,
+  attributeColumn: parameters.attributeColumn,
+  attributeValueId: parameters.attributeValueId,
       isActive: parameters.isActive,
       createdAt: parameters.createdAt,
       updatedAt: parameters.updatedAt,
@@ -1300,12 +1303,28 @@ export class DatabaseStorage implements IStorage {
   maxLimit: (item as any).maxLimit,
       unit: (item as any).unit,
       notes: (item as any).notes,
+  attributeTable: (item as any).attributeTable,
+  attributeColumn: (item as any).attributeColumn,
+  attributeValueId: (item as any).attributeValueId,
       isActive: (item as any).isActive ?? true,
     }).returning();
     return row as Parameter;
   }
   async updateParameter(id: number, item: Partial<InsertParameter>): Promise<Parameter> {
-    const [row] = await db.update(parameters).set({ ...(item as any), updatedAt: new Date() }).where(eq(parameters.id, id)).returning();
+    const updateData: any = { updatedAt: new Date() };
+    // Apenas inclui campos presentes; permite enviar null para limpar
+    const keys: (keyof InsertParameter | 'isActive')[] = [
+      'analysisId','label','minimumValue','intermediateValue','superiorValue',
+      'minLimit','maxLimit','unit','notes','attributeTable','attributeColumn','attributeValueId','isActive'
+    ] as any;
+    for (const k of keys) {
+      if (k in item) {
+        (updateData as any)[k] = (item as any)[k];
+      }
+    }
+    // Evita setar analysisId como undefined (NOT NULL)
+    if (updateData.analysisId === undefined) delete updateData.analysisId;
+    const [row] = await db.update(parameters).set(updateData).where(eq(parameters.id, id)).returning();
     return row as Parameter;
   }
   async deleteParameter(id: number): Promise<boolean> {

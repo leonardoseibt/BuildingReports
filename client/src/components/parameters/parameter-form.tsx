@@ -24,6 +24,9 @@ const formSchema = z.object({
   superiorValue: z.union([z.string(), z.number()]).optional(),
   unit: z.string().optional().nullable().transform(v => v === null ? '' : (v ?? '')),
   notes: z.string().optional().nullable().transform(v => v === null ? '' : (v ?? '')),
+  attributeTable: z.string().optional().nullable(),
+  attributeColumn: z.string().optional().nullable(),
+  attributeValueId: z.union([z.string(), z.number()]).optional().nullable(),
   isActive: z.boolean().optional().default(true),
 });
 
@@ -51,12 +54,30 @@ export default function ParameterForm({ onSuccess, onCancel, initialItem }: { on
   superiorValue: (initialItem as any)?.superiorValue ?? '',
       unit: (initialItem as any)?.unit || '',
       notes: (initialItem as any)?.notes || '',
+      attributeTable: (initialItem as any)?.attributeTable ?? '',
+      attributeColumn: (initialItem as any)?.attributeColumn ?? '',
+      attributeValueId: (initialItem as any)?.attributeValueId ?? '',
       isActive: initialItem?.isActive ?? true,
     }
   });
   const [submitting, setSubmitting] = useState(false);
   const [criterionId, setCriterionId] = useState<number | ''>('');
   const [requirementId, setRequirementId] = useState<number | ''>('');
+
+  // Garante que ao editar, quando initialItem chegar async, o Atributo fique selecionado
+  useEffect(() => {
+    if (initialItem) {
+      if (initialItem.attributeColumn) {
+        form.setValue('attributeColumn', (initialItem as any).attributeColumn as any);
+      }
+      if (initialItem.attributeTable) {
+        form.setValue('attributeTable', (initialItem as any).attributeTable as any);
+      }
+      if ((initialItem as any).attributeValueId !== undefined && (initialItem as any).attributeValueId !== null) {
+        form.setValue('attributeValueId', String((initialItem as any).attributeValueId) as any);
+      }
+    }
+  }, [initialItem, form]);
 
   // When editing: analyses may arrive after first render; set criterionId then
   useEffect(() => {
@@ -79,6 +100,48 @@ export default function ParameterForm({ onSuccess, onCancel, initialItem }: { on
     const currentAnalysis = analyses.find(a => a.id === form.getValues('analysisId'));
     if (currentAnalysis && currentAnalysis.criterionId !== criterionId) {
       form.setValue('analysisId', 0 as any);
+    }
+  }
+
+  // Lista de atributos possíveis (campos de edificações)
+  const attributeOptions = [
+    { label: 'Tipo de Uso Habitacional', table: 'buildings', column: 'typology_id', kind: 'ref', source: '/api/typologies', valueKey: 'id', labelKey: 'label' },
+  { label: 'Zona Bioclimática', table: 'buildings', column: 'bioclimatic_zone', kind: 'ref', source: '/api/bioclimatic-zones', valueKey: 'id', labelKey: (row:any)=> `${row.code} - ${row.label}` },
+  { label: 'Isopleta', table: 'buildings', column: 'isopleth_code', kind: 'ref', source: '/api/isopleths', valueKey: 'id', labelKey: (row:any)=> `${row.code} - ${row.label}` },
+    { label: 'Área Total Construída', table: 'buildings', column: 'total_area', kind: 'number' },
+    { label: 'Altura da Edificação', table: 'buildings', column: 'building_height', kind: 'number' },
+    { label: 'Número de Pavimentos', table: 'buildings', column: 'floors', kind: 'number' },
+    { label: 'Número de Unidades', table: 'buildings', column: 'units', kind: 'number' },
+    { label: 'Classe de Ruído do Entorno', table: 'buildings', column: 'noise_class_id', kind: 'ref', source: '/api/noise-classes', valueKey: 'id', labelKey: (row:any)=> `${row.code} - ${row.label}` },
+    { label: 'Classe de Agressividade Ambiental', table: 'buildings', column: 'aggressiveness_class_id', kind: 'ref', source: '/api/aggressiveness-classes', valueKey: 'id', labelKey: (row:any)=> `${row.code} - ${row.label}` },
+  ] as any[];
+
+  type AttributeOption = {
+    label: string; table: string; column: string; kind: 'ref' | 'number';
+    source?: string; valueKey?: string; labelKey?: string | ((row:any)=>string);
+  };
+  const selectedAttribute: AttributeOption | null = (() => {
+    const col = form.watch('attributeColumn');
+    if(!col) return null;
+    return (attributeOptions as readonly AttributeOption[]).find(a => a.column === col) || null;
+  })();
+
+  // Pré-carrega dados das fontes de referência
+  const { data: typologiesList = [] } = useQuery({ queryKey: ['/api/typologies'] });
+  const { data: zonesList = [] } = useQuery({ queryKey: ['/api/bioclimatic-zones'] });
+  const { data: isoplethsList = [] } = useQuery({ queryKey: ['/api/isopleths'] });
+  const { data: noiseClassList = [] } = useQuery({ queryKey: ['/api/noise-classes'] });
+  const { data: aggressivenessList = [] } = useQuery({ queryKey: ['/api/aggressiveness-classes'] });
+
+  function getAttributeSourceRows(opt: AttributeOption | null): any[] {
+    if(!opt) return [] as any[];
+    switch(opt.source){
+      case '/api/typologies': return typologiesList as any[];
+      case '/api/bioclimatic-zones': return zonesList as any[];
+      case '/api/isopleths': return isoplethsList as any[];
+      case '/api/noise-classes': return noiseClassList as any[];
+      case '/api/aggressiveness-classes': return aggressivenessList as any[];
+      default: return [];
     }
   }
 
@@ -106,6 +169,9 @@ export default function ParameterForm({ onSuccess, onCancel, initialItem }: { on
         superiorValue: clean(values.superiorValue),
         unit: values.unit === '' ? null : values.unit,
         notes: values.notes === '' ? null : values.notes,
+        attributeTable: values.attributeTable || null,
+        attributeColumn: values.attributeColumn || null,
+        attributeValueId: values.attributeValueId ? Number(values.attributeValueId) : null,
         isActive: values.isActive,
       };
       const method = isEdit ? 'PUT' : 'POST';
@@ -169,10 +235,10 @@ export default function ParameterForm({ onSuccess, onCancel, initialItem }: { on
             </NotchedField>
           </div>
         </div>
-        {/* Linha 2: Análise (50%), Limite Mínimo (25%), Limite Máximo (25%) */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        {/* Linha 2: Análise (linha isolada) */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormField name="analysisId" control={form.control} render={({ field }) => (
-            <FormItem className="md:col-span-2">
+            <FormItem className="md:col-span-1">
               <FormControl>
                 <NotchedField label="Análise" requiredMark>
                   <select
@@ -188,32 +254,92 @@ export default function ParameterForm({ onSuccess, onCancel, initialItem }: { on
               <FormMessage />
             </FormItem>
           )} />
-          <FormField name="minLimit" control={form.control} render={({ field }) => (
-            <FormItem>
-              <FormControl>
-                <NotchedField label="Limite Mínimo">
-                  <Input {...field} value={field.value ?? ''}
-                    onChange={(e)=> field.onChange(e.target.value)}
-                    onBlur={(e)=> { const v = e.target.value.trim(); if(v===''){return;} const num = Number(v.replace(',', '.')); if(!isNaN(num)) field.onChange(num.toFixed(2)); }}
-                    placeholder="Ex: 0" className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" />
-                </NotchedField>
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )} />
-          <FormField name="maxLimit" control={form.control} render={({ field }) => (
-            <FormItem>
-              <FormControl>
-                <NotchedField label="Limite Máximo">
-                  <Input {...field} value={field.value ?? ''}
-                    onChange={(e)=> field.onChange(e.target.value)}
-                    onBlur={(e)=> { const v = e.target.value.trim(); if(v===''){return;} const num = Number(v.replace(',', '.')); if(!isNaN(num)) field.onChange(num.toFixed(2)); }}
-                    placeholder="Ex: 100" className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" />
-                </NotchedField>
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )} />
+        </div>
+        {/* Linha 3 nova: Atributo + dependentes */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-start">
+          <div className="md:col-span-2">
+            <NotchedField label="Atributo">
+              <select
+                value={form.watch('attributeColumn') || ''}
+                onChange={(e)=> {
+                  const col = e.target.value;
+                  const opt = attributeOptions.find(a=> a.column === col);
+                  form.setValue('attributeColumn', col || '' as any);
+                  form.setValue('attributeTable', opt ? opt.table : '' as any);
+                  form.setValue('attributeValueId', '' as any);
+                  if(opt?.kind === 'number') {
+                    // numérico -> manter
+                  } else {
+                    form.setValue('minLimit','' as any);
+                    form.setValue('maxLimit','' as any);
+                  }
+                }}
+                className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 w-full h-9 text-sm"
+              >
+                <option value="">Selecione...</option>
+                {attributeOptions.slice().sort((a:any,b:any)=> a.label.localeCompare(b.label,'pt-BR')).map(a => (
+                  <option key={a.column} value={a.column}>{`${a.label}: ${a.table} -> ${a.column}`}</option>
+                ))}
+              </select>
+            </NotchedField>
+          </div>
+          <div className="md:col-span-2">
+            {selectedAttribute && selectedAttribute.kind === 'ref' && (
+              <FormField name="attributeValueId" control={form.control} render={({ field }) => (
+                <FormItem>
+                  <FormControl>
+                    <NotchedField label="Valor do Atributo">
+                      <select
+                        {...field}
+                        value={field.value || ''}
+                        onChange={(e)=> field.onChange(e.target.value)}
+                        className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 w-full h-9 text-sm"
+                      >
+                        <option value="">Selecione...</option>
+                        {getAttributeSourceRows(selectedAttribute).map((row:any) => {
+                          const sa:any = selectedAttribute as any;
+                          const valueKey = sa.valueKey;
+                          const rawLabel = typeof sa.labelKey === 'function' ? sa.labelKey(row) : row[sa.labelKey];
+                          return <option key={row[valueKey]} value={row[valueKey]}>{rawLabel}</option>;
+                        })}
+                      </select>
+                    </NotchedField>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+            )}
+            {selectedAttribute && selectedAttribute.kind === 'number' && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField name="minLimit" control={form.control} render={({ field }) => (
+                  <FormItem>
+                    <FormControl>
+                      <NotchedField label="Limite Mínimo">
+                        <Input {...field} value={field.value ?? ''}
+                          onChange={(e)=> field.onChange(e.target.value)}
+                          onBlur={(e)=> { const v = e.target.value.trim(); if(v===''){return;} const num = Number(v.replace(',', '.')); if(!isNaN(num)) field.onChange(num.toFixed(2)); }}
+                          placeholder="Ex: 0" className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" />
+                      </NotchedField>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+                <FormField name="maxLimit" control={form.control} render={({ field }) => (
+                  <FormItem>
+                    <FormControl>
+                      <NotchedField label="Limite Máximo">
+                        <Input {...field} value={field.value ?? ''}
+                          onChange={(e)=> field.onChange(e.target.value)}
+                          onBlur={(e)=> { const v = e.target.value.trim(); if(v===''){return;} const num = Number(v.replace(',', '.')); if(!isNaN(num)) field.onChange(num.toFixed(2)); }}
+                          placeholder="Ex: 100" className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" />
+                      </NotchedField>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+              </div>
+            )}
+          </div>
         </div>
         {/* Linha 3: Descrição & Unidade */}
         <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
