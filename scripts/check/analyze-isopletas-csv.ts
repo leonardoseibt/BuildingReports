@@ -51,7 +51,8 @@ function parseCSV(content: string, forcedDelim?: string): Row[] {
 }
 
 function normKey(s: string): string {
-  return s.toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu,'').replace(/[^a-z0-9]+/g,'').trim();
+  // Remover diacríticos com faixa combining marks para evitar uso de \p{Diacritic}
+  return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'').trim();
 }
 
 function getField(row: Row, names: string[]): string | undefined {

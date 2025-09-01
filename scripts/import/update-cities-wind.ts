@@ -20,7 +20,8 @@ const { Pool } = pg;
 interface Row { [k: string]: string }
 
 function normalizeKey(s: string): string {
-  return s.toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu,'').replace(/[^a-z0-9]+/g,'').trim();
+  // Remover acentos: usar faixa de combining marks em vez de Unicode property escapes (\p{Diacritic})
+  return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'').trim();
 }
 // Normalização usada na chave: minúsculas, sem acentos, só caracteres [a-z0-9].
 // Isso já garante busca case-insensitive e accent-insensitive.

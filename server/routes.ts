@@ -73,6 +73,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Introspection: simple list of allowed tables & columns for attribute definitions (whitelist approach)
+  app.get('/api/metadata/tables', isAuthenticated, async (_req, res) => {
+    // For segurança: retornar apenas tabelas whitelisted que fazem sentido para atributos
+    const tables = [
+      { name: 'buildings', columns: [
+        'id','user_id','typology_id','noise_class_id','aggressiveness_class_id','bioclimatic_zone_code','isopleth_code','building_height','created_at','updated_at'
+      ] },
+      { name: 'typologies', columns: ['id','code','label','is_active','created_at','updated_at'] },
+      { name: 'noise_classes', columns: ['id','code','label','min_db','max_db','is_active','created_at','updated_at'] },
+      { name: 'aggressiveness_classes', columns: ['id','code','label','risk','is_active','created_at','updated_at'] },
+      { name: 'bioclimatic_zones', columns: ['id','code','label','is_active','created_at','updated_at'] },
+      { name: 'isopleths', columns: ['id','code','label','is_active','created_at','updated_at'] },
+    ];
+    res.json(tables);
+  });
+
+    // Attribute Definitions (independent CRUD for validation phase)
+    app.get('/api/attributes', isAuthenticated, async (req, res) => {
+      try {
+        const dataKind = typeof req.query.dataKind === 'string' ? req.query.dataKind : undefined;
+        const valueSource = typeof req.query.valueSource === 'string' ? req.query.valueSource : undefined;
+        const activeOnly = req.query.activeOnly === 'true';
+        const rows = await storage.listAttributeDefinitions({ dataKind, valueSource, activeOnly });
+        res.json(rows);
+      } catch (err:any) {
+        console.error('Erro ao listar atributos', err); res.status(500).json({ message: 'Falha ao listar atributos' });
+      }
+    });
+    app.post('/api/attributes', isAuthenticated, express.json(), async (req, res) => {
+      try {
+        const item = req.body || {};
+        if (!item.friendlyName || !item.sourceTable || !item.sourceColumn || !item.dataKind) {
+          return res.status(400).json({ message: 'Campos obrigatórios ausentes' });
+        }
+        // Remove any legacy fields that might still be sent by antigos clients
+        delete item.code; delete item.description; delete item.unit;
+        const row = await storage.createAttributeDefinition(item);
+        res.json(row);
+      } catch (err:any) {
+        if (/(unique|duplicate)/i.test(err?.message)) return res.status(409).json({ message: 'Atributo já existe para esta coluna' });
+        res.status(500).json({ message: 'Falha ao criar atributo' });
+      }
+    });
+    app.put('/api/attributes/:id', isAuthenticated, express.json(), async (req, res) => {
+      try {
+        const id = Number(req.params.id);
+        const body = { ...(req.body||{}) };
+        // Legacy cleanup
+        delete body.code; delete body.description; delete body.unit;
+        const row = await storage.updateAttributeDefinition(id, body);
+        res.json(row);
+      } catch { res.status(500).json({ message: 'Falha ao atualizar atributo' }); }
+    });
+    app.delete('/api/attributes/:id', isAuthenticated, async (req, res) => {
+      try {
+        const id = Number(req.params.id);
+        const ok = await storage.deleteAttributeDefinition(id);
+        res.json({ success: ok });
+      } catch { res.status(500).json({ message: 'Falha ao excluir atributo' }); }
+    });
   app.get('/api/users/:id', isAuthenticated, async (req: any, res) => {
     try {
       const id = Number(req.params.id);

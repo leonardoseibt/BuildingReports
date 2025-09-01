@@ -21,6 +21,7 @@ import {
   Sun,
   Wind,
   Beaker,
+  Database,
   ChevronRight,
   ChevronLeft
 } from "lucide-react";
@@ -354,6 +355,13 @@ export default function Sidebar() {
                         label="Análises"
                         isActive={location === '/analyses'}
                         testId="nav-analises"
+                      />
+                      <NavLink
+                        href="/attributes"
+                        icon={Database}
+                        label="Atributos"
+                        isActive={location === '/attributes'}
+                        testId="nav-atributos"
                       />
                       <NavLink
                         href="/parameters"

@@ -91,7 +91,8 @@ async function main() {
 }
 
 function normalize(v: string) {
-  return v.normalize('NFD').replace(/\p{Diacritic}+/gu, '').toLowerCase();
+  // Remover diacríticos usando faixa de combining marks, evitando \p{Diacritic} para compatibilidade TS
+  return v.normalize('NFD').replace(/[\u0300-\u036f]+/g, '').toLowerCase();
 }
 
 main().catch(err => { console.error(err); process.exit(1); }).finally(() => pool.end());

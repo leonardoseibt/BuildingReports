@@ -281,6 +281,32 @@ export const parameters = pgTable("parameters", {
   index("idx_parameters_analysis").on(table.analysisId),
 ]);
 
+// Attribute Definitions (metadados de atributos de edificações / parâmetros)
+export const attributeDataKindEnum = [ 'numeric', 'reference', 'text', 'boolean', 'date' ] as const;
+export const attributeValueSourceEnum = [ 'typologies', 'noise_classes', 'aggressiveness_classes', 'bioclimatic_zones', 'isopleths' ] as const; // extensível depois
+
+export const attributeDefinitions = pgTable('attribute_definitions', {
+  id: integer('id').generatedAlwaysAsIdentity().primaryKey(),
+  friendlyName: varchar('friendly_name', { length: 128 }).notNull(),
+  sourceTable: varchar('source_table', { length: 64 }).notNull(),
+  sourceColumn: varchar('source_column', { length: 64 }).notNull(),
+  dataKind: varchar('data_kind', { length: 16 }).notNull(), // must be one of attributeDataKindEnum
+  valueSource: varchar('value_source', { length: 64 }), // must be one of attributeValueSourceEnum when not null
+  valueIdField: varchar('value_id_field', { length: 64 }).default('id'),
+  valueLabelField: varchar('value_label_field', { length: 64 }).default('label'),
+  isActive: boolean('is_active').default(true),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+}, (table) => [
+  uniqueIndex('uq_attribute_def_src').on(table.sourceTable, table.sourceColumn),
+  index('idx_attribute_def_kind').on(table.dataKind),
+  index('idx_attribute_def_value_source').on(table.valueSource),
+  index('idx_attribute_def_active').on(table.isActive),
+]);
+
+export type AttributeDefinition = typeof attributeDefinitions.$inferSelect;
+export type InsertAttributeDefinition = typeof attributeDefinitions.$inferInsert;
+
 // Structural Systems
 export const structuralSystems = pgTable("structural_systems", {
   id: integer("id").generatedAlwaysAsIdentity().primaryKey(),

@@ -66,6 +66,9 @@ import {
   type InsertState,
   type City,
   type InsertCity,
+  attributeDefinitions,
+  type AttributeDefinition,
+  type InsertAttributeDefinition,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, asc, isNull, sql, count } from "drizzle-orm";
@@ -177,6 +180,12 @@ export interface IStorage {
   createParameter(item: InsertParameter): Promise<Parameter>;
   updateParameter(id: number, item: Partial<InsertParameter>): Promise<Parameter>;
   deleteParameter(id: number): Promise<boolean>;
+
+  // Attribute Definitions
+  listAttributeDefinitions(options?: { dataKind?: string; valueSource?: string; activeOnly?: boolean }): Promise<AttributeDefinition[]>;
+  createAttributeDefinition(item: InsertAttributeDefinition): Promise<AttributeDefinition>;
+  updateAttributeDefinition(id: number, item: Partial<InsertAttributeDefinition>): Promise<AttributeDefinition>;
+  deleteAttributeDefinition(id: number): Promise<boolean>; // soft delete -> isActive = false
 
 
   // Bioclimatic zones
@@ -1402,6 +1411,32 @@ export class DatabaseStorage implements IStorage {
       if (err?.code === '23503') { const e = new Error('Não é possível excluir: existem registros relacionados.'); (e as any).status = 409; throw e; }
       throw err;
     }
+  }
+
+  // Attribute Definitions
+  async listAttributeDefinitions(options?: { dataKind?: string; valueSource?: string; activeOnly?: boolean }): Promise<AttributeDefinition[]> {
+    let q: any = db.select().from(attributeDefinitions);
+    const conditions: any[] = [];
+    if (options?.dataKind) conditions.push(eq(attributeDefinitions.dataKind as any, options.dataKind));
+    if (options?.valueSource) conditions.push(eq(attributeDefinitions.valueSource as any, options.valueSource));
+    if (options?.activeOnly) conditions.push(eq(attributeDefinitions.isActive, true));
+    if (conditions.length === 1) q = q.where(conditions[0]);
+    else if (conditions.length > 1) q = q.where(and(...conditions));
+    const rows = await q.orderBy(sql`${attributeDefinitions.friendlyName} collate "pt-BR-x-icu"`);
+    return rows as any;
+  }
+  async createAttributeDefinition(item: InsertAttributeDefinition): Promise<AttributeDefinition> {
+    const [row] = await db.insert(attributeDefinitions).values(item as any).returning();
+    return row as any;
+  }
+  async updateAttributeDefinition(id: number, item: Partial<InsertAttributeDefinition>): Promise<AttributeDefinition> {
+    const data = { ...item, updatedAt: new Date() } as any;
+    const [row] = await db.update(attributeDefinitions).set(data).where(eq(attributeDefinitions.id, id)).returning();
+    return row as any;
+  }
+  async deleteAttributeDefinition(id: number): Promise<boolean> {
+    const [row] = await db.update(attributeDefinitions).set({ isActive: false, updatedAt: new Date() }).where(eq(attributeDefinitions.id, id)).returning({ id: attributeDefinitions.id });
+    return !!row;
   }
 
   // Bioclimatic zones
