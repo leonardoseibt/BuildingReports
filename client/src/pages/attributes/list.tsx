@@ -16,19 +16,8 @@ import { ActiveToggleButton } from '@/components/common/active-toggle-button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { PaginationSimple as Pagination } from '@/components/ui/pagination';
 
-interface AttributeDefinitionFormData {
-  id?: number;
-  friendlyName: string;
-  sourceTable: string;
-  sourceColumn: string;
-  dataKind: string;
-  valueSource?: string | null;
-  valueIdField?: string;
-  valueLabelField?: string;
-  isActive?: boolean;
-}
-
-const DATA_KINDS = ['boolean','date','numeric','reference','text'].sort();
+import { AttributeDefinitionFormData, DATA_KINDS } from './types';
+import AttributesFormDialog from './attributes-form';
 
 export default function AttributesList() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
@@ -38,7 +27,6 @@ export default function AttributesList() {
   const [open, setOpen] = useState(false);
   const [formKey, setFormKey] = useState(0);
   const [editItem, setEditItem] = useState<AttributeDefinitionFormData | null>(null);
-  // Controlled form states for live updates
   const [friendlyName, setFriendlyName] = useState<string>('');
   // Filtros removidos (tipo / somente ativos) conforme solicitação – mantendo apenas busca textual.
   const [tables, setTables] = useState<string[]>([]);
@@ -207,38 +195,13 @@ export default function AttributesList() {
     onSuccess: () => { toast({ title: 'Atributo desativado' }); queryClient.invalidateQueries({ queryKey: attributeKey }); }
   });
 
-  function openNew() {
-    setEditItem(null);
-    setFriendlyName('');
-    setSelectedTable('');
-    setSourceColumn('');
-    setColumns([]);
-    setDataKind('');
-    setValueSourceTable('');
-    setValueSourceColumns([]);
-    setValueIdField('');
-    setValueLabelField('');
-    setFormKey(k=>k+1);
-    setOpen(true);
-  }
+  function openNew() { setEditItem(null); setFormKey(k=>k+1); setOpen(true); }
   function openEdit(item: AttributeDefinitionFormData) { setEditItem(item); setFormKey(k=>k+1); setOpen(true); }
 
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    const fd = new FormData(e.currentTarget);
-    const payload: AttributeDefinitionFormData = {
-      id: editItem?.id,
-      friendlyName: friendlyName.trim(),
-      sourceTable: (fd.get('sourceTable') as string).trim(),
-      sourceColumn: sourceColumn.trim(),
-      dataKind: fd.get('dataKind') as string,
-      valueSource: (fd.get('valueSource') as string) || null,
-      valueIdField: (fd.get('valueIdField') as string) || 'id',
-      valueLabelField: (fd.get('valueLabelField') as string) || 'label'
-    };
-    // Não enviar isActive (controle removido). Mantém valor atual no update e default true no create.
+  function submitFromDialog(data: AttributeDefinitionFormData) {
+    const payload = { ...data } as AttributeDefinitionFormData;
     delete (payload as any).isActive;
-  if (payload.id) updateMutation.mutate(payload); else createMutation.mutate(payload);
+    if (payload.id) updateMutation.mutate(payload); else createMutation.mutate(payload);
   }
 
   // Normaliza (minúsculas) e remove acentos simples sem usar normalize para compatibilidade ampla
@@ -367,116 +330,14 @@ export default function AttributesList() {
         </main>
       </div>
 
-      <Dialog open={open} onOpenChange={(v)=> { if (v) setFormKey(k=>k+1); if (!v) setEditItem(null); setOpen(v); }}>
-        <DialogContent className="max-w-3xl max-h-[90vh] p-0 overflow-hidden">
-          <div className="max-h-[calc(90vh-1rem)] overflow-y-auto my-7 px-7">
-          <form key={formKey} onSubmit={handleSubmit} className="space-y-6 mt-2" autoComplete="off">
-            <FormHeader
-              title={editItem ? 'Editar Atributo' : 'Novo Atributo'}
-              subtitle={editItem ? 'Atualize os dados do atributo.' : 'Cadastre um novo atributo.'}
-              initials={(friendlyName.trim().slice(0,2) || null)}
-            />
-            {/* Linha 1: Nome */}
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
-              <div className="md:col-span-12">
-                <NotchedField label="Nome" requiredMark>
-                  <Input name="friendlyName" value={friendlyName} onChange={(e)=> setFriendlyName(e.target.value)} required className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" />
-                </NotchedField>
-              </div>
-            </div>
-            {/* Linha 2: Tabela, Coluna, Tipo */}
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
-              <div className="md:col-span-5">
-                <NotchedField label="Tabela" requiredMark>
-                  <select
-                    name="sourceTable"
-                    value={selectedTable || ''}
-                    onChange={(e)=> { setSelectedTable(e.target.value); }}
-                    className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 w-full h-9 text-sm"
-                    required
-                  >
-                    <option value="" disabled>Selecionar</option>
-                    {([...tables].sort((a,b)=> a.localeCompare(b))).map(t=> <option key={t} value={t}>{t}</option>)}
-                  </select>
-                </NotchedField>
-              </div>
-              <div className="md:col-span-4">
-                <NotchedField label="Coluna" requiredMark>
-                  <select
-                    name="sourceColumn"
-                    value={sourceColumn}
-                    onChange={(e)=> setSourceColumn(e.target.value)}
-                    className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 w-full h-9 text-sm"
-                    required
-                    disabled={!selectedTable || loadingColumns}
-                  >
-                    <option value="" disabled>{loadingColumns ? 'Carregando...' : 'Selecionar'}</option>
-                    {[...columns].sort((a,b)=> a.localeCompare(b)).map(c=> <option key={c} value={c}>{c}</option>)}
-                  </select>
-                </NotchedField>
-              </div>
-              <div className="md:col-span-3">
-                <NotchedField label="Tipo" requiredMark>
-                  <select name="dataKind" value={dataKind} onChange={(e)=> setDataKind(e.target.value)} className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 w-full h-9 text-sm" required>
-                    <option value="" disabled>Selecionar</option>
-                    {[...DATA_KINDS].sort((a,b)=> a.localeCompare(b)).map(k=> <option key={k} value={k}>{k}</option>)}
-                  </select>
-                </NotchedField>
-              </div>
-            </div>
-            {/* Linha 3: Fonte Valor, Campo ID, Campo Label */}
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
-              <div className="md:col-span-5">
-                <NotchedField label="Fonte Valor (ref)">
-                  <select
-                    name="valueSource"
-                    value={dataKind==='reference' ? valueSourceTable : ''}
-                    onChange={(e)=> setValueSourceTable(e.target.value)}
-                    disabled={dataKind !== 'reference'}
-                    className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 w-full h-9 text-sm"
-                  >
-                    <option value="" disabled>Selecionar</option>
-                    {[...Array.from(new Set([...(tables||[]), valueSourceTable].filter(Boolean) as string[]))].sort((a,b)=> a.localeCompare(b)).map(t=> <option key={t} value={t}>{t}</option>)}
-                  </select>
-                </NotchedField>
-              </div>
-              <div className="md:col-span-3">
-                <NotchedField label="Campo ID">
-                  <select
-                    name="valueIdField"
-                    value={valueIdField}
-                    onChange={(e)=> setValueIdField(e.target.value)}
-                    disabled={dataKind !== 'reference' || !valueSourceTable || loadingValueSourceColumns}
-                    className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 w-full h-9 text-sm"
-                  >
-                    <option value="" disabled>Selecionar</option>
-                    {dataKind === 'reference' && valueSourceColumns.sort((a,b)=> a.localeCompare(b)).map(c=> <option key={c} value={c}>{c}</option>)}
-                  </select>
-                </NotchedField>
-              </div>
-              <div className="md:col-span-4">
-                <NotchedField label="Campo Label">
-                  <select
-                    name="valueLabelField"
-                    value={valueLabelField}
-                    onChange={(e)=> setValueLabelField(e.target.value)}
-                    disabled={dataKind !== 'reference' || !valueSourceTable || loadingValueSourceColumns}
-                    className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 w-full h-9 text-sm"
-                  >
-                    <option value="" disabled>Selecionar</option>
-                    {dataKind === 'reference' && valueSourceColumns.sort((a,b)=> a.localeCompare(b)).map(c=> <option key={c} value={c}>{c}</option>)}
-                  </select>
-                </NotchedField>
-              </div>
-            </div>
-            <div className="flex justify-end gap-2 pt-2 border-t">
-              <Button type="button" variant="outline" onClick={()=> setOpen(false)}>Cancelar</Button>
-              <Button type="submit" disabled={createMutation.status === 'pending' || updateMutation.status === 'pending'}>{editItem ? 'Salvar' : 'Criar'}</Button>
-            </div>
-          </form>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <AttributesFormDialog
+        open={open}
+        onOpenChange={(v)=> { if (!v) setEditItem(null); setOpen(v);} }
+        editItem={editItem}
+        onSubmit={submitFromDialog}
+        loading={createMutation.status==='pending' || updateMutation.status==='pending'}
+        tables={tables}
+      />
     </div>
   );
 }
