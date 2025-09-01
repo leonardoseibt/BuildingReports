@@ -167,11 +167,13 @@ export interface IStorage {
   unlinkCriterionFromRequirement(requirementId: number, criterionId: number): Promise<boolean>;
   // Analyses
   listAnalyses(criterionId?: number, requirementId?: number): Promise<Analysis[]>;
+  listAnalysesPaginated(params: { criterionId?: number; requirementId?: number; page: number; limit: number }): Promise<{ items: Analysis[]; total: number }>;
   createAnalysis(item: InsertAnalysis): Promise<Analysis>;
   updateAnalysis(id: number, item: Partial<InsertAnalysis>): Promise<Analysis>;
   deleteAnalysis(id: number): Promise<boolean>;
   // Parameters
   listParameters(analysisId?: number, criterionId?: number, requirementId?: number): Promise<Parameter[]>;
+  listParametersPaginated(params: { analysisId?: number; criterionId?: number; requirementId?: number; page: number; limit: number; search?: string }): Promise<{ items: Parameter[]; total: number }>;
   createParameter(item: InsertParameter): Promise<Parameter>;
   updateParameter(id: number, item: Partial<InsertParameter>): Promise<Parameter>;
   deleteParameter(id: number): Promise<boolean>;
@@ -1221,6 +1223,23 @@ export class DatabaseStorage implements IStorage {
     const rows = await q.orderBy(sql`length(${analyses.code})`, sql`${analyses.code} collate "pt-BR-x-icu"`);
     return rows as any;
   }
+  async listAnalysesPaginated(params: { criterionId?: number; requirementId?: number; page: number; limit: number }): Promise<{ items: Analysis[]; total: number }> {
+    const { criterionId, requirementId, page, limit } = params;
+    const conditions: any[] = [];
+    if (criterionId) conditions.push(eq(analyses.criterionId, criterionId));
+    if (requirementId) conditions.push(eq(analyses.requirementId, requirementId));
+    let base: any = db.select().from(analyses);
+    if (conditions.length === 1) base = base.where(conditions[0]);
+    else if (conditions.length > 1) base = base.where(and(...conditions));
+    const totalRes = await base.clone().clearOrder().select({ value: count() });
+    const total = Number(totalRes[0]?.value ?? 0);
+    const offset = (page - 1) * limit;
+    const items = await base
+      .orderBy(sql`length(${analyses.code})`, sql`${analyses.code} collate "pt-BR-x-icu"`)
+      .limit(limit)
+      .offset(offset);
+    return { items: items as any, total };
+  }
   async createAnalysis(item: InsertAnalysis): Promise<Analysis> {
     const [row] = await db.insert(analyses).values({
       requirementId: (item as any).requirementId,
@@ -1292,6 +1311,49 @@ export class DatabaseStorage implements IStorage {
     const rows = await q.orderBy(sql`${parameters.label} collate "pt-BR-x-icu"`);
     return rows as any;
   }
+  async listParametersPaginated(params: { analysisId?: number; criterionId?: number; requirementId?: number; page: number; limit: number; search?: string }): Promise<{ items: Parameter[]; total: number }> {
+    const { analysisId, criterionId, requirementId, page, limit, search } = params;
+    const selectShape = {
+      id: parameters.id,
+      analysisId: parameters.analysisId,
+      label: parameters.label,
+      minimumValue: parameters.minimumValue,
+      intermediateValue: parameters.intermediateValue,
+      superiorValue: parameters.superiorValue,
+      minLimit: parameters.minLimit,
+      maxLimit: parameters.maxLimit,
+      unit: parameters.unit,
+      notes: parameters.notes,
+      attributeTable: parameters.attributeTable,
+      attributeColumn: parameters.attributeColumn,
+      attributeValueId: parameters.attributeValueId,
+      isActive: parameters.isActive,
+      createdAt: parameters.createdAt,
+      updatedAt: parameters.updatedAt,
+      _analysisRequirementId: analyses.requirementId,
+      _analysisCriterionId: analyses.criterionId,
+    } as const;
+    const conditions: any[] = [];
+    if (analysisId) conditions.push(eq(parameters.analysisId, analysisId));
+    if (criterionId) conditions.push(eq(analyses.criterionId, criterionId));
+    if (requirementId) conditions.push(eq(analyses.requirementId, requirementId));
+    let base: any = db.select(selectShape).from(parameters).innerJoin(analyses, eq(parameters.analysisId, analyses.id));
+    if (conditions.length === 1) base = base.where(conditions[0]);
+    else if (conditions.length > 1) base = base.where(and(...conditions));
+    let filtered = base;
+    if (search) {
+      // Simple ILIKE search on label
+      filtered = filtered.where(sql`${parameters.label} ILIKE ${'%' + search + '%'}`);
+    }
+    const totalRes = await filtered.clone().clearOrder().select({ value: count() });
+    const total = Number(totalRes[0]?.value ?? 0);
+    const offset = (page - 1) * limit;
+    const items = await filtered
+      .orderBy(sql`${parameters.label} collate "pt-BR-x-icu"`)
+      .limit(limit)
+      .offset(offset);
+    return { items: items as any, total };
+  }
   async createParameter(item: InsertParameter): Promise<Parameter> {
     const [row] = await db.insert(parameters).values({
       analysisId: (item as any).analysisId,
@@ -1324,8 +1386,13 @@ export class DatabaseStorage implements IStorage {
     }
     // Evita setar analysisId como undefined (NOT NULL)
     if (updateData.analysisId === undefined) delete updateData.analysisId;
-    const [row] = await db.update(parameters).set(updateData).where(eq(parameters.id, id)).returning();
-    return row as Parameter;
+    try {
+      const [row] = await db.update(parameters).set(updateData).where(eq(parameters.id, id)).returning();
+      return row as Parameter;
+    } catch (err) {
+      console.error('Erro ao atualizar parâmetro', { id, updateData, err });
+      throw err;
+    }
   }
   async deleteParameter(id: number): Promise<boolean> {
     try {

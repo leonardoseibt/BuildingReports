@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -45,7 +45,7 @@ export default function ParameterForm({ onSuccess, onCancel, initialItem }: { on
   const form = useForm<ParameterFormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      analysisId: initialItem?.analysisId || (analyses[0]?.id ?? 0),
+      analysisId: initialItem?.analysisId || undefined as any,
       label: initialItem?.label || '',
   minLimit: (initialItem as any)?.minLimit ?? '',
   maxLimit: (initialItem as any)?.maxLimit ?? '',
@@ -277,7 +277,7 @@ export default function ParameterForm({ onSuccess, onCancel, initialItem }: { on
                 className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 w-full h-9 text-sm"
               >
                 <option value="">Selecione...</option>
-                {attributeOptions.slice().sort((a:any,b:any)=> a.label.localeCompare(b.label,'pt-BR')).map(a => (
+                {useMemo(()=> attributeOptions.slice().sort((a:any,b:any)=> a.label.localeCompare(b.label,'pt-BR')), [attributeOptions]).map(a => (
                   <option key={a.column} value={a.column}>{`${a.label}: ${a.table} -> ${a.column}`}</option>
                 ))}
               </select>

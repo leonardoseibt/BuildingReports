@@ -884,8 +884,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const criterionId = req.query.criterionId ? Number(req.query.criterionId) : undefined;
       const requirementId = req.query.requirementId ? Number(req.query.requirementId) : undefined;
-      const rows = await storage.listAnalyses(criterionId, requirementId);
-      res.json(rows);
+      const hasPaging = 'page' in req.query || 'limit' in req.query;
+      if (!hasPaging) {
+        const rows = await storage.listAnalyses(criterionId, requirementId);
+        return res.json(rows);
+      }
+      const page = req.query.page ? Number(req.query.page) : 1;
+      const limit = req.query.limit ? Math.min(Number(req.query.limit), 100) : 250;
+      const { items, total } = await storage.listAnalysesPaginated({ criterionId, requirementId, page, limit });
+      return res.json({ items, total, page, limit, totalPages: Math.max(1, Math.ceil(total / limit)) });
     } catch {
       res.status(500).json({ message: 'Failed to fetch analyses' });
     }
@@ -932,8 +939,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const analysisId = req.query.analysisId ? Number(req.query.analysisId) : undefined;
       const criterionId = req.query.criterionId ? Number(req.query.criterionId) : undefined;
       const requirementId = req.query.requirementId ? Number(req.query.requirementId) : undefined;
-      const rows = await storage.listParameters(analysisId, criterionId, requirementId);
-      res.json(rows);
+      const hasPaging = 'page' in req.query || 'limit' in req.query || 'search' in req.query;
+      if (!hasPaging) {
+        const rows = await storage.listParameters(analysisId, criterionId, requirementId);
+        return res.json(rows);
+      }
+      const page = req.query.page ? Number(req.query.page) : 1;
+      const limit = req.query.limit ? Math.min(Number(req.query.limit), 100) : 250;
+      const search = req.query.search ? String(req.query.search) : undefined;
+      const { items, total } = await storage.listParametersPaginated({ analysisId, criterionId, requirementId, page, limit, search });
+      return res.json({ items, total, page, limit, totalPages: Math.max(1, Math.ceil(total / limit)) });
     } catch (err:any) {
       console.error('Erro ao buscar parâmetros', { q: req.query, error: err?.message, stack: err?.stack });
       res.status(500).json({ message: 'Failed to fetch parameters' });
@@ -942,6 +957,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/parameters', isAuthenticated, express.json(), async (req, res) => {
     try {
       const data = insertParameterSchema.parse(req.body);
+      // Invariantes de negócio para atributos
+      const refColumns = new Set(['typology_id','bioclimatic_zone','isopleth_code','noise_class_id','aggressiveness_class_id']);
+      const numericColumns = new Set(['total_area','building_height','floors','units']);
+      if ((data as any).minLimit != null && (data as any).maxLimit != null) {
+        const a = Number((data as any).minLimit); const b = Number((data as any).maxLimit);
+        if (!isNaN(a) && !isNaN(b) && a > b) {
+          return res.status(400).json({ message: 'Limite máximo deve ser >= limite mínimo' });
+        }
+      }
+      if ((data as any).attributeColumn) {
+        const col = (data as any).attributeColumn as string;
+        const valueId = (data as any).attributeValueId;
+        const hasLimits = (data as any).minLimit != null || (data as any).maxLimit != null;
+        if (refColumns.has(col)) {
+          if (hasLimits) return res.status(400).json({ message: 'Atributo de referência não deve ter limites numéricos.' });
+        } else if (numericColumns.has(col)) {
+          if (valueId != null) return res.status(400).json({ message: 'Atributo numérico não deve ter valor de item selecionado.' });
+        }
+      }
       const row = await storage.createParameter(data as any);
       res.json(row);
     } catch (error) {
@@ -954,6 +988,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const id = Number(req.params.id);
   if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' });
       const data = insertParameterSchema.partial().parse(req.body);
+      const refColumns = new Set(['typology_id','bioclimatic_zone','isopleth_code','noise_class_id','aggressiveness_class_id']);
+      const numericColumns = new Set(['total_area','building_height','floors','units']);
+      if ((data as any).minLimit != null && (data as any).maxLimit != null) {
+        const a = Number((data as any).minLimit); const b = Number((data as any).maxLimit);
+        if (!isNaN(a) && !isNaN(b) && a > b) {
+          return res.status(400).json({ message: 'Limite máximo deve ser >= limite mínimo' });
+        }
+      }
+      if ((data as any).attributeColumn) {
+        const col = (data as any).attributeColumn as string;
+        const valueId = (data as any).attributeValueId;
+        const hasLimits = (data as any).minLimit != null || (data as any).maxLimit != null;
+        if (refColumns.has(col)) {
+          if (hasLimits) return res.status(400).json({ message: 'Atributo de referência não deve ter limites numéricos.' });
+        } else if (numericColumns.has(col)) {
+          if (valueId != null) return res.status(400).json({ message: 'Atributo numérico não deve ter valor de item selecionado.' });
+        }
+      }
       const row = await storage.updateParameter(id, data as any);
       res.json(row);
     } catch (error) {

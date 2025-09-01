@@ -1,0 +1,4 @@
+-- Índices para consultas futuras por atributos em parâmetros
+-- Observação: Dialeto atual rejeitou sintaxe CREATE INDEX. Manter comentado até validar engine.
+-- CREATE INDEX idx_parameters_attribute_column ON parameters(attribute_column);
+-- CREATE INDEX idx_parameters_attribute_value ON parameters(attribute_value_id);
