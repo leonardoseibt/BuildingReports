@@ -28,8 +28,7 @@ interface AttributeDefinitionFormData {
   isActive?: boolean;
 }
 
-const DATA_KINDS = ['numeric','reference','text','boolean','date'];
-const VALUE_SOURCES = ['typologies','noise_classes','aggressiveness_classes','bioclimatic_zones','isopleths'];
+const DATA_KINDS = ['boolean','date','numeric','reference','text'].sort();
 
 export default function AttributesList() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
@@ -39,9 +38,21 @@ export default function AttributesList() {
   const [open, setOpen] = useState(false);
   const [formKey, setFormKey] = useState(0);
   const [editItem, setEditItem] = useState<AttributeDefinitionFormData | null>(null);
+  // Controlled form states for live updates
+  const [friendlyName, setFriendlyName] = useState<string>('');
   // Filtros removidos (tipo / somente ativos) conforme solicitação – mantendo apenas busca textual.
-  const [metaTables, setMetaTables] = useState<Array<{ name: string; columns: string[] }>>([]);
-  const [selectedTable, setSelectedTable] = useState('buildings');
+  const [tables, setTables] = useState<string[]>([]);
+  const [selectedTable, setSelectedTable] = useState('');
+  const [columns, setColumns] = useState<string[]>([]);
+  const [loadingColumns, setLoadingColumns] = useState(false);
+  const [sourceColumn, setSourceColumn] = useState<string>('');
+  // Reference value source related state
+  const [dataKind, setDataKind] = useState<string>(editItem?.dataKind || '');
+  const [valueSourceTable, setValueSourceTable] = useState<string>(editItem?.valueSource || '');
+  const [valueSourceColumns, setValueSourceColumns] = useState<string[]>([]);
+  const [loadingValueSourceColumns, setLoadingValueSourceColumns] = useState(false);
+  const [valueIdField, setValueIdField] = useState<string>(editItem?.valueIdField || '');
+  const [valueLabelField, setValueLabelField] = useState<string>(editItem?.valueLabelField || '');
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState<'friendlyName' | 'dataKind' | 'source' | 'valueSource' | 'isActive' | null>(null);
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
@@ -58,8 +69,8 @@ export default function AttributesList() {
     enabled: isAuthenticated,
   });
 
-  // Fetch metadata tables once
-  const metaQuery = useQuery<{ name: string; columns: string[] }[]>({
+  // Fetch dynamic table list
+  const tablesQuery = useQuery<string[]>({
     queryKey: ['/api/metadata/tables'],
     queryFn: async () => {
       const res = await fetch('/api/metadata/tables', { credentials: 'include' });
@@ -68,28 +79,125 @@ export default function AttributesList() {
     },
     enabled: isAuthenticated,
   });
-  useEffect(() => {
-    if (metaQuery.data) {
-      setMetaTables(metaQuery.data);
-      if (metaQuery.data.length && !selectedTable) setSelectedTable(metaQuery.data[0].name);
+  useEffect(()=> {
+    if (tablesQuery.data) {
+      setTables(tablesQuery.data);
+      // Não auto-selecionar primeira tabela em criação
+      if (editItem?.sourceTable) setSelectedTable(editItem.sourceTable);
     }
-  }, [metaQuery.data, selectedTable]);
+  }, [tablesQuery.data, editItem]);
+  // Sync form state when entering edit mode or clearing
+  useEffect(()=> {
+    if (editItem) {
+      setFriendlyName(editItem.friendlyName || '');
+      setSelectedTable(editItem.sourceTable || '');
+      setSourceColumn(editItem.sourceColumn || '');
+      setDataKind(editItem.dataKind || '');
+      setValueSourceTable(editItem.valueSource || '');
+      setValueIdField(editItem.valueIdField || '');
+      setValueLabelField(editItem.valueLabelField || '');
+    } else {
+      setFriendlyName('');
+      setSourceColumn('');
+    }
+  }, [editItem]);
+
+  // Fetch columns for reference value source table
+  useEffect(()=> {
+    if (dataKind !== 'reference' || !valueSourceTable) { setValueSourceColumns([]); return; }
+    let aborted = false;
+    (async ()=> {
+      try {
+        setLoadingValueSourceColumns(true);
+        const res = await fetch(`/api/metadata/tables/${valueSourceTable}/columns`, { credentials: 'include' });
+        if (!res.ok) throw new Error('');
+        const cols: string[] = await res.json();
+        cols.sort((a,b)=> a.localeCompare(b));
+        if (!aborted) {
+          setValueSourceColumns(cols);
+          // Ajusta id/label se vazio ou inválido
+            if (!valueIdField || !cols.includes(valueIdField)) setValueIdField(cols.find(c=> c === 'id') || cols[0] || '');
+            if (!valueLabelField || !cols.includes(valueLabelField)) setValueLabelField(cols.find(c=> /label|name/i.test(c)) || cols[0] || '');
+        }
+      } catch {
+        if (!aborted) setValueSourceColumns([]);
+      } finally {
+        if (!aborted) setLoadingValueSourceColumns(false);
+      }
+    })();
+    return ()=> { aborted = true; };
+  }, [dataKind, valueSourceTable]);
+
+  // If dataKind changes away from reference, clear related fields (not removing id/label values from state but ensure disabled)
+  useEffect(()=> {
+    if (dataKind !== 'reference') {
+      setValueSourceTable('');
+      setValueSourceColumns([]);
+    }
+  }, [dataKind]);
+  // Fetch columns when table changes
+  useEffect(()=> {
+    if (!selectedTable) { setColumns([]); return; }
+    let aborted = false;
+    (async ()=> {
+      try {
+        setLoadingColumns(true);
+        const res = await fetch(`/api/metadata/tables/${selectedTable}/columns`, { credentials: 'include' });
+        if (!res.ok) throw new Error('');
+        const cols: string[] = await res.json();
+        if (!aborted) {
+          setColumns(cols);
+          // If current selected column not in new list, reset
+          if (sourceColumn && !cols.includes(sourceColumn)) setSourceColumn('');
+          // If editing and column available but state empty, set it
+          if (!sourceColumn && editItem?.sourceColumn && cols.includes(editItem.sourceColumn)) setSourceColumn(editItem.sourceColumn);
+        }
+      } catch {
+        if (!aborted) setColumns([]);
+      } finally {
+        if (!aborted) setLoadingColumns(false);
+      }
+    })();
+    return ()=> { aborted = true; };
+  }, [selectedTable]);
 
   const attributeKey: any = ['/api/attributes'];
 
   const createMutation = useMutation({
     mutationFn: async (data: AttributeDefinitionFormData) => {
       const res = await apiRequest('POST', '/api/attributes', data);
+      if (res.status === 409) {
+        const body = await res.json().catch(()=>({}));
+        throw new Error(body?.message || 'Conflito (já existe)');
+      }
+      if (!res.ok) {
+        const body = await res.json().catch(()=>({}));
+        throw new Error(body?.message || 'Falha ao criar');
+      }
       return res.json();
     },
-    onSuccess: () => { toast({ title: 'Atributo criado' }); queryClient.invalidateQueries({ queryKey: attributeKey }); }
+    onSuccess: () => { toast({ title: 'Atributo criado' }); queryClient.invalidateQueries({ queryKey: attributeKey }); setOpen(false); },
+    onError: (err: any) => {
+      toast({ title: 'Erro ao criar', description: err?.message === 'Atributo já existe para esta coluna' ? 'Já existe atributo cadastrado para esta Tabela/Coluna.' : (err?.message || 'Falha inesperada'), variant: 'destructive' });
+    }
   });
   const updateMutation = useMutation({
     mutationFn: async (data: AttributeDefinitionFormData) => {
       const res = await apiRequest('PUT', `/api/attributes/${data.id}`, data);
+      if (res.status === 409) {
+        const body = await res.json().catch(()=>({}));
+        throw new Error(body?.message || 'Conflito (já existe)');
+      }
+      if (!res.ok) {
+        const body = await res.json().catch(()=>({}));
+        throw new Error(body?.message || 'Falha ao atualizar');
+      }
       return res.json();
     },
-    onSuccess: () => { toast({ title: 'Atributo atualizado' }); queryClient.invalidateQueries({ queryKey: attributeKey }); }
+    onSuccess: () => { toast({ title: 'Atributo atualizado' }); queryClient.invalidateQueries({ queryKey: attributeKey }); setOpen(false); },
+    onError: (err: any) => {
+      toast({ title: 'Erro ao atualizar', description: err?.message === 'Atributo já existe para esta coluna' ? 'Já existe atributo cadastrado para esta Tabela/Coluna.' : (err?.message || 'Falha inesperada'), variant: 'destructive' });
+    }
   });
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
@@ -99,7 +207,20 @@ export default function AttributesList() {
     onSuccess: () => { toast({ title: 'Atributo desativado' }); queryClient.invalidateQueries({ queryKey: attributeKey }); }
   });
 
-  function openNew() { setEditItem(null); setFormKey(k=>k+1); setOpen(true); }
+  function openNew() {
+    setEditItem(null);
+    setFriendlyName('');
+    setSelectedTable('');
+    setSourceColumn('');
+    setColumns([]);
+    setDataKind('');
+    setValueSourceTable('');
+    setValueSourceColumns([]);
+    setValueIdField('');
+    setValueLabelField('');
+    setFormKey(k=>k+1);
+    setOpen(true);
+  }
   function openEdit(item: AttributeDefinitionFormData) { setEditItem(item); setFormKey(k=>k+1); setOpen(true); }
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -107,18 +228,17 @@ export default function AttributesList() {
     const fd = new FormData(e.currentTarget);
     const payload: AttributeDefinitionFormData = {
       id: editItem?.id,
-  // code omitted (auto)
-      friendlyName: (fd.get('friendlyName') as string).trim(),
+      friendlyName: friendlyName.trim(),
       sourceTable: (fd.get('sourceTable') as string).trim(),
-      sourceColumn: (fd.get('sourceColumn') as string).trim(),
+      sourceColumn: sourceColumn.trim(),
       dataKind: fd.get('dataKind') as string,
       valueSource: (fd.get('valueSource') as string) || null,
       valueIdField: (fd.get('valueIdField') as string) || 'id',
-      valueLabelField: (fd.get('valueLabelField') as string) || 'label',
-      isActive: fd.get('isActive') === 'on'
+      valueLabelField: (fd.get('valueLabelField') as string) || 'label'
     };
-    if (payload.id) updateMutation.mutate(payload); else createMutation.mutate(payload);
-    setTimeout(()=> setOpen(false), 50);
+    // Não enviar isActive (controle removido). Mantém valor atual no update e default true no create.
+    delete (payload as any).isActive;
+  if (payload.id) updateMutation.mutate(payload); else createMutation.mutate(payload);
   }
 
   // Normaliza (minúsculas) e remove acentos simples sem usar normalize para compatibilidade ampla
@@ -254,13 +374,13 @@ export default function AttributesList() {
             <FormHeader
               title={editItem ? 'Editar Atributo' : 'Novo Atributo'}
               subtitle={editItem ? 'Atualize os dados do atributo.' : 'Cadastre um novo atributo.'}
-              initials={editItem?.friendlyName?.slice(0,2) || null}
+              initials={(friendlyName.trim().slice(0,2) || null)}
             />
             {/* Linha 1: Nome */}
             <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
               <div className="md:col-span-12">
                 <NotchedField label="Nome" requiredMark>
-                  <Input name="friendlyName" defaultValue={editItem?.friendlyName || ''} required className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" />
+                  <Input name="friendlyName" value={friendlyName} onChange={(e)=> setFriendlyName(e.target.value)} required className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" />
                 </NotchedField>
               </div>
             </div>
@@ -270,12 +390,13 @@ export default function AttributesList() {
                 <NotchedField label="Tabela" requiredMark>
                   <select
                     name="sourceTable"
-                    defaultValue={editItem?.sourceTable || selectedTable}
-                    onChange={(e)=> setSelectedTable(e.target.value)}
+                    value={selectedTable || ''}
+                    onChange={(e)=> { setSelectedTable(e.target.value); }}
                     className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 w-full h-9 text-sm"
                     required
                   >
-                    {metaTables.map(t=> <option key={t.name} value={t.name}>{t.name}</option>)}
+                    <option value="" disabled>Selecionar</option>
+                    {([...tables].sort((a,b)=> a.localeCompare(b))).map(t=> <option key={t} value={t}>{t}</option>)}
                   </select>
                 </NotchedField>
               </div>
@@ -283,19 +404,22 @@ export default function AttributesList() {
                 <NotchedField label="Coluna" requiredMark>
                   <select
                     name="sourceColumn"
-                    defaultValue={editItem?.sourceColumn || ''}
+                    value={sourceColumn}
+                    onChange={(e)=> setSourceColumn(e.target.value)}
                     className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 w-full h-9 text-sm"
                     required
+                    disabled={!selectedTable || loadingColumns}
                   >
-                    <option value="" disabled>{metaTables.length? 'Selecionar':'Carregando...'}</option>
-                    {metaTables.find(t=> t.name === (editItem?.sourceTable || selectedTable))?.columns.map(c=> <option key={c} value={c}>{c}</option>)}
+                    <option value="" disabled>{loadingColumns ? 'Carregando...' : 'Selecionar'}</option>
+                    {[...columns].sort((a,b)=> a.localeCompare(b)).map(c=> <option key={c} value={c}>{c}</option>)}
                   </select>
                 </NotchedField>
               </div>
               <div className="md:col-span-3">
                 <NotchedField label="Tipo" requiredMark>
-                  <select name="dataKind" defaultValue={editItem?.dataKind || 'numeric'} className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 w-full h-9 text-sm" required>
-                    {DATA_KINDS.map(k=> <option key={k} value={k}>{k}</option>)}
+                  <select name="dataKind" value={dataKind} onChange={(e)=> setDataKind(e.target.value)} className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 w-full h-9 text-sm" required>
+                    <option value="" disabled>Selecionar</option>
+                    {[...DATA_KINDS].sort((a,b)=> a.localeCompare(b)).map(k=> <option key={k} value={k}>{k}</option>)}
                   </select>
                 </NotchedField>
               </div>
@@ -304,20 +428,44 @@ export default function AttributesList() {
             <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
               <div className="md:col-span-5">
                 <NotchedField label="Fonte Valor (ref)">
-                  <select name="valueSource" defaultValue={editItem?.valueSource || ''} className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 w-full h-9 text-sm">
-                    <option value="">--</option>
-                    {VALUE_SOURCES.map(v=> <option key={v} value={v}>{v}</option>)}
+                  <select
+                    name="valueSource"
+                    value={dataKind==='reference' ? valueSourceTable : ''}
+                    onChange={(e)=> setValueSourceTable(e.target.value)}
+                    disabled={dataKind !== 'reference'}
+                    className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 w-full h-9 text-sm"
+                  >
+                    <option value="" disabled>Selecionar</option>
+                    {[...Array.from(new Set([...(tables||[]), valueSourceTable].filter(Boolean) as string[]))].sort((a,b)=> a.localeCompare(b)).map(t=> <option key={t} value={t}>{t}</option>)}
                   </select>
                 </NotchedField>
               </div>
               <div className="md:col-span-3">
                 <NotchedField label="Campo ID">
-                  <Input name="valueIdField" defaultValue={editItem?.valueIdField || 'id'} className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" />
+                  <select
+                    name="valueIdField"
+                    value={valueIdField}
+                    onChange={(e)=> setValueIdField(e.target.value)}
+                    disabled={dataKind !== 'reference' || !valueSourceTable || loadingValueSourceColumns}
+                    className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 w-full h-9 text-sm"
+                  >
+                    <option value="" disabled>Selecionar</option>
+                    {dataKind === 'reference' && valueSourceColumns.sort((a,b)=> a.localeCompare(b)).map(c=> <option key={c} value={c}>{c}</option>)}
+                  </select>
                 </NotchedField>
               </div>
               <div className="md:col-span-4">
                 <NotchedField label="Campo Label">
-                  <Input name="valueLabelField" defaultValue={editItem?.valueLabelField || 'label'} className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" />
+                  <select
+                    name="valueLabelField"
+                    value={valueLabelField}
+                    onChange={(e)=> setValueLabelField(e.target.value)}
+                    disabled={dataKind !== 'reference' || !valueSourceTable || loadingValueSourceColumns}
+                    className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 w-full h-9 text-sm"
+                  >
+                    <option value="" disabled>Selecionar</option>
+                    {dataKind === 'reference' && valueSourceColumns.sort((a,b)=> a.localeCompare(b)).map(c=> <option key={c} value={c}>{c}</option>)}
+                  </select>
                 </NotchedField>
               </div>
             </div>

@@ -6,6 +6,7 @@ import { insertBuildingSchema, updateBuildingSchema, insertStructuralSystemSchem
 import { insertParameterSchema } from '@shared/schema';
 import bcrypt from "bcryptjs";
 import { z } from "zod";
+import { pool } from './db';
 
 function getPaginationParams(query: any) {
   const limit = Math.min(parseInt(query?.limit as string) || 10, 100);
@@ -73,20 +74,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Introspection: simple list of allowed tables & columns for attribute definitions (whitelist approach)
+  // Dynamic metadata: list all user tables (public schema) excluding system/internal ones
   app.get('/api/metadata/tables', isAuthenticated, async (_req, res) => {
-    // For segurança: retornar apenas tabelas whitelisted que fazem sentido para atributos
-    const tables = [
-      { name: 'buildings', columns: [
-        'id','user_id','typology_id','noise_class_id','aggressiveness_class_id','bioclimatic_zone_code','isopleth_code','building_height','created_at','updated_at'
-      ] },
-      { name: 'typologies', columns: ['id','code','label','is_active','created_at','updated_at'] },
-      { name: 'noise_classes', columns: ['id','code','label','min_db','max_db','is_active','created_at','updated_at'] },
-      { name: 'aggressiveness_classes', columns: ['id','code','label','risk','is_active','created_at','updated_at'] },
-      { name: 'bioclimatic_zones', columns: ['id','code','label','is_active','created_at','updated_at'] },
-      { name: 'isopleths', columns: ['id','code','label','is_active','created_at','updated_at'] },
-    ];
-    res.json(tables);
+    try {
+      const result = await pool.query<{ table_name: string }>(
+        `select table_name from information_schema.tables
+         where table_schema = 'public' and table_type='BASE TABLE'
+         order by table_name`);
+      const systemPrefixes = ['_drizzle'];
+      const blacklist = new Set<string>(['_prisma_migrations']);
+      const names = result.rows
+        .map(r => r.table_name)
+        .filter(n => !systemPrefixes.some(p => n.startsWith(p)))
+        .filter(n => !blacklist.has(n));
+      res.json(names);
+    } catch (err) {
+      console.error('Erro ao listar tabelas', err);
+      res.status(500).json({ message: 'Falha ao listar tabelas' });
+    }
+  });
+
+  // Dynamic metadata: list columns for a specific table
+  app.get('/api/metadata/tables/:table/columns', isAuthenticated, async (req, res) => {
+    try {
+      const table = req.params.table;
+      if (!/^[a-zA-Z0-9_]+$/.test(table)) return res.status(400).json({ message: 'Tabela inválida' });
+      const result = await pool.query<{ column_name: string }>(
+        `select column_name from information_schema.columns
+         where table_schema='public' and table_name=$1
+         order by ordinal_position`, [table]);
+      const cols = result.rows.map(r => r.column_name);
+      res.json(cols);
+    } catch (err) {
+      console.error('Erro ao listar colunas', err);
+      res.status(500).json({ message: 'Falha ao listar colunas' });
+    }
   });
 
     // Attribute Definitions (independent CRUD for validation phase)
