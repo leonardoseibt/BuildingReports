@@ -70,28 +70,49 @@ try {
   });
 }
 
-export function getSession() {
-  const pgStore = connectPg(session);
-  const store = new pgStore({
+let cachedSessionMw: any; // cache single instance to avoid multiple pools
+
+function buildSessionMiddleware() {
+  const PgStore = connectPg(session);
+  const ttlSeconds = Math.floor(SESSION_TTL_MS / 1000); // connect-pg-simple expects seconds
+  const store: any = new PgStore({
     conString: process.env.DATABASE_URL,
     createTableIfMissing: !isProd,
-    ttl: SESSION_TTL_MS,
+    ttl: ttlSeconds,
     tableName: "sessions",
+    // Pass through minimal pool config to reduce idle disconnect churn
+    pruneSessionInterval: Number(process.env.SESSION_PRUNE_INTERVAL_SEC || 60),
+  });
+  // Rebuild store on ECONNRESET (network flakiness / Neon socket close)
+  store.on?.('error', (err: any) => {
+    if (err?.code === 'ECONNRESET') {
+      console.error('[session-store] ECONNRESET detected, recreating session store');
+      cachedSessionMw = null; // force rebuild next request
+    } else {
+      console.error('[session-store] error', err);
+    }
   });
   return session({
     secret: process.env.SESSION_SECRET!,
     store,
     resave: false,
     saveUninitialized: false,
-    name: process.env.SESSION_COOKIE_NAME || "sid",
-    rolling: true, // idle timeout refresh
+    name: process.env.SESSION_COOKIE_NAME || 'sid',
+    rolling: true,
     cookie: {
       httpOnly: true,
       secure: isProd,
-      sameSite: (process.env.SESSION_SAMESITE as any) || (isProd ? "lax" : "lax"),
+      sameSite: (process.env.SESSION_SAMESITE as any) || (isProd ? 'lax' : 'lax'),
       maxAge: Math.min(SESSION_IDLE_MS, SESSION_TTL_MS),
     },
   });
+}
+
+export function getSession() {
+  if (!cachedSessionMw) {
+    cachedSessionMw = buildSessionMiddleware();
+  }
+  return cachedSessionMw;
 }
 
 export async function setupAuth(app: Express) {
