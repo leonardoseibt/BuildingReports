@@ -2,10 +2,6 @@ import { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest, throwIfResNotOk } from '@/lib/queryClient';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { NotchedField } from '@/components/ui/notched-field';
-import FormHeader from '@/components/ui/form-header';
 import Sidebar from '@/components/layout/sidebar';
 import Header from '@/components/layout/header';
 import { useAuth } from '@/hooks/useAuth';
@@ -16,7 +12,7 @@ import { ActiveToggleButton } from '@/components/common/active-toggle-button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { PaginationSimple as Pagination } from '@/components/ui/pagination';
 
-import { AttributeDefinitionFormData, DATA_KINDS } from './types';
+import { AttributeDefinitionFormData } from './types';
 import AttributesFormDialog from './attributes-form';
 
 export default function AttributesList() {
