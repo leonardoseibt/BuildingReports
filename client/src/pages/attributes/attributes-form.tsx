@@ -113,7 +113,7 @@ export function AttributesFormDialog({ open, onOpenChange, editItem, onSubmit, l
             </div>
             <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
               <div className="md:col-span-5">
-                <NotchedField label="Fonte Valor (ref)">
+                <NotchedField label="Fonte Valor (reference)">
                   <select name="valueSource" value={dataKind==='reference'? valueSource: ''} onChange={(e)=> setValueSource(e.target.value)} disabled={dataKind!=='reference'} className="bg-transparent border-0 shadow-none w-full h-9 text-sm">
                     <option value="" disabled>Selecionar</option>
                     {[...tables].sort((a,b)=> a.localeCompare(b)).map(t=> <option key={t} value={t}>{t}</option>)}
