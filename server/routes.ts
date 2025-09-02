@@ -3,7 +3,9 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated, refreshSession } from "./auth";
 import { insertBuildingSchema, updateBuildingSchema, insertStructuralSystemSchema, insertSealingSystemSchema, insertRoofingSystemSchema, insertPerformanceEvaluationSchema, insertReportSchema, insertTechnicianSchema, updateTechnicianSchema, insertUserSchema, updateUserSchema, insertTypologySchema, insertNoiseClassSchema, insertAggressivenessClassSchema, insertBioclimaticZoneSchema, insertBioclimaticZoneCoverageSchema, insertStateSchema, insertCitySchema, insertConstructiveSystemSchema, insertRequirementSchema, insertCriterionSchema, insertAnalysisSchema, insertIsoplethSchema } from "@shared/schema";
-import { insertParameterSchema } from '@shared/schema';
+import { insertParameterSchema, attributeDefinitions } from '@shared/schema';
+import { db } from './db';
+import { eq } from 'drizzle-orm';
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { pool } from './db';
@@ -1039,23 +1041,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/parameters', isAuthenticated, express.json(), async (req, res) => {
     try {
       const data = insertParameterSchema.parse(req.body);
-      // Invariantes de negócio para atributos
-      const refColumns = new Set(['typology_id','bioclimatic_zone','isopleth_code','noise_class_id','aggressiveness_class_id']);
-      const numericColumns = new Set(['total_area','building_height','floors','units']);
-      if ((data as any).minLimit != null && (data as any).maxLimit != null) {
-        const a = Number((data as any).minLimit); const b = Number((data as any).maxLimit);
-        if (!isNaN(a) && !isNaN(b) && a > b) {
-          return res.status(400).json({ message: 'Limite máximo deve ser >= limite mínimo' });
-        }
-      }
-      if ((data as any).attributeColumn) {
-        const col = (data as any).attributeColumn as string;
-        const valueId = (data as any).attributeValueId;
+      // Nova validação baseada em attributeId
+      if ((data as any).attributeId) {
+        const attrId = Number((data as any).attributeId);
+        const attr = await db.query.attributeDefinitions.findFirst({ where: eq(attributeDefinitions.id, attrId) });
+        if (!attr) return res.status(400).json({ message: 'Atributo inválido' });
         const hasLimits = (data as any).minLimit != null || (data as any).maxLimit != null;
-        if (refColumns.has(col)) {
+        if (attr.dataKind === 'reference') {
           if (hasLimits) return res.status(400).json({ message: 'Atributo de referência não deve ter limites numéricos.' });
-        } else if (numericColumns.has(col)) {
-          if (valueId != null) return res.status(400).json({ message: 'Atributo numérico não deve ter valor de item selecionado.' });
+          if ((data as any).attributeValueId == null) return res.status(400).json({ message: 'Valor do atributo de referência obrigatório.' });
+        } else if (attr.dataKind === 'numeric') {
+          if ((data as any).attributeValueId != null) return res.status(400).json({ message: 'Atributo numérico não deve ter valor de item selecionado.' });
+          if ((data as any).minLimit != null && (data as any).maxLimit != null) {
+            const a = Number((data as any).minLimit); const b = Number((data as any).maxLimit); if (!isNaN(a) && !isNaN(b) && a > b) return res.status(400).json({ message: 'Limite máximo deve ser >= limite mínimo' });
+          }
+        } else {
+          // text / boolean / date -> não aceita limites ou valorId
+          if (hasLimits) return res.status(400).json({ message: 'Este tipo de atributo não aceita limites.' });
+          if ((data as any).attributeValueId != null) return res.status(400).json({ message: 'Este tipo de atributo não aceita valor selecionado.' });
         }
       }
       const row = await storage.createParameter(data as any);
@@ -1068,24 +1071,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put('/api/parameters/:id', isAuthenticated, express.json(), async (req, res) => {
     try {
       const id = Number(req.params.id);
-  if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' });
+      if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' });
       const data = insertParameterSchema.partial().parse(req.body);
-      const refColumns = new Set(['typology_id','bioclimatic_zone','isopleth_code','noise_class_id','aggressiveness_class_id']);
-      const numericColumns = new Set(['total_area','building_height','floors','units']);
-      if ((data as any).minLimit != null && (data as any).maxLimit != null) {
-        const a = Number((data as any).minLimit); const b = Number((data as any).maxLimit);
-        if (!isNaN(a) && !isNaN(b) && a > b) {
-          return res.status(400).json({ message: 'Limite máximo deve ser >= limite mínimo' });
-        }
-      }
-      if ((data as any).attributeColumn) {
-        const col = (data as any).attributeColumn as string;
-        const valueId = (data as any).attributeValueId;
+      if ((data as any).attributeId) {
+        const attrId = Number((data as any).attributeId);
+        const attr = await db.query.attributeDefinitions.findFirst({ where: eq(attributeDefinitions.id, attrId) });
+        if (!attr) return res.status(400).json({ message: 'Atributo inválido' });
         const hasLimits = (data as any).minLimit != null || (data as any).maxLimit != null;
-        if (refColumns.has(col)) {
+        if (attr.dataKind === 'reference') {
           if (hasLimits) return res.status(400).json({ message: 'Atributo de referência não deve ter limites numéricos.' });
-        } else if (numericColumns.has(col)) {
-          if (valueId != null) return res.status(400).json({ message: 'Atributo numérico não deve ter valor de item selecionado.' });
+        } else if (attr.dataKind === 'numeric') {
+          if ((data as any).attributeValueId != null) return res.status(400).json({ message: 'Atributo numérico não deve ter valor de item selecionado.' });
+          if ((data as any).minLimit != null && (data as any).maxLimit != null) {
+            const a = Number((data as any).minLimit); const b = Number((data as any).maxLimit); if (!isNaN(a) && !isNaN(b) && a > b) return res.status(400).json({ message: 'Limite máximo deve ser >= limite mínimo' });
+          }
+        } else {
+          if (hasLimits) return res.status(400).json({ message: 'Este tipo de atributo não aceita limites.' });
+          if ((data as any).attributeValueId != null) return res.status(400).json({ message: 'Este tipo de atributo não aceita valor selecionado.' });
         }
       }
       const row = await storage.updateParameter(id, data as any);
@@ -1099,6 +1101,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try { const id = Number(req.params.id); if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' }); const ok = await storage.deleteParameter(id); res.json({ ok }); }
     catch { res.status(500).json({ message: 'Failed to delete parameter' }); }
   });
+
+  // Unified attribute value options endpoint
+  app.get('/api/attributes/:id/values', isAuthenticated, async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' });
+      const attr = await db.query.attributeDefinitions.findFirst({ where: eq(attributeDefinitions.id, id) });
+      if (!attr) return res.status(404).json({ message: 'Atributo não encontrado' });
+      if (attr.dataKind !== 'reference') return res.json([]);
+      const table = attr.valueSource; // e.g. 'typologies'
+      if (!table) return res.json([]);
+      // Basic whitelist to avoid SQL injection; could instead query attributeValueSourceEnum
+      const allowed = new Set(['typologies','noise_classes','aggressiveness_classes','bioclimatic_zones','isopleths']);
+      if (!allowed.has(table)) return res.status(400).json({ message: 'Fonte não suportada' });
+      // Build dynamic SQL selecting id + label
+      const idField = attr.valueIdField || 'id';
+      const labelField = attr.valueLabelField || 'label';
+      const rows = await pool.query(`select ${idField} as id, ${labelField} as label from ${table} where is_active is distinct from false order by 1 limit 500`);
+      res.json(rows.rows);
+    } catch (e:any) {
+      console.error('Erro /api/attributes/:id/values', e);
+      res.status(500).json({ message: 'Falha ao listar valores' });
+    }
+  });
+
+  // Integração attributeId concluída.
 
   const httpServer = createServer(app);
   return httpServer;

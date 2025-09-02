@@ -24,8 +24,7 @@ const formSchema = z.object({
   superiorValue: z.union([z.string(), z.number()]).optional(),
   unit: z.string().optional().nullable().transform(v => v === null ? '' : (v ?? '')),
   notes: z.string().optional().nullable().transform(v => v === null ? '' : (v ?? '')),
-  attributeTable: z.string().optional().nullable(),
-  attributeColumn: z.string().optional().nullable(),
+  attributeId: z.union([z.string(), z.number()]).optional().nullable(),
   attributeValueId: z.union([z.string(), z.number()]).optional().nullable(),
   isActive: z.boolean().optional().default(true),
 });
@@ -54,9 +53,8 @@ export default function ParameterForm({ onSuccess, onCancel, initialItem }: { on
   superiorValue: (initialItem as any)?.superiorValue ?? '',
       unit: (initialItem as any)?.unit || '',
       notes: (initialItem as any)?.notes || '',
-      attributeTable: (initialItem as any)?.attributeTable ?? '',
-      attributeColumn: (initialItem as any)?.attributeColumn ?? '',
-      attributeValueId: (initialItem as any)?.attributeValueId ?? '',
+  attributeId: (initialItem as any)?.attributeId ?? '',
+  attributeValueId: (initialItem as any)?.attributeValueId ?? '',
       isActive: initialItem?.isActive ?? true,
     }
   });
@@ -64,20 +62,23 @@ export default function ParameterForm({ onSuccess, onCancel, initialItem }: { on
   const [criterionId, setCriterionId] = useState<number | ''>('');
   const [requirementId, setRequirementId] = useState<number | ''>('');
 
-  // Garante que ao editar, quando initialItem chegar async, o Atributo fique selecionado
-  useEffect(() => {
-    if (initialItem) {
-      if (initialItem.attributeColumn) {
-        form.setValue('attributeColumn', (initialItem as any).attributeColumn as any);
-      }
-      if (initialItem.attributeTable) {
-        form.setValue('attributeTable', (initialItem as any).attributeTable as any);
-      }
-      if ((initialItem as any).attributeValueId !== undefined && (initialItem as any).attributeValueId !== null) {
-        form.setValue('attributeValueId', String((initialItem as any).attributeValueId) as any);
-      }
+  // Carregar atributos dinâmicos
+  const { data: attributes = [] } = useQuery<any[]>({
+    queryKey: ['/api/attributes'],
+    queryFn: async () => {
+      const r = await fetch('/api/attributes', { credentials: 'include' });
+      if (!r.ok) return [];
+      return r.json();
     }
-  }, [initialItem, form]);
+  });
+
+  // Persist selection when editing
+  useEffect(()=> {
+    if (initialItem && (initialItem as any).attributeId) {
+      form.setValue('attributeId', String((initialItem as any).attributeId) as any);
+      if ((initialItem as any).attributeValueId != null) form.setValue('attributeValueId', String((initialItem as any).attributeValueId) as any);
+    }
+  }, [initialItem]);
 
   // When editing: analyses may arrive after first render; set criterionId then
   useEffect(() => {
@@ -103,47 +104,26 @@ export default function ParameterForm({ onSuccess, onCancel, initialItem }: { on
     }
   }
 
-  // Lista de atributos possíveis (campos de edificações)
-  const attributeOptions = [
-    { label: 'Tipo de Uso Habitacional', table: 'buildings', column: 'typology_id', kind: 'ref', source: '/api/typologies', valueKey: 'id', labelKey: 'label' },
-  { label: 'Zona Bioclimática', table: 'buildings', column: 'bioclimatic_zone', kind: 'ref', source: '/api/bioclimatic-zones', valueKey: 'id', labelKey: (row:any)=> `${row.code} - ${row.label}` },
-  { label: 'Isopleta', table: 'buildings', column: 'isopleth_code', kind: 'ref', source: '/api/isopleths', valueKey: 'id', labelKey: (row:any)=> `${row.code} - ${row.label}` },
-    { label: 'Área Total Construída', table: 'buildings', column: 'total_area', kind: 'number' },
-    { label: 'Altura da Edificação', table: 'buildings', column: 'building_height', kind: 'number' },
-    { label: 'Número de Pavimentos', table: 'buildings', column: 'floors', kind: 'number' },
-    { label: 'Número de Unidades', table: 'buildings', column: 'units', kind: 'number' },
-    { label: 'Classe de Ruído do Entorno', table: 'buildings', column: 'noise_class_id', kind: 'ref', source: '/api/noise-classes', valueKey: 'id', labelKey: (row:any)=> `${row.code} - ${row.label}` },
-    { label: 'Classe de Agressividade Ambiental', table: 'buildings', column: 'aggressiveness_class_id', kind: 'ref', source: '/api/aggressiveness-classes', valueKey: 'id', labelKey: (row:any)=> `${row.code} - ${row.label}` },
-  ] as any[];
-
-  type AttributeOption = {
-    label: string; table: string; column: string; kind: 'ref' | 'number';
-    source?: string; valueKey?: string; labelKey?: string | ((row:any)=>string);
-  };
-  const selectedAttribute: AttributeOption | null = (() => {
-    const col = form.watch('attributeColumn');
-    if(!col) return null;
-    return (attributeOptions as readonly AttributeOption[]).find(a => a.column === col) || null;
-  })();
+  const selectedAttribute = useMemo(()=> {
+    const id = form.watch('attributeId');
+    if (!id) return null;
+    return attributes.find(a => String(a.id) === String(id)) || null;
+  }, [attributes, form.watch('attributeId')]);
 
   // Pré-carrega dados das fontes de referência
-  const { data: typologiesList = [] } = useQuery({ queryKey: ['/api/typologies'] });
-  const { data: zonesList = [] } = useQuery({ queryKey: ['/api/bioclimatic-zones'] });
-  const { data: isoplethsList = [] } = useQuery({ queryKey: ['/api/isopleths'] });
-  const { data: noiseClassList = [] } = useQuery({ queryKey: ['/api/noise-classes'] });
-  const { data: aggressivenessList = [] } = useQuery({ queryKey: ['/api/aggressiveness-classes'] });
-
-  function getAttributeSourceRows(opt: AttributeOption | null): any[] {
-    if(!opt) return [] as any[];
-    switch(opt.source){
-      case '/api/typologies': return typologiesList as any[];
-      case '/api/bioclimatic-zones': return zonesList as any[];
-      case '/api/isopleths': return isoplethsList as any[];
-      case '/api/noise-classes': return noiseClassList as any[];
-      case '/api/aggressiveness-classes': return aggressivenessList as any[];
-      default: return [];
+  const { data: attributeValues = [], isLoading: loadingAttributeValues } = useQuery({
+    queryKey: ['attribute-values', form.watch('attributeId')],
+    enabled: !!selectedAttribute && selectedAttribute.dataKind === 'reference',
+    queryFn: async () => {
+      const id = form.watch('attributeId');
+      if (!id) return [];
+      const r = await fetch(`/api/attributes/${id}/values`, { credentials: 'include' });
+      if (!r.ok) return [];
+      return r.json();
     }
-  }
+  });
+
+  function getAttributeSourceRows(): any[] { return attributeValues; }
 
   async function onSubmit(values: ParameterFormData) {
     // Basic validation: ensure numeric ordering if both provided
@@ -169,8 +149,7 @@ export default function ParameterForm({ onSuccess, onCancel, initialItem }: { on
         superiorValue: clean(values.superiorValue),
         unit: values.unit === '' ? null : values.unit,
         notes: values.notes === '' ? null : values.notes,
-        attributeTable: values.attributeTable || null,
-        attributeColumn: values.attributeColumn || null,
+  attributeId: values.attributeId ? Number(values.attributeId) : null,
         attributeValueId: values.attributeValueId ? Number(values.attributeValueId) : null,
         isActive: values.isActive,
       };
@@ -260,31 +239,30 @@ export default function ParameterForm({ onSuccess, onCancel, initialItem }: { on
           <div className="md:col-span-2">
             <NotchedField label="Atributo">
               <select
-                value={form.watch('attributeColumn') || ''}
+                value={form.watch('attributeId') || ''}
                 onChange={(e)=> {
-                  const col = e.target.value;
-                  const opt = attributeOptions.find(a=> a.column === col);
-                  form.setValue('attributeColumn', col || '' as any);
-                  form.setValue('attributeTable', opt ? opt.table : '' as any);
+                  const id = e.target.value;
+                  form.setValue('attributeId', id as any);
                   form.setValue('attributeValueId', '' as any);
-                  if(opt?.kind === 'number') {
-                    // numérico -> manter
-                  } else {
-                    form.setValue('minLimit','' as any);
-                    form.setValue('maxLimit','' as any);
-                  }
+                  form.setValue('minLimit','' as any);
+                  form.setValue('maxLimit','' as any);
                 }}
                 className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 w-full h-9 text-sm"
               >
                 <option value="">Selecione...</option>
-                {useMemo(()=> attributeOptions.slice().sort((a:any,b:any)=> a.label.localeCompare(b.label,'pt-BR')), [attributeOptions]).map(a => (
-                  <option key={a.column} value={a.column}>{`${a.label}: ${a.table} -> ${a.column}`}</option>
+                {attributes.slice().sort((a:any,b:any)=> a.friendlyName.localeCompare(b.friendlyName,'pt-BR')).map(a => (
+                  <option key={a.id} value={a.id}>{a.friendlyName} ({a.dataKind})</option>
                 ))}
               </select>
             </NotchedField>
+            {selectedAttribute && (
+              <p className="text-[11px] text-slate-500 mt-1">
+                Origem: {selectedAttribute.sourceTable}.{selectedAttribute.sourceColumn}{selectedAttribute.valueSource ? ` • Fonte Valor: ${selectedAttribute.valueSource}` : ''}
+              </p>
+            )}
           </div>
           <div className="md:col-span-2">
-            {selectedAttribute && selectedAttribute.kind === 'ref' && (
+            {selectedAttribute && selectedAttribute.dataKind === 'reference' && (
               <FormField name="attributeValueId" control={form.control} render={({ field }) => (
                 <FormItem>
                   <FormControl>
@@ -296,11 +274,12 @@ export default function ParameterForm({ onSuccess, onCancel, initialItem }: { on
                         className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 w-full h-9 text-sm"
                       >
                         <option value="">Selecione...</option>
-                        {getAttributeSourceRows(selectedAttribute).map((row:any) => {
-                          const sa:any = selectedAttribute as any;
-                          const valueKey = sa.valueKey;
-                          const rawLabel = typeof sa.labelKey === 'function' ? sa.labelKey(row) : row[sa.labelKey];
-                          return <option key={row[valueKey]} value={row[valueKey]}>{rawLabel}</option>;
+                        {loadingAttributeValues && <option value="" disabled>Carregando...</option>}
+                        {getAttributeSourceRows().map((row:any) => {
+                          const idField = selectedAttribute.valueIdField || 'id';
+                          const labelField = selectedAttribute.valueLabelField || 'label';
+                          const rawLabel = row.label ?? row[labelField] ?? row.code ?? row.name ?? row[idField];
+                          return <option key={row.id ?? row[idField]} value={row.id ?? row[idField]}>{rawLabel}</option>;
                         })}
                       </select>
                     </NotchedField>
@@ -309,7 +288,7 @@ export default function ParameterForm({ onSuccess, onCancel, initialItem }: { on
                 </FormItem>
               )} />
             )}
-            {selectedAttribute && selectedAttribute.kind === 'number' && (
+            {selectedAttribute && selectedAttribute.dataKind === 'numeric' && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField name="minLimit" control={form.control} render={({ field }) => (
                   <FormItem>

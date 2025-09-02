@@ -270,10 +270,9 @@ export const parameters = pgTable("parameters", {
   maxLimit: decimal("max_limit", { precision: 12, scale: 2 }),
   unit: varchar("unit", { length: 32 }),
   notes: text("notes"),
-  // Novos campos para associação com atributos de edificações
-  attributeTable: varchar("attribute_table", { length: 64 }),
-  attributeColumn: varchar("attribute_column", { length: 64 }),
-  attributeValueId: integer("attribute_value_id"), // guarda o id do item selecionado quando atributo é referência
+  // Associação com atributo definido em attribute_definitions
+  attributeValueId: integer("attribute_value_id"), // id do item (quando atributo reference)
+  attributeId: integer('attribute_id').references(()=> attributeDefinitions.id, { onDelete: 'restrict' }),
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),

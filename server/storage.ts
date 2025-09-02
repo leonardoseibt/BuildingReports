@@ -1303,13 +1303,11 @@ export class DatabaseStorage implements IStorage {
       maxLimit: parameters.maxLimit,
       unit: parameters.unit,
       notes: parameters.notes,
-  attributeTable: parameters.attributeTable,
-  attributeColumn: parameters.attributeColumn,
-  attributeValueId: parameters.attributeValueId,
+      attributeId: parameters.attributeId,
+      attributeValueId: parameters.attributeValueId,
       isActive: parameters.isActive,
       createdAt: parameters.createdAt,
       updatedAt: parameters.updatedAt,
-      // Extra fields from analyses to stabilize join & potential filtering
       _analysisRequirementId: analyses.requirementId,
       _analysisCriterionId: analyses.criterionId,
     } as const;
@@ -1333,8 +1331,7 @@ export class DatabaseStorage implements IStorage {
       maxLimit: parameters.maxLimit,
       unit: parameters.unit,
       notes: parameters.notes,
-      attributeTable: parameters.attributeTable,
-      attributeColumn: parameters.attributeColumn,
+      attributeId: parameters.attributeId,
       attributeValueId: parameters.attributeValueId,
       isActive: parameters.isActive,
       createdAt: parameters.createdAt,
@@ -1367,16 +1364,15 @@ export class DatabaseStorage implements IStorage {
     const [row] = await db.insert(parameters).values({
       analysisId: (item as any).analysisId,
       label: (item as any).label,
-      minimumValue: (item as any).minimumValue,
-      intermediateValue: (item as any).intermediateValue,
-      superiorValue: (item as any).superiorValue,
-  minLimit: (item as any).minLimit,
-  maxLimit: (item as any).maxLimit,
-      unit: (item as any).unit,
-      notes: (item as any).notes,
-  attributeTable: (item as any).attributeTable,
-  attributeColumn: (item as any).attributeColumn,
-  attributeValueId: (item as any).attributeValueId,
+      minimumValue: (item as any).minimumValue ?? null,
+      intermediateValue: (item as any).intermediateValue ?? null,
+      superiorValue: (item as any).superiorValue ?? null,
+      minLimit: (item as any).minLimit ?? null,
+      maxLimit: (item as any).maxLimit ?? null,
+      unit: (item as any).unit ?? null,
+      notes: (item as any).notes ?? null,
+      attributeId: (item as any).attributeId ?? null,
+      attributeValueId: (item as any).attributeValueId ?? null,
       isActive: (item as any).isActive ?? true,
     }).returning();
     return row as Parameter;
@@ -1386,7 +1382,7 @@ export class DatabaseStorage implements IStorage {
     // Apenas inclui campos presentes; permite enviar null para limpar
     const keys: (keyof InsertParameter | 'isActive')[] = [
       'analysisId','label','minimumValue','intermediateValue','superiorValue',
-      'minLimit','maxLimit','unit','notes','attributeTable','attributeColumn','attributeValueId','isActive'
+      'minLimit','maxLimit','unit','notes','attributeId','attributeValueId','isActive'
     ] as any;
     for (const k of keys) {
       if (k in item) {
