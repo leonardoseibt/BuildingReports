@@ -7,6 +7,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
 import { scheduleAutoRefresh } from "@/lib/authUtils";
 import { useEffect } from "react";
+import SessionExpiryPrompt from '@/components/session-expiry-prompt';
 import NotFound from "@/pages/not-found";
 import Login from "@/pages/login";
 import Dashboard from "@/pages/dashboard";
@@ -91,7 +92,8 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <Toaster />
-        <Router />
+  <Router />
+  <SessionExpiryPrompt />
       </TooltipProvider>
     </QueryClientProvider>
   );

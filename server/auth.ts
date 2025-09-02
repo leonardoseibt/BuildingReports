@@ -18,6 +18,8 @@ const SESSION_TTL_MS = Number(process.env.SESSION_TTL_MS || 7 * 24 * 60 * 60 * 1
 const CLAIM_LIFETIME_SEC = Number(process.env.CLAIM_LIFETIME_SEC || 60 * 60); // 1h logical token expiry
 // If remaining lifetime is below this window, we extend (rolling logic)
 const ROLLING_RENEW_WINDOW_SEC = Number(process.env.ROLLING_RENEW_WINDOW_SEC || 5 * 60); // 5m
+// Optional: force renewal on every authenticated request (sliding session) while under absolute TTL
+const ALWAYS_ROLLING_RENEW = process.env.ALWAYS_ROLLING_RENEW === 'true';
 
 const authSchema = z.object({
   email: z.string().email(),
@@ -266,7 +268,8 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
   if (activeUser?.expires_at) {
     // Rolling renewal: extend if within window but not yet expired
     const remaining = activeUser.expires_at - nowSec;
-    if (remaining > 0 && remaining < ROLLING_RENEW_WINDOW_SEC) {
+  const shouldRenew = remaining > 0 && (ALWAYS_ROLLING_RENEW || remaining < ROLLING_RENEW_WINDOW_SEC);
+  if (shouldRenew) {
       const newExp = nowSec + CLAIM_LIFETIME_SEC;
       activeUser.expires_at = newExp;
       if (activeUser.claims) activeUser.claims.exp = newExp;
