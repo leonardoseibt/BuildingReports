@@ -5,6 +5,8 @@ import { queryClient } from '@/lib/queryClient';
 
 // Configurable warning threshold (seconds) via Vite env var
 const WARNING_THRESHOLD_SEC = Number(import.meta.env.VITE_SESSION_WARNING_SEC || 5 * 60); // default 5m
+// Grace period (ms) to keep the prompt hidden right after uma renovação manual, mesmo que já esteja dentro do threshold
+const HIDE_AFTER_REFRESH_MS = Number(import.meta.env.VITE_SESSION_PROMPT_HIDE_AFTER_REFRESH_MS || 30_000); // 30s
 
 export function SessionExpiryPrompt() {
   const { expiresAt, isAuthenticated } = useAuth();
@@ -23,7 +25,9 @@ export function SessionExpiryPrompt() {
 
   if (!isAuthenticated || !expiresAt) return null;
   const remaining = expiresAt - nowSec;
-  const show = remaining > 0 && remaining <= WARNING_THRESHOLD_SEC;
+  // Auto-hide logic: se acabou de renovar, ocultar enquanto dentro da janela de grace
+  const inGrace = lastExtended !== null && (Date.now() - lastExtended) < HIDE_AFTER_REFRESH_MS;
+  const show = remaining > 0 && remaining <= WARNING_THRESHOLD_SEC && !inGrace;
   const minutes = Math.floor(Math.max(remaining, 0) / 60);
   const seconds = Math.max(remaining, 0) % 60;
 
