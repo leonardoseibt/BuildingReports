@@ -96,13 +96,15 @@ export default function ParameterForm({ onSuccess, onCancel, initialItem }: { on
     ? analyses.filter(a => a.criterionId === criterionId && (a as any).requirementId === requirementId)
     : [];
 
-  // Keep analysis consistent with criterion selection
-  if (criterionId && form.getValues('analysisId')) {
-    const currentAnalysis = analyses.find(a => a.id === form.getValues('analysisId'));
-    if (currentAnalysis && currentAnalysis.criterionId !== criterionId) {
-      form.setValue('analysisId', 0 as any);
+  // Keep analysis consistent with criterion selection/react to changes safely
+  useEffect(() => {
+    const current = form.getValues('analysisId') as any;
+    if (!current) return;
+    const currentAnalysis = analyses.find(a => a.id === current);
+    if (criterionId && currentAnalysis && currentAnalysis.criterionId !== criterionId) {
+      form.setValue('analysisId', '' as any);
     }
-  }
+  }, [criterionId, analyses]);
 
   const selectedAttribute = useMemo(()=> {
     const id = form.watch('attributeId');

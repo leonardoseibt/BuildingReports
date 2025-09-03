@@ -1,4 +1,4 @@
-import { queryClient, clearCsrfToken } from './queryClient';
+import { queryClient, clearCsrfToken, apiRequest } from './queryClient';
 import { toast } from '@/hooks/use-toast';
 
 export function isUnauthorizedError(error: Error): boolean {
@@ -19,7 +19,7 @@ export async function logout(options: { redirect?: boolean } = {}) {
 // Explicit refresh request (optional manual trigger)
 export async function refreshSession(): Promise<{ expires_at: number; now: number } | null> {
   try {
-    const res = await fetch('/api/auth/refresh', { method: 'POST', credentials: 'include' });
+    const res = await apiRequest('POST', '/api/auth/refresh');
     if (!res.ok) return null;
     return await res.json();
   } catch { return null; }

@@ -1115,10 +1115,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Basic whitelist to avoid SQL injection; could instead query attributeValueSourceEnum
       const allowed = new Set(['typologies','noise_classes','aggressiveness_classes','bioclimatic_zones','isopleths']);
       if (!allowed.has(table)) return res.status(400).json({ message: 'Fonte não suportada' });
-      // Build dynamic SQL selecting id + label
-      const idField = attr.valueIdField || 'id';
-      const labelField = attr.valueLabelField || 'label';
-      const rows = await pool.query(`select ${idField} as id, ${labelField} as label from ${table} where is_active is distinct from false order by 1 limit 500`);
+      // Validate identifier names against information_schema
+      const identRe = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
+      const idField = (attr.valueIdField || 'id');
+      const labelField = (attr.valueLabelField || 'label');
+      if (!identRe.test(idField) || !identRe.test(labelField)) {
+        return res.status(400).json({ message: 'Campos de identificador inválidos' });
+      }
+      const colsRes = await pool.query<{ column_name: string }>(
+        `select column_name from information_schema.columns where table_schema='public' and table_name=$1`,
+        [table]
+      );
+      const colSet = new Set(colsRes.rows.map(r => r.column_name));
+      if (!colSet.has(idField) || !colSet.has(labelField)) {
+        return res.status(400).json({ message: 'Campos não encontrados na tabela de origem' });
+      }
+      // Build dynamic SQL selecting id + label (identifiers validated)
+      const sqlText = `select ${idField} as id, ${labelField} as label from ${table} where is_active is distinct from false order by 1 limit 500`;
+      const rows = await pool.query(sqlText);
       res.json(rows.rows);
     } catch (e:any) {
       console.error('Erro /api/attributes/:id/values', e);

@@ -702,17 +702,21 @@ export class DatabaseStorage implements IStorage {
   }> {
     const { items: userBuildings } = await this.getBuildingsByUser(userId);
     const { items: userReports } = await this.getReportsByUser(userId);
-    
-    // Get pending evaluations count
-  const buildingIds = userBuildings.map(b => b.id);
-    let pendingEvaluations = 0;
-    
-    for (const buildingId of buildingIds) {
-      const evaluation = await this.getPerformanceEvaluation(buildingId);
-      if (!evaluation || evaluation.status === 'pending') {
-        pendingEvaluations++;
-      }
-    }
+
+    // Pending evaluations: buildings with no evaluation or last evaluation status = 'pending'
+    const pendingRow = await db.execute(sql`WITH last_eval AS (
+      SELECT DISTINCT ON (pe.building_id)
+             pe.building_id,
+             pe.status,
+             pe.created_at
+      FROM performance_evaluations pe
+      ORDER BY pe.building_id, pe.created_at DESC
+    )
+    SELECT COUNT(b.*)::int AS cnt
+    FROM buildings b
+    LEFT JOIN last_eval le ON le.building_id = b.id
+    WHERE b.user_id = ${userId} AND (le.status IS NULL OR le.status = 'pending')`);
+    const pendingEvaluations = Number(((pendingRow as any).rows ?? [])[0]?.cnt ?? 0);
 
     const recentBuildings = userBuildings.slice(0, 5);
 
@@ -1343,18 +1347,19 @@ export class DatabaseStorage implements IStorage {
     if (analysisId) conditions.push(eq(parameters.analysisId, analysisId));
     if (criterionId) conditions.push(eq(analyses.criterionId, criterionId));
     if (requirementId) conditions.push(eq(analyses.requirementId, requirementId));
-    let base: any = db.select(selectShape).from(parameters).innerJoin(analyses, eq(parameters.analysisId, analyses.id));
+    if (search) {
+      conditions.push(sql`${parameters.label} ILIKE ${'%' + search + '%'}`);
+    }
+    let base: any = db
+      .select(selectShape)
+      .from(parameters)
+      .innerJoin(analyses, eq(parameters.analysisId, analyses.id));
     if (conditions.length === 1) base = base.where(conditions[0]);
     else if (conditions.length > 1) base = base.where(and(...conditions));
-    let filtered = base;
-    if (search) {
-      // Simple ILIKE search on label
-      filtered = filtered.where(sql`${parameters.label} ILIKE ${'%' + search + '%'}`);
-    }
-    const totalRes = await filtered.clone().clearOrder().select({ value: count() });
+    const totalRes = await base.clone().clearOrder().select({ value: count() });
     const total = Number(totalRes[0]?.value ?? 0);
     const offset = (page - 1) * limit;
-    const items = await filtered
+    const items = await base
       .orderBy(sql`${parameters.label} collate "pt-BR-x-icu"`)
       .limit(limit)
       .offset(offset);

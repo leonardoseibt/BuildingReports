@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { apiRequest } from "@/lib/queryClient";
 import { Mail, Lock, Eye, EyeOff, Loader2, Building2, ArrowRight } from "lucide-react";
 
 export default function Login() {
@@ -31,12 +32,7 @@ export default function Login() {
     e.preventDefault();
     try {
       setSubmitting(true);
-      const res = await fetch("/api/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-        credentials: "include",
-      });
+      const res = await apiRequest("POST", "/api/login", { email, password });
       if (res.ok) {
         toast({ title: "Sucesso", description: "Login realizado" });
         await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });

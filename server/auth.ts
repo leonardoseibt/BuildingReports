@@ -139,11 +139,12 @@ export async function setupAuth(app: Express) {
     next();
   });
 
-  // CSRF protection: skip login/logout endpoints entirely; apply to all others.
+  // CSRF protection: exigir no POST /api/login (cliente já envia token). Mantém GET /api/login (dev) sem CSRF.
   const csrfProtection = csurf({ cookie: false });
   app.use((req, res, next) => {
-    if (req.path.startsWith('/api/login') || req.path.startsWith('/api/logout')) {
-      return next(); // no CSRF required for auth endpoints
+    // Permite GET /api/login (atalho dev) sem CSRF
+    if (req.method === 'GET' && req.path === '/api/login') {
+      return next();
     }
     return csrfProtection(req, res, next);
   });
