@@ -28,21 +28,40 @@ export async function refreshSession(): Promise<{ expires_at: number; now: numbe
 // Schedule periodic soft-refresh (optional usage in a top-level component)
 export function scheduleAutoRefresh(intervalMs = 60_000) {
   let timer: any = null;
+  let lastActivity = Date.now();
+
+  const markActivity = () => { lastActivity = Date.now(); };
+  const events: Array<keyof WindowEventMap> = ['click', 'keydown', 'mousemove', 'scroll', 'touchstart'];
+  events.forEach((ev) => window.addEventListener(ev, markActivity, { passive: true } as any));
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) markActivity();
+  });
+
   const tick = async () => {
-    const user: any = queryClient.getQueryData(['/api/auth/user']);
-    if (user?.expires_at) {
-      const nowSec = Math.floor(Date.now() / 1000);
+    try {
+      const user: any = queryClient.getQueryData(['/api/auth/user']);
+      if (!user?.expires_at) return;
+
+      const now = Date.now();
+      const hadRecentActivity = now - lastActivity < intervalMs;
+      if (document.hidden) return; // não manter viva em abas ocultas
+
+      const nowSec = Math.floor(now / 1000);
       const remaining = user.expires_at - nowSec;
-      if (remaining < 5 * 60) { // inside renewal window
+      // Só renova com atividade recente e dentro da janela de renovação
+      if (hadRecentActivity && remaining < 5 * 60) {
         const refreshed = await refreshSession();
         if (refreshed?.expires_at) {
-          // Update cached user object with new expiry
-            queryClient.setQueryData(['/api/auth/user'], { ...user, expires_at: refreshed.expires_at });
+          queryClient.setQueryData(['/api/auth/user'], { ...user, expires_at: refreshed.expires_at });
         }
       }
+    } finally {
+      timer = setTimeout(tick, intervalMs);
     }
-    timer = setTimeout(tick, intervalMs);
   };
-  tick();
-  return () => { if (timer) clearTimeout(timer); };
+  timer = setTimeout(tick, intervalMs);
+  return () => {
+    if (timer) clearTimeout(timer);
+    events.forEach((ev) => window.removeEventListener(ev, markActivity as any));
+  };
 }
