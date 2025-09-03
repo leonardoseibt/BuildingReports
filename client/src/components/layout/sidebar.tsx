@@ -49,6 +49,10 @@ function NavLink({ href, icon: Icon, label, isActive, testId, indent = 0 }: { hr
 export default function Sidebar() {
   const [location] = useLocation();
   const { user } = useAuth();
+  const hasAccess = (key: string) => {
+    if (!user) return false;
+    return (user as any).isAdmin || ((user as any).allowedModules || []).includes(key);
+  };
 
   const [isCollapsed, setIsCollapsed] = useState(() => {
     if (typeof window !== "undefined") {

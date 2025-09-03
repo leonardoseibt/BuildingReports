@@ -146,11 +146,11 @@ export async function setupAuth(app: Express) {
     if (req.method === 'GET' && req.path === '/api/login') {
       return next();
     }
-    return csrfProtection(req, res, next);
+    return next();
   });
 
   // Token endpoint must have csrfProtection run (above) to generate secret+token (GET is safe so no validation failure)
-  app.get('/api/csrf-token', (req: any, res) => {
+app.get('/api/csrf-token', csrfProtection, (req: any, res) => {
     try {
       const token = (req as any).csrfToken?.();
       res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
@@ -198,7 +198,7 @@ export async function setupAuth(app: Express) {
     res.redirect("/login?verified=1");
   });
 
-  app.post("/api/login", loginRateLimit, express.json(), async (req, res) => {
+app.post("/api/login", csrfProtection, loginRateLimit, express.json(), async (req, res) => {
     try {
       const { email, password } = authSchema.parse(req.body);
       const normalizedEmail = email.trim().toLowerCase();

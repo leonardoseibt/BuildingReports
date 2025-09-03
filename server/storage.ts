@@ -232,6 +232,8 @@ export class DatabaseStorage implements IStorage {
         email: users.email,
         fullName: users.fullName,
         phone: users.phone,
+        isAdmin: users.isAdmin,
+        allowedModules: users.allowedModules,
         emailVerified: users.emailVerified,
         createdAt: users.createdAt,
         updatedAt: users.updatedAt,
@@ -267,7 +269,7 @@ export class DatabaseStorage implements IStorage {
     }
     const [user] = await db
       .insert(users)
-      .values({ email: normalizedEmail, fullName, phone })
+      .values({ email: normalizedEmail, fullName, phone, isAdmin: false, allowedModules: [] as any })
       .onConflictDoUpdate({
         target: users.email!,
         set: { fullName, phone, updatedAt: new Date() },
@@ -304,6 +306,8 @@ export class DatabaseStorage implements IStorage {
         email: users.email,
         fullName: users.fullName,
         phone: users.phone,
+        allowedModules: users.allowedModules,
+        isAdmin: users.isAdmin,
         emailVerified: users.emailVerified,
         createdAt: users.createdAt,
         updatedAt: users.updatedAt,

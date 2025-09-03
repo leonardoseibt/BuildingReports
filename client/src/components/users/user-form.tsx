@@ -9,13 +9,35 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
 import { Mail, Phone, User2, Lock, Loader2 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { insertUserSchema, updateUserSchema } from "@shared/schema";
 import { z } from "zod";
+
+const MODULE_OPTIONS: Array<{ key: string; label: string }> = [
+  { key: 'reports', label: 'Relatórios' },
+  { key: 'buildings', label: 'Edificações' },
+  { key: 'technicians', label: 'Responsáveis Técnicos' },
+  { key: 'states', label: 'Estados' },
+  { key: 'cities', label: 'Municípios' },
+  { key: 'bioclimatic-zones', label: 'Zonas Bioclimáticas' },
+  { key: 'isopleths', label: 'Isopletas' },
+  { key: 'typologies', label: 'Tipos de Uso' },
+  { key: 'noise-classes', label: 'Classes de Ruído' },
+  { key: 'aggressiveness-classes', label: 'Classes de Agressividade' },
+  { key: 'constructive-systems', label: 'Sistemas Construtivos' },
+  { key: 'requirements', label: 'Requisitos' },
+  { key: 'criteria', label: 'Critérios' },
+  { key: 'analyses', label: 'Análises' },
+  { key: 'attributes', label: 'Atributos' },
+  { key: 'parameters', label: 'Parâmetros' },
+  { key: 'users', label: 'Usuários' },
+  { key: 'settings', label: 'Configurações' },
+];
 
 interface UserFormProps {
   onSuccess?: () => void;
   onCancel?: () => void;
-  initialUser?: { id: number; fullName: string; email: string; phone?: string | null } | null;
+  initialUser?: { id: number; fullName: string; email: string; phone?: string | null; isAdmin?: boolean; allowedModules?: string[] } | null;
 }
 
 type FormValues = {
@@ -23,6 +45,8 @@ type FormValues = {
   email: string;
   password?: string;
   phone?: string;
+  isAdmin: boolean;
+  allowedModules: string[];
 };
 
 export default function UserForm({ onSuccess, onCancel, initialUser }: UserFormProps = {}) {
@@ -68,6 +92,8 @@ export default function UserForm({ onSuccess, onCancel, initialUser }: UserFormP
       email: initialUser?.email ?? "",
       password: "",
       phone: initialUser?.phone ?? "",
+      isAdmin: !!initialUser?.isAdmin,
+      allowedModules: initialUser?.allowedModules ?? [],
     },
     mode: "onSubmit",
   });
@@ -98,6 +124,8 @@ export default function UserForm({ onSuccess, onCancel, initialUser }: UserFormP
           const digits = onlyDigits(raw);
           return digits ? digits : undefined;
         })(),
+        isAdmin: !!data.isAdmin,
+        allowedModules: data.isAdmin ? [] : Array.from(new Set(data.allowedModules || [])).filter(Boolean),
       };
       if (!isEdit) {
         payload.password = (data.password || "").trim();
@@ -264,6 +292,49 @@ export default function UserForm({ onSuccess, onCancel, initialUser }: UserFormP
               </FormItem>
             )}
           />
+        </div>
+
+        {/* PERMISSÕES */}
+        <div className="rounded-2xl border bg-white/80 backdrop-blur px-5 py-4 md:px-6 md:py-5 shadow-sm">
+          <div className="mb-3">
+            <h3 className="text-sm font-semibold text-slate-800">Permissões de Acesso</h3>
+            <p className="text-xs text-slate-500">Defina se o usuário é administrador ou selecione os módulos permitidos.</p>
+          </div>
+          <div className="space-y-3">
+            <FormField
+              name="isAdmin"
+              control={form.control}
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center space-x-2 space-y-0">
+                  <FormControl>
+                    <Checkbox checked={field.value} onCheckedChange={(v:any)=> field.onChange(!!v)} />
+                  </FormControl>
+                  <FormLabel className="font-medium">Administrador</FormLabel>
+                </FormItem>
+              )}
+            />
+
+            {!form.watch('isAdmin') && (
+              <div>
+                <div className="text-xs text-slate-600 mb-2">Módulos permitidos:</div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+                  {MODULE_OPTIONS.map(opt => (
+                    <label key={opt.key} className="inline-flex items-center gap-2 text-sm">
+                      <Checkbox
+                        checked={form.watch('allowedModules')?.includes(opt.key) || false}
+                        onCheckedChange={(checked:any) => {
+                          const curr = new Set(form.getValues('allowedModules') || []);
+                          if (checked) curr.add(opt.key); else curr.delete(opt.key);
+                          form.setValue('allowedModules', Array.from(curr));
+                        }}
+                      />
+                      <span>{opt.label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* AÇÕES */}

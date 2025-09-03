@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, clearCsrfToken } from "@/lib/queryClient";
 import { Mail, Lock, Eye, EyeOff, Loader2, Building2, ArrowRight } from "lucide-react";
 
 export default function Login() {
@@ -34,6 +34,8 @@ export default function Login() {
       setSubmitting(true);
       const res = await apiRequest("POST", "/api/login", { email, password });
       if (res.ok) {
+        // Regenerating the session on login invalidates previous CSRF secrets; clear cached token
+        clearCsrfToken();
         toast({ title: "Sucesso", description: "Login realizado" });
         await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
         await queryClient.refetchQueries({ queryKey: ["/api/auth/user"] });

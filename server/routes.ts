@@ -175,15 +175,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const data = insertUserSchema.parse(req.body);
       const normalizedEmail = data.email.trim().toLowerCase();
       const passwordHash = await bcrypt.hash(data.password, 10);
+      const body: any = req.body || {};
+      const isAdmin = !!body.isAdmin;
+      const allowedModules = Array.isArray(body.allowedModules) ? body.allowedModules.filter((x: any) => typeof x === 'string') : [];
       const created = await storage.upsertUser({
         email: normalizedEmail,
         fullName: data.fullName,
         passwordHash,
         phone: data.phone,
         emailVerified: true,
+        isAdmin,
+        allowedModules,
       } as any);
-      const { id, email, fullName, phone, createdAt, updatedAt } = created as any;
-      res.json({ id, email, fullName, phone, createdAt, updatedAt });
+      const { id, email, fullName, phone, isAdmin: adminFlag, allowedModules, createdAt, updatedAt } = created as any;
+      res.json({ id, email, fullName, phone, isAdmin: adminFlag, allowedModules, createdAt, updatedAt });
     } catch (error) {
       console.error('Error creating user:', error);
       if (error instanceof z.ZodError) {
@@ -202,13 +207,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' });
       const data = updateUserSchema.parse(req.body);
       let update: any = { email: data.email.trim().toLowerCase(), fullName: data.fullName, phone: data.phone };
+      if (typeof (req.body as any).isAdmin === 'boolean') {
+        update.isAdmin = !!(req.body as any).isAdmin;
+      }
+      if (Array.isArray((req.body as any).allowedModules)) {
+        update.allowedModules = (req.body as any).allowedModules.filter((x: any) => typeof x === 'string');
+      }
       if (data.password) {
         const passwordHash = await bcrypt.hash(data.password, 10);
         update.passwordHash = passwordHash;
       }
       const saved = await storage.updateUser(id, update);
-      const { email, fullName, phone, createdAt, updatedAt } = saved as any;
-      res.json({ id, email, fullName, phone, createdAt, updatedAt });
+      const { email, fullName, phone, isAdmin: adminFlag, allowedModules, createdAt, updatedAt } = saved as any;
+      res.json({ id, email, fullName, phone, isAdmin: adminFlag, allowedModules, createdAt, updatedAt });
     } catch (error) {
       console.error('Error updating user:', error);
       if (error instanceof z.ZodError) {

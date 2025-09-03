@@ -30,8 +30,10 @@ import StatesList from "@/pages/states/list.tsx";
 import CitiesList from "@/pages/cities/list.tsx";
 import SettingsPlaceholder from "@/pages/settings";
 
-function PrivateRoute(props: RouteProps) {
-  const { isAuthenticated, isLoading, isError } = useAuth();
+type PrivateRouteProps = RouteProps & { module?: string };
+
+function PrivateRoute(props: PrivateRouteProps) {
+  const { isAuthenticated, isLoading, isError, user } = useAuth();
 
   if (isLoading) {
     return (
@@ -51,6 +53,13 @@ function PrivateRoute(props: RouteProps) {
 
   if (!isAuthenticated) return <Redirect to="/login" />;
 
+  // Optional: guard by module access when provided
+  const required = (props as any).module as string | undefined;
+  if (required && user && !(user as any).isAdmin) {
+    const allowed = ((user as any).allowedModules || []) as string[];
+    if (!allowed.includes(required)) return <Redirect to="/" />;
+  }
+
   return <Route {...props} />;
 }
 
@@ -59,24 +68,24 @@ function Router() {
     <Switch>
       <Route path="/login" component={Login} />
       <PrivateRoute path="/" component={Dashboard} />
-      <PrivateRoute path="/buildings" component={BuildingList} />
-      <PrivateRoute path="/reports" component={ReportList} />
-      <PrivateRoute path="/technicians" component={TechniciansList} />
-      <PrivateRoute path="/typologies" component={TypologiesList} />
-      <PrivateRoute path="/noise-classes" component={NoiseClassesList} />
-      <PrivateRoute path="/aggressiveness-classes" component={AggressivenessClassesList} />
-  <PrivateRoute path="/constructive-systems" component={ConstructiveSystemsList} />
-  <PrivateRoute path="/requirements" component={RequirementsList} />
-  <PrivateRoute path="/criteria" component={CriteriaList} />
-  <PrivateRoute path="/analyses" component={AnalysesList} />
-  <PrivateRoute path="/attributes" component={AttributesList} />
-  <PrivateRoute path="/parameters" component={ParametersList} />
-      <PrivateRoute path="/bioclimatic-zones" component={BioclimaticZonesList} />
-  <PrivateRoute path="/isopleths" component={IsoplethsList} />
-      <PrivateRoute path="/states" component={StatesList} />
-      <PrivateRoute path="/cities" component={CitiesList} />
-      <PrivateRoute path="/users" component={UsersList} />
-  <PrivateRoute path="/settings" component={SettingsPlaceholder} />
+      <PrivateRoute path="/buildings" component={BuildingList} module="buildings" />
+      <PrivateRoute path="/reports" component={ReportList} module="reports" />
+      <PrivateRoute path="/technicians" component={TechniciansList} module="technicians" />
+      <PrivateRoute path="/typologies" component={TypologiesList} module="typologies" />
+      <PrivateRoute path="/noise-classes" component={NoiseClassesList} module="noise-classes" />
+      <PrivateRoute path="/aggressiveness-classes" component={AggressivenessClassesList} module="aggressiveness-classes" />
+  <PrivateRoute path="/constructive-systems" component={ConstructiveSystemsList} module="constructive-systems" />
+  <PrivateRoute path="/requirements" component={RequirementsList} module="requirements" />
+  <PrivateRoute path="/criteria" component={CriteriaList} module="criteria" />
+  <PrivateRoute path="/analyses" component={AnalysesList} module="analyses" />
+  <PrivateRoute path="/attributes" component={AttributesList} module="attributes" />
+  <PrivateRoute path="/parameters" component={ParametersList} module="parameters" />
+      <PrivateRoute path="/bioclimatic-zones" component={BioclimaticZonesList} module="bioclimatic-zones" />
+  <PrivateRoute path="/isopleths" component={IsoplethsList} module="isopleths" />
+      <PrivateRoute path="/states" component={StatesList} module="states" />
+      <PrivateRoute path="/cities" component={CitiesList} module="cities" />
+      <PrivateRoute path="/users" component={UsersList} module="users" />
+  <PrivateRoute path="/settings" component={SettingsPlaceholder} module="settings" />
       <Route component={NotFound} />
     </Switch>
   );

@@ -346,9 +346,9 @@ export default function UsersList() {
         <DialogContent className="max-w-4xl max-h-[90vh] p-0 overflow-hidden">
           <div className="max-h-[calc(90vh-1rem)] overflow-y-auto my-7 px-7">
             <UserForm
-      key={formKey}
-              initialUser={editUser ? { id: editUser.id, fullName: editUser.fullName, email: editUser.email || '', phone: editUser.phone ?? '' } : null}
-  onSuccess={() => {
+              key={formKey}
+              initialUser={editUser ? { id: editUser.id, fullName: editUser.fullName, email: editUser.email || '', phone: editUser.phone ?? '', isAdmin: (editUser as any).isAdmin ?? false, allowedModules: (editUser as any).allowedModules ?? [] } : null}
+              onSuccess={() => {
         setEditUser(null);
         setOpenCreate(false);
                 queryClient.invalidateQueries({ queryKey: ["/api/users"] });

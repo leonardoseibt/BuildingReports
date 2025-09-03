@@ -48,6 +48,9 @@ export const users = pgTable("users", {
   emailVerified: boolean("email_verified").default(false),
   verificationToken: varchar("verification_token"),
   phone: varchar("phone", { length: 32 }),
+  // Permissions
+  isAdmin: boolean("is_admin").default(false).notNull(),
+  allowedModules: jsonb("allowed_modules").$type<string[]>().default(sql`'[]'::jsonb`).notNull(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
