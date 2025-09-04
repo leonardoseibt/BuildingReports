@@ -55,14 +55,6 @@ export default function Sidebar() {
     return (user as any).isAdmin || ((user as any).allowedModules || []).includes(key);
   };
 
-  // Compute which section groups should be shown based on module access
-  const showOperacoes = hasAccess('reports');
-  const showCadPessoas = hasAccess('buildings') || hasAccess('technicians');
-  const showCadLocalizacao = hasAccess('states') || hasAccess('cities') || hasAccess('bioclimatic-zones') || hasAccess('isopleths');
-  const showCadAuxiliares = hasAccess('typologies') || hasAccess('noise-classes') || hasAccess('aggressiveness-classes') || hasAccess('constructive-systems');
-  const showCadParametros = hasAccess('requirements') || hasAccess('criteria') || hasAccess('analyses') || hasAccess('attributes') || hasAccess('parameters');
-  const showAdministracao = hasAccess('users') || hasAccess('settings');
-
   const [isCollapsed, setIsCollapsed] = useState(() => {
     if (typeof window !== "undefined") {
       const stored = localStorage.getItem("sidebar-collapsed");
