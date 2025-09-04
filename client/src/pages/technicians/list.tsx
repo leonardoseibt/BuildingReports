@@ -6,6 +6,7 @@ import Header from "@/components/layout/header";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthRedirect } from '@/hooks/useAuthRedirect';
 import { useToast } from "@/hooks/use-toast";
+import { showSuccess, showError } from "@/lib/toast-messages";
 import TechnicianForm from "@/components/technicians/technician-form";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -159,10 +160,10 @@ export default function TechniciansList() {
     },
     onError: (err, _t, ctx) => {
       if (ctx?.prev) queryClient.setQueryData(["/api/technicians"], ctx.prev);
-      toast({ title: 'Erro ao excluir', description: String(err), variant: 'destructive' });
+      showError(toast, `Erro ao excluir: ${String(err)}`);
     },
     onSuccess: (_data, t) => {
-      toast({ title: 'Responsável técnico excluído', description: `${t.fullName} foi removido.` });
+      showSuccess(toast, `${t.fullName} foi removido.`);
     },
   onSettled: () => { queryClient.invalidateQueries({ queryKey: ["/api/technicians"], refetchType: 'inactive' }); queryClient.invalidateQueries({ queryKey: ['/api/dashboard/extended-stats'] }); }
   });

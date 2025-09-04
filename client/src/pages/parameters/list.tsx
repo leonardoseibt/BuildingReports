@@ -4,6 +4,7 @@ import Sidebar from '@/components/layout/sidebar';
 import Header from '@/components/layout/header';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
+import { showSuccess, showError } from '@/lib/toast-messages';
 import { useAuthRedirect } from '@/hooks/useAuthRedirect';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -118,9 +119,9 @@ export default function ParametersList() {
     },
     onError:(err,_t,ctx)=>{
       if(ctx?.prev) queryClient.setQueryData(parametersKey, ctx.prev);
-      toast({ title:'Erro ao excluir', description:String(err), variant:'destructive'});
+      showError(toast, `Erro ao excluir: ${String(err)}`);
     },
-    onSuccess:(_d,t)=> toast({ title:'Parâmetro excluído', description:`${t.label} foi removido.`}),
+    onSuccess:(_d,t)=> showSuccess(toast, `${t.label} foi removido.`),
     onSettled:()=> queryClient.invalidateQueries({ queryKey: parametersKey })
   });
   function askDelete(t:Parameter){ setSelectedItem(t); setConfirmOpen(true);} function confirmDelete(){ if(!selectedItem) return; deleteMutation.mutate(selectedItem); setConfirmOpen(false); setSelectedItem(null);} if(isLoading||!isAuthenticated) return null;

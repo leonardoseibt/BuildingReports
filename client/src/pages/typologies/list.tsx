@@ -6,6 +6,7 @@ import Header from "@/components/layout/header";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthRedirect } from '@/hooks/useAuthRedirect';
 import { useToast } from "@/hooks/use-toast";
+import { showSuccess, showError } from "@/lib/toast-messages";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Layers2, Plus, Loader2, Pencil, Trash2, Search, ArrowUp, ArrowDown } from "lucide-react";
@@ -104,9 +105,9 @@ export default function TypologiesList() {
     },
     onError: (err, _t, ctx) => {
       if (ctx?.prev) queryClient.setQueryData(["/api/typologies"], ctx.prev);
-      toast({ title: 'Erro ao excluir', description: String(err), variant: 'destructive' });
+      showError(toast, `Erro ao excluir: ${String(err)}`);
     },
-  onSuccess: (_data, t) => { toast({ title: 'Tipo de Uso excluído', description: `${t.label} foi removido.` }); },
+    onSuccess: (_data, t) => { showSuccess(toast, `${t.label} foi removido.`); },
   onSettled: () => { queryClient.invalidateQueries({ queryKey: ["/api/typologies"], refetchType: 'inactive' }); queryClient.invalidateQueries({ queryKey: ['/api/dashboard/extended-stats'] }); }
   });
 

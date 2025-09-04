@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useToast } from '@/hooks/use-toast';
+import { showSuccess, showError } from '@/lib/toast-messages';
 import { apiRequest } from '@/lib/queryClient';
 import { Button } from '@/components/ui/button';
 import FormHeader from '@/components/ui/form-header';
@@ -39,13 +40,13 @@ export default function CriterionForm({ onSuccess, onCancel, initialItem }: { on
       const method = isEdit ? 'PUT' : 'POST';
       const url = isEdit ? `/api/criteria/${initialItem!.id}` : '/api/criteria';
       await apiRequest(method as any, url as any, payload);
-      toast({ title: 'Sucesso', description: isEdit ? 'Critério atualizado.' : 'Critério cadastrado.' });
+      showSuccess(toast, isEdit ? 'Critério atualizado.' : 'Critério cadastrado.');
       onSuccess?.();
     } catch (e: any) {
       if (e.status === 409) {
-        toast({ title: 'Duplicado', description: 'Código já cadastrado.', variant: 'destructive' });
+        showError(toast, 'Código já cadastrado.');
       } else {
-        toast({ title: 'Erro', description: isEdit ? 'Falha ao atualizar.' : 'Falha ao cadastrar.', variant: 'destructive' });
+        showError(toast, isEdit ? 'Falha ao atualizar.' : 'Falha ao cadastrar.');
       }
     } finally {
       setSubmitting(false);

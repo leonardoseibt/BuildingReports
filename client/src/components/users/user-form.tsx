@@ -3,6 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { showSuccess, showError } from "@/lib/toast-messages";
 
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -140,7 +141,7 @@ export default function UserForm({ onSuccess, onCancel, initialUser }: UserFormP
         ? await apiRequest("PUT", `/api/users/${initialUser!.id}` as const, payload)
         : await apiRequest("POST", "/api/users", payload);
       await res.json();
-      toast({ title: "Sucesso", description: isEdit ? "Usuário atualizado." : "Usuário cadastrado." });
+      showSuccess(toast, isEdit ? "Usuário atualizado." : "Usuário cadastrado.");
       onSuccess?.();
     } catch (e) {
       let description = isEdit ? "Não foi possível atualizar." : "Não foi possível cadastrar.";
@@ -149,7 +150,7 @@ export default function UserForm({ onSuccess, onCancel, initialUser }: UserFormP
         form.setError("email", { message: description });
         if (form.setFocus) form.setFocus("email");
       }
-      toast({ title: "Erro", description, variant: "destructive" });
+      showError(toast, description);
     } finally {
       setSubmitting(false);
     }

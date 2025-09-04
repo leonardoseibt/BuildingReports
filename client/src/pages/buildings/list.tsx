@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { comparePt } from '@/lib/utils';
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { showSuccess, showError } from "@/lib/toast-messages";
 import { useAuthRedirect } from "@/hooks/useAuthRedirect";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import BuildingForm from "@/components/buildings/building-form";
@@ -230,11 +231,11 @@ export default function BuildingList() {
     },
     onError: (err, _b, ctx) => {
       if (ctx?.prev) queryClient.setQueryData(["/api/buildings"], ctx.prev);
-      toast({ title: 'Erro ao excluir', description: String(err), variant: 'destructive' });
+      showError(toast, `Erro ao excluir: ${String(err)}`);
     },
     onSuccess: (_data, b) => {
-  toast({ title: 'Edificação excluída', description: `${b.name} foi removida.` });
-  invalidateDashboard(queryClient);
+      showSuccess(toast, `${b.name} foi removida.`);
+      invalidateDashboard(queryClient);
     },
     onSettled: () => {
   queryClient.invalidateQueries({ queryKey: ["/api/buildings"], refetchType: 'inactive' });

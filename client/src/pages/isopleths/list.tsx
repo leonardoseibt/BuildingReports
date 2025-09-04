@@ -5,6 +5,7 @@ import Header from '@/components/layout/header';
 import { useAuth } from '@/hooks/useAuth';
 import { useAuthRedirect } from '@/hooks/useAuthRedirect';
 import { useToast } from '@/hooks/use-toast';
+import { showSuccess, showError } from '@/lib/toast-messages';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Wind, Plus, Loader2, Pencil, Trash2, MapPin, X, Search, ArrowUp, ArrowDown, AlertTriangle } from 'lucide-react';
@@ -126,8 +127,8 @@ export default function IsoplethsList() {
       queryClient.setQueryData<Isopleth[]>(['/api/isopleths'], prev.filter(x => x.id !== z.id));
       return { prev };
     },
-    onError: (err, _z, ctx) => { if (ctx?.prev) queryClient.setQueryData(['/api/isopleths'], ctx.prev); toast({ title: 'Erro ao excluir', description: String(err), variant: 'destructive' }); },
-    onSuccess: (_d, z) => toast({ title: 'Isopleta excluída', description: `${z.code} - ${z.label} removida.` }),
+    onError: (err, _z, ctx) => { if (ctx?.prev) queryClient.setQueryData(['/api/isopleths'], ctx.prev); showError(toast, `Erro ao excluir: ${String(err)}`); },
+    onSuccess: (_d, z) => showSuccess(toast, `${z.code} - ${z.label} removida.`),
     onSettled: () => queryClient.invalidateQueries({ queryKey: ['/api/isopleths'], refetchType: 'inactive' })
   });
 

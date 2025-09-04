@@ -5,6 +5,7 @@ import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { showSuccess, showError } from "@/lib/toast-messages";
 import { useAuthRedirect } from "@/hooks/useAuthRedirect";
 import UserForm from "@/components/users/user-form";
 import {
@@ -164,10 +165,10 @@ export default function UsersList() {
     },
     onError: (err, _u, ctx) => {
       if (ctx?.prev) queryClient.setQueryData(["/api/users"], ctx.prev);
-      toast({ title: "Erro ao excluir", description: (err as Error).message, variant: "destructive" });
+      showError(toast, `Erro ao excluir: ${(err as Error).message}`);
     },
     onSuccess: (_data, u) => {
-  toast({ title: "Usuário excluído", description: `${u.fullName} foi removido.` });
+      showSuccess(toast, `${u.fullName} foi removido.`);
     },
     onSettled: () => {
   // Revalida em background sem limpar lista atual
