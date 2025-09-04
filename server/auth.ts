@@ -139,18 +139,17 @@ export async function setupAuth(app: Express) {
     next();
   });
 
-  // CSRF protection: exigir no POST /api/login (cliente já envia token). Mantém GET /api/login (dev) sem CSRF.
+  // CSRF protection: aplica globalmente, exceto para GET /api/login (atalho dev)
   const csrfProtection = csurf({ cookie: false });
   app.use((req, res, next) => {
-    // Permite GET /api/login (atalho dev) sem CSRF
     if (req.method === 'GET' && req.path === '/api/login') {
       return next();
     }
-    return next();
+    return csrfProtection(req, res, next);
   });
 
-  // Token endpoint must have csrfProtection run (above) to generate secret+token (GET is safe so no validation failure)
-app.get('/api/csrf-token', csrfProtection, (req: any, res) => {
+  // Token endpoint: precisa apenas gerar token (GET é seguro e não falha na verificação)
+  app.get('/api/csrf-token', (req: any, res) => {
     try {
       const token = (req as any).csrfToken?.();
       res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
@@ -198,7 +197,7 @@ app.get('/api/csrf-token', csrfProtection, (req: any, res) => {
     res.redirect("/login?verified=1");
   });
 
-app.post("/api/login", csrfProtection, loginRateLimit, express.json(), async (req, res) => {
+  app.post("/api/login", loginRateLimit, express.json(), async (req, res) => {
     try {
       const { email, password } = authSchema.parse(req.body);
       const normalizedEmail = email.trim().toLowerCase();
