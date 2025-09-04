@@ -77,8 +77,8 @@ export default function Sidebar() {
     cadastros: true,
     cadPessoas: true,
     cadLocalizacao: true,
-  cadParametros: true,
-  cadAuxiliares: true,
+    cadParametros: true,
+    cadAuxiliares: true,
     administracao: true,
   };
 
@@ -127,6 +127,39 @@ export default function Sidebar() {
   const handleLogout = () => {
     window.location.href = '/api/logout';
   };
+
+  // Permission checks for each module
+  const canReports = hasAccess("reports");
+  const canBuildings = hasAccess("buildings");
+  const canTechnicians = hasAccess("technicians");
+  const canStates = hasAccess("states");
+  const canCities = hasAccess("cities");
+  const canBioclimatic = hasAccess("bioclimatic-zones");
+  const canIsopleths = hasAccess("isopleths");
+  const canTypologies = hasAccess("typologies");
+  const canNoiseClasses = hasAccess("noise-classes");
+  const canAggressivenessClasses = hasAccess("aggressiveness-classes");
+  const canConstructiveSystems = hasAccess("constructive-systems");
+  const canRequirements = hasAccess("requirements");
+  const canCriteria = hasAccess("criteria");
+  const canAnalyses = hasAccess("analyses");
+  const canAttributes = hasAccess("attributes");
+  const canParameters = hasAccess("parameters");
+  const canUsers = hasAccess("users");
+  const canSettings = hasAccess("settings");
+
+  // Visibility controls for groups
+  const showOperacoes = canReports;
+  const showCadPessoas = canBuildings || canTechnicians;
+  const showCadLocalizacao =
+    canStates || canCities || canBioclimatic || canIsopleths;
+  const showCadAuxiliares =
+    canTypologies || canNoiseClasses || canAggressivenessClasses || canConstructiveSystems;
+  const showCadParametros =
+    canRequirements || canCriteria || canAnalyses || canAttributes || canParameters;
+  const showCadastros =
+    showCadPessoas || showCadLocalizacao || showCadAuxiliares || showCadParametros;
+  const showAdministracao = canUsers || canSettings;
 
   return (
     <div
@@ -181,18 +214,18 @@ export default function Sidebar() {
             />
           </div>
           {/* Operações */}
-          <div style={{ display: showOperacoes ? undefined : 'none' }}>
-            <button
-              className="px-2 w-full text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1 flex items-center justify-between"
-              onClick={() => toggleSection('operacoes')}
-            >
-              <span>Operações</span>
-              <ChevronRight
-                className={cn("w-4 h-4 transition-transform", open.operacoes && "rotate-90")}
-              />
-            </button>
-            {open.operacoes && (
-              <>
+          {showOperacoes && (
+            <div>
+              <button
+                className="px-2 w-full text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1 flex items-center justify-between"
+                onClick={() => toggleSection('operacoes')}
+              >
+                <span>Operações</span>
+                <ChevronRight
+                  className={cn("w-4 h-4 transition-transform", open.operacoes && "rotate-90")}
+                />
+              </button>
+              {open.operacoes && canReports && (
                 <NavLink
                   href="/reports"
                   icon={FileText}
@@ -201,249 +234,275 @@ export default function Sidebar() {
                   isActive={location === '/reports'}
                   testId="nav-relatórios"
                 />
-              </>
-            )}
-          </div>
+              )}
+            </div>
+          )}
 
           {/* Cadastros */}
-          <div style={{ display: (showCadPessoas || showCadLocalizacao || showCadAuxiliares || showCadParametros) ? undefined : 'none' }}>
-            <button
-              className="px-2 w-full text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1 flex items-center justify-between"
-              onClick={() => toggleSection('cadastros')}
-            >
-              <span>Cadastros</span>
-              <ChevronRight
-                className={cn("w-4 h-4 transition-transform", open.cadastros && "rotate-90")}
-              />
-            </button>
-            {open.cadastros && (
-              <div className="pl-2 space-y-2">
-                {showCadPessoas && (
-                <div>
-                  <button
-                    className="px-0 w-full text-[11px] text-slate-500 font-medium flex items-center justify-between mb-1"
-                    onClick={() => toggleSection('cadPessoas')}
-                  >
-                    <span>Edificações e Profissionais</span>
-                    <ChevronRight
-                      className={cn("w-4 h-4 transition-transform", open.cadPessoas && "rotate-90")}
-                    />
-                  </button>
-                  {open.cadPessoas && (
-                    <div className="pl-2 space-y-0.5">
-                      <NavLink
-                        href="/buildings"
-                        visible={hasAccess('buildings')}
-                        icon={Building2}
-                        label="Edificações"
-                        isActive={location === '/buildings'}
-                        testId="nav-edificações"
-                      />
-                      <NavLink
-                        href="/technicians"
-                        visible={hasAccess('technicians')}
-                        icon={IdCard}
-                        label="Responsáveis Técnicos"
-                        isActive={location === '/technicians'}
-                        testId="nav-responsáveis-técnicos"
-                      />
+          {showCadastros && (
+            <div>
+              <button
+                className="px-2 w-full text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1 flex items-center justify-between"
+                onClick={() => toggleSection('cadastros')}
+              >
+                <span>Cadastros</span>
+                <ChevronRight
+                  className={cn("w-4 h-4 transition-transform", open.cadastros && "rotate-90")}
+                />
+              </button>
+              {open.cadastros && (
+                <div className="pl-2 space-y-2">
+                  {/* Edificações e Profissionais */}
+                  {showCadPessoas && (
+                    <div>
+                      <button
+                        className="px-0 w-full text-[11px] text-slate-500 font-medium flex items-center justify-between mb-1"
+                        onClick={() => toggleSection('cadPessoas')}
+                      >
+                        <span>Edificações e Profissionais</span>
+                        <ChevronRight
+                          className={cn("w-4 h-4 transition-transform", open.cadPessoas && "rotate-90")}
+                        />
+                      </button>
+                      {open.cadPessoas && (
+                        <div className="pl-2 space-y-0.5">
+                          {canBuildings && (
+                            <NavLink
+                              href="/buildings"
+                              icon={Building2}
+                              label="Edificações"
+                              isActive={location === '/buildings'}
+                              testId="nav-edificações"
+                            />
+                          )}
+                          {canTechnicians && (
+                            <NavLink
+                              href="/technicians"
+                              icon={IdCard}
+                              label="Responsáveis Técnicos"
+                              isActive={location === '/technicians'}
+                              testId="nav-responsáveis-técnicos"
+                            />
+                          )}
+                        </div>
+                      )}
                     </div>
                   )}
-                </div>
-                )}
 
-                {showCadLocalizacao && (
-                <div>
-                  <button
-                    className="px-0 w-full text-[11px] text-slate-500 font-medium flex items-center justify-between mb-1 mt-1"
-                    onClick={() => toggleSection('cadLocalizacao')}
-                  >
-                    <span>Localização</span>
-                    <ChevronRight
-                      className={cn("w-4 h-4 transition-transform", open.cadLocalizacao && "rotate-90")}
-                    />
-                  </button>
-                  {open.cadLocalizacao && (
-                    <div className="pl-2 space-y-0.5">
-                      <NavLink
-                        href="/states"
-                        visible={hasAccess('states')}
-                        icon={Map}
-                        label="Estados"
-                        isActive={location === '/states'}
-                        testId="nav-estados"
-                      />
-                      <NavLink
-                        href="/cities"
-                        visible={hasAccess('cities')}
-                        icon={Building2}
-                        label="Municípios"
-                        isActive={location === '/cities'}
-                        testId="nav-municípios"
-                      />
-                      <NavLink
-                        href="/bioclimatic-zones"
-                        visible={hasAccess('bioclimatic-zones')}
-                        icon={Sun}
-                        label="Zonas Bioclimáticas"
-                        isActive={location === '/bioclimatic-zones'}
-                        testId="nav-zonas-bioclimáticas"
-                      />
-                      <NavLink
-                        href="/isopleths"
-                        visible={hasAccess('isopleths')}
-                        icon={Wind}
-                        label="Isopletas"
-                        isActive={location === '/isopleths'}
-                        testId="nav-isopletas"
-                      />
+                  {/* Localização */}
+                  {showCadLocalizacao && (
+                    <div>
+                      <button
+                        className="px-0 w-full text-[11px] text-slate-500 font-medium flex items-center justify-between mb-1 mt-1"
+                        onClick={() => toggleSection('cadLocalizacao')}
+                      >
+                        <span>Localização</span>
+                        <ChevronRight
+                          className={cn("w-4 h-4 transition-transform", open.cadLocalizacao && "rotate-90")}
+                        />
+                      </button>
+                      {open.cadLocalizacao && (
+                        <div className="pl-2 space-y-0.5">
+                          {canStates && (
+                            <NavLink
+                              href="/states"
+                              icon={Map}
+                              label="Estados"
+                              isActive={location === '/states'}
+                              testId="nav-estados"
+                            />
+                          )}
+                          {canCities && (
+                            <NavLink
+                              href="/cities"
+                              icon={Building2}
+                              label="Municípios"
+                              isActive={location === '/cities'}
+                              testId="nav-municípios"
+                            />
+                          )}
+                          {canBioclimatic && (
+                            <NavLink
+                              href="/bioclimatic-zones"
+                              icon={Sun}
+                              label="Zonas Bioclimáticas"
+                              isActive={location === '/bioclimatic-zones'}
+                              testId="nav-zonas-bioclimáticas"
+                            />
+                          )}
+                          {canIsopleths && (
+                            <NavLink
+                              href="/isopleths"
+                              icon={Wind}
+                              label="Isopletas"
+                              isActive={location === '/isopleths'}
+                              testId="nav-isopletas"
+                            />
+                          )}
+                        </div>
+                      )}
                     </div>
                   )}
-                </div>
-                )}
-                )}
 
-                {showCadAuxiliares && (
-                <div>
-                  <button
-                    className="px-0 w-full text-[11px] text-slate-500 font-medium flex items-center justify-between mb-1 mt-1"
-                    onClick={() => toggleSection('cadAuxiliares')}
-                  >
-                    <span>Auxiliares</span>
-                    <ChevronRight
-                      className={cn("w-4 h-4 transition-transform", open.cadAuxiliares && "rotate-90")}
-                    />
-                  </button>
-                  {open.cadAuxiliares && (
-                    <div className="pl-2 space-y-0.5">
-                      <NavLink
-                        href="/typologies"
-                        visible={hasAccess('typologies')}
-                        icon={LayoutGrid}
-                        label="Tipos de Uso"
-                        isActive={location === '/typologies'}
-                        testId="nav-tipos-de-uso"
-                      />
-                      <NavLink
-                        href="/noise-classes"
-                        visible={hasAccess('noise-classes')}
-                        icon={Volume2}
-                        label="Classes de Ruído"
-                        isActive={location === '/noise-classes'}
-                        testId="nav-classes-de-ruído"
-                      />
-                      <NavLink
-                        href="/aggressiveness-classes"
-                        visible={hasAccess('aggressiveness-classes')}
-                        icon={AlertTriangle}
-                        label="Classes de Agressividade"
-                        isActive={location === '/aggressiveness-classes'}
-                        testId="nav-classes-de-agressividade"
-                      />
-                      <NavLink
-                        href="/constructive-systems"
-                        visible={hasAccess('constructive-systems')}
-                        icon={Hammer}
-                        label="Sistemas Construtivos"
-                        isActive={location === '/constructive-systems'}
-                        testId="nav-sistemas-construtivos"
-                      />
+                  {/* Auxiliares */}
+                  {showCadAuxiliares && (
+                    <div>
+                      <button
+                        className="px-0 w-full text-[11px] text-slate-500 font-medium flex items-center justify-between mb-1 mt-1"
+                        onClick={() => toggleSection('cadAuxiliares')}
+                      >
+                        <span>Auxiliares</span>
+                        <ChevronRight
+                          className={cn("w-4 h-4 transition-transform", open.cadAuxiliares && "rotate-90")}
+                        />
+                      </button>
+                      {open.cadAuxiliares && (
+                        <div className="pl-2 space-y-0.5">
+                          {canTypologies && (
+                            <NavLink
+                              href="/typologies"
+                              icon={LayoutGrid}
+                              label="Tipos de Uso"
+                              isActive={location === '/typologies'}
+                              testId="nav-tipos-de-uso"
+                            />
+                          )}
+                          {canNoiseClasses && (
+                            <NavLink
+                              href="/noise-classes"
+                              icon={Volume2}
+                              label="Classes de Ruído"
+                              isActive={location === '/noise-classes'}
+                              testId="nav-classes-de-ruído"
+                            />
+                          )}
+                          {canAggressivenessClasses && (
+                            <NavLink
+                              href="/aggressiveness-classes"
+                              icon={AlertTriangle}
+                              label="Classes de Agressividade"
+                              isActive={location === '/aggressiveness-classes'}
+                              testId="nav-classes-de-agressividade"
+                            />
+                          )}
+                          {canConstructiveSystems && (
+                            <NavLink
+                              href="/constructive-systems"
+                              icon={Hammer}
+                              label="Sistemas Construtivos"
+                              isActive={location === '/constructive-systems'}
+                              testId="nav-sistemas-construtivos"
+                            />
+                          )}
+                        </div>
+                      )}
                     </div>
                   )}
-                </div>
-                )}
 
-                <div>
-                  <button
-                    className="px-0 w-full text-[11px] text-slate-500 font-medium flex items-center justify-between mb-1 mt-1"
-                    onClick={() => toggleSection('cadParametros')}
-                  >
-                    <span>Parâmetros</span>
-                    <ChevronRight
-                      className={cn("w-4 h-4 transition-transform", open.cadParametros && "rotate-90")}
-                    />
-                  </button>
-                  {open.cadParametros && (
-                    <div className="pl-2 space-y-0.5">
-                      <NavLink
-                        href="/requirements"
-                        visible={hasAccess('requirements')}
-                        icon={ListChecks}
-                        label="Requisitos"
-                        isActive={location === '/requirements'}
-                        testId="nav-requisitos-parametros"
-                      />
-                      <NavLink
-                        href="/criteria"
-                        visible={hasAccess('criteria')}
-                        icon={Target}
-                        label="Critérios"
-                        isActive={location === '/criteria'}
-                        testId="nav-criterios"
-                      />
-                      <NavLink
-                        href="/analyses"
-                        visible={hasAccess('analyses')}
-                        icon={Beaker}
-                        label="Análises"
-                        isActive={location === '/analyses'}
-                        testId="nav-analises"
-                      />
-                      <NavLink
-                        href="/attributes"
-                        visible={hasAccess('attributes')}
-                        icon={Database}
-                        label="Atributos"
-                        isActive={location === '/attributes'}
-                        testId="nav-atributos"
-                      />
-                      <NavLink
-                        href="/parameters"
-                        visible={hasAccess('parameters')}
-                        icon={ListChecks}
-                        label="Parâmetros"
-                        isActive={location === '/parameters'}
-                        testId="nav-parametros"
-                      />
+                  {/* Parâmetros */}
+                  {showCadParametros && (
+                    <div>
+                      <button
+                        className="px-0 w-full text-[11px] text-slate-500 font-medium flex items-center justify-between mb-1 mt-1"
+                        onClick={() => toggleSection('cadParametros')}
+                      >
+                        <span>Parâmetros</span>
+                        <ChevronRight
+                          className={cn("w-4 h-4 transition-transform", open.cadParametros && "rotate-90")}
+                        />
+                      </button>
+                      {open.cadParametros && (
+                        <div className="pl-2 space-y-0.5">
+                          {canRequirements && (
+                            <NavLink
+                              href="/requirements"
+                              icon={ListChecks}
+                              label="Requisitos"
+                              isActive={location === '/requirements'}
+                              testId="nav-requisitos-parametros"
+                            />
+                          )}
+                          {canCriteria && (
+                            <NavLink
+                              href="/criteria"
+                              icon={Target}
+                              label="Critérios"
+                              isActive={location === '/criteria'}
+                              testId="nav-criterios"
+                            />
+                          )}
+                          {canAnalyses && (
+                            <NavLink
+                              href="/analyses"
+                              icon={Beaker}
+                              label="Análises"
+                              isActive={location === '/analyses'}
+                              testId="nav-analises"
+                            />
+                          )}
+                          {canAttributes && (
+                            <NavLink
+                              href="/attributes"
+                              icon={Database}
+                              label="Atributos"
+                              isActive={location === '/attributes'}
+                              testId="nav-atributos"
+                            />
+                          )}
+                          {canParameters && (
+                            <NavLink
+                              href="/parameters"
+                              icon={ListChecks}
+                              label="Parâmetros"
+                              isActive={location === '/parameters'}
+                              testId="nav-parametros"
+                            />
+                          )}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          )}
 
           {/* Administração */}
-          <div style={{ display: showAdministracao ? undefined : 'none' }}>
-            <button
-              className="px-2 w-full text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1 flex items-center justify-between"
-              onClick={() => toggleSection('administracao')}
-            >
-              <span>Administração</span>
-              <ChevronRight
-                className={cn("w-4 h-4 transition-transform", open.administracao && "rotate-90")}
-              />
-            </button>
-            {open.administracao && (
-              <>
-                <NavLink
-                  href="/users"
-                  visible={hasAccess('users')}
-                  icon={Users}
-                  label="Usuários"
-                  isActive={location === '/users'}
-                  testId="nav-usuários"
+          {showAdministracao && (
+            <div>
+              <button
+                className="px-2 w-full text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1 flex items-center justify-between"
+                onClick={() => toggleSection('administracao')}
+              >
+                <span>Administração</span>
+                <ChevronRight
+                  className={cn("w-4 h-4 transition-transform", open.administracao && "rotate-90")}
                 />
-                <NavLink
-                  href="/settings"
-                  visible={hasAccess('settings')}
-                  icon={Cog}
-                  label="Configurações"
-                  isActive={location === '/settings'}
-                  testId="nav-configurações"
-                />
-              </>
-            )}
-          </div>
+              </button>
+              {open.administracao && (
+                <>
+                  {canUsers && (
+                    <NavLink
+                      href="/users"
+                      icon={Users}
+                      label="Usuários"
+                      isActive={location === '/users'}
+                      testId="nav-usuários"
+                    />
+                  )}
+                  {canSettings && (
+                    <NavLink
+                      href="/settings"
+                      icon={Cog}
+                      label="Configurações"
+                      isActive={location === '/settings'}
+                      testId="nav-configurações"
+                    />
+                  )}
+                </>
+              )}
+            </div>
+          )}
         </nav>
       )}
 

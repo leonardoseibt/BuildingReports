@@ -177,7 +177,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const passwordHash = await bcrypt.hash(data.password, 10);
       const body: any = req.body || {};
       const isAdmin = !!body.isAdmin;
-      const allowedModules = Array.isArray(body.allowedModules) ? body.allowedModules.filter((x: any) => typeof x === 'string') : [];
+      const allowedModulesInput = Array.isArray(body.allowedModules)
+        ? body.allowedModules.filter((x: any) => typeof x === 'string')
+        : [];
       const created = await storage.upsertUser({
         email: normalizedEmail,
         fullName: data.fullName,
@@ -185,10 +187,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         phone: data.phone,
         emailVerified: true,
         isAdmin,
-        allowedModules,
+        allowedModules: allowedModulesInput,
       } as any);
-      const { id, email, fullName, phone, isAdmin: adminFlag, allowedModules: createdAllowedModules, createdAt, updatedAt } = created as any;
-      res.json({ id, email, fullName, phone, isAdmin: adminFlag, allowedModules: createdAllowedModules, createdAt, updatedAt });
+      const {
+        id,
+        email,
+        fullName,
+        phone,
+        isAdmin: adminFlag,
+        allowedModules: allowedModulesDb,
+        createdAt,
+        updatedAt,
+      } = created as any;
+      res.json({
+        id,
+        email,
+        fullName,
+        phone,
+        isAdmin: adminFlag,
+        allowedModules: allowedModulesDb,
+        createdAt,
+        updatedAt,
+      });
     } catch (error) {
       console.error('Error creating user:', error);
       if (error instanceof z.ZodError) {
