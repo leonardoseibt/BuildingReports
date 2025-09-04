@@ -5,6 +5,7 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { showSuccess, showError } from "@/lib/toast-messages";
 import {
   Form,
   FormControl,
@@ -173,11 +174,7 @@ export default function TechnicianForm({ onSuccess, onCancel, initialTech }: Tec
         });
       }
     } catch (error) {
-      toast({
-        title: "Erro",
-        description: "Erro ao buscar informações do CEP.",
-        variant: "destructive",
-      });
+      showError(toast, "Erro ao buscar informações do CEP.");
     } finally {
       setIsLookingUpCep(false);
     }
@@ -206,16 +203,12 @@ export default function TechnicianForm({ onSuccess, onCancel, initialTech }: Tec
       await (isEdit
         ? apiRequest("PUT", `/api/technicians/${initialTech!.id}` as const, payload)
         : apiRequest("POST", "/api/technicians", payload));
-  toast({ title: "Sucesso", description: isEdit ? "Responsável técnico atualizado." : "Responsável técnico cadastrado." });
+      showSuccess(toast, isEdit ? "Responsável técnico atualizado." : "Responsável técnico cadastrado.");
   queryClient.invalidateQueries({ queryKey: ['/api/technicians'] });
   queryClient.invalidateQueries({ queryKey: ['/api/dashboard/extended-stats'] });
   onSuccess?.();
     } catch (e) {
-      toast({
-        title: "Erro",
-        description: isEdit ? "Não foi possível atualizar." : "Não foi possível cadastrar.",
-        variant: "destructive",
-      });
+      showError(toast, isEdit ? "Não foi possível atualizar." : "Não foi possível cadastrar.");
     } finally {
       setSubmitting(false);
     }

@@ -1,9 +1,5 @@
 import type { FieldValues, UseFormReturn } from "react-hook-form";
-
-type AllowedVariant = 'default' | 'destructive' | null | undefined;
-interface ToastFn {
-  (opts: { title: string; description?: string; variant?: AllowedVariant }): void;
-}
+import { showError, type ToastFn } from "./toast-messages";
 
 // Centralized handler for 409 duplicate code errors.
 export async function handleCodeUniquenessError(
@@ -17,10 +13,10 @@ export async function handleCodeUniquenessError(
     if ((error?.response?.status === 409) || body?.message?.includes?.('já cadastrado')) {
       // Mark field level error
       form.setError('code', { message: 'Já existe um registro com este código.' });
-      toast({ title: 'Código duplicado', description: 'Escolha um código único.', variant: 'destructive' });
+      showError(toast, 'Código já cadastrado. Escolha um código único.');
       return true;
     }
   } catch { /* swallow parse errors */ }
-  toast({ title: 'Erro', description: fallbackDescription, variant: 'destructive' });
+  showError(toast, fallbackDescription);
   return false;
 }

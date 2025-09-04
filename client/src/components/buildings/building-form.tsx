@@ -6,6 +6,7 @@ import { useLocation } from "wouter";
 import { insertBuildingSchema, type Technician, type Building, type BioclimaticZone, type Isopleth } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { showSuccess, showError } from "@/lib/toast-messages";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -177,7 +178,7 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
       return response.json();
     },
     onSuccess: () => {
-      toast({ title: 'Sucesso', description: 'Edificação cadastrada com sucesso!' });
+      showSuccess(toast, 'Edificação cadastrada com sucesso!');
   queryClient.invalidateQueries({ queryKey: ['/api/buildings'] });
   invalidateDashboard(queryClient);
       onSuccess?.();
@@ -189,7 +190,7 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
         setTimeout(() => { window.location.href = '/login'; }, 400);
         return;
       }
-      toast({ title: 'Erro', description: 'Erro ao cadastrar edificação. Tente novamente.', variant: 'destructive' });
+        showError(toast, 'Erro ao cadastrar edificação. Tente novamente.');
     },
   });
 
@@ -230,11 +231,7 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
       }
     } catch (error) {
       setZoneLocked(false);
-      toast({
-        title: "Erro",
-        description: "Erro ao buscar informações do CEP.",
-        variant: "destructive",
-      });
+      showError(toast, "Erro ao buscar informações do CEP.");
     } finally {
       setIsLookingUpCep(false);
     }
@@ -247,7 +244,7 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
       return response.json();
     },
     onSuccess: () => {
-      toast({ title: 'Sucesso', description: 'Edificação atualizada com sucesso!' });
+      showSuccess(toast, 'Edificação atualizada com sucesso!');
   queryClient.invalidateQueries({ queryKey: ['/api/buildings'] });
   invalidateDashboard(queryClient);
       onSuccess?.();
@@ -258,7 +255,7 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
         setTimeout(() => { window.location.href = '/login'; }, 400);
         return;
       }
-      toast({ title: 'Erro', description: 'Erro ao atualizar edificação. Tente novamente.', variant: 'destructive' });
+      showError(toast, 'Erro ao atualizar edificação. Tente novamente.');
     },
   });
 

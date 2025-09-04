@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useToast } from '@/hooks/use-toast';
+import { showSuccess, showError } from '@/lib/toast-messages';
 import { apiRequest } from '@/lib/queryClient';
 import { Button } from '@/components/ui/button';
 import FormHeader from '@/components/ui/form-header';
@@ -158,10 +159,10 @@ export default function ParameterForm({ onSuccess, onCancel, initialItem }: { on
       const method = isEdit ? 'PUT' : 'POST';
       const url = isEdit ? `/api/parameters/${initialItem!.id}` : '/api/parameters';
       await apiRequest(method as any, url as any, payload);
-      toast({ title: 'Sucesso', description: isEdit ? 'Parâmetro atualizado.' : 'Parâmetro cadastrado.' });
+      showSuccess(toast, isEdit ? 'Parâmetro atualizado.' : 'Parâmetro cadastrado.');
       onSuccess?.();
     } catch (e: any) {
-      toast({ title: 'Erro', description: isEdit ? 'Falha ao atualizar.' : 'Falha ao cadastrar.', variant: 'destructive' });
+      showError(toast, isEdit ? 'Falha ao atualizar.' : 'Falha ao cadastrar.');
     } finally {
       setSubmitting(false);
     }

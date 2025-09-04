@@ -4,6 +4,7 @@ import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { showSuccess, showError } from "@/lib/toast-messages";
 import { useAuthRedirect } from "@/hooks/useAuthRedirect";
 import { apiRequest } from '@/lib/queryClient';
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -84,8 +85,9 @@ export default function StatesList() {
     },
     onError: (err, _t, ctx) => {
       if (ctx?.prev) queryClient.setQueryData(["/api/states"], ctx.prev);
-      toast({ title: 'Erro ao excluir', description: String(err), variant: 'destructive' });
+      showError(toast, `Erro ao excluir: ${String(err)}`);
     },
+    onSuccess: (_data, t) => { showSuccess(toast, `${t.name} (${t.code}) foi removido.`); },
     onSettled: () => { queryClient.invalidateQueries({ queryKey: ["/api/states"], refetchType: 'inactive' }); }
   });
 
@@ -110,9 +112,9 @@ export default function StatesList() {
     onSuccess: () => {
       setOpen(false); setEditItem(null); setCode(""); setName(""); setRegion("");
       queryClient.invalidateQueries({ queryKey: ["/api/states"] });
-      toast({ title: 'Estado salvo' });
+      showSuccess(toast, 'Estado salvo com sucesso.');
     },
-    onError: () => { toast({ title: 'Erro', description: 'Falha ao salvar estado', variant: 'destructive' }); },
+    onError: () => { showError(toast, 'Falha ao salvar estado'); },
   });
 
   if (isLoading || !isAuthenticated) return null;

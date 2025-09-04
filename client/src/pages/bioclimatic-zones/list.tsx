@@ -5,6 +5,7 @@ import Header from "@/components/layout/header";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthRedirect } from '@/hooks/useAuthRedirect';
 import { useToast } from "@/hooks/use-toast";
+import { showSuccess, showError } from "@/lib/toast-messages";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Globe2, Plus, Loader2, Pencil, Trash2, MapPin, X, Search, ArrowUp, ArrowDown } from "lucide-react";
@@ -123,9 +124,9 @@ export default function BioclimaticZonesList() {
     },
     onError: (err, _z, ctx) => {
       if (ctx?.prev) queryClient.setQueryData(["/api/bioclimatic-zones"], ctx.prev);
-      toast({ title: 'Erro ao excluir', description: String(err), variant: 'destructive' });
+      showError(toast, `Erro ao excluir: ${String(err)}`);
     },
-    onSuccess: (_data, z) => { toast({ title: 'Zona excluída', description: `${z.code} - ${z.label} foi removida.` }); },
+    onSuccess: (_data, z) => { showSuccess(toast, `${z.code} - ${z.label} foi removida.`); },
     onSettled: () => { queryClient.invalidateQueries({ queryKey: ["/api/bioclimatic-zones"], refetchType: 'inactive' }); }
   });
 
@@ -294,9 +295,9 @@ function CoveragesPanel({ zone, onClose }: { zone: BioclimaticZone; onClose: () 
     },
     onError: (_e, _vars, ctx) => {
       if (ctx?.prev) queryClient.setQueryData(["/api/bioclimatic-zones", zone.id, "coverages"], ctx.prev);
-      toast({ title: 'Erro', description: 'Falha ao adicionar abrangência', variant: 'destructive' });
+      showError(toast, 'Falha ao adicionar abrangência');
     },
-    onSuccess: () => { toast({ title: 'Abrangência adicionada' }); },
+    onSuccess: () => { showSuccess(toast, 'Abrangência adicionada.'); },
     onSettled: () => { queryClient.invalidateQueries({ queryKey: ["/api/bioclimatic-zones", zone.id, "coverages"] }); }
   });
 
@@ -313,9 +314,9 @@ function CoveragesPanel({ zone, onClose }: { zone: BioclimaticZone; onClose: () 
     },
     onError: (_e, _vars, ctx) => {
       if (ctx?.prev) queryClient.setQueryData(["/api/bioclimatic-zones", zone.id, "coverages"], ctx.prev);
-      toast({ title: 'Erro', description: 'Falha ao atualizar abrangência', variant: 'destructive' });
+      showError(toast, 'Falha ao atualizar abrangência');
     },
-    onSuccess: () => { toast({ title: 'Abrangência atualizada' }); setEditingId(null); },
+    onSuccess: () => { showSuccess(toast, 'Abrangência atualizada.'); setEditingId(null); },
     onSettled: () => { queryClient.invalidateQueries({ queryKey: ["/api/bioclimatic-zones", zone.id, "coverages"] }); }
   });
 
@@ -331,9 +332,9 @@ function CoveragesPanel({ zone, onClose }: { zone: BioclimaticZone; onClose: () 
     },
     onError: (_e, _vars, ctx) => {
       if (ctx?.prev) queryClient.setQueryData(["/api/bioclimatic-zones", zone.id, "coverages"], ctx.prev);
-      toast({ title: 'Erro', description: 'Falha ao remover abrangência', variant: 'destructive' });
+      showError(toast, 'Falha ao remover abrangência');
     },
-    onSuccess: () => { toast({ title: 'Abrangência removida' }); },
+    onSuccess: () => { showSuccess(toast, 'Abrangência removida.'); },
     onSettled: () => { queryClient.invalidateQueries({ queryKey: ["/api/bioclimatic-zones", zone.id, "coverages"] }); }
   });
 

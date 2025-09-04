@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import FormHeader from "@/components/ui/form-header";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { showSuccess } from "@/lib/toast-messages";
 import { apiRequest } from "@/lib/queryClient";
 import { handleCodeUniquenessError } from "@/lib/form-error-handlers";
 import type { AggressivenessClass } from "@shared/schema";
@@ -38,7 +39,7 @@ export default function AggressivenessClassForm({ initialItem, onSuccess, onCanc
       return res.json();
     },
     onSuccess: () => {
-      toast({ title: 'Sucesso', description: `Classe ${initialItem ? 'atualizada' : 'cadastrada'} com sucesso!` });
+      showSuccess(toast, `Classe ${initialItem ? 'atualizada' : 'cadastrada'} com sucesso!`);
       queryClient.invalidateQueries({ queryKey: ['/api/aggressiveness-classes'] });
   queryClient.invalidateQueries({ queryKey: ['/api/dashboard/extended-stats'] });
       onSuccess?.();

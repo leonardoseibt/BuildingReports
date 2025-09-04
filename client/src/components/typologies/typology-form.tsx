@@ -8,6 +8,7 @@ import FormHeader from "@/components/ui/form-header";
 import { Button } from "@/components/ui/button";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { showSuccess } from "@/lib/toast-messages";
 import { apiRequest } from "@/lib/queryClient";
 import { handleCodeUniquenessError } from "@/lib/form-error-handlers";
 import type { Typology } from "@shared/schema";
@@ -37,7 +38,7 @@ export default function TypologyForm({ initialItem, onSuccess, onCancel }: { ini
       return res.json();
     },
     onSuccess: () => {
-  toast({ title: 'Sucesso', description: `Tipo de Uso ${initialItem ? 'atualizado' : 'cadastrado'} com sucesso!` });
+      showSuccess(toast, `Tipo de Uso ${initialItem ? 'atualizado' : 'cadastrado'} com sucesso!`);
       queryClient.invalidateQueries({ queryKey: ['/api/typologies'] });
   queryClient.invalidateQueries({ queryKey: ['/api/dashboard/extended-stats'] });
   queryClient.invalidateQueries({ queryKey: ['/api/dashboard/stats'] });

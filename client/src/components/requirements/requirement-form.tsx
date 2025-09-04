@@ -8,6 +8,7 @@ import FormHeader from "@/components/ui/form-header";
 import { Button } from "@/components/ui/button";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { showSuccess } from "@/lib/toast-messages";
 import { apiRequest } from "@/lib/queryClient";
 import { handleCodeUniquenessError } from "@/lib/form-error-handlers";
 import type { Requirement } from "@shared/schema";
@@ -37,7 +38,7 @@ export default function RequirementForm({ initialItem, onSuccess, onCancel }: { 
       return res.json();
     },
     onSuccess: () => {
-      toast({ title: 'Sucesso', description: `Requisito ${initialItem ? 'atualizado' : 'cadastrado'} com sucesso!` });
+      showSuccess(toast, `Requisito ${initialItem ? 'atualizado' : 'cadastrado'} com sucesso!`);
       queryClient.invalidateQueries({ queryKey: ['/api/requirements'] });
       onSuccess?.();
     },

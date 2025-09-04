@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useToast } from '@/hooks/use-toast';
+import { showSuccess, showError } from '@/lib/toast-messages';
 import { apiRequest } from '@/lib/queryClient';
 import { Button } from '@/components/ui/button';
 import FormHeader from '@/components/ui/form-header';
@@ -48,13 +49,13 @@ export default function AnalysisForm({ onSuccess, onCancel, initialItem }: { onS
       const method = isEdit ? 'PUT' : 'POST';
       const url = isEdit ? `/api/analyses/${initialItem!.id}` : '/api/analyses';
       await apiRequest(method as any, url as any, payload);
-      toast({ title: 'Sucesso', description: isEdit ? 'Análise atualizada.' : 'Análise cadastrada.' });
+      showSuccess(toast, isEdit ? 'Análise atualizada.' : 'Análise cadastrada.');
       onSuccess?.();
     } catch (e: any) {
       if (String(e.message).includes('409')) {
-        toast({ title: 'Duplicado', description: 'Código já cadastrado dentro deste critério.', variant: 'destructive' });
+        showError(toast, 'Código já cadastrado dentro deste critério.');
       } else {
-        toast({ title: 'Erro', description: isEdit ? 'Falha ao atualizar.' : 'Falha ao cadastrar.', variant: 'destructive' });
+        showError(toast, isEdit ? 'Falha ao atualizar.' : 'Falha ao cadastrar.');
       }
     } finally {
       setSubmitting(false);
