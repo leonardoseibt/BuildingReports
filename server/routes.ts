@@ -280,10 +280,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userId,
       });
       // If technicianId is provided, ensure it exists and belongs to the same user
+      // unless the requester has permissions to manage all technicians
       if ((buildingData as any).technicianId) {
         const tech = await storage.getTechnician(Number((buildingData as any).technicianId));
         if (!tech) return res.status(400).json({ message: 'Responsável técnico informado não existe.' });
-        if (tech.userId !== userId) return res.status(403).json({ message: 'Access denied' });
+        const me = await storage.getUser(userId);
+        const canManageTechnicians = !!(me && ((me as any).isAdmin || ((me as any).allowedModules || []).includes('technicians')));
+        if (tech.userId !== userId && !canManageTechnicians) return res.status(403).json({ message: 'Access denied' });
       }
       // Validate master ids (if provided)
       const { typologyId, noiseClassId, aggressivenessClassId } = buildingData as any;
@@ -361,13 +364,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId: number = Number(req.user.claims.sub);
       const me = await storage.getUser(userId);
       const canManageBuildings = !!(me && ((me as any).isAdmin || ((me as any).allowedModules || []).includes('buildings')));
+      const canManageTechnicians = !!(me && ((me as any).isAdmin || ((me as any).allowedModules || []).includes('technicians')));
       if (existing.userId !== userId && !canManageBuildings) return res.status(403).json({ message: 'Access denied' });
 
       const data = updateBuildingSchema.parse(req.body);
       if ((data as any).technicianId) {
         const tech = await storage.getTechnician(Number((data as any).technicianId));
         if (!tech) return res.status(400).json({ message: 'Responsável técnico informado não existe.' });
-        if (tech.userId !== Number(req.user.claims.sub)) return res.status(403).json({ message: 'Access denied' });
+        if (tech.userId !== userId && !canManageTechnicians) return res.status(403).json({ message: 'Access denied' });
       }
       // Validate master ids (if provided)
       const { typologyId, noiseClassId, aggressivenessClassId } = data as any;
