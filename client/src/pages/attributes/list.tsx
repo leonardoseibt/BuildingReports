@@ -7,6 +7,7 @@ import Header from '@/components/layout/header';
 import { useAuth } from '@/hooks/useAuth';
 import { useAuthRedirect } from '@/hooks/useAuthRedirect';
 import { useToast } from '@/hooks/use-toast';
+import { showSuccess, showError } from '@/lib/toast-messages';
 import { Plus, Database, Search, ArrowUp, ArrowDown, Pencil, Trash2 } from 'lucide-react';
 import { ActiveToggleButton } from '@/components/common/active-toggle-button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -160,10 +161,18 @@ export default function AttributesList() {
       }
       return res.json();
     },
-    onSuccess: () => { toast({ title: 'Atributo criado' }); queryClient.invalidateQueries({ queryKey: attributeKey }); setOpen(false); },
+    onSuccess: () => {
+      showSuccess(toast, 'Atributo criado com sucesso.');
+      queryClient.invalidateQueries({ queryKey: attributeKey });
+      setOpen(false);
+    },
     onError: (err: any) => {
-      toast({ title: 'Erro ao criar', description: err?.message === 'Atributo já existe para esta coluna' ? 'Já existe atributo cadastrado para esta Tabela/Coluna.' : (err?.message || 'Falha inesperada'), variant: 'destructive' });
-    }
+      const msg =
+        err?.message === 'Atributo já existe para esta coluna'
+          ? 'Já existe atributo cadastrado para esta Tabela/Coluna.'
+          : err?.message || 'Falha inesperada';
+      showError(toast, msg);
+    },
   });
   const updateMutation = useMutation({
     mutationFn: async (data: AttributeDefinitionFormData) => {
@@ -178,17 +187,31 @@ export default function AttributesList() {
       }
       return res.json();
     },
-    onSuccess: () => { toast({ title: 'Atributo atualizado' }); queryClient.invalidateQueries({ queryKey: attributeKey }); setOpen(false); },
+    onSuccess: () => {
+      showSuccess(toast, 'Atributo atualizado.');
+      queryClient.invalidateQueries({ queryKey: attributeKey });
+      setOpen(false);
+    },
     onError: (err: any) => {
-      toast({ title: 'Erro ao atualizar', description: err?.message === 'Atributo já existe para esta coluna' ? 'Já existe atributo cadastrado para esta Tabela/Coluna.' : (err?.message || 'Falha inesperada'), variant: 'destructive' });
-    }
+      const msg =
+        err?.message === 'Atributo já existe para esta coluna'
+          ? 'Já existe atributo cadastrado para esta Tabela/Coluna.'
+          : err?.message || 'Falha inesperada';
+      showError(toast, msg);
+    },
   });
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
       const res = await apiRequest('DELETE', `/api/attributes/${id}`);
       return res.json();
     },
-    onSuccess: () => { toast({ title: 'Atributo desativado' }); queryClient.invalidateQueries({ queryKey: attributeKey }); }
+    onSuccess: () => {
+      showSuccess(toast, 'Atributo removido.');
+      queryClient.invalidateQueries({ queryKey: attributeKey });
+    },
+    onError: (err: any) => {
+      showError(toast, `Erro ao remover: ${err?.message || 'falha inesperada'}`);
+    },
   });
 
   function openNew() { setEditItem(null); setFormKey(k=>k+1); setOpen(true); }
