@@ -3,6 +3,7 @@ import { Power } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useMutation } from "@tanstack/react-query";
+import { showSuccess, showError } from "@/lib/toast-messages";
 import * as React from 'react';
 
 interface ActiveToggleButtonProps {
@@ -59,10 +60,10 @@ export const ActiveToggleButton: React.FC<ActiveToggleButtonProps> = ({
         const restored = Array.isArray(context.prevData) ? context.prevData.find((r:any) => r.id === id) : null;
         setLocalActive(restored?.isActive ?? isActive);
       }
-      toast({ title: 'Erro', description: 'Falha ao alterar status.', variant: 'destructive' });
+      showError(toast, 'Falha ao alterar status.');
     },
     onSuccess: (val) => {
-      toast({ title: 'Status atualizado', description: `${entityLabel} ${val ? 'ativado' : 'desativado'}.` });
+      showSuccess(toast, `${entityLabel} ${val ? 'ativado' : 'desativado'}.`);
     },
     onSettled: () => {
       // Ensure final server state reflected

@@ -4,6 +4,7 @@ import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { showSuccess, showError } from "@/lib/toast-messages";
 import { useAuthRedirect } from "@/hooks/useAuthRedirect";
 import { apiRequest } from '@/lib/queryClient';
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -137,8 +138,9 @@ export default function CitiesList() {
     },
     onError: (err, _t, ctx) => {
       if (ctx?.prev) queryClient.setQueryData(["/api/cities"], ctx.prev);
-      toast({ title: 'Erro ao excluir', description: String(err), variant: 'destructive' });
+      showError(toast, `Erro ao excluir: ${String(err)}`);
     },
+    onSuccess: (_data, t) => { showSuccess(toast, `${t.name} foi removido.`); },
     onSettled: () => { queryClient.invalidateQueries({ queryKey: ["/api/cities"], refetchType: 'inactive' }); }
   });
 
@@ -171,9 +173,9 @@ export default function CitiesList() {
     onSuccess: () => {
       setOpen(false); setEditItem(null); resetFormFields();
       queryClient.invalidateQueries({ queryKey: ["/api/cities"] });
-      toast({ title: 'Município salvo' });
+      showSuccess(toast, 'Município salvo com sucesso.');
     },
-    onError: (e) => { toast({ title: 'Erro', description: String(e), variant: 'destructive' }); },
+    onError: (e) => { showError(toast, String(e)); },
   });
 
   if (isLoading || !isAuthenticated) return null;

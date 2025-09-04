@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
+import { showSuccess, showError } from "@/lib/toast-messages";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, clearCsrfToken } from "@/lib/queryClient";
 import { Mail, Lock, Eye, EyeOff, Loader2, Building2, ArrowRight } from "lucide-react";
@@ -36,7 +37,7 @@ export default function Login() {
       if (res.ok) {
         // Regenerating the session on login invalidates previous CSRF secrets; clear cached token
         clearCsrfToken();
-        toast({ title: "Sucesso", description: "Login realizado" });
+        showSuccess(toast, "Login realizado.");
         await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
         await queryClient.refetchQueries({ queryKey: ["/api/auth/user"] });
         // fallback: caso o roteamento SPA não ocorra (ex: estado interno ainda carregando), força navegação
@@ -48,14 +49,10 @@ export default function Login() {
         setLocation("/");
       } else {
         const data = await res.json().catch(() => ({}));
-        toast({
-          title: "Erro",
-          description: data.message || "Login falhou",
-          variant: "destructive",
-        });
+        showError(toast, data.message || "Login falhou");
       }
     } catch (err) {
-      toast({ title: "Erro", description: "Login falhou", variant: "destructive" });
+      showError(toast, "Login falhou");
     } finally {
       setSubmitting(false);
     }

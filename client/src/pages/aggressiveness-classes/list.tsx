@@ -6,6 +6,7 @@ import Header from "@/components/layout/header";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthRedirect } from '@/hooks/useAuthRedirect';
 import { useToast } from "@/hooks/use-toast";
+import { showSuccess, showError } from "@/lib/toast-messages";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Shield, Plus, Loader2, Pencil, Trash2, Search, ArrowUp, ArrowDown } from "lucide-react";
@@ -104,9 +105,9 @@ export default function AggressivenessClassesList() {
     },
     onError: (err, _t, ctx) => {
       if (ctx?.prev) queryClient.setQueryData(["/api/aggressiveness-classes"], ctx.prev);
-      toast({ title: 'Erro ao excluir', description: String(err), variant: 'destructive' });
+      showError(toast, `Erro ao excluir: ${String(err)}`);
     },
-    onSuccess: (_data, t) => { toast({ title: 'Classe de agressividade excluída', description: `${t.label} foi removida.` }); },
+    onSuccess: (_data, t) => { showSuccess(toast, `${t.label} foi removida.`); },
   onSettled: () => { queryClient.invalidateQueries({ queryKey: ["/api/aggressiveness-classes"], refetchType: 'inactive' }); queryClient.invalidateQueries({ queryKey: ['/api/dashboard/extended-stats'] }); }
   });
 

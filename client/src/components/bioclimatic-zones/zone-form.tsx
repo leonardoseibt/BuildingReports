@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import FormHeader from "@/components/ui/form-header";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { showSuccess, showError } from "@/lib/toast-messages";
 import { apiRequest } from "@/lib/queryClient";
 import type { BioclimaticZone } from "@shared/schema";
 
@@ -39,11 +40,11 @@ export default function ZoneForm({ initialItem, onSuccess, onCancel }: { initial
       return res.json();
     },
     onSuccess: () => {
-      toast({ title: 'Sucesso', description: `Zona ${initialItem ? 'atualizada' : 'cadastrada'} com sucesso!` });
+      showSuccess(toast, `Zona ${initialItem ? 'atualizada' : 'cadastrada'} com sucesso!`);
       queryClient.invalidateQueries({ queryKey: ['/api/bioclimatic-zones'] });
       onSuccess?.();
     },
-    onError: () => { toast({ title: 'Erro', description: 'Falha ao salvar zona', variant: 'destructive' }); },
+    onError: () => { showError(toast, 'Falha ao salvar zona'); },
   });
 
   return (

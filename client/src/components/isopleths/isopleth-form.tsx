@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useToast } from '@/hooks/use-toast';
+import { showSuccess, showError } from '@/lib/toast-messages';
 import { apiRequest } from '@/lib/queryClient';
 import { Button } from '@/components/ui/button';
 import FormHeader from '@/components/ui/form-header';
@@ -84,13 +85,13 @@ export default function IsoplethForm({ initialItem, onSuccess, onCancel }: { ini
       const method = isEdit ? 'PUT' : 'POST';
       const url = isEdit ? `/api/isopleths/${initialItem!.id}` : '/api/isopleths';
       await apiRequest(method as any, url as any, payload);
-      toast({ title: 'Sucesso', description: isEdit ? 'Isopleta atualizada.' : 'Isopleta cadastrada.' });
+      showSuccess(toast, isEdit ? 'Isopleta atualizada.' : 'Isopleta cadastrada.');
       onSuccess?.();
     } catch (e: any) {
       if (String(e.message).includes('409')) {
-        toast({ title: 'Duplicado', description: 'Código já cadastrado.', variant: 'destructive' });
+        showError(toast, 'Código já cadastrado.');
       } else {
-        toast({ title: 'Erro', description: isEdit ? 'Falha ao atualizar.' : 'Falha ao cadastrar.', variant: 'destructive' });
+        showError(toast, isEdit ? 'Falha ao atualizar.' : 'Falha ao cadastrar.');
       }
     } finally {
       setSubmitting(false);

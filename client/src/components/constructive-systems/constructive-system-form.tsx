@@ -8,6 +8,7 @@ import FormHeader from "@/components/ui/form-header";
 import { Button } from "@/components/ui/button";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { showSuccess } from "@/lib/toast-messages";
 import { apiRequest } from "@/lib/queryClient";
 import { handleCodeUniquenessError } from "@/lib/form-error-handlers";
 import type { ConstructiveSystem } from "@shared/schema";
@@ -37,7 +38,7 @@ export default function ConstructiveSystemForm({ initialItem, onSuccess, onCance
       return res.json();
     },
     onSuccess: () => {
-      toast({ title: 'Sucesso', description: `Sistema Construtivo ${initialItem ? 'atualizado' : 'cadastrado'} com sucesso!` });
+      showSuccess(toast, `Sistema Construtivo ${initialItem ? 'atualizado' : 'cadastrado'} com sucesso!`);
       queryClient.invalidateQueries({ queryKey: ['/api/constructive-systems'] });
       onSuccess?.();
     },
