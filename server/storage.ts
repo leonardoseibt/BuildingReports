@@ -91,6 +91,7 @@ export interface IStorage {
   // Building operations
   createBuilding(building: InsertBuilding): Promise<Building>;
   getBuildingsByUser(userId: number, limit?: number, offset?: number): Promise<{ items: Building[]; total: number }>;
+  listAllBuildings(limit?: number, offset?: number): Promise<{ items: Building[]; total: number }>;
   getBuilding(id: number): Promise<Building | undefined>;
   updateBuilding(id: number, building: Partial<InsertBuilding>): Promise<Building>;
   deleteBuilding(id: number): Promise<boolean>;
@@ -126,6 +127,7 @@ export interface IStorage {
   // Technicians
   createTechnician(tech: InsertTechnician): Promise<Technician>;
   listTechnicians(userId: number, limit?: number, offset?: number): Promise<{ items: Technician[]; total: number }>;
+  listAllTechnicians(limit?: number, offset?: number): Promise<{ items: Technician[]; total: number }>;
   getTechnician(id: number): Promise<Technician | undefined>;
   updateTechnician(id: number, tech: Partial<InsertTechnician>): Promise<Technician>;
   deleteTechnician(id: number): Promise<boolean>;
@@ -730,6 +732,49 @@ export class DatabaseStorage implements IStorage {
       pendingEvaluations,
       recentBuildings,
     };
+  }
+
+  async listAllBuildings(limit?: number, offset?: number): Promise<{ items: Building[]; total: number }> {
+    const totalRes = await db.select({ value: count() }).from(buildings);
+    const total = Number(totalRes[0]?.value ?? 0);
+    let query = db
+      .select({
+        id: buildings.id,
+        userId: buildings.userId,
+        technicianId: buildings.technicianId,
+        name: buildings.name,
+        typologyId: buildings.typologyId,
+        noiseClassId: buildings.noiseClassId,
+        aggressivenessClassId: buildings.aggressivenessClassId,
+        cep: buildings.cep,
+        street: buildings.street,
+        addressNumber: buildings.addressNumber,
+        neighborhood: buildings.neighborhood,
+        city: buildings.city,
+        state: buildings.state,
+        bioclimaticZone: buildings.bioclimaticZone,
+        totalArea: buildings.totalArea,
+        buildingHeight: buildings.buildingHeight,
+        floors: buildings.floors,
+        units: buildings.units,
+        createdAt: buildings.createdAt,
+        updatedAt: buildings.updatedAt,
+        typologyCode: typologies.code,
+        typologyLabel: typologies.label,
+        noiseClassCode: noiseClasses.code,
+        noiseClassLabel: noiseClasses.label,
+        aggressivenessClassCode: aggressivenessClasses.code,
+        aggressivenessClassLabel: aggressivenessClasses.label,
+      })
+      .from(buildings)
+      .leftJoin(typologies, eq(buildings.typologyId, typologies.id))
+      .leftJoin(noiseClasses, eq(buildings.noiseClassId, noiseClasses.id))
+      .leftJoin(aggressivenessClasses, eq(buildings.aggressivenessClassId, aggressivenessClasses.id))
+      .orderBy(desc(buildings.createdAt));
+    if (limit !== undefined) query = (query as any).limit(limit);
+    if (offset !== undefined) query = (query as any).offset(offset);
+    const items = await query as any;
+    return { items, total };
   }
 
   // Extended dashboard statistics (aggregations & distributions)
@@ -1368,6 +1413,21 @@ export class DatabaseStorage implements IStorage {
       .limit(limit)
       .offset(offset);
     return { items: items as any, total };
+  }
+
+  async listAllTechnicians(limit?: number, offset?: number): Promise<{ items: Technician[]; total: number }> {
+    const totalRes = await db
+      .select({ value: count() })
+      .from(technicians);
+    const total = Number(totalRes[0]?.value ?? 0);
+    let query = db
+      .select()
+      .from(technicians)
+      .orderBy(desc(technicians.createdAt));
+    if (limit !== undefined) query = (query as any).limit(limit);
+    if (offset !== undefined) query = (query as any).offset(offset);
+    const items = await query;
+    return { items, total };
   }
   async createParameter(item: InsertParameter): Promise<Parameter> {
     const [row] = await db.insert(parameters).values({

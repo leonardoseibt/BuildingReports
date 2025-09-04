@@ -187,8 +187,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         isAdmin,
         allowedModules,
       } as any);
-      const { id, email, fullName, phone, isAdmin: adminFlag, allowedModules, createdAt, updatedAt } = created as any;
-      res.json({ id, email, fullName, phone, isAdmin: adminFlag, allowedModules, createdAt, updatedAt });
+      const { id, email, fullName, phone, isAdmin: adminFlag, allowedModules: createdAllowedModules, createdAt, updatedAt } = created as any;
+      res.json({ id, email, fullName, phone, isAdmin: adminFlag, allowedModules: createdAllowedModules, createdAt, updatedAt });
     } catch (error) {
       console.error('Error creating user:', error);
       if (error instanceof z.ZodError) {
@@ -294,10 +294,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/buildings', isAuthenticated, async (req: any, res) => {
     try {
       const userId: number = Number(req.user.claims.sub);
-      const { limit, offset, page } = getPaginationParams(req.query);
-      const { items, total } = await storage.getBuildingsByUser(userId, limit, offset);
-  // Client expects a plain array (was breaking when wrapped). If pagination needed later, adapt client first.
-  res.json(items);
+      const me = await storage.getUser(userId);
+      const { limit, offset } = getPaginationParams(req.query);
+      const canViewAll = !!(me && ((me as any).isAdmin || ((me as any).allowedModules || []).includes('buildings')));
+      const { items } = canViewAll
+        ? await storage.listAllBuildings(limit, offset)
+        : await storage.getBuildingsByUser(userId, limit, offset);
+      // Client expects a plain array.
+      res.json(items);
     } catch (error) {
       console.error("Error fetching buildings:", error);
       res.status(500).json({ message: "Failed to fetch buildings" });
@@ -313,8 +317,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Building not found" });
       }
       
-      // Check if building belongs to user
-      if (building.userId !== Number(req.user.claims.sub)) {
+      // Check permission: owner OR admin/has module 'buildings'
+      const userId: number = Number(req.user.claims.sub);
+      const me = await storage.getUser(userId);
+      const canManageBuildings = !!(me && ((me as any).isAdmin || ((me as any).allowedModules || []).includes('buildings')));
+      if (building.userId !== userId && !canManageBuildings) {
         return res.status(403).json({ message: "Access denied" });
       }
       
@@ -331,7 +338,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' });
       const existing = await storage.getBuilding(id);
       if (!existing) return res.status(404).json({ message: 'Edificação não encontrada' });
-      if (existing.userId !== Number(req.user.claims.sub)) return res.status(403).json({ message: 'Access denied' });
+      const userId: number = Number(req.user.claims.sub);
+      const me = await storage.getUser(userId);
+      const canManageBuildings = !!(me && ((me as any).isAdmin || ((me as any).allowedModules || []).includes('buildings')));
+      if (existing.userId !== userId && !canManageBuildings) return res.status(403).json({ message: 'Access denied' });
 
       const data = updateBuildingSchema.parse(req.body);
       if ((data as any).technicianId) {
@@ -370,7 +380,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' });
       const existing = await storage.getBuilding(id);
       if (!existing) return res.status(404).json({ message: 'Edificação não encontrada' });
-      if (existing.userId !== Number(req.user.claims.sub)) return res.status(403).json({ message: 'Access denied' });
+      const userId: number = Number(req.user.claims.sub);
+      const me = await storage.getUser(userId);
+      const canManageBuildings = !!(me && ((me as any).isAdmin || ((me as any).allowedModules || []).includes('buildings')));
+      if (existing.userId !== userId && !canManageBuildings) return res.status(403).json({ message: 'Access denied' });
 
       const ok = await storage.deleteBuilding(id);
       res.json({ ok });
@@ -389,7 +402,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   if (!Number.isFinite(buildingId)) return res.status(400).json({ message: 'ID inválido' });
       const building = await storage.getBuilding(buildingId);
       
-  if (!building || building.userId !== Number(req.user.claims.sub)) {
+      const userId: number = Number(req.user.claims.sub);
+      const me = await storage.getUser(userId);
+      const canManageBuildings = !!(me && ((me as any).isAdmin || ((me as any).allowedModules || []).includes('buildings')));
+      if (!building || (building.userId !== userId && !canManageBuildings)) {
         return res.status(403).json({ message: "Access denied" });
       }
       
@@ -415,7 +431,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   if (!Number.isFinite(buildingId)) return res.status(400).json({ message: 'ID inválido' });
       const building = await storage.getBuilding(buildingId);
       
-  if (!building || building.userId !== Number(req.user.claims.sub)) {
+      const userId: number = Number(req.user.claims.sub);
+      const me = await storage.getUser(userId);
+      const canManageBuildings = !!(me && ((me as any).isAdmin || ((me as any).allowedModules || []).includes('buildings')));
+      if (!building || (building.userId !== userId && !canManageBuildings)) {
         return res.status(403).json({ message: "Access denied" });
       }
       
@@ -441,7 +460,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   if (!Number.isFinite(buildingId)) return res.status(400).json({ message: 'ID inválido' });
       const building = await storage.getBuilding(buildingId);
       
-  if (!building || building.userId !== Number(req.user.claims.sub)) {
+      const userId: number = Number(req.user.claims.sub);
+      const me = await storage.getUser(userId);
+      const canManageBuildings = !!(me && ((me as any).isAdmin || ((me as any).allowedModules || []).includes('buildings')));
+      if (!building || (building.userId !== userId && !canManageBuildings)) {
         return res.status(403).json({ message: "Access denied" });
       }
       
@@ -468,7 +490,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   if (!Number.isFinite(buildingId)) return res.status(400).json({ message: 'ID inválido' });
       const building = await storage.getBuilding(buildingId);
       
-  if (!building || building.userId !== Number(req.user.claims.sub)) {
+      const userId: number = Number(req.user.claims.sub);
+      const me = await storage.getUser(userId);
+      const canManageBuildings = !!(me && ((me as any).isAdmin || ((me as any).allowedModules || []).includes('buildings')));
+      if (!building || (building.userId !== userId && !canManageBuildings)) {
         return res.status(403).json({ message: "Access denied" });
       }
       
@@ -494,7 +519,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   if (!Number.isFinite(buildingId)) return res.status(400).json({ message: 'ID inválido' });
       const building = await storage.getBuilding(buildingId);
       
-  if (!building || building.userId !== Number(req.user.claims.sub)) {
+      const userId: number = Number(req.user.claims.sub);
+      const me = await storage.getUser(userId);
+      const canManageBuildings = !!(me && ((me as any).isAdmin || ((me as any).allowedModules || []).includes('buildings')));
+      if (!building || (building.userId !== userId && !canManageBuildings)) {
         return res.status(403).json({ message: "Access denied" });
       }
       
@@ -730,9 +758,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/technicians', isAuthenticated, async (req: any, res) => {
     try {
       const userId: number = Number(req.user.claims.sub);
-      const { limit, offset, page } = getPaginationParams(req.query);
-      const { items, total } = await storage.listTechnicians(userId, limit, offset);
-  res.json(items);
+      const me = await storage.getUser(userId);
+      const { limit, offset } = getPaginationParams(req.query);
+      const canViewAll = !!(me && ((me as any).isAdmin || ((me as any).allowedModules || []).includes('technicians')));
+      const { items } = canViewAll
+        ? await storage.listAllTechnicians(limit, offset)
+        : await storage.listTechnicians(userId, limit, offset);
+      res.json(items);
     } catch (error) {
       console.error('Error fetching technicians', error);
       res.status(500).json({ message: 'Failed to fetch technicians' });
@@ -761,7 +793,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' });
       const row = await storage.getTechnician(id);
       if (!row) return res.status(404).json({ message: 'Responsável técnico não encontrado' });
-      if (row.userId !== Number(req.user.claims.sub)) return res.status(403).json({ message: 'Access denied' });
+      const userId: number = Number(req.user.claims.sub);
+      const me = await storage.getUser(userId);
+      const canManageTechnicians = !!(me && ((me as any).isAdmin || ((me as any).allowedModules || []).includes('technicians')));
+      if (row.userId !== userId && !canManageTechnicians) return res.status(403).json({ message: 'Access denied' });
       res.json(row);
     } catch (error) {
       console.error('Error fetching technician', error);
@@ -775,7 +810,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' });
       const existing = await storage.getTechnician(id);
       if (!existing) return res.status(404).json({ message: 'Responsável técnico não encontrado' });
-      if (existing.userId !== Number(req.user.claims.sub)) return res.status(403).json({ message: 'Access denied' });
+      const userId: number = Number(req.user.claims.sub);
+      const me = await storage.getUser(userId);
+      const canManageTechnicians = !!(me && ((me as any).isAdmin || ((me as any).allowedModules || []).includes('technicians')));
+      if (existing.userId !== userId && !canManageTechnicians) return res.status(403).json({ message: 'Access denied' });
 
       const data = updateTechnicianSchema.parse(req.body);
       const saved = await storage.updateTechnician(id, data as any);
@@ -795,7 +833,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' });
       const existing = await storage.getTechnician(id);
       if (!existing) return res.status(404).json({ message: 'Responsável técnico não encontrado' });
-      if (existing.userId !== Number(req.user.claims.sub)) return res.status(403).json({ message: 'Access denied' });
+      const userId: number = Number(req.user.claims.sub);
+      const me = await storage.getUser(userId);
+      const canManageTechnicians = !!(me && ((me as any).isAdmin || ((me as any).allowedModules || []).includes('technicians')));
+      if (existing.userId !== userId && !canManageTechnicians) return res.status(403).json({ message: 'Access denied' });
       const ok = await storage.deleteTechnician(id);
       res.json({ ok });
     } catch (error: any) {

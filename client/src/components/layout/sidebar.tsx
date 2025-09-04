@@ -27,7 +27,8 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
-function NavLink({ href, icon: Icon, label, isActive, testId, indent = 0 }: { href: string; icon: any; label: string; isActive: boolean; testId: string; indent?: number; }) {
+function NavLink({ href, icon: Icon, label, isActive, testId, indent = 0, visible = true }: { href: string; icon: any; label: string; isActive: boolean; testId: string; indent?: number; visible?: boolean; }) {
+  if (!visible) return null;
   return (
     <Link href={href}>
       <Button
@@ -53,6 +54,14 @@ export default function Sidebar() {
     if (!user) return false;
     return (user as any).isAdmin || ((user as any).allowedModules || []).includes(key);
   };
+
+  // Compute which section groups should be shown based on module access
+  const showOperacoes = hasAccess('reports');
+  const showCadPessoas = hasAccess('buildings') || hasAccess('technicians');
+  const showCadLocalizacao = hasAccess('states') || hasAccess('cities') || hasAccess('bioclimatic-zones') || hasAccess('isopleths');
+  const showCadAuxiliares = hasAccess('typologies') || hasAccess('noise-classes') || hasAccess('aggressiveness-classes') || hasAccess('constructive-systems');
+  const showCadParametros = hasAccess('requirements') || hasAccess('criteria') || hasAccess('analyses') || hasAccess('attributes') || hasAccess('parameters');
+  const showAdministracao = hasAccess('users') || hasAccess('settings');
 
   const [isCollapsed, setIsCollapsed] = useState(() => {
     if (typeof window !== "undefined") {
@@ -171,9 +180,8 @@ export default function Sidebar() {
               testId="nav-dashboard"
             />
           </div>
-
           {/* Operações */}
-          <div>
+          <div style={{ display: showOperacoes ? undefined : 'none' }}>
             <button
               className="px-2 w-full text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1 flex items-center justify-between"
               onClick={() => toggleSection('operacoes')}
@@ -188,6 +196,7 @@ export default function Sidebar() {
                 <NavLink
                   href="/reports"
                   icon={FileText}
+                  visible={hasAccess('reports')}
                   label="Relatórios"
                   isActive={location === '/reports'}
                   testId="nav-relatórios"
@@ -197,7 +206,7 @@ export default function Sidebar() {
           </div>
 
           {/* Cadastros */}
-          <div>
+          <div style={{ display: (showCadPessoas || showCadLocalizacao || showCadAuxiliares || showCadParametros) ? undefined : 'none' }}>
             <button
               className="px-2 w-full text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1 flex items-center justify-between"
               onClick={() => toggleSection('cadastros')}
@@ -209,6 +218,7 @@ export default function Sidebar() {
             </button>
             {open.cadastros && (
               <div className="pl-2 space-y-2">
+                {showCadPessoas && (
                 <div>
                   <button
                     className="px-0 w-full text-[11px] text-slate-500 font-medium flex items-center justify-between mb-1"
@@ -223,6 +233,7 @@ export default function Sidebar() {
                     <div className="pl-2 space-y-0.5">
                       <NavLink
                         href="/buildings"
+                        visible={hasAccess('buildings')}
                         icon={Building2}
                         label="Edificações"
                         isActive={location === '/buildings'}
@@ -230,6 +241,7 @@ export default function Sidebar() {
                       />
                       <NavLink
                         href="/technicians"
+                        visible={hasAccess('technicians')}
                         icon={IdCard}
                         label="Responsáveis Técnicos"
                         isActive={location === '/technicians'}
@@ -238,7 +250,9 @@ export default function Sidebar() {
                     </div>
                   )}
                 </div>
+                )}
 
+                {showCadLocalizacao && (
                 <div>
                   <button
                     className="px-0 w-full text-[11px] text-slate-500 font-medium flex items-center justify-between mb-1 mt-1"
@@ -253,6 +267,7 @@ export default function Sidebar() {
                     <div className="pl-2 space-y-0.5">
                       <NavLink
                         href="/states"
+                        visible={hasAccess('states')}
                         icon={Map}
                         label="Estados"
                         isActive={location === '/states'}
@@ -260,6 +275,7 @@ export default function Sidebar() {
                       />
                       <NavLink
                         href="/cities"
+                        visible={hasAccess('cities')}
                         icon={Building2}
                         label="Municípios"
                         isActive={location === '/cities'}
@@ -267,6 +283,7 @@ export default function Sidebar() {
                       />
                       <NavLink
                         href="/bioclimatic-zones"
+                        visible={hasAccess('bioclimatic-zones')}
                         icon={Sun}
                         label="Zonas Bioclimáticas"
                         isActive={location === '/bioclimatic-zones'}
@@ -274,6 +291,7 @@ export default function Sidebar() {
                       />
                       <NavLink
                         href="/isopleths"
+                        visible={hasAccess('isopleths')}
                         icon={Wind}
                         label="Isopletas"
                         isActive={location === '/isopleths'}
@@ -282,7 +300,10 @@ export default function Sidebar() {
                     </div>
                   )}
                 </div>
+                )}
+                )}
 
+                {showCadAuxiliares && (
                 <div>
                   <button
                     className="px-0 w-full text-[11px] text-slate-500 font-medium flex items-center justify-between mb-1 mt-1"
@@ -297,6 +318,7 @@ export default function Sidebar() {
                     <div className="pl-2 space-y-0.5">
                       <NavLink
                         href="/typologies"
+                        visible={hasAccess('typologies')}
                         icon={LayoutGrid}
                         label="Tipos de Uso"
                         isActive={location === '/typologies'}
@@ -304,6 +326,7 @@ export default function Sidebar() {
                       />
                       <NavLink
                         href="/noise-classes"
+                        visible={hasAccess('noise-classes')}
                         icon={Volume2}
                         label="Classes de Ruído"
                         isActive={location === '/noise-classes'}
@@ -311,6 +334,7 @@ export default function Sidebar() {
                       />
                       <NavLink
                         href="/aggressiveness-classes"
+                        visible={hasAccess('aggressiveness-classes')}
                         icon={AlertTriangle}
                         label="Classes de Agressividade"
                         isActive={location === '/aggressiveness-classes'}
@@ -318,6 +342,7 @@ export default function Sidebar() {
                       />
                       <NavLink
                         href="/constructive-systems"
+                        visible={hasAccess('constructive-systems')}
                         icon={Hammer}
                         label="Sistemas Construtivos"
                         isActive={location === '/constructive-systems'}
@@ -326,6 +351,7 @@ export default function Sidebar() {
                     </div>
                   )}
                 </div>
+                )}
 
                 <div>
                   <button
@@ -341,6 +367,7 @@ export default function Sidebar() {
                     <div className="pl-2 space-y-0.5">
                       <NavLink
                         href="/requirements"
+                        visible={hasAccess('requirements')}
                         icon={ListChecks}
                         label="Requisitos"
                         isActive={location === '/requirements'}
@@ -348,6 +375,7 @@ export default function Sidebar() {
                       />
                       <NavLink
                         href="/criteria"
+                        visible={hasAccess('criteria')}
                         icon={Target}
                         label="Critérios"
                         isActive={location === '/criteria'}
@@ -355,6 +383,7 @@ export default function Sidebar() {
                       />
                       <NavLink
                         href="/analyses"
+                        visible={hasAccess('analyses')}
                         icon={Beaker}
                         label="Análises"
                         isActive={location === '/analyses'}
@@ -362,6 +391,7 @@ export default function Sidebar() {
                       />
                       <NavLink
                         href="/attributes"
+                        visible={hasAccess('attributes')}
                         icon={Database}
                         label="Atributos"
                         isActive={location === '/attributes'}
@@ -369,6 +399,7 @@ export default function Sidebar() {
                       />
                       <NavLink
                         href="/parameters"
+                        visible={hasAccess('parameters')}
                         icon={ListChecks}
                         label="Parâmetros"
                         isActive={location === '/parameters'}
@@ -382,7 +413,7 @@ export default function Sidebar() {
           </div>
 
           {/* Administração */}
-          <div>
+          <div style={{ display: showAdministracao ? undefined : 'none' }}>
             <button
               className="px-2 w-full text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1 flex items-center justify-between"
               onClick={() => toggleSection('administracao')}
@@ -396,6 +427,7 @@ export default function Sidebar() {
               <>
                 <NavLink
                   href="/users"
+                  visible={hasAccess('users')}
                   icon={Users}
                   label="Usuários"
                   isActive={location === '/users'}
@@ -403,6 +435,7 @@ export default function Sidebar() {
                 />
                 <NavLink
                   href="/settings"
+                  visible={hasAccess('settings')}
                   icon={Cog}
                   label="Configurações"
                   isActive={location === '/settings'}

@@ -69,7 +69,11 @@ export default function UserForm({ onSuccess, onCancel, initialUser }: UserFormP
   const isEdit = !!initialUser?.id;
   const userSchemaClient = React.useMemo(() => {
     const base = isEdit ? updateUserSchema : insertUserSchema;
-    return base.superRefine((data, ctx) => {
+    const withPerms = base.extend({
+      isAdmin: z.boolean().optional(),
+      allowedModules: z.array(z.string()).optional(),
+    });
+    return withPerms.superRefine((data, ctx) => {
       if (!data.fullName || String(data.fullName).trim().length === 0) {
         ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Nome é obrigatório', path: ['fullName'] });
       }

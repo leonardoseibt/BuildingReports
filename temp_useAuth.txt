@@ -1,0 +1,45 @@
+    1:import { useQuery, useQueryClient } from "@tanstack/react-query";
+    2:import type { PublicUser as User } from "@shared/schema";
+    3:import { useEffect, useState } from "react";
+    4:import { getQueryFn } from "@/lib/queryClient";
+    5:
+    6:interface SessionUser extends User { expires_at?: number }
+    7:
+    8:export function useAuth() {
+    9:  const queryClient = useQueryClient();
+   10:  const { data: user, isLoading, isError, error } = useQuery<SessionUser | null>({
+   11:    queryKey: ["/api/auth/user"],
+   12:    retry: false,
+   13:    queryFn: getQueryFn<SessionUser | null>({ on401: "returnNull" }),
+   14:  });
+   15:
+   16:  const [nowSec, setNowSec] = useState(() => Math.floor(Date.now() / 1000));
+   17:
+   18:  // Schedule a timer to tick precisely at expiry (or every 30s if far away)
+   19:  useEffect(() => {
+   20:    if (!user?.expires_at) return;
+   21:    const remainingSec = user.expires_at - nowSec;
+   22:    const nextTickMs = remainingSec > 180 ? 30_000 : Math.max(500, remainingSec * 1000);
+   23:    const t = setTimeout(() => setNowSec(Math.floor(Date.now() / 1000)), nextTickMs);
+   24:    return () => clearTimeout(t);
+   25:  }, [user?.expires_at, nowSec]);
+   26:
+   27:  const isExpired = !!user?.expires_at && user.expires_at <= nowSec;
+   28:
+   29:  // When expired, proactively clear cached user so PrivateRoute redirects without needing an API call
+   30:  useEffect(() => {
+   31:    if (isExpired && user) {
+   32:      queryClient.setQueryData(["/api/auth/user"], null);
+   33:    }
+   34:  }, [isExpired, user, queryClient]);
+   35:
+   36:  return {
+   37:    user: isExpired ? null : user,
+   38:    isLoading,
+   39:    isError,
+   40:    error,
+   41:    isAuthenticated: !!user && !isExpired,
+   42:    expiresAt: user?.expires_at,
+   43:    isExpired,
+   44:  };
+   45:}
