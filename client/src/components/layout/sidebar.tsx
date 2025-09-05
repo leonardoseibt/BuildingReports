@@ -23,7 +23,8 @@ import {
   Beaker,
   Database,
   ChevronRight,
-  ChevronLeft
+  ChevronLeft,
+  RefreshCw
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { refreshSession } from "@/lib/authUtils";
@@ -112,11 +113,12 @@ export default function Sidebar() {
 
   useEffect(() => {
     if (!expiresAt || !isAuthenticated) return;
-    const remaining = expiresAt - nowSec;
-    const nextMs = remaining <= 300 ? 1000 : 30_000;
-    const t = setTimeout(() => setNowSec(Math.floor(Date.now() / 1000)), nextMs);
-    return () => clearTimeout(t);
-  }, [expiresAt, nowSec, isAuthenticated]);
+    const interval = setInterval(
+      () => setNowSec(Math.floor(Date.now() / 1000)),
+      1000
+    );
+    return () => clearInterval(interval);
+  }, [expiresAt, isAuthenticated]);
 
   const toggleSidebar = () => {
     const next = !isCollapsed;
@@ -154,15 +156,13 @@ export default function Sidebar() {
   const remaining = expiresAt ? expiresAt - nowSec : 0;
   const minutes = Math.floor(Math.max(remaining, 0) / 60);
   const seconds = Math.max(remaining, 0) % 60;
-  const timeColor = remaining <= 60 ? 'text-red-600' : remaining <= 300 ? 'text-orange-500' : 'text-slate-600';
-  const initials = user?.fullName
-    ? (() => {
-        const parts = user.fullName.trim().split(/\s+/);
-        const first = parts[0]?.[0] ?? '';
-        const last = parts[parts.length - 1]?.[0] ?? '';
-        return (first + last).toUpperCase();
-      })()
-    : user?.email?.[0]?.toUpperCase() || '';
+  const timeColor =
+    remaining <= 60
+      ? "text-red-600"
+      : remaining <= 300
+      ? "text-orange-500"
+      : "text-slate-600";
+  const fullName = user?.fullName || user?.email || "Usuário";
 
   // Permission checks for each module
   const canReports = hasAccess("reports");
@@ -549,32 +549,41 @@ export default function Sidebar() {
             <div className="w-10 h-10 bg-slate-300 rounded-full flex items-center justify-center overflow-hidden">
               <User className="w-5 h-5 text-slate-600" />
             </div>
-            <span
-              className="text-sm font-medium text-slate-900"
-              data-testid="text-user-name"
-            >
-              {initials || 'Usuário'}
-            </span>
-            {isAuthenticated && expiresAt && (
-              <>
-                <span
-                  className={cn("text-xs font-mono", timeColor)}
-                  data-testid="text-session-remaining"
-                >
-                  {minutes}:{seconds.toString().padStart(2, '0')}
-                </span>
-                <Button
-                  onClick={handleExtend}
-                  size="sm"
-                  variant="ghost"
-                  className="text-xs px-2"
-                  data-testid="button-extend-session"
-                  disabled={isRefreshing}
-                >
-                  {isRefreshing ? '...': 'Continuar'}
-                </Button>
-              </>
-            )}
+            <div className="flex flex-col">
+              <span
+                className="text-sm font-medium text-slate-900"
+                data-testid="text-user-name"
+              >
+                {fullName}
+              </span>
+              {isAuthenticated && expiresAt && (
+                <div className="flex items-center gap-1 mt-0.5">
+                  <span
+                    className={cn("text-xs font-mono", timeColor)}
+                    data-testid="text-session-remaining"
+                  >
+                    {minutes}:{seconds.toString().padStart(2, "0")}
+                  </span>
+                  {remaining <= 60 && remaining > 0 && (
+                    <Button
+                      onClick={handleExtend}
+                      size="icon"
+                      variant="ghost"
+                      className="h-4 w-4 p-0"
+                      data-testid="button-extend-session"
+                      disabled={isRefreshing}
+                    >
+                      <RefreshCw
+                        className={cn(
+                          "w-3 h-3",
+                          isRefreshing && "animate-spin"
+                        )}
+                      />
+                    </Button>
+                  )}
+                </div>
+              )}
+            </div>
             <Button
               variant="ghost"
               size="sm"
