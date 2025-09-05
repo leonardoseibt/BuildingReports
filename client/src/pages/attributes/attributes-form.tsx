@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { NotchedField } from '@/components/ui/notched-field';
-import { Input } from '@/components/ui/input';
+import { SmartInput } from '@/components/ui/smart-inputs';
 import FormHeader from '@/components/ui/form-header';
 import { Button } from '@/components/ui/button';
 import { AttributeDefinitionFormData, DATA_KINDS } from './types';
@@ -81,7 +81,7 @@ export function AttributesFormDialog({ open, onOpenChange, editItem, onSubmit, l
             <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
               <div className="md:col-span-12">
                 <NotchedField label="Nome" requiredMark>
-                  <Input value={friendlyName} onChange={(e)=> setFriendlyName(e.target.value)} required name="friendlyName" className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" />
+                  <SmartInput value={friendlyName} onChange={(e)=> setFriendlyName(e.target.value)} required name="friendlyName" className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" />
                 </NotchedField>
               </div>
             </div>

@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useSmartReplace } from '@/hooks/use-smart-replace';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -8,7 +9,7 @@ import { apiRequest } from '@/lib/queryClient';
 import { Button } from '@/components/ui/button';
 import FormHeader from '@/components/ui/form-header';
 import { Form, FormField, FormItem, FormControl, FormMessage } from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
+import { SmartInput, SmartTextarea } from '@/components/ui/smart-inputs';
 import { NotchedField } from '@/components/ui/notched-field';
 import type { Parameter, Analysis, Criterion, Requirement } from '@shared/schema';
 import { useQuery } from '@tanstack/react-query';
@@ -33,6 +34,7 @@ const formSchema = z.object({
 export type ParameterFormData = z.infer<typeof formSchema>;
 
 export default function ParameterForm({ onSuccess, onCancel, initialItem }: { onSuccess?: () => void; onCancel?: () => void; initialItem?: Parameter | null; }) {
+  const smartReplace = useSmartReplace();
   const { toast } = useToast();
   const isEdit = !!initialItem;
   const { data: requirements = [] } = useQuery<Requirement[]>({ queryKey: ['/api/requirements'] });
@@ -297,7 +299,7 @@ export default function ParameterForm({ onSuccess, onCancel, initialItem }: { on
                   <FormItem>
                     <FormControl>
                       <NotchedField label="Limite Mínimo">
-                        <Input {...field} value={field.value ?? ''}
+                        <SmartInput {...field} value={field.value ?? ''}
                           onChange={(e)=> field.onChange(e.target.value)}
                           onBlur={(e)=> { const v = e.target.value.trim(); if(v===''){return;} const num = Number(v.replace(',', '.')); if(!isNaN(num)) field.onChange(num.toFixed(2)); }}
                           placeholder="Ex: 0" className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" />
@@ -310,7 +312,7 @@ export default function ParameterForm({ onSuccess, onCancel, initialItem }: { on
                   <FormItem>
                     <FormControl>
                       <NotchedField label="Limite Máximo">
-                        <Input {...field} value={field.value ?? ''}
+                        <SmartInput {...field} value={field.value ?? ''}
                           onChange={(e)=> field.onChange(e.target.value)}
                           onBlur={(e)=> { const v = e.target.value.trim(); if(v===''){return;} const num = Number(v.replace(',', '.')); if(!isNaN(num)) field.onChange(num.toFixed(2)); }}
                           placeholder="Ex: 100" className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" />
@@ -329,7 +331,7 @@ export default function ParameterForm({ onSuccess, onCancel, initialItem }: { on
             <FormItem className="md:col-span-5">
               <FormControl>
                 <NotchedField label="Descrição" requiredMark>
-                  <textarea
+                  <SmartTextarea
                     {...field}
                     placeholder="Descrição"
                     rows={3}
@@ -344,7 +346,7 @@ export default function ParameterForm({ onSuccess, onCancel, initialItem }: { on
             <FormItem>
               <FormControl>
                 <NotchedField label="Unidade">
-                  <Input {...field} placeholder="Ex: dB" className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" />
+                  <SmartInput {...field} placeholder="Ex: dB" className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" />
                 </NotchedField>
               </FormControl>
               <FormMessage />
@@ -407,11 +409,12 @@ export default function ParameterForm({ onSuccess, onCancel, initialItem }: { on
           <FormItem>
             <FormControl>
               <NotchedField label="Observações">
-                <textarea
+                <SmartTextarea
                   {...field}
                   placeholder="Notas adicionais"
                   rows={3}
                   className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 resize-y min-h-[64px] text-sm w-full"
+                  onChange={e => field.onChange(smartReplace(e.target.value))}
                 />
               </NotchedField>
             </FormControl>
