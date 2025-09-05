@@ -81,7 +81,7 @@ export function AttributesFormDialog({ open, onOpenChange, editItem, onSubmit, l
             <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
               <div className="md:col-span-12">
                 <NotchedField label="Nome" requiredMark>
-                  <SmartInput value={friendlyName} onChange={(e)=> setFriendlyName(e.target.value)} required name="friendlyName" className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" />
+                  <SmartInput value={friendlyName} onChange={(e)=> setFriendlyName(e.target.value)} required name="friendlyName" className="w-full bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0" />
                 </NotchedField>
               </div>
             </div>

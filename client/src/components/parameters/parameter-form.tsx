@@ -222,13 +222,13 @@ export default function ParameterForm({ onSuccess, onCancel, initialItem }: { on
         {/* Linha 2: Análise (linha isolada) */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormField name="analysisId" control={form.control} render={({ field }) => (
-            <FormItem className="md:col-span-1">
+            <FormItem className="md:col-span-2">
               <FormControl>
                 <NotchedField label="Análise" requiredMark>
                   <select
                     {...field}
                     disabled={!(requirementId && criterionId) || filteredAnalyses.length === 0}
-                    className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 w-full h-9 text-sm disabled:opacity-50"
+                    className="bg-transparent shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 w-full h-9 text-sm disabled:opacity-50"
                   >
                     <option value="">{requirementId && criterionId ? (filteredAnalyses.length ? 'Selecione...' : 'Sem análises') : 'Selecione Requisito e Critério'}</option>
                     {filteredAnalyses.map(a => <option key={a.id} value={a.id}>{a.label}</option>)}
@@ -302,7 +302,7 @@ export default function ParameterForm({ onSuccess, onCancel, initialItem }: { on
                         <SmartInput {...field} value={field.value ?? ''}
                           onChange={(e)=> field.onChange(e.target.value)}
                           onBlur={(e)=> { const v = e.target.value.trim(); if(v===''){return;} const num = Number(v.replace(',', '.')); if(!isNaN(num)) field.onChange(num.toFixed(2)); }}
-                          placeholder="Ex: 0" className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" />
+                          placeholder="Ex: 0" className="w-full bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" />
                       </NotchedField>
                     </FormControl>
                     <FormMessage />
@@ -315,7 +315,7 @@ export default function ParameterForm({ onSuccess, onCancel, initialItem }: { on
                         <SmartInput {...field} value={field.value ?? ''}
                           onChange={(e)=> field.onChange(e.target.value)}
                           onBlur={(e)=> { const v = e.target.value.trim(); if(v===''){return;} const num = Number(v.replace(',', '.')); if(!isNaN(num)) field.onChange(num.toFixed(2)); }}
-                          placeholder="Ex: 100" className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" />
+                          placeholder="Ex: 100" className="w-full bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" />
                       </NotchedField>
                     </FormControl>
                     <FormMessage />
@@ -346,7 +346,7 @@ export default function ParameterForm({ onSuccess, onCancel, initialItem }: { on
             <FormItem>
               <FormControl>
                 <NotchedField label="Unidade">
-                  <SmartInput {...field} placeholder="Ex: dB" className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" />
+                  <SmartInput {...field} placeholder="Ex: dB" className="w-full bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" />
                 </NotchedField>
               </FormControl>
               <FormMessage />
@@ -359,12 +359,12 @@ export default function ParameterForm({ onSuccess, onCancel, initialItem }: { on
             <FormItem>
               <FormControl>
                 <NotchedField label="Mínimo">
-                  <Input
+                  <SmartInput
                     {...field}
                     value={field.value ?? ''}
                     onChange={(e) => field.onChange(normalizeIneq(e.target.value))}
                     placeholder="Min"
-                    className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                    className="w-full bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
                   />
                 </NotchedField>
               </FormControl>
@@ -375,12 +375,12 @@ export default function ParameterForm({ onSuccess, onCancel, initialItem }: { on
             <FormItem>
               <FormControl>
                 <NotchedField label="Intermediário">
-                  <Input
+                  <SmartInput
                     {...field}
                     value={field.value ?? ''}
                     onChange={(e) => field.onChange(normalizeIneq(e.target.value))}
                     placeholder="Interm"
-                    className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                    className="w-full bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
                   />
                 </NotchedField>
               </FormControl>
@@ -391,12 +391,12 @@ export default function ParameterForm({ onSuccess, onCancel, initialItem }: { on
             <FormItem>
               <FormControl>
                 <NotchedField label="Superior">
-                  <Input
+                  <SmartInput
                     {...field}
                     value={field.value ?? ''}
                     onChange={(e) => field.onChange(normalizeIneq(e.target.value))}
                     placeholder="Sup"
-                    className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                    className="w-full bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
                   />
                 </NotchedField>
               </FormControl>
