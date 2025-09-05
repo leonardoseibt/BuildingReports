@@ -246,10 +246,19 @@ export default function AttributesList() {
   const sorted = useMemo(()=> {
     if (!sortBy) return withSource;
     const arr = [...withSource];
-    arr.sort((a,b)=> {
-      let av:any = (a as any)[sortBy];
-      let bv:any = (b as any)[sortBy];
-      if (sortBy === 'isActive') { av = Number(!!av); bv = Number(!!bv); }
+    arr.sort((a, b) => {
+      let av: any = (a as any)[sortBy];
+      let bv: any = (b as any)[sortBy];
+      if (sortBy === 'isActive') {
+        av = Number(!!av); bv = Number(!!bv);
+        return sortDir === 'asc' ? av - bv : bv - av;
+      }
+      // Ordenação acentuada para strings
+      if (typeof av === 'string' && typeof bv === 'string') {
+        const cmp = av.localeCompare(bv, 'pt-BR', { sensitivity: 'accent', numeric: true });
+        return sortDir === 'asc' ? cmp : -cmp;
+      }
+      // Fallback para outros tipos
       return sortDir === 'asc' ? (av > bv ? 1 : av < bv ? -1 : 0) : (av < bv ? 1 : av > bv ? -1 : 0);
     });
     return arr;
