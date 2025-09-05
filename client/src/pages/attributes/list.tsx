@@ -9,6 +9,7 @@ import { useAuthRedirect } from '@/hooks/useAuthRedirect';
 import { useToast } from '@/hooks/use-toast';
 import { showSuccess, showError } from '@/lib/toast-messages';
 import { Plus, Database, Search, ArrowUp, ArrowDown, Pencil, Trash2 } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { ActiveToggleButton } from '@/components/common/active-toggle-button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { PaginationSimple as Pagination } from '@/components/ui/pagination';
@@ -26,6 +27,8 @@ export default function AttributesList() {
   const [editItem, setEditItem] = useState<AttributeDefinitionFormData | null>(null);
   const [friendlyName, setFriendlyName] = useState<string>('');
   // Filtros removidos (tipo / somente ativos) conforme solicitação – mantendo apenas busca textual.
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<AttributeDefinitionFormData | null>(null);
   const [tables, setTables] = useState<string[]>([]);
   const [selectedTable, setSelectedTable] = useState('');
   const [columns, setColumns] = useState<string[]>([]);
@@ -338,7 +341,7 @@ export default function AttributesList() {
                             variant="ghost"
                             size="icon"
                             className="text-rose-600 hover:bg-rose-50 hover:text-rose-700"
-                            onClick={()=> deleteMutation.mutate(a.id!)}
+                            onClick={()=> { setSelectedItem(a); setConfirmOpen(true); }}
                             disabled={deleteMutation.isPending && editItem?.id === a.id}
                           >
                             <Trash2 className="h-4 w-4"/>
@@ -366,6 +369,31 @@ export default function AttributesList() {
         loading={createMutation.status==='pending' || updateMutation.status==='pending'}
         tables={tables}
       />
+      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir atributo</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir {selectedItem ? (<strong>{` ${selectedItem.friendlyName} `}</strong>):('este atributo')}?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={()=> setSelectedItem(null)}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (!selectedItem) return;
+                deleteMutation.mutate(selectedItem.id!);
+                setConfirmOpen(false);
+                setSelectedItem(null);
+              }}
+              className="bg-rose-600 hover:bg-rose-700"
+              disabled={deleteMutation.isPending}
+            >
+              {deleteMutation.isPending ? 'Excluindo…' : 'Excluir'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

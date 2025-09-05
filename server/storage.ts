@@ -1500,8 +1500,17 @@ export class DatabaseStorage implements IStorage {
     return row as any;
   }
   async deleteAttributeDefinition(id: number): Promise<boolean> {
-    const [row] = await db.update(attributeDefinitions).set({ isActive: false, updatedAt: new Date() }).where(eq(attributeDefinitions.id, id)).returning({ id: attributeDefinitions.id });
-    return !!row;
+    try {
+      const deleted = await db.delete(attributeDefinitions).where(eq(attributeDefinitions.id, id)).returning({ id: attributeDefinitions.id });
+      return deleted.length > 0;
+    } catch (err: any) {
+      if (err?.code === '23503') { // foreign key violation
+        const e = new Error('Não é possível excluir: existem registros relacionados.');
+        (e as any).status = 409;
+        throw e;
+      }
+      throw err;
+    }
   }
 
   // Bioclimatic zones
