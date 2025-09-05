@@ -204,12 +204,12 @@ export default function AttributesList() {
     },
   });
   const deleteMutation = useMutation({
-    mutationFn: async (id: number) => {
-      const res = await apiRequest('DELETE', `/api/attributes/${id}`);
-      return res.json();
+    mutationFn: async (item: AttributeDefinitionFormData) => {
+      const res = await apiRequest('DELETE', `/api/attributes/${item.id}`);
+      return item;
     },
-    onSuccess: () => {
-      showSuccess(toast, 'Atributo removido.');
+    onSuccess: (deleted) => {
+      showSuccess(toast, `${deleted.friendlyName || 'Atributo'} foi removido.`);
       queryClient.invalidateQueries({ queryKey: attributeKey });
     },
     onError: (err: any) => {
@@ -382,7 +382,7 @@ export default function AttributesList() {
             <AlertDialogAction
               onClick={() => {
                 if (!selectedItem) return;
-                deleteMutation.mutate(selectedItem.id!);
+                deleteMutation.mutate(selectedItem);
                 setConfirmOpen(false);
                 setSelectedItem(null);
               }}
