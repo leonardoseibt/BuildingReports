@@ -23,9 +23,12 @@ import {
   Beaker,
   Database,
   ChevronRight,
-  ChevronLeft
+  ChevronLeft,
+  RefreshCw
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { refreshSession } from "@/lib/authUtils";
+import { queryClient } from "@/lib/queryClient";
 
 function NavLink({ href, icon: Icon, label, isActive, testId, indent = 0, visible = true }: { href: string; icon: any; label: string; isActive: boolean; testId: string; indent?: number; visible?: boolean; }) {
   if (!visible) return null;
@@ -49,7 +52,9 @@ function NavLink({ href, icon: Icon, label, isActive, testId, indent = 0, visibl
 
 export default function Sidebar() {
   const [location] = useLocation();
-  const { user } = useAuth();
+  const { user, expiresAt, isAuthenticated } = useAuth();
+  const [nowSec, setNowSec] = useState(() => Math.floor(Date.now() / 1000));
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const hasAccess = (key: string) => {
     if (!user) return false;
     return (user as any).isAdmin || ((user as any).allowedModules || []).includes(key);
@@ -106,6 +111,15 @@ export default function Sidebar() {
     localStorage.setItem("sidebar-open", JSON.stringify(open));
   }, [open]);
 
+  useEffect(() => {
+    if (!expiresAt || !isAuthenticated) return;
+    const interval = setInterval(
+      () => setNowSec(Math.floor(Date.now() / 1000)),
+      1000
+    );
+    return () => clearInterval(interval);
+  }, [expiresAt, isAuthenticated]);
+
   const toggleSidebar = () => {
     const next = !isCollapsed;
     setIsCollapsed(next);
@@ -119,6 +133,36 @@ export default function Sidebar() {
   const handleLogout = () => {
     window.location.href = '/api/logout';
   };
+
+  async function handleExtend() {
+    if (isRefreshing) return;
+    setIsRefreshing(true);
+    try {
+      const data = await refreshSession();
+      if (data?.expires_at) {
+        const current: any = queryClient.getQueryData(['/api/auth/user']);
+        if (current) {
+          queryClient.setQueryData(['/api/auth/user'], {
+            ...current,
+            expires_at: data.expires_at,
+          });
+        }
+      }
+    } finally {
+      setIsRefreshing(false);
+    }
+  }
+
+  const remaining = expiresAt ? expiresAt - nowSec : 0;
+  const minutes = Math.floor(Math.max(remaining, 0) / 60);
+  const seconds = Math.max(remaining, 0) % 60;
+  const timeColor =
+    remaining <= 60
+      ? "text-red-600"
+      : remaining <= 300
+      ? "text-orange-500"
+      : "text-slate-600";
+  const fullName = user?.fullName || user?.email || "Usuário";
 
   // Permission checks for each module
   const canReports = hasAccess("reports");
@@ -501,24 +545,50 @@ export default function Sidebar() {
       {/* User Profile Section */}
       {!isCollapsed && (
         <div className="p-4 border-t border-slate-200">
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center gap-2">
             <div className="w-10 h-10 bg-slate-300 rounded-full flex items-center justify-center overflow-hidden">
               <User className="w-5 h-5 text-slate-600" />
             </div>
-            <div className="flex-1 min-w-0">
-              <p
-                className="text-sm font-medium text-slate-900 truncate"
+            <div className="flex flex-col">
+              <span
+                className="text-sm font-medium text-slate-900"
                 data-testid="text-user-name"
               >
-                {user?.fullName || user?.email || 'Usuário'}
-              </p>
-              {/* Removed static role subtitle */}
+                {fullName}
+              </span>
+              {isAuthenticated && expiresAt && (
+                <div className="flex items-center gap-1 mt-0.5">
+                  <span
+                    className={cn("text-xs font-mono", timeColor)}
+                    data-testid="text-session-remaining"
+                  >
+                    {minutes}:{seconds.toString().padStart(2, "0")}
+                  </span>
+                  {remaining <= 60 && remaining > 0 && (
+                    <Button
+                      onClick={handleExtend}
+                      size="icon"
+                      variant="ghost"
+                      className="h-4 w-4 p-0"
+                      data-testid="button-extend-session"
+                      disabled={isRefreshing}
+                    >
+                      <RefreshCw
+                        className={cn(
+                          "w-3 h-3",
+                          isRefreshing && "animate-spin"
+                        )}
+                      />
+                    </Button>
+                  )}
+                </div>
+              )}
             </div>
             <Button
               variant="ghost"
               size="sm"
               onClick={handleLogout}
-              className="text-slate-400 hover:text-slate-600 p-2"
+              className="ml-auto text-slate-400 hover:text-slate-600 p-2"
               data-testid="button-logout"
             >
               <LogOut className="w-4 h-4" />
