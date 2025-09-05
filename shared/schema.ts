@@ -264,7 +264,7 @@ export const analyses = pgTable("analyses", {
 export const parameters = pgTable("parameters", {
   id: integer("id").generatedAlwaysAsIdentity().primaryKey(),
   analysisId: integer("analysis_id").references(() => analyses.id).notNull(),
-  label: varchar("label", { length: 255 }).notNull(), // descrição
+  label: text("label").notNull(), // descrição multiline
   minimumValue: text("minimum_value"),
   intermediateValue: text("intermediate_value"),
   superiorValue: text("superior_value"),

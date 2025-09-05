@@ -329,7 +329,12 @@ export default function ParameterForm({ onSuccess, onCancel, initialItem }: { on
             <FormItem className="md:col-span-5">
               <FormControl>
                 <NotchedField label="Descrição" requiredMark>
-                  <Input {...field} placeholder="Descrição" className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" />
+                  <textarea
+                    {...field}
+                    placeholder="Descrição"
+                    rows={3}
+                    className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 resize-y min-h-[80px] text-sm w-full"
+                  />
                 </NotchedField>
               </FormControl>
               <FormMessage />
