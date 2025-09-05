@@ -407,7 +407,12 @@ export default function ParameterForm({ onSuccess, onCancel, initialItem }: { on
           <FormItem>
             <FormControl>
               <NotchedField label="Observações">
-                <Input {...field} placeholder="Notas adicionais" className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" />
+                <textarea
+                  {...field}
+                  placeholder="Notas adicionais"
+                  rows={2}
+                  className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 resize-y min-h-[48px] text-sm w-full"
+                />
               </NotchedField>
             </FormControl>
             <FormMessage />
