@@ -8,6 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { showSuccess, showError } from '@/lib/toast-messages';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Beaker, Plus, Loader2, Pencil, Trash2, Search, ArrowUp, ArrowDown } from 'lucide-react';
 import { ActiveToggleButton } from '@/components/common/active-toggle-button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -140,7 +141,13 @@ export default function AnalysesList() {
             <div className="flex flex-col md:flex-row gap-3 md:items-center md:justify-between">
               <div className="flex gap-3 flex-1">
                 <div className="relative w-full max-w-lg">
-                  <input type="text" value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} placeholder="Buscar análises" className="w-full h-9 rounded-md border px-9 text-sm focus:outline-none" />
+                  <Input
+                    type="text"
+                    value={search}
+                    onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                    placeholder="Buscar análises"
+                    className="h-9 pl-9"
+                  />
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
                 </div>
                 <select value={requirementFilter} onChange={(e) => { const v = e.target.value === 'all' ? 'all' : Number(e.target.value); setRequirementFilter(v); setPage(1); }} className="h-9 text-sm rounded-md border px-2 bg-white focus:outline-none">
