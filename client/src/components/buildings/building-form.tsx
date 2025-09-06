@@ -362,7 +362,7 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
                             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                           </Button>
                         </PopoverTrigger>
-                        <PopoverContent className="w-full p-0">
+                        <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
                           <Command>
                             <CommandInput placeholder="Procurar..." />
                             <CommandList>
@@ -371,7 +371,7 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
                                 {technicians?.map((tech) => (
                                   <CommandItem
                                     key={tech.id}
-                                    value={String(tech.id)}
+                                    value={tech.fullName}
                                     onSelect={() => {
                                       form.setValue('technicianId', tech.id as any);
                                       setOpenTech(false);
