@@ -14,7 +14,7 @@ export function NotchedField({ label, requiredMark, children, className, labelCl
   return (
   <div
     className={cn(
-      "relative rounded-md border border-slate-200 bg-white px-2 pb-1.5 pt-2 transition-colors",
+      "notched-field relative rounded-md border border-slate-200 bg-white px-2 pb-1.5 pt-2 transition-colors",
       "focus-within:border-blue-500 focus-within:shadow-[0_0_0_2px_rgba(59,130,246,0.2)]",
       className
     )}

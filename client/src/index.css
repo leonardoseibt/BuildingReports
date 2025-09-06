@@ -129,6 +129,10 @@
     align-items: center;
     justify-content: center;
   }
+
+  .notched-field :is(input, textarea, select, button) {
+    @apply bg-transparent border-0 shadow-none focus:outline-none focus:ring-0 focus:ring-offset-0;
+  }
 }
 
 @layer components {
