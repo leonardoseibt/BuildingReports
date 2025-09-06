@@ -373,7 +373,7 @@ function CoveragesPanel({ zone, onClose }: { zone: BioclimaticZone; onClose: () 
         <div className="grid grid-cols-2 gap-3">
           <NotchedField label="UF" requiredMark>
             <select
-              className="h-8 w-full bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 px-1"
+              className="h-8 w-full bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 px-1 focus:outline-none"
               value={selectedStateId ?? ''}
               onChange={(e) => { const v = e.target.value ? Number(e.target.value) : null; setSelectedStateId(v); setSelectedCityId(null); }}
             >
@@ -385,7 +385,7 @@ function CoveragesPanel({ zone, onClose }: { zone: BioclimaticZone; onClose: () 
           </NotchedField>
           <NotchedField label="Município" requiredMark>
             <select
-              className="h-8 w-full bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 px-1"
+              className="h-8 w-full bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 px-1 focus:outline-none"
               value={selectedCityId ?? ''}
               onChange={(e) => setSelectedCityId(e.target.value ? Number(e.target.value) : null)}
               disabled={!selectedStateId}

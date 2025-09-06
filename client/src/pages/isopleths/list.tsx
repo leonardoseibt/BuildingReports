@@ -293,18 +293,18 @@ function IsoplethCoveragesPanel({ isopleth, onClose }: { isopleth: Isopleth; onC
       </div>
       <div className='space-y-3'>
         <div className='relative w-full'>
-          <input type='text' value={coverSearch} onChange={(e)=>setCoverSearch(e.target.value)} placeholder='Buscar (UF, Município)' className='w-full h-8 rounded-md border px-8 text-sm' />
+          <input type='text' value={coverSearch} onChange={(e)=>setCoverSearch(e.target.value)} placeholder='Buscar (UF, Município)' className='w-full h-8 rounded-md border px-8 text-sm focus:outline-none' />
           <Search className='absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4' />
         </div>
         <div className='grid grid-cols-2 gap-3'>
           <NotchedField label='UF' requiredMark>
-            <select className='h-8 w-full bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 px-1' value={selectedStateId ?? ''} onChange={(e)=>{ const v = e.target.value?Number(e.target.value):null; setSelectedStateId(v); setSelectedCityId(null); }}>
+            <select className='h-8 w-full bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 px-1 focus:outline-none' value={selectedStateId ?? ''} onChange={(e)=>{ const v = e.target.value?Number(e.target.value):null; setSelectedStateId(v); setSelectedCityId(null); }}>
               <option value=''>Selecione a UF</option>
               {states.map(s=> <option key={s.id} value={s.id}>{s.code} — {s.name}</option>)}
             </select>
           </NotchedField>
           <NotchedField label='Município' requiredMark>
-            <select className='h-8 w-full bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 px-1' value={selectedCityId ?? ''} onChange={(e)=>setSelectedCityId(e.target.value?Number(e.target.value):null)} disabled={!selectedStateId}>
+            <select className='h-8 w-full bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 px-1 focus:outline-none' value={selectedCityId ?? ''} onChange={(e)=>setSelectedCityId(e.target.value?Number(e.target.value):null)} disabled={!selectedStateId}>
               <option value=''>Selecione o Município</option>
               {cities.map(c=> <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>

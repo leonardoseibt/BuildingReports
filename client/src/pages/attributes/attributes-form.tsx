@@ -81,58 +81,32 @@ export function AttributesFormDialog({ open, onOpenChange, editItem, onSubmit, l
             <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
               <div className="md:col-span-12">
                 <NotchedField label="Nome" requiredMark>
-                  <SmartInput value={friendlyName} onChange={(e)=> setFriendlyName(e.target.value)} required name="friendlyName" className="w-full bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0" />
+                  <SmartInput value={friendlyName} onChange={(e)=> setFriendlyName(e.target.value)} required name="friendlyName" className="w-full h-9 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 focus:outline-none" />
                 </NotchedField>
               </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
               <div className="md:col-span-5">
                 <NotchedField label="Tabela" requiredMark>
-                  <select
-                    name="sourceTable"
-                    value={sourceTable}
-                    onChange={e => setSourceTable(e.target.value)}
-                    required
-                    className="bg-transparent border-0 shadow-none w-full h-9 text-sm"
-                    disabled={tables.length === 0}
-                  >
+                  <select name="sourceTable" value={sourceTable} onChange={(e)=> setSourceTable(e.target.value)} required className="bg-transparent border-0 shadow-none w-full h-9 text-sm focus:outline-none">
                     <option value="" disabled>Selecionar</option>
-                    {[...tables].sort((a,b)=> a.localeCompare(b)).map(t => (
-                      <option key={t} value={t}>{t}</option>
-                    ))}
+                    {[...tables].sort((a,b)=> a.localeCompare(b)).map(t=> <option key={t} value={t}>{t}</option>)}
                   </select>
                 </NotchedField>
               </div>
               <div className="md:col-span-4">
                 <NotchedField label="Coluna" requiredMark>
-                  <select
-                    name="sourceColumn"
-                    value={sourceColumn}
-                    onChange={e => setSourceColumn(e.target.value)}
-                    required
-                    className="bg-transparent border-0 shadow-none w-full h-9 text-sm"
-                    disabled={!sourceTable || loadingColumns}
-                  >
+                  <select name="sourceColumn" value={sourceColumn} onChange={(e)=> setSourceColumn(e.target.value)} required disabled={!sourceTable || loadingColumns} className="bg-transparent border-0 shadow-none w-full h-9 text-sm focus:outline-none">
                     <option value="" disabled>{loadingColumns ? 'Carregando...' : 'Selecionar'}</option>
-                    {[...columns].sort((a,b)=> a.localeCompare(b)).map(c => (
-                      <option key={c} value={c}>{c}</option>
-                    ))}
+                    {[...columns].sort((a,b)=> a.localeCompare(b)).map(c=> <option key={c} value={c}>{c}</option>)}
                   </select>
                 </NotchedField>
               </div>
               <div className="md:col-span-3">
                 <NotchedField label="Tipo" requiredMark>
-                  <select
-                    name="dataKind"
-                    value={dataKind}
-                    onChange={e => setDataKind(e.target.value)}
-                    required
-                    className="bg-transparent border-0 shadow-none w-full h-9 text-sm"
-                  >
+                  <select name="dataKind" value={dataKind} onChange={(e)=> setDataKind(e.target.value)} required className="bg-transparent border-0 shadow-none w-full h-9 text-sm focus:outline-none">
                     <option value="" disabled>Selecionar</option>
-                    {[...DATA_KINDS].sort((a,b)=> a.localeCompare(b)).map(k => (
-                      <option key={k} value={k}>{k}</option>
-                    ))}
+                    {[...DATA_KINDS].sort((a,b)=> a.localeCompare(b)).map(k=> <option key={k} value={k}>{k}</option>)}
                   </select>
                 </NotchedField>
               </div>
@@ -140,49 +114,25 @@ export function AttributesFormDialog({ open, onOpenChange, editItem, onSubmit, l
             <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
               <div className="md:col-span-5">
                 <NotchedField label="Fonte Valor (reference)">
-                  <select
-                    name="valueSource"
-                    value={dataKind==='reference' ? valueSource : ''}
-                    onChange={e => setValueSource(e.target.value)}
-                    disabled={dataKind!=='reference'}
-                    className="bg-transparent border-0 shadow-none w-full h-9 text-sm"
-                  >
+                  <select name="valueSource" value={dataKind==='reference'? valueSource: ''} onChange={(e)=> setValueSource(e.target.value)} disabled={dataKind!=='reference'} className="bg-transparent border-0 shadow-none w-full h-9 text-sm focus:outline-none">
                     <option value="" disabled>Selecionar</option>
-                    {[...tables].sort((a,b)=> a.localeCompare(b)).map(t => (
-                      <option key={t} value={t}>{t}</option>
-                    ))}
+                    {[...tables].sort((a,b)=> a.localeCompare(b)).map(t=> <option key={t} value={t}>{t}</option>)}
                   </select>
                 </NotchedField>
               </div>
               <div className="md:col-span-3">
                 <NotchedField label="Campo ID">
-                  <select
-                    name="valueIdField"
-                    value={valueIdField}
-                    onChange={e => setValueIdField(e.target.value)}
-                    disabled={dataKind!=='reference' || !valueSource || loadingRefColumns}
-                    className="bg-transparent border-0 shadow-none w-full h-9 text-sm"
-                  >
+                  <select name="valueIdField" value={valueIdField} onChange={(e)=> setValueIdField(e.target.value)} disabled={dataKind!=='reference' || !valueSource || loadingRefColumns} className="bg-transparent border-0 shadow-none w-full h-9 text-sm focus:outline-none">
                     <option value="" disabled>Selecionar</option>
-                    {dataKind==='reference' && columnsRef.sort((a,b)=> a.localeCompare(b)).map(c => (
-                      <option key={c} value={c}>{c}</option>
-                    ))}
+                    {dataKind==='reference' && columnsRef.sort((a,b)=> a.localeCompare(b)).map(c=> <option key={c} value={c}>{c}</option>)}
                   </select>
                 </NotchedField>
               </div>
               <div className="md:col-span-4">
                 <NotchedField label="Campo Label">
-                  <select
-                    name="valueLabelField"
-                    value={valueLabelField}
-                    onChange={e => setValueLabelField(e.target.value)}
-                    disabled={dataKind!=='reference' || !valueSource || loadingRefColumns}
-                    className="bg-transparent border-0 shadow-none w-full h-9 text-sm"
-                  >
+                  <select name="valueLabelField" value={valueLabelField} onChange={(e)=> setValueLabelField(e.target.value)} disabled={dataKind!=='reference' || !valueSource || loadingRefColumns} className="bg-transparent border-0 shadow-none w-full h-9 text-sm focus:outline-none">
                     <option value="" disabled>Selecionar</option>
-                    {dataKind==='reference' && columnsRef.sort((a,b)=> a.localeCompare(b)).map(c => (
-                      <option key={c} value={c}>{c}</option>
-                    ))}
+                    {dataKind==='reference' && columnsRef.sort((a,b)=> a.localeCompare(b)).map(c=> <option key={c} value={c}>{c}</option>)}
                   </select>
                 </NotchedField>
               </div>

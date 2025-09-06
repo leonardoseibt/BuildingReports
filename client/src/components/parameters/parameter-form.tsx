@@ -11,7 +11,6 @@ import FormHeader from '@/components/ui/form-header';
 import { Form, FormField, FormItem, FormControl, FormMessage } from '@/components/ui/form';
 import { SmartInput, SmartTextarea } from '@/components/ui/smart-inputs';
 import { NotchedField } from '@/components/ui/notched-field';
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import type { Parameter, Analysis, Criterion, Requirement } from '@shared/schema';
 import { useQuery } from '@tanstack/react-query';
 
@@ -196,7 +195,7 @@ export default function ParameterForm({ onSuccess, onCancel, initialItem }: { on
                   setRequirementId(val as any);
                   form.setValue('analysisId', 0 as any);
                 }}
-                className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 w-full h-9 text-sm"
+                className="bg-transparent border-0 shadow-none focus:outline-none focus:ring-0 focus:ring-offset-0 w-full h-9 text-sm"
               >
                 <option value="">Selecione...</option>
                 {requirements.map(r => <option key={r.id} value={r.id}>{r.code} - {r.label}</option>)}
@@ -212,7 +211,7 @@ export default function ParameterForm({ onSuccess, onCancel, initialItem }: { on
                   setCriterionId(val as any);
                   form.setValue('analysisId', 0 as any);
                 }}
-                className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 w-full h-9 text-sm"
+                className="bg-transparent border-0 shadow-none focus:outline-none focus:ring-0 focus:ring-offset-0 w-full h-9 text-sm"
               >
                 <option value="">Selecione...</option>
                 {criteria.map(c => <option key={c.id} value={c.id}>{c.code} - {c.label}</option>)}
@@ -227,15 +226,12 @@ export default function ParameterForm({ onSuccess, onCancel, initialItem }: { on
               <FormControl>
                 <NotchedField label="Análise" requiredMark>
                   <select
-                    value={field.value ? String(field.value) : ''}
-                    onChange={e => field.onChange(e.target.value)}
+                    {...field}
                     disabled={!(requirementId && criterionId) || filteredAnalyses.length === 0}
-                    className="w-full h-9 bg-transparent border-0 shadow-none text-sm"
+                    className="bg-transparent border-0 shadow-none focus:outline-none focus:ring-0 focus:ring-offset-0 w-full h-9 text-sm disabled:opacity-50"
                   >
-                    <option value="" disabled>{requirementId && criterionId ? (filteredAnalyses.length ? 'Selecione...' : 'Sem análises') : 'Selecione Requisito e Critério'}</option>
-                    {filteredAnalyses.map(a => (
-                      <option key={a.id} value={String(a.id)}>{a.label}</option>
-                    ))}
+                    <option value="">{requirementId && criterionId ? (filteredAnalyses.length ? 'Selecione...' : 'Sem análises') : 'Selecione Requisito e Critério'}</option>
+                    {filteredAnalyses.map(a => <option key={a.id} value={a.id}>{a.label}</option>)}
                   </select>
                 </NotchedField>
               </FormControl>
@@ -256,7 +252,7 @@ export default function ParameterForm({ onSuccess, onCancel, initialItem }: { on
                   form.setValue('minLimit','' as any);
                   form.setValue('maxLimit','' as any);
                 }}
-                className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 w-full h-9 text-sm"
+                className="bg-transparent border-0 shadow-none focus:outline-none focus:ring-0 focus:ring-offset-0 w-full h-9 text-sm"
               >
                 <option value="">Selecione...</option>
                 {attributes.slice().sort((a:any,b:any)=> a.friendlyName.localeCompare(b.friendlyName,'pt-BR')).map(a => (
@@ -280,7 +276,7 @@ export default function ParameterForm({ onSuccess, onCancel, initialItem }: { on
                         {...field}
                         value={field.value || ''}
                         onChange={(e)=> field.onChange(e.target.value)}
-                        className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 w-full h-9 text-sm"
+                        className="bg-transparent border-0 shadow-none focus:outline-none focus:ring-0 focus:ring-offset-0 w-full h-9 text-sm"
                       >
                         <option value="">Selecione...</option>
                         {loadingAttributeValues && <option value="" disabled>Carregando...</option>}
@@ -360,6 +356,22 @@ export default function ParameterForm({ onSuccess, onCancel, initialItem }: { on
         {/* Linha 4: Mínimo, Intermediário, Superior */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <FormField name="minimumValue" control={form.control} render={({ field }) => (
+            <FormItem>
+              <FormControl>
+                <NotchedField label="Mínimo">
+                  <SmartInput
+                    {...field}
+                    value={field.value ?? ''}
+                    onChange={(e) => field.onChange(normalizeIneq(e.target.value))}
+                    placeholder="Min"
+                    className="w-full bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                  />
+                </NotchedField>
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )} />
+          <FormField name="intermediateValue" control={form.control} render={({ field }) => (
             <FormItem>
               <FormControl>
                 <NotchedField label="Intermediário">

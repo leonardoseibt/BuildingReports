@@ -200,7 +200,7 @@ export default function CitiesList() {
           <div className="rounded-2xl border bg-white/80 backdrop-blur px-5 py-4 md:px-6 md:py-5 shadow-sm mb-4">
             <div className="flex items-center gap-3">
               <div className="relative w-full max-w-lg">
-                <input type="text" value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} placeholder="Buscar municípios (nome, UF)" className="w-full h-9 rounded-md border px-9 text-sm" />
+                <input type="text" value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} placeholder="Buscar municípios (nome, UF)" className="w-full h-9 rounded-md border px-9 text-sm focus:outline-none" />
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
               </div>
             </div>
@@ -275,7 +275,7 @@ export default function CitiesList() {
                 <select
                   value={stateId}
                   onChange={(e) => setStateId(e.target.value ? Number(e.target.value) : "")}
-                  className="w-full h-9 bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 px-1"
+                  className="w-full h-9 bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 px-1 focus:outline-none"
                 >
                   <option value="">Selecione o estado (UF)</option>
                   {states.map((s) => (

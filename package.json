@@ -12,43 +12,43 @@
     "db:migrate:ids": "tsx scripts/run-sql.ts scripts/sql/20250814_ids_to_int.sql",
     "db:migrate:identity": "tsx scripts/run-sql.ts scripts/sql/20250814_convert_defaults_to_identity.sql",
     "db:migrate:users": "tsx scripts/run-sql.ts scripts/sql/20250815_users_fullname_password.sql",
-    "db:check:ids": "tsx scripts/run-sql.ts scripts/sql/check_ids.sql",
-    "db:migrate:bioclimatic": "tsx scripts/run-sql.ts scripts/sql/20250819_bioclimatic_zones.sql",
-    "db:seed:bioclimatic": "tsx scripts/run-sql.ts scripts/sql/20250819_bioclimatic_zones_seed.sql",
-    "db:seed:bioclimatic-coverages": "tsx scripts/run-sql.ts scripts/sql/20250819_bioclimatic_coverages_seed.sql",
-    "db:migrate:bioclimatic-details": "tsx scripts/run-sql.ts scripts/sql/20250819_bioclimatic_zone_details.sql",
-    "db:rollback:bioclimatic-details": "tsx scripts/run-sql.ts scripts/sql/20250819_bioclimatic_zone_details_rollback.sql",
-    "db:migrate:bioclimatic-coverages-extend": "tsx scripts/run-sql.ts scripts/sql/20250820_extend_bioclimatic_coverages_table.sql",
-    "db:migrate:prev-zone-code": "tsx scripts/run-sql.ts scripts/sql/20250821_add_prev_zone_code_to_coverages.sql",
-    "db:migrate:normalize-coverages": "tsx scripts/run-sql.ts scripts/sql/20250820_normalize_coverages_states_cities.sql",
-    "db:seed:bioclimatic-1R-6B": "tsx scripts/run-sql.ts scripts/sql/20250820_reset_bioclimatic_zones_and_seed_1R_6B.sql",
-    "db:truncate:coverages": "tsx scripts/run-sql.ts scripts/sql/20250820_truncate_coverages.sql",
-    "db:check:coverages": "tsx scripts/run-sql.ts scripts/sql/20250820_check_coverages_populated.sql",
-    "import:coverages:csv": "tsx scripts/import/coverages-from-csv.ts",
-    "reimport:coverages": "npm run -s db:truncate:coverages && tsx scripts/import/coverages-from-csv.ts",
-    "check:coverages:health": "tsx scripts/check/coverages-health.ts",
-    "db:migrate:drop-city-region": "tsx scripts/run-sql.ts scripts/sql/20250820_drop_region_from_cities.sql",
-    "db:migrate:region-to-states": "tsx scripts/run-sql.ts scripts/sql/20250821_move_region_to_states.sql",
-    "db:migrate:technicians-neighborhood": "tsx scripts/run-sql.ts scripts/sql/20250821_add_neighborhood_to_technicians.sql",
-    "db:migrate:buildings-neighborhood": "tsx scripts/run-sql.ts scripts/sql/20250822_add_neighborhood_to_buildings.sql",
-    "db:migrate:buildings-address-split": "tsx scripts/run-sql.ts scripts/sql/20250822_split_building_address.sql",
-    "db:migrate:buildings-address-reparse-fix": "tsx scripts/run-sql.ts scripts/sql/20250822_reparse_building_address_fix.sql",
-    "db:migrate:buildings-drop-legacy-address": "tsx scripts/run-sql.ts scripts/sql/20250822_drop_legacy_address_buildings.sql",
-    "db:migrate:technicians-address-split": "tsx scripts/run-sql.ts scripts/sql/20250822_split_technician_address.sql",
-    "db:migrate:constructive-systems": "tsx scripts/run-sql.ts scripts/sql/20250823_create_constructive_systems.sql",
-    "db:seed:constructive-systems": "tsx scripts/run-sql.ts scripts/sql/20250823_seed_constructive_systems.sql",
-    "db:migrate:requirements": "tsx scripts/run-sql.ts scripts/sql/20250823_create_requirements.sql",
-    "db:migrate:performance-evaluations": "tsx scripts/run-sql.ts scripts/sql/20250824_create_performance_evaluations.sql",
-    "db:migrate:building-systems": "tsx scripts/run-sql.ts scripts/sql/20250826_create_building_systems.sql",
-    "check:missing-cities": "tsx scripts/check/missing-cities.ts",
-    "check:cities-coverages": "tsx scripts/check/cities-without-coverages.ts",
-    "db:migrate:fks-criteria-analyses-parameters": "tsx scripts/run-sql.ts scripts/sql/20250826_add_fk_criteria_analyses_parameters.sql",
-    "db:migrate:fks-buildings-masters": "tsx scripts/run-sql.ts scripts/sql/20250826_add_fk_buildings_master_refs.sql",
-    "test": "cross-env NODE_ENV=test tsx --test server/index.test.ts",
-    "db:check:fks-criteria-analyses-parameters": "tsx scripts/check/fks_criteria_analyses_parameters.ts",
-    "import:isopletas": "tsx scripts/import/update-cities-wind.ts",
-    "analyze:isopletas": "tsx scripts/check/analyze-isopletas-csv.ts",
-    "check:missing-wind": "tsx scripts/check/cities-missing-wind.ts"
+  "db:check:ids": "tsx scripts/run-sql.ts scripts/sql/check_ids.sql",
+  "db:migrate:bioclimatic": "tsx scripts/run-sql.ts scripts/sql/20250819_bioclimatic_zones.sql",
+  "db:seed:bioclimatic": "tsx scripts/run-sql.ts scripts/sql/20250819_bioclimatic_zones_seed.sql",
+  "db:seed:bioclimatic-coverages": "tsx scripts/run-sql.ts scripts/sql/20250819_bioclimatic_coverages_seed.sql",
+  "db:migrate:bioclimatic-details": "tsx scripts/run-sql.ts scripts/sql/20250819_bioclimatic_zone_details.sql",
+  "db:rollback:bioclimatic-details": "tsx scripts/run-sql.ts scripts/sql/20250819_bioclimatic_zone_details_rollback.sql",
+  "db:migrate:bioclimatic-coverages-extend": "tsx scripts/run-sql.ts scripts/sql/20250820_extend_bioclimatic_coverages_table.sql",
+  "db:migrate:prev-zone-code": "tsx scripts/run-sql.ts scripts/sql/20250821_add_prev_zone_code_to_coverages.sql",
+  "db:migrate:normalize-coverages": "tsx scripts/run-sql.ts scripts/sql/20250820_normalize_coverages_states_cities.sql",
+  "db:seed:bioclimatic-1R-6B": "tsx scripts/run-sql.ts scripts/sql/20250820_reset_bioclimatic_zones_and_seed_1R_6B.sql",
+  "db:truncate:coverages": "tsx scripts/run-sql.ts scripts/sql/20250820_truncate_coverages.sql",
+  "db:check:coverages": "tsx scripts/run-sql.ts scripts/sql/20250820_check_coverages_populated.sql",
+  "import:coverages:csv": "tsx scripts/import/coverages-from-csv.ts",
+  "reimport:coverages": "npm run -s db:truncate:coverages && tsx scripts/import/coverages-from-csv.ts",
+  "check:coverages:health": "tsx scripts/check/coverages-health.ts",
+  "db:migrate:drop-city-region": "tsx scripts/run-sql.ts scripts/sql/20250820_drop_region_from_cities.sql",
+  "db:migrate:region-to-states": "tsx scripts/run-sql.ts scripts/sql/20250821_move_region_to_states.sql"
+  ,"db:migrate:technicians-neighborhood": "tsx scripts/run-sql.ts scripts/sql/20250821_add_neighborhood_to_technicians.sql"
+  ,"db:migrate:buildings-neighborhood": "tsx scripts/run-sql.ts scripts/sql/20250822_add_neighborhood_to_buildings.sql"
+  ,"db:migrate:buildings-address-split": "tsx scripts/run-sql.ts scripts/sql/20250822_split_building_address.sql"
+  ,"db:migrate:buildings-address-reparse-fix": "tsx scripts/run-sql.ts scripts/sql/20250822_reparse_building_address_fix.sql"
+  ,"db:migrate:buildings-drop-legacy-address": "tsx scripts/run-sql.ts scripts/sql/20250822_drop_legacy_address_buildings.sql"
+  ,"db:migrate:technicians-address-split": "tsx scripts/run-sql.ts scripts/sql/20250822_split_technician_address.sql"
+  ,"db:migrate:constructive-systems": "tsx scripts/run-sql.ts scripts/sql/20250823_create_constructive_systems.sql"
+  ,"db:seed:constructive-systems": "tsx scripts/run-sql.ts scripts/sql/20250823_seed_constructive_systems.sql"
+  ,"db:migrate:requirements": "tsx scripts/run-sql.ts scripts/sql/20250823_create_requirements.sql"
+  ,"db:migrate:performance-evaluations": "tsx scripts/run-sql.ts scripts/sql/20250824_create_performance_evaluations.sql"
+  ,"db:migrate:building-systems": "tsx scripts/run-sql.ts scripts/sql/20250826_create_building_systems.sql"
+  ,"check:missing-cities": "tsx scripts/check/missing-cities.ts"
+  ,"check:cities-coverages": "tsx scripts/check/cities-without-coverages.ts"
+  ,"db:migrate:fks-criteria-analyses-parameters": "tsx scripts/run-sql.ts scripts/sql/20250826_add_fk_criteria_analyses_parameters.sql"
+  ,"db:migrate:fks-buildings-masters": "tsx scripts/run-sql.ts scripts/sql/20250826_add_fk_buildings_master_refs.sql"
+  ,"test": "cross-env NODE_ENV=test tsx --test server/index.test.ts"
+  ,"db:check:fks-criteria-analyses-parameters": "tsx scripts/check/fks_criteria_analyses_parameters.ts"
+  ,"import:isopletas": "tsx scripts/import/update-cities-wind.ts"
+  ,"analyze:isopletas": "tsx scripts/check/analyze-isopletas-csv.ts"
+  ,"check:missing-wind": "tsx scripts/check/cities-missing-wind.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
@@ -88,18 +88,20 @@
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
     "connect-pg-simple": "^10.0.0",
-    "cors": "^2.8.5",
-    "csurf": "^1.11.0",
     "date-fns": "^3.6.0",
     "dotenv": "^17.2.1",
     "drizzle-orm": "^0.39.1",
     "drizzle-zod": "^0.7.0",
     "embla-carousel-react": "^8.6.0",
-    "express": "^4.21.2",
+  "express": "^4.21.2",
+  "helmet": "^7.2.0",
+  "cors": "^2.8.5",
     "express-rate-limit": "^7.5.1",
+    "csurf": "^1.11.0",
     "express-session": "^1.18.1",
+    "rate-limit-redis": "^1.0.0",
+    "redis": "^4.6.7",
     "framer-motion": "^11.13.1",
-    "helmet": "^7.2.0",
     "input-otp": "^1.4.2",
     "lucide-react": "^0.453.0",
     "memoizee": "^0.4.17",
@@ -107,7 +109,6 @@
     "nanoid": "^5.1.5",
     "next-themes": "^0.4.6",
     "passport": "^0.7.0",
-    "rate-limit-redis": "^1.0.0",
     "react": "^18.3.1",
     "react-day-picker": "^8.10.1",
     "react-dom": "^18.3.1",
@@ -115,7 +116,6 @@
     "react-icons": "^5.4.0",
     "react-resizable-panels": "^2.1.7",
     "recharts": "^2.15.2",
-    "redis": "^4.6.7",
     "tailwind-merge": "^2.6.0",
     "tailwindcss-animate": "^1.0.7",
     "tw-animate-css": "^1.2.5",
@@ -128,10 +128,10 @@
   "devDependencies": {
     "@tailwindcss/typography": "^0.5.15",
     "@tailwindcss/vite": "^4.1.3",
-    "@types/bcryptjs": "^2.4.6",
+  "@types/bcryptjs": "^2.4.6",
+  "@types/cors": "^2.8.19",
+  "@types/csurf": "^1.11.3",
     "@types/connect-pg-simple": "^7.0.3",
-    "@types/cors": "^2.8.19",
-    "@types/csurf": "^1.11.3",
     "@types/express": "4.17.21",
     "@types/express-session": "^1.18.0",
     "@types/node": "20.16.11",
