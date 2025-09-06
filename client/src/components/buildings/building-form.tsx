@@ -726,62 +726,60 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
 
           {/* Caracterização do Entorno */}
           <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="noiseClassId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormControl>
-                      <NotchedField label="Classe de Ruído do Entorno" requiredMark>
-                        <Combobox
-                          options={(noiseClasses || [])
-                            .filter((t: any) => t.isActive !== false)
-                            .slice()
-                            .sort((a: any, b: any) => String(a.code).localeCompare(String(b.code), 'pt-BR', { numeric: true }))
-                            .map((t: any) => ({ value: String(t.id), label: `${t.code} - ${t.label}` }))}
-                          value={field.value ? String(field.value) : undefined}
-                          onChange={field.onChange}
-                          placeholder="Selecione a classe"
-                          triggerTestId="select-noise-class"
-                          className="border-0 bg-transparent shadow-none focus:ring-0 focus:ring-offset-0 h-8 px-2"
-                        />
-                      </NotchedField>
+            <FormField
+              control={form.control}
+              name="noiseClassId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormControl>
+                    <NotchedField label="Classe de Ruído do Entorno" requiredMark className="w-full">
+                      <Combobox
+                        options={(noiseClasses || [])
+                          .filter((t: any) => t.isActive !== false)
+                          .slice()
+                          .sort((a: any, b: any) => String(a.code).localeCompare(String(b.code), 'pt-BR', { numeric: true }))
+                          .map((t: any) => ({ value: String(t.id), label: `${t.code} - ${t.label}` }))}
+                        value={field.value ? String(field.value) : undefined}
+                        onChange={field.onChange}
+                        placeholder="Selecione a classe"
+                        triggerTestId="select-noise-class"
+                        className="w-full border-0 bg-transparent shadow-none focus:ring-0 focus:ring-offset-0 h-8 px-2"
+                      />
+                    </NotchedField>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
 
-              <FormField
-                control={form.control}
-                name="aggressivenessClassId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormControl>
-                      <NotchedField label="Classe de Agressividade Ambiental" requiredMark>
-                        <Combobox
-                          options={(aggressiveness || [])
-                            .filter((t: any) => t.isActive !== false)
-                            .slice()
-                            .sort((a: any, b: any) => String(a.code).localeCompare(String(b.code), 'pt-BR', { numeric: true }))
-                            .map((t: any) => ({
-                              value: String(t.id),
-                              label: `${t.code} - ${t.label}${t.risk ? ' (' + t.risk + ')' : ''}`,
-                            }))}
-                          value={field.value ? String(field.value) : undefined}
-                          onChange={field.onChange}
-                          placeholder="Selecione a classe"
-                          triggerTestId="select-aggressiveness-class"
-                          className="border-0 bg-transparent shadow-none focus:ring-0 focus:ring-offset-0 h-8 px-2"
-                        />
-                      </NotchedField>
+            <FormField
+              control={form.control}
+              name="aggressivenessClassId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormControl>
+                    <NotchedField label="Classe de Agressividade Ambiental" requiredMark className="w-full">
+                      <Combobox
+                        options={(aggressiveness || [])
+                          .filter((t: any) => t.isActive !== false)
+                          .slice()
+                          .sort((a: any, b: any) => String(a.code).localeCompare(String(b.code), 'pt-BR', { numeric: true }))
+                          .map((t: any) => ({
+                            value: String(t.id),
+                            label: `${t.code} - ${t.label}${t.risk ? ' (' + t.risk + ')' : ''}`,
+                          }))}
+                        value={field.value ? String(field.value) : undefined}
+                        onChange={field.onChange}
+                        placeholder="Selecione a classe"
+                        triggerTestId="select-aggressiveness-class"
+                        className="w-full border-0 bg-transparent shadow-none focus:ring-0 focus:ring-offset-0 h-8 px-2"
+                      />
+                    </NotchedField>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            </div>
           </div>
 
           {/* AÇÕES */}
