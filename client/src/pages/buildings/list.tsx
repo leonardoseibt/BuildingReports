@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Building2, Plus, MapPin, Loader2, Pencil, Trash2, Search, ArrowUp, ArrowDown } from "lucide-react";
 import {
   AlertDialog,
@@ -270,12 +271,12 @@ export default function BuildingList() {
           <div className="rounded-2xl border bg-white/80 backdrop-blur px-5 py-4 md:px-6 md:py-5 shadow-sm mb-4">
             <div className="flex items-center gap-3">
               <div className="relative w-full max-w-lg">
-                <input
+                <Input
                   type="text"
                   value={search}
                   onChange={(e) => { setSearch(e.target.value); setPage(1); }}
                   placeholder="Buscar edificações (nome, localização, cidade, UF, responsável, data)"
-                  className="w-full h-9 rounded-md border px-9 text-sm"
+                  className="h-9 pl-9"
                 />
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
               </div>
