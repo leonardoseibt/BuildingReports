@@ -17,8 +17,8 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { NotchedField } from "@/components/ui/notched-field";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { Combobox } from "@/components/ui/combobox";
 import { IdCard, MapPin, Mail, Phone, Loader2, User2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 // Estados agora carregados dinamicamente da API
@@ -331,18 +331,16 @@ export default function TechnicianForm({ onSuccess, onCancel, initialTech }: Tec
                   <FormItem>
         <FormControl>
           <NotchedField label="UF do Registro" requiredMark>
-      <Select onValueChange={field.onChange} value={field.value}>
-              <FormControl>
-        <SelectTrigger className="border-0 bg-transparent shadow-none focus:ring-0 focus:ring-offset-0">
-                  <SelectValue placeholder={loadingStates ? 'Carregando...' : 'Selecione a UF'} />
-                </SelectTrigger>
-              </FormControl>
-              <SelectContent>
-                {states.slice().sort((a,b)=>a.code.localeCompare(b.code)).map(st => (
-                  <SelectItem key={st.code} value={st.code}>{st.code}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Combobox
+              options={states
+                .slice()
+                .sort((a, b) => a.code.localeCompare(b.code))
+                .map((st) => ({ value: st.code, label: st.code }))}
+              value={field.value}
+              onChange={field.onChange}
+              placeholder={loadingStates ? 'Carregando...' : 'Selecione a UF'}
+              className="border-0 bg-transparent shadow-none focus:ring-0 focus:ring-offset-0 h-8 px-2"
+            />
           </NotchedField>
         </FormControl>
                     <FormMessage />
@@ -527,18 +525,16 @@ export default function TechnicianForm({ onSuccess, onCancel, initialTech }: Tec
                     <FormItem className="md:col-span-2">
                       <FormControl>
                         <NotchedField label="UF">
-                          <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl>
-                              <SelectTrigger className="border-0 bg-transparent shadow-none focus:ring-0 focus:ring-offset-0">
-                                <SelectValue placeholder={loadingStates ? 'Carregando...' : 'UF'} />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {states.slice().sort((a,b)=>a.code.localeCompare(b.code)).map(st => (
-                                <SelectItem key={st.code} value={st.code}>{st.code}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <Combobox
+                            options={states
+                              .slice()
+                              .sort((a, b) => a.code.localeCompare(b.code))
+                              .map((st) => ({ value: st.code, label: st.code }))}
+                            value={field.value}
+                            onChange={field.onChange}
+                            placeholder={loadingStates ? 'Carregando...' : 'UF'}
+                            className="border-0 bg-transparent shadow-none focus:ring-0 focus:ring-offset-0 h-8 px-2"
+                          />
                         </NotchedField>
                       </FormControl>
                       <FormMessage />
