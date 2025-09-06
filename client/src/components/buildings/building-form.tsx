@@ -325,6 +325,8 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
                       <Combobox
                         options={(typologies || [])
                           .filter((t: any) => t.isActive !== false)
+                          .slice()
+                          .sort((a: any, b: any) => String(a.label).localeCompare(String(b.label), 'pt-BR', { numeric: true }))
                           .map((t: any) => ({ value: String(t.id), label: t.label }))}
                         value={field.value ? String(field.value) : undefined}
                         onChange={field.onChange}
@@ -735,6 +737,8 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
                         <Combobox
                           options={(noiseClasses || [])
                             .filter((t: any) => t.isActive !== false)
+                            .slice()
+                            .sort((a: any, b: any) => String(a.code).localeCompare(String(b.code), 'pt-BR', { numeric: true }))
                             .map((t: any) => ({ value: String(t.id), label: `${t.code} - ${t.label}` }))}
                           value={field.value ? String(field.value) : undefined}
                           onChange={field.onChange}
@@ -759,6 +763,8 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
                         <Combobox
                           options={(aggressiveness || [])
                             .filter((t: any) => t.isActive !== false)
+                            .slice()
+                            .sort((a: any, b: any) => String(a.code).localeCompare(String(b.code), 'pt-BR', { numeric: true }))
                             .map((t: any) => ({
                               value: String(t.id),
                               label: `${t.code} - ${t.label}${t.risk ? ' (' + t.risk + ')' : ''}`,
