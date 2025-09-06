@@ -11,8 +11,8 @@ import { isUnauthorizedError } from "@/lib/authUtils";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { NotchedField } from "@/components/ui/notched-field";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { Combobox } from "@/components/ui/combobox";
 import { MapPin, Building2, User, Home, Check, ChevronsUpDown, Loader2 } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
@@ -322,18 +322,16 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
                 <FormItem>
                   <FormControl>
                     <NotchedField label="Tipo de Uso Habitacional" requiredMark>
-                      <Select onValueChange={field.onChange} value={field.value ? String(field.value) : undefined}>
-                        <FormControl>
-                          <SelectTrigger data-testid="select-typology" className="border-0 bg-transparent shadow-none focus:ring-0 focus:ring-offset-0">
-                            <SelectValue placeholder="Selecione o tipo de uso" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {(typologies || []).filter((t:any)=>t.isActive!==false).map((t:any)=> (
-                            <SelectItem key={t.id} value={String(t.id)}>{t.label}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <Combobox
+                        options={(typologies || [])
+                          .filter((t: any) => t.isActive !== false)
+                          .map((t: any) => ({ value: String(t.id), label: t.label }))}
+                        value={field.value ? String(field.value) : undefined}
+                        onChange={field.onChange}
+                        placeholder="Selecione o tipo de uso"
+                        triggerTestId="select-typology"
+                        className="border-0 bg-transparent shadow-none focus:ring-0 focus:ring-offset-0 h-8 px-2"
+                      />
                     </NotchedField>
                   </FormControl>
                   <FormMessage />
@@ -491,38 +489,38 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
                 render={({ field }) => (
                   <FormItem className="md:col-span-5">
                     <FormControl>
-                      <NotchedField label="Isopleta">
-                        <Select onValueChange={field.onChange} value={field.value ? String(field.value) : undefined} disabled={isoplethLocked}>
-                          <FormControl>
-                            <SelectTrigger className="border-0 bg-transparent shadow-none focus:ring-0 focus:ring-offset-0 h-8 px-2" data-testid="select-isopleth">
-                              <SelectValue placeholder="Selecione a isopleta" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {(isopleths || []).slice().sort((a:any,b:any)=> String(a.code).localeCompare(String(b.code),'pt-BR',{numeric:true})).map((i:any)=> {
-                              const min = i.windMinMS != null ? parseFloat(i.windMinMS as any) : null;
-                              const max = i.windMaxMS != null ? parseFloat(i.windMaxMS as any) : null;
-                              const fmt = (v:number|null) => v == null || Number.isNaN(v) ? null : v.toFixed(2).replace(/\.00$/,'');
-                              const range = (() => {
-                                const fmin = fmt(min);
-                                const fmax = fmt(max);
-                                if (fmin && fmax) return ` (${fmin}–${fmax} m/s)`;
-                                if (fmin) return ` (≥ ${fmin} m/s)`;
-                                if (fmax) return ` (≤ ${fmax} m/s)`;
-                                return '';
-                              })();
-                              return (
-                                <SelectItem key={i.id} value={i.code}>{`${i.code} - ${i.label}${range}`}</SelectItem>
-                              );
-                            })}
-                          </SelectContent>
-                        </Select>
-                      </NotchedField>
-                    </FormControl>
-                    <FormMessage />
-                    {isoplethLocked && <p className="text-xs text-slate-500 mt-1">Determinada pelo CEP.</p>}
-                  </FormItem>
-                )}
+                    <NotchedField label="Isopleta">
+                      <Combobox
+                        options={(isopleths || [])
+                          .slice()
+                          .sort((a: any, b: any) => String(a.code).localeCompare(String(b.code), 'pt-BR', { numeric: true }))
+                          .map((i: any) => {
+                            const min = i.windMinMS != null ? parseFloat(i.windMinMS as any) : null;
+                            const max = i.windMaxMS != null ? parseFloat(i.windMaxMS as any) : null;
+                            const fmt = (v: number | null) => (v == null || Number.isNaN(v) ? null : v.toFixed(2).replace(/\.00$/, ''));
+                            const range = (() => {
+                              const fmin = fmt(min);
+                              const fmax = fmt(max);
+                              if (fmin && fmax) return ` (${fmin}–${fmax} m/s)`;
+                              if (fmin) return ` (≥ ${fmin} m/s)`;
+                              if (fmax) return ` (≤ ${fmax} m/s)`;
+                              return '';
+                            })();
+                            return { value: i.code, label: `${i.code} - ${i.label}${range}` };
+                          })}
+                        value={field.value ? String(field.value) : undefined}
+                        onChange={field.onChange}
+                        placeholder="Selecione a isopleta"
+                        triggerTestId="select-isopleth"
+                        className="border-0 bg-transparent shadow-none focus:ring-0 focus:ring-offset-0 h-8 px-2"
+                        disabled={isoplethLocked}
+                      />
+                    </NotchedField>
+                  </FormControl>
+                  <FormMessage />
+                  {isoplethLocked && <p className="text-xs text-slate-500 mt-1">Determinada pelo CEP.</p>}
+                </FormItem>
+              )}
               />
             </div>
             {/* Linha 2: Logradouro + Número */}
@@ -611,24 +609,22 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
                   <FormItem className="md:col-span-2">
                     <FormControl>
                       <NotchedField label="UF">
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl>
-                            <SelectTrigger className="border-0 bg-transparent shadow-none focus:ring-0 focus:ring-offset-0">
-                              <SelectValue placeholder={loadingStates ? 'Carregando...' : 'UF'} />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {states.slice().sort((a,b)=>a.code.localeCompare(b.code)).map(st => (
-                              <SelectItem key={st.code} value={st.code}>{st.code}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <Combobox
+                          options={states
+                            .slice()
+                            .sort((a, b) => a.code.localeCompare(b.code))
+                            .map((st) => ({ value: st.code, label: st.code }))}
+                          value={field.value}
+                          onChange={field.onChange}
+                          placeholder={loadingStates ? 'Carregando...' : 'UF'}
+                          className="border-0 bg-transparent shadow-none focus:ring-0 focus:ring-offset-0 h-8 px-2"
+                        />
                       </NotchedField>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             </div>
           </div>
 
@@ -736,24 +732,22 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
                   <FormItem>
                     <FormControl>
                       <NotchedField label="Classe de Ruído do Entorno" requiredMark>
-                        <Select onValueChange={field.onChange} value={field.value ? String(field.value) : undefined}>
-                          <FormControl>
-                            <SelectTrigger data-testid="select-noise-class" className="border-0 bg-transparent shadow-none focus:ring-0 focus:ring-offset-0">
-                              <SelectValue placeholder="Selecione a classe" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {(noiseClasses || []).filter((t:any)=>t.isActive!==false).map((t:any)=> (
-                              <SelectItem key={t.id} value={String(t.id)}>{`${t.code} - ${t.label}`}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <Combobox
+                          options={(noiseClasses || [])
+                            .filter((t: any) => t.isActive !== false)
+                            .map((t: any) => ({ value: String(t.id), label: `${t.code} - ${t.label}` }))}
+                          value={field.value ? String(field.value) : undefined}
+                          onChange={field.onChange}
+                          placeholder="Selecione a classe"
+                          triggerTestId="select-noise-class"
+                          className="border-0 bg-transparent shadow-none focus:ring-0 focus:ring-offset-0 h-8 px-2"
+                        />
                       </NotchedField>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
               <FormField
                 control={form.control}
@@ -762,24 +756,25 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
                   <FormItem>
                     <FormControl>
                       <NotchedField label="Classe de Agressividade Ambiental" requiredMark>
-                        <Select onValueChange={field.onChange} value={field.value ? String(field.value) : undefined}>
-                          <FormControl>
-                            <SelectTrigger data-testid="select-aggressiveness-class" className="border-0 bg-transparent shadow-none focus:ring-0 focus:ring-offset-0">
-                              <SelectValue placeholder="Selecione a classe" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {(aggressiveness || []).filter((t:any)=>t.isActive!==false).map((t:any)=> (
-                              <SelectItem key={t.id} value={String(t.id)}>{`${t.code} - ${t.label}${t.risk ? ' ('+ t.risk +')' : ''}`}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <Combobox
+                          options={(aggressiveness || [])
+                            .filter((t: any) => t.isActive !== false)
+                            .map((t: any) => ({
+                              value: String(t.id),
+                              label: `${t.code} - ${t.label}${t.risk ? ' (' + t.risk + ')' : ''}`,
+                            }))}
+                          value={field.value ? String(field.value) : undefined}
+                          onChange={field.onChange}
+                          placeholder="Selecione a classe"
+                          triggerTestId="select-aggressiveness-class"
+                          className="border-0 bg-transparent shadow-none focus:ring-0 focus:ring-offset-0 h-8 px-2"
+                        />
                       </NotchedField>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             </div>
           </div>
 
