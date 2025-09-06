@@ -226,20 +226,17 @@ export default function ParameterForm({ onSuccess, onCancel, initialItem }: { on
             <FormItem className="md:col-span-2">
               <FormControl>
                 <NotchedField label="Análise" requiredMark>
-                  <Select
+                  <select
                     value={field.value ? String(field.value) : ''}
-                    onValueChange={v => field.onChange(v)}
+                    onChange={e => field.onChange(e.target.value)}
                     disabled={!(requirementId && criterionId) || filteredAnalyses.length === 0}
+                    className="w-full h-9 bg-transparent border-0 shadow-none text-sm"
                   >
-                    <SelectTrigger>
-                      <SelectValue placeholder={requirementId && criterionId ? (filteredAnalyses.length ? 'Selecione...' : 'Sem análises') : 'Selecione Requisito e Critério'} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {filteredAnalyses.map(a => (
-                        <SelectItem key={a.id} value={String(a.id)}>{a.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    <option value="" disabled>{requirementId && criterionId ? (filteredAnalyses.length ? 'Selecione...' : 'Sem análises') : 'Selecione Requisito e Critério'}</option>
+                    {filteredAnalyses.map(a => (
+                      <option key={a.id} value={String(a.id)}>{a.label}</option>
+                    ))}
+                  </select>
                 </NotchedField>
               </FormControl>
               <FormMessage />
@@ -363,22 +360,6 @@ export default function ParameterForm({ onSuccess, onCancel, initialItem }: { on
         {/* Linha 4: Mínimo, Intermediário, Superior */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <FormField name="minimumValue" control={form.control} render={({ field }) => (
-            <FormItem>
-              <FormControl>
-                <NotchedField label="Mínimo">
-                  <SmartInput
-                    {...field}
-                    value={field.value ?? ''}
-                    onChange={(e) => field.onChange(normalizeIneq(e.target.value))}
-                    placeholder="Min"
-                    className="w-full bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
-                  />
-                </NotchedField>
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )} />
-          <FormField name="intermediateValue" control={form.control} render={({ field }) => (
             <FormItem>
               <FormControl>
                 <NotchedField label="Intermediário">

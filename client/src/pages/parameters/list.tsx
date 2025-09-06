@@ -16,6 +16,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import type { Parameter, Analysis, Criterion, Requirement } from '@shared/schema';
 import { apiRequest } from '@/lib/queryClient';
 import ParameterForm from '@/components/parameters/parameter-form';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 export default function ParametersList() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -135,14 +136,24 @@ export default function ParametersList() {
               <input type="text" value={search} onChange={(e)=>{ setSearch(e.target.value); setPage(1); }} placeholder="Buscar parâmetros" className="w-full h-9 rounded-md border px-9 text-sm" />
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
             </div>
-            <select value={requirementFilter} onChange={(e)=>{ const v = e.target.value==='all'?'all':Number(e.target.value); setRequirementFilter(v); setPage(1); }} className="h-9 text-sm rounded-md border px-2 bg-white">
-              <option value="all">Todos os Requisitos</option>
-              {requirements.map(r=> <option key={r.id} value={r.id}>{r.code} - {r.label}</option>)}
-            </select>
-            <select value={criterionFilter} onChange={(e)=>{ const v = e.target.value==='all'?'all':Number(e.target.value); setCriterionFilter(v); setPage(1); }} className="h-9 text-sm rounded-md border px-2 bg-white">
-              <option value="all">Todos os Critérios</option>
-              {criteria.map(c=> <option key={c.id} value={c.id}>{c.code} - {c.label}</option>)}
-            </select>
+            <Select value={String(requirementFilter)} onValueChange={v => { const val = v==='all'?'all':Number(v); setRequirementFilter(val); setPage(1); }}>
+              <SelectTrigger>
+                <SelectValue placeholder="Todos os Requisitos" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os Requisitos</SelectItem>
+                {requirements.map(r=> <SelectItem key={r.id} value={String(r.id)}>{r.code} - {r.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={String(criterionFilter)} onValueChange={v => { const val = v==='all'?'all':Number(v); setCriterionFilter(val); setPage(1); }}>
+              <SelectTrigger>
+                <SelectValue placeholder="Todos os Critérios" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os Critérios</SelectItem>
+                {criteria.map(c=> <SelectItem key={c.id} value={String(c.id)}>{c.code} - {c.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
           </div>
         </div>
       </div>
