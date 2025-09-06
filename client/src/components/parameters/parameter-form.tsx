@@ -11,6 +11,7 @@ import FormHeader from '@/components/ui/form-header';
 import { Form, FormField, FormItem, FormControl, FormMessage } from '@/components/ui/form';
 import { SmartInput, SmartTextarea } from '@/components/ui/smart-inputs';
 import { NotchedField } from '@/components/ui/notched-field';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import type { Parameter, Analysis, Criterion, Requirement } from '@shared/schema';
 import { useQuery } from '@tanstack/react-query';
 
@@ -225,14 +226,20 @@ export default function ParameterForm({ onSuccess, onCancel, initialItem }: { on
             <FormItem className="md:col-span-2">
               <FormControl>
                 <NotchedField label="Análise" requiredMark>
-                  <select
-                    {...field}
+                  <Select
+                    value={field.value ? String(field.value) : ''}
+                    onValueChange={v => field.onChange(v)}
                     disabled={!(requirementId && criterionId) || filteredAnalyses.length === 0}
-                    className="bg-transparent shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 w-full h-9 text-sm disabled:opacity-50"
                   >
-                    <option value="">{requirementId && criterionId ? (filteredAnalyses.length ? 'Selecione...' : 'Sem análises') : 'Selecione Requisito e Critério'}</option>
-                    {filteredAnalyses.map(a => <option key={a.id} value={a.id}>{a.label}</option>)}
-                  </select>
+                    <SelectTrigger>
+                      <SelectValue placeholder={requirementId && criterionId ? (filteredAnalyses.length ? 'Selecione...' : 'Sem análises') : 'Selecione Requisito e Critério'} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {filteredAnalyses.map(a => (
+                        <SelectItem key={a.id} value={String(a.id)}>{a.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </NotchedField>
               </FormControl>
               <FormMessage />
