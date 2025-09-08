@@ -153,7 +153,7 @@ export default function AnalysesList() {
                 <select
                   value={requirementFilter}
                   onChange={(e) => { const v = e.target.value === 'all' ? 'all' : Number(e.target.value); setRequirementFilter(v); setPage(1); }}
-                  className="h-9 bg-transparent border-0 shadow-none px-1 text-sm focus-visible:ring-0 focus-visible:ring-offset-0 focus:outline-none"
+                  className="h-9 text-sm rounded-md border px-2 bg-white focus:outline-none"
                 >
                   <option value="all">Todos os Requisitos</option>
                   {requirements.map(r => <option key={r.id} value={r.id}>{r.code} - {r.label}</option>)}
@@ -161,7 +161,7 @@ export default function AnalysesList() {
                 <select
                   value={criterionFilter}
                   onChange={(e) => { const v = e.target.value === 'all' ? 'all' : Number(e.target.value); setCriterionFilter(v); setPage(1); }}
-                  className="h-9 bg-transparent border-0 shadow-none px-1 text-sm focus-visible:ring-0 focus-visible:ring-offset-0 focus:outline-none"
+                  className="h-9 text-sm rounded-md border px-2 bg-white focus:outline-none"
                 >
                   <option value="all">Todos os Critérios</option>
                   {criteria.map(c => <option key={c.id} value={c.id}>{c.code} - {c.label}</option>)}
