@@ -1303,14 +1303,44 @@ export class DatabaseStorage implements IStorage {
     return { items: items as any, total };
   }
   async createAnalysis(item: InsertAnalysis): Promise<Analysis> {
-    const [row] = await db.insert(analyses).values({
-      requirementId: (item as any).requirementId,
-      criterionId: (item as any).criterionId,
-      code: (item as any).code,
-      label: (item as any).label,
-      isActive: (item as any).isActive ?? true,
-    }).returning();
-    return row as Analysis;
+    return db.transaction(async (tx) => {
+      const [req] = await tx
+        .select({ code: requirements.code })
+        .from(requirements)
+        .where(eq(requirements.id, (item as any).requirementId));
+      const [crit] = await tx
+        .select({ code: criteria.code })
+        .from(criteria)
+        .where(eq(criteria.id, (item as any).criterionId));
+      if (!req || !crit) throw new Error('Invalid requirement or criterion');
+
+      const prefix = `${req.code}.${crit.code}`;
+      const [last] = await tx
+        .select({ code: analyses.code })
+        .from(analyses)
+        .where(and(eq(analyses.requirementId, (item as any).requirementId), eq(analyses.criterionId, (item as any).criterionId)))
+        .orderBy(desc(analyses.code))
+        .limit(1);
+      let seq = 1;
+      if (last?.code) {
+        const parts = String(last.code).split('.');
+        const n = Number(parts[2]);
+        if (Number.isFinite(n)) seq = n + 1;
+      }
+      const code = `${prefix}.${String(seq).padStart(3, '0')}`;
+
+      const [row] = await tx
+        .insert(analyses)
+        .values({
+          requirementId: (item as any).requirementId,
+          criterionId: (item as any).criterionId,
+          code,
+          label: (item as any).label,
+          isActive: (item as any).isActive ?? true,
+        })
+        .returning();
+      return row as Analysis;
+    });
   }
   async updateAnalysis(id: number, item: Partial<InsertAnalysis>): Promise<Analysis> {
     const [row] = await db.update(analyses).set({ ...(item as any), updatedAt: new Date() }).where(eq(analyses.id, id)).returning();
