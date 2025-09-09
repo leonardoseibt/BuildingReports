@@ -312,7 +312,7 @@ export default function AttributesList() {
               <p className="text-slate-500">Carregando…</p>
             </div>
           ) : sorted.length === 0 ? (
-            <div className="text-center py-12 rounded-2xl bg-white shadow-sm ring-1 ring-slate-200/60">
+            <div className="text-center py-12">
               <Database className="w-16 h-16 text-slate-300 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-slate-900 mb-2">Nenhum atributo cadastrado</h3>
               <p className="text-slate-500 mb-6">Cadastre o primeiro para começar a vincular aos parâmetros.</p>
