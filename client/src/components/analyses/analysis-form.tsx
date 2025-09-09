@@ -98,7 +98,7 @@ export default function AnalysisForm({ onSuccess, onCancel, initialItem }: { onS
         <FormHeader
           title={isEdit ? 'Editar Análise' : 'Nova Análise'}
           subtitle={isEdit ? 'Atualize os dados da análise.' : 'Cadastre uma nova análise para um critério.'}
-          initials={initialItem?.code ?? null}
+          initials={code || null}
         />
         <div className="grid grid-cols-1 md:grid-cols-8 gap-4">
           <FormField
@@ -113,7 +113,6 @@ export default function AnalysisForm({ onSuccess, onCancel, initialItem }: { onS
                       onChange={(e) => {
                         const val = Number(e.target.value);
                         field.onChange(val);
-                        form.setValue('criterionId', 0 as any);
                       }}
                       disabled={isEdit}
                       className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 w-full h-9 text-sm"
