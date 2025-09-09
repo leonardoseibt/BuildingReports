@@ -1057,6 +1057,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: 'Failed to fetch analyses' });
     }
   });
+  app.get('/api/analyses/next-code', isAuthenticated, async (req, res) => {
+    const requirementId = Number(req.query.requirementId);
+    const criterionId = Number(req.query.criterionId);
+    if (!Number.isFinite(requirementId) || !Number.isFinite(criterionId)) {
+      return res.status(400).json({ message: 'Parâmetros inválidos' });
+    }
+    try {
+      const code = await storage.getNextAnalysisCode(requirementId, criterionId);
+      res.json({ code });
+    } catch {
+      res.status(500).json({ message: 'Failed to generate analysis code' });
+    }
+  });
   app.post('/api/analyses', isAuthenticated, express.json(), async (req, res) => {
     try {
       const data = insertAnalysisSchema.parse(req.body);
