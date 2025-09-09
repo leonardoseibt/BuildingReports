@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -39,6 +39,30 @@ export default function AnalysisForm({ onSuccess, onCancel, initialItem }: { onS
     }
   });
   const [submitting, setSubmitting] = useState(false);
+  const [code, setCode] = useState(initialItem?.code ?? '');
+  const requirementId = form.watch('requirementId');
+  const criterionId = form.watch('criterionId');
+
+  useEffect(() => {
+    if (isEdit) return;
+    if (requirementId && criterionId) {
+      (async () => {
+        try {
+          const res = await fetch(`/api/analyses/next-code?requirementId=${requirementId}&criterionId=${criterionId}`);
+          if (res.ok) {
+            const data = await res.json();
+            setCode(data.code);
+          } else {
+            setCode('');
+          }
+        } catch {
+          setCode('');
+        }
+      })();
+    } else {
+      setCode('');
+    }
+  }, [requirementId, criterionId, isEdit]);
 
   async function onSubmit(values: AnalysisFormData) {
     try {
@@ -112,13 +136,11 @@ export default function AnalysisForm({ onSuccess, onCancel, initialItem }: { onS
               </FormItem>
             )}
           />
-          {isEdit && (
-            <div className="md:col-span-2">
-              <NotchedField label="Código">
-                <Input value={initialItem?.code} disabled className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" />
-              </NotchedField>
-            </div>
-          )}
+          <div className="md:col-span-2">
+            <NotchedField label="Código">
+              <Input value={code} readOnly className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" />
+            </NotchedField>
+          </div>
           <FormField
             name="label"
             control={form.control}

@@ -173,6 +173,7 @@ export interface IStorage {
   // Analyses
   listAnalyses(criterionId?: number, requirementId?: number): Promise<Analysis[]>;
   listAnalysesPaginated(params: { criterionId?: number; requirementId?: number; page: number; limit: number }): Promise<{ items: Analysis[]; total: number }>;
+  getNextAnalysisCode(requirementId: number, criterionId: number): Promise<string>;
   createAnalysis(item: InsertAnalysis): Promise<Analysis>;
   updateAnalysis(id: number, item: Partial<InsertAnalysis>): Promise<Analysis>;
   deleteAnalysis(id: number): Promise<boolean>;
@@ -1301,6 +1302,32 @@ export class DatabaseStorage implements IStorage {
       .limit(limit)
       .offset(offset);
     return { items: items as any, total };
+  }
+  async getNextAnalysisCode(requirementId: number, criterionId: number): Promise<string> {
+    const [req] = await db
+      .select({ code: requirements.code })
+      .from(requirements)
+      .where(eq(requirements.id, requirementId));
+    const [crit] = await db
+      .select({ code: criteria.code })
+      .from(criteria)
+      .where(eq(criteria.id, criterionId));
+    if (!req || !crit) throw new Error('Invalid requirement or criterion');
+
+    const prefix = `${req.code}.${crit.code}`;
+    const [last] = await db
+      .select({ code: analyses.code })
+      .from(analyses)
+      .where(and(eq(analyses.requirementId, requirementId), eq(analyses.criterionId, criterionId)))
+      .orderBy(desc(analyses.code))
+      .limit(1);
+    let seq = 1;
+    if (last?.code) {
+      const parts = String(last.code).split('.');
+      const n = Number(parts[2]);
+      if (Number.isFinite(n)) seq = n + 1;
+    }
+    return `${prefix}.${String(seq).padStart(3, '0')}`;
   }
   async createAnalysis(item: InsertAnalysis): Promise<Analysis> {
     return db.transaction(async (tx) => {
