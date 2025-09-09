@@ -1370,8 +1370,26 @@ export class DatabaseStorage implements IStorage {
     });
   }
   async updateAnalysis(id: number, item: Partial<InsertAnalysis>): Promise<Analysis> {
-    const [row] = await db.update(analyses).set({ ...(item as any), updatedAt: new Date() }).where(eq(analyses.id, id)).returning();
-    return row as Analysis;
+    return db.transaction(async (tx) => {
+      const [existing] = await tx.select().from(analyses).where(eq(analyses.id, id));
+      if (!existing) throw new Error('Analysis not found');
+
+      const requirementId = (item as any).requirementId ?? existing.requirementId;
+      const criterionId = (item as any).criterionId ?? existing.criterionId;
+      let code = existing.code;
+      if (
+        (item as any).requirementId && (item as any).requirementId !== existing.requirementId ||
+        (item as any).criterionId && (item as any).criterionId !== existing.criterionId
+      ) {
+        code = await this.getNextAnalysisCode(requirementId, criterionId);
+      }
+      const [row] = await tx
+        .update(analyses)
+        .set({ ...(item as any), requirementId, criterionId, code, updatedAt: new Date() })
+        .where(eq(analyses.id, id))
+        .returning();
+      return row as Analysis;
+    });
   }
   async deleteAnalysis(id: number): Promise<boolean> {
     // Guard: block deletion if parameters exist for this analysis

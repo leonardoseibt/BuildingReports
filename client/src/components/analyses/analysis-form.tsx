@@ -44,8 +44,16 @@ export default function AnalysisForm({ onSuccess, onCancel, initialItem }: { onS
   const criterionId = form.watch('criterionId');
 
   useEffect(() => {
-    if (isEdit) return;
     if (requirementId && criterionId) {
+      // If editing and requirement/criterion unchanged, keep original code
+      if (
+        isEdit &&
+        requirementId === initialItem?.requirementId &&
+        criterionId === initialItem?.criterionId
+      ) {
+        setCode(initialItem!.code);
+        return;
+      }
       (async () => {
         try {
           const res = await fetch(`/api/analyses/next-code?requirementId=${requirementId}&criterionId=${criterionId}`);
@@ -62,7 +70,7 @@ export default function AnalysisForm({ onSuccess, onCancel, initialItem }: { onS
     } else {
       setCode('');
     }
-  }, [requirementId, criterionId, isEdit]);
+  }, [requirementId, criterionId, isEdit, initialItem]);
 
   async function onSubmit(values: AnalysisFormData) {
     try {
@@ -105,7 +113,7 @@ export default function AnalysisForm({ onSuccess, onCancel, initialItem }: { onS
                       onChange={(e) => {
                         const val = Number(e.target.value);
                         field.onChange(val);
-                        if (!isEdit) form.setValue('criterionId', 0 as any);
+                        form.setValue('criterionId', 0 as any);
                       }}
                       disabled={isEdit}
                       className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 w-full h-9 text-sm"
@@ -138,7 +146,13 @@ export default function AnalysisForm({ onSuccess, onCancel, initialItem }: { onS
           />
           <div className="md:col-span-2">
             <NotchedField label="Código">
-              <Input value={code} readOnly className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" />
+              <Input
+                value={code}
+                readOnly
+                tabIndex={-1}
+                onFocus={(e) => e.target.blur()}
+                className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+              />
             </NotchedField>
           </div>
           <FormField
