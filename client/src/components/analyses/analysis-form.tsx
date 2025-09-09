@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -16,7 +16,6 @@ import { useQuery } from '@tanstack/react-query';
 const formSchema = z.object({
   requirementId: z.coerce.number().min(1, 'Requisito é obrigatório'),
   criterionId: z.coerce.number().min(1, 'Critério é obrigatório'),
-  code: z.string().min(1, 'Código é obrigatório').max(32, 'Máx 32 caracteres'),
   label: z.string().min(1, 'Descrição é obrigatória').max(255, 'Máx 255 caracteres'),
   isActive: z.boolean().optional().default(true),
 });
@@ -33,9 +32,8 @@ export default function AnalysisForm({ onSuccess, onCancel, initialItem }: { onS
   const form = useForm<AnalysisFormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-  requirementId: initialItem ? (initialItem as any).requirementId : 0,
-  criterionId: initialItem?.criterionId || 0,
-      code: initialItem?.code || '',
+      requirementId: initialItem ? (initialItem as any).requirementId : 0,
+      criterionId: initialItem?.criterionId || 0,
       label: initialItem?.label || '',
       isActive: initialItem?.isActive ?? true,
     }
@@ -45,7 +43,7 @@ export default function AnalysisForm({ onSuccess, onCancel, initialItem }: { onS
   async function onSubmit(values: AnalysisFormData) {
     try {
       setSubmitting(true);
-  const payload = { ...values, code: values.code.trim(), label: values.label.trim() };
+      const payload = { ...values, label: values.label.trim() };
       const method = isEdit ? 'PUT' : 'POST';
       const url = isEdit ? `/api/analyses/${initialItem!.id}` : '/api/analyses';
       await apiRequest(method as any, url as any, payload);
@@ -68,14 +66,14 @@ export default function AnalysisForm({ onSuccess, onCancel, initialItem }: { onS
         <FormHeader
           title={isEdit ? 'Editar Análise' : 'Nova Análise'}
           subtitle={isEdit ? 'Atualize os dados da análise.' : 'Cadastre uma nova análise para um critério.'}
-          initials={form.getValues('code') || null}
+          initials={initialItem?.code ?? null}
         />
-    <div className="grid grid-cols-1 md:grid-cols-8 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-8 gap-4">
           <FormField
             name="requirementId"
             control={form.control}
             render={({ field }) => (
-      <FormItem className="md:col-span-4">
+              <FormItem className="md:col-span-4">
                 <FormControl>
                   <NotchedField label="Requisito" requiredMark>
                     <select
@@ -83,8 +81,9 @@ export default function AnalysisForm({ onSuccess, onCancel, initialItem }: { onS
                       onChange={(e) => {
                         const val = Number(e.target.value);
                         field.onChange(val);
-                        form.setValue('criterionId', 0 as any); // reset criterion to force explicit choice (optional)
+                        if (!isEdit) form.setValue('criterionId', 0 as any);
                       }}
+                      disabled={isEdit}
                       className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 w-full h-9 text-sm"
                     >
                       <option value="">Selecione...</option>
@@ -103,7 +102,7 @@ export default function AnalysisForm({ onSuccess, onCancel, initialItem }: { onS
               <FormItem className="md:col-span-4">
                 <FormControl>
                   <NotchedField label="Critério" requiredMark>
-                    <select {...field} className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 w-full h-9 text-sm">
+                    <select {...field} disabled={isEdit} className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 w-full h-9 text-sm">
                       <option value="">Selecione...</option>
                       {criteria.map(c => <option key={c.id} value={c.id}>{c.code} - {c.label}</option>)}
                     </select>
@@ -113,25 +112,18 @@ export default function AnalysisForm({ onSuccess, onCancel, initialItem }: { onS
               </FormItem>
             )}
           />
-          <FormField
-            name="code"
-            control={form.control}
-            render={({ field }) => (
-              <FormItem className="md:col-span-2">
-                <FormControl>
-                  <NotchedField label="Código" requiredMark>
-                    <Input {...field} placeholder="Ex: A1" className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" />
-                  </NotchedField>
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          {isEdit && (
+            <div className="md:col-span-2">
+              <NotchedField label="Código">
+                <Input value={initialItem?.code} disabled className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" />
+              </NotchedField>
+            </div>
+          )}
           <FormField
             name="label"
             control={form.control}
             render={({ field }) => (
-              <FormItem className="md:col-span-6">
+              <FormItem className={isEdit ? 'md:col-span-6' : 'md:col-span-8'}>
                 <FormControl>
                   <NotchedField label="Descrição" requiredMark>
                     <Input {...field} placeholder="Descrição da análise" className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" />

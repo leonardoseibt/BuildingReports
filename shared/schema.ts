@@ -603,6 +603,7 @@ export const insertConstructiveSystemSchema = createInsertSchema(constructiveSys
 export const insertRequirementSchema = createInsertSchema(requirements);
 export const insertCriterionSchema = createInsertSchema(criteria);
 export const insertAnalysisSchema = createInsertSchema(analyses)
+  .omit({ code: true })
   .extend({
     requirementId: z.coerce.number().min(1, 'Requisito é obrigatório'),
     criterionId: z.coerce.number().min(1, 'Critério é obrigatório'),
