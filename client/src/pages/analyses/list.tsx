@@ -29,7 +29,7 @@ export default function AnalysesList() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<Analysis | null>(null);
   const [search, setSearch] = useState('');
-  const [sortBy, setSortBy] = useState<'code' | 'label' | 'isActive' | 'criterionId' | 'createdAt' | null>(null);
+  const [sortBy, setSortBy] = useState<'code' | 'label' | 'isActive' | 'criterionId' | 'requirementId' | 'createdAt' | null>(null);
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
   const [criterionFilter, setCriterionFilter] = useState<number | 'all'>('all');
   const [requirementFilter, setRequirementFilter] = useState<number | 'all'>('all');
@@ -77,6 +77,8 @@ export default function AnalysesList() {
         cmp = Number((a as any).isActive) - Number((b as any).isActive);
       } else if (sortBy === 'criterionId') {
         cmp = (a.criterionId ?? 0) - (b.criterionId ?? 0);
+      } else if (sortBy === 'requirementId') {
+        cmp = (a.requirementId ?? 0) - (b.requirementId ?? 0);
       } else {
         cmp = comparePt(av, bv);
       }
@@ -185,7 +187,15 @@ export default function AnalysesList() {
               <Table className="table-fixed">
                 <TableHeader>
                   <TableRow className="bg-slate-100/60">
-          <TableHead className="w-[18%]">Requisito</TableHead>
+          <TableHead
+            onClick={() => toggleSort('requirementId')}
+            aria-sort={sortBy === 'requirementId' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
+            className="w-[18%] cursor-pointer select-none"
+          >
+            Requisito {sortBy === 'requirementId' && (sortDir === 'asc'
+              ? <ArrowUp className="inline-block w-3 h-3 ml-1 opacity-70" />
+              : <ArrowDown className="inline-block w-3 h-3 ml-1 opacity-70" />)}
+          </TableHead>
           <TableHead onClick={() => toggleSort('criterionId')} aria-sort={sortBy === 'criterionId' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} className="w-[18%] cursor-pointer select-none">Critério {sortBy === 'criterionId' && (sortDir === 'asc' ? <ArrowUp className="inline-block w-3 h-3 ml-1 opacity-70" /> : <ArrowDown className="inline-block w-3 h-3 ml-1 opacity-70" />)}</TableHead>
           <TableHead onClick={() => toggleSort('code')} aria-sort={sortBy === 'code' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} className="w-[10%] cursor-pointer select-none">Código {sortBy === 'code' && (sortDir === 'asc' ? <ArrowUp className="inline-block w-3 h-3 ml-1 opacity-70" /> : <ArrowDown className="inline-block w-3 h-3 ml-1 opacity-70" />)}</TableHead>
           <TableHead onClick={() => toggleSort('label')} aria-sort={sortBy === 'label' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} className="w-[32%] cursor-pointer select-none">Descrição {sortBy === 'label' && (sortDir === 'asc' ? <ArrowUp className="inline-block w-3 h-3 ml-1 opacity-70" /> : <ArrowDown className="inline-block w-3 h-3 ml-1 opacity-70" />)}</TableHead>
