@@ -95,14 +95,48 @@ export default function ParametersList() {
         cmp = la.localeCompare(lb, 'pt-BR', { sensitivity: 'accent', numeric: true });
         if (cmp === 0) {
           // Desempate estável: label do parâmetro
-            cmp = (a.label || '').localeCompare(b.label || '', 'pt-BR', { sensitivity: 'accent', numeric: true });
+          cmp = (a.label || '').localeCompare(b.label || '', 'pt-BR', { sensitivity: 'accent', numeric: true });
         }
       } else {
         const av = (a as any)[sortBy];
         const bv = (b as any)[sortBy];
         cmp = String(av ?? '').localeCompare(String(bv ?? ''), 'pt-BR', { sensitivity: 'accent', numeric: true });
       }
-      return sortDir === 'asc' ? cmp : -cmp;
+      if (cmp !== 0) return sortDir === 'asc' ? cmp : -cmp;
+
+      // Ordenação secundária: priorizar linhas com Min, depois Int e Sup
+      const priority = (t: Parameter) => {
+        if ((t as any).minimumValue != null && (t as any).minimumValue !== '') return 1;
+        if ((t as any).intermediateValue != null && (t as any).intermediateValue !== '') return 2;
+        if ((t as any).superiorValue != null && (t as any).superiorValue !== '') return 3;
+        return 4;
+      };
+      const pa = priority(a);
+      const pb = priority(b);
+      if (pa !== pb) return pa - pb;
+
+      // Se mesma prioridade, ordenar pelos valores numéricos Min -> Int -> Sup
+      const toNum = (v: any) => {
+        const n = parseFloat(String(v).replace(',', '.'));
+        return isNaN(n) ? Number.POSITIVE_INFINITY : n;
+      };
+      if (pa === 1) {
+        const c = toNum((a as any).minimumValue) - toNum((b as any).minimumValue);
+        if (c !== 0) return c;
+        const ci = toNum((a as any).intermediateValue) - toNum((b as any).intermediateValue);
+        if (ci !== 0) return ci;
+        const cs = toNum((a as any).superiorValue) - toNum((b as any).superiorValue);
+        if (cs !== 0) return cs;
+      } else if (pa === 2) {
+        const ci = toNum((a as any).intermediateValue) - toNum((b as any).intermediateValue);
+        if (ci !== 0) return ci;
+        const cs = toNum((a as any).superiorValue) - toNum((b as any).superiorValue);
+        if (cs !== 0) return cs;
+      } else if (pa === 3) {
+        const cs = toNum((a as any).superiorValue) - toNum((b as any).superiorValue);
+        if (cs !== 0) return cs;
+      }
+      return 0;
     });
     return arr;
   }, [filtered, sortBy, sortDir, analysisLabelById]);
