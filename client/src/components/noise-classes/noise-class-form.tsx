@@ -3,6 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { NotchedField } from "@/components/ui/notched-field";
 import { Button } from "@/components/ui/button";
 import FormHeader from "@/components/ui/form-header";
@@ -15,7 +16,7 @@ import type { NoiseClass } from "@shared/schema";
 
 const schema = z.object({
   code: z.string().min(1, 'Código é obrigatório'),
-  label: z.string().min(1, 'Descrição é obrigatória'),
+  label: z.string().min(1, 'Descrição é obrigatória').max(255, 'Descrição deve ter no máximo 255 caracteres'),
   minDb: z.coerce.number().int().min(0).max(140),
   maxDb: z
     .union([z.literal(''), z.null(), z.coerce.number().int().min(0).max(140)])
@@ -66,7 +67,7 @@ export default function NoiseClassForm({ initialItem, onSuccess, onCancel }: { i
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit((data) => mutation.mutate(data))} className="space-y-6" autoComplete="off">
-  <FormHeader title={initialItem ? 'Editar Classe de Ruído do Entorno' : 'Nova Classe de Ruído do Entorno'} subtitle={initialItem ? 'Atualize os dados da classe de ruído.' : 'Cadastre uma nova classe de ruído.'} initials={initialItem?.code ?? null} />
+  <FormHeader title={initialItem ? 'Editar Classe de Ruído' : 'Nova Classe de Ruído'} subtitle={initialItem ? 'Atualize os dados da classe de ruído.' : 'Cadastre uma nova classe de ruído.'} initials={initialItem?.code ?? null} />
 
         {/* Linha 1: Código & Descrição */}
     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -84,7 +85,13 @@ export default function NoiseClassForm({ initialItem, onSuccess, onCancel }: { i
       <FormItem className="md:col-span-3">
               <FormControl>
                 <NotchedField label="Descrição" requiredMark>
-                  <Input placeholder="Classe 1" {...field} className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" />
+                  <Textarea
+                    placeholder="Classe 1"
+                    {...field}
+                    rows={3}
+                    maxLength={255}
+                    className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 resize-none min-h-0"
+                  />
                 </NotchedField>
               </FormControl>
               <FormMessage />

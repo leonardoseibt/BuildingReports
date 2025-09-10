@@ -119,8 +119,8 @@ export default function NoiseClassesList() {
       <Sidebar />
       <div className="flex-1 flex flex-col overflow-hidden">
         <Header
-          title="Classes de Ruído do Entorno"
-          description="Gerencie as classes de ruído do entorno"
+          title="Classes de Ruído"
+          description="Gerencie as classes de ruído"
           action={
             <div className="flex items-center gap-2">
               {isFetching && <Loader2 className="h-4 w-4 animate-spin text-slate-400" aria-label="Atualizando" />}
