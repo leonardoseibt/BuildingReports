@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import FormHeader from '@/components/ui/form-header';
 import { Form, FormField, FormItem, FormControl, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { NotchedField } from '@/components/ui/notched-field';
 import type { Analysis, Criterion, Requirement } from '@shared/schema';
 import { useQuery } from '@tanstack/react-query';
@@ -157,10 +158,15 @@ export default function AnalysisForm({ onSuccess, onCancel, initialItem }: { onS
             name="label"
             control={form.control}
             render={({ field }) => (
-              <FormItem className={isEdit ? 'md:col-span-6' : 'md:col-span-8'}>
+              <FormItem className="md:col-span-6">
                 <FormControl>
                   <NotchedField label="Descrição" requiredMark>
-                    <Input {...field} placeholder="Descrição da análise" className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" />
+                    <Textarea
+                      {...field}
+                      rows={2}
+                      placeholder="Descrição da análise"
+                      className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 resize-none min-h-0"
+                    />
                   </NotchedField>
                 </FormControl>
                 <FormMessage />
