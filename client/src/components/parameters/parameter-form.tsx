@@ -280,11 +280,19 @@ export default function ParameterForm({ onSuccess, onCancel, initialItem }: { on
                       >
                         <option value="">Selecione...</option>
                         {loadingAttributeValues && <option value="" disabled>Carregando...</option>}
-                        {getAttributeSourceRows().map((row:any) => {
+                        {getAttributeSourceRows().map((row: any) => {
                           const idField = selectedAttribute.valueIdField || 'id';
                           const labelField = selectedAttribute.valueLabelField || 'label';
-                          const rawLabel = row.label ?? row[labelField] ?? row.code ?? row.name ?? row[idField];
-                          return <option key={row.id ?? row[idField]} value={row.id ?? row[idField]}>{rawLabel}</option>;
+                          const optionId = row[idField];
+                          const code = row.code ?? optionId;
+                          const description = row.label ?? row[labelField] ?? row.description ?? row.name ?? '';
+                          const combined = description ? `${code} - ${description}` : String(code);
+                          const truncated = combined.length > 40 ? combined.slice(0, 40) + '…' : combined;
+                          return (
+                            <option key={optionId} value={optionId} title={combined}>
+                              {truncated}
+                            </option>
+                          );
                         })}
                       </select>
                     </NotchedField>
