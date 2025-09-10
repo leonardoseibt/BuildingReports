@@ -1073,7 +1073,16 @@ export class DatabaseStorage implements IStorage {
     return rows as any;
   }
   async createNoiseClass(item: InsertNoiseClass): Promise<NoiseClass> {
-    const [row] = await db.insert(noiseClasses).values({ code: (item as any).code, label: (item as any).label, isActive: (item as any).isActive ?? true }).returning();
+    const [row] = await db
+      .insert(noiseClasses)
+      .values({
+        code: (item as any).code,
+        label: (item as any).label,
+        minDb: (item as any).minDb ?? 0,
+        maxDb: (item as any).maxDb ?? null,
+        isActive: (item as any).isActive ?? true,
+      })
+      .returning();
     return row as NoiseClass;
   }
   async updateNoiseClass(id: number, item: Partial<InsertNoiseClass>): Promise<NoiseClass> {

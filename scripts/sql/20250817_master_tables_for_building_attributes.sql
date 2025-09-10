@@ -21,9 +21,12 @@ BEGIN
       id integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
       code varchar(64) UNIQUE NOT NULL,
       label varchar(255) NOT NULL,
+      min_db smallint NOT NULL DEFAULT 0,
+      max_db smallint NULL,
       is_active boolean DEFAULT true,
       created_at timestamp DEFAULT now(),
-      updated_at timestamp DEFAULT now()
+      updated_at timestamp DEFAULT now(),
+      CONSTRAINT chk_noise_range CHECK (min_db <= COALESCE(max_db, 32767))
     );
   END IF;
 
