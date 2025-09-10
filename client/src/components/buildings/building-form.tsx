@@ -732,7 +732,7 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
               render={({ field }) => (
                 <FormItem>
                   <FormControl>
-                    <NotchedField label="Classe de Ruído do Entorno" requiredMark className="w-full">
+                    <NotchedField label="Classe de Ruído" requiredMark className="w-full">
                       <Combobox
                         options={(noiseClasses || [])
                           .filter((t: any) => t.isActive !== false)

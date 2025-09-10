@@ -175,7 +175,7 @@ Desenvolver sistema web para automatizar a elaboração de relatórios de Perfil
 #### **Critério 3: Desempenho Acústico**
 **Conceitos**:
 - Isolamento sonoro de vedações
-- Classe de ruído do entorno
+- Classe de Ruído
 - Cálculo de DnT,w
 - Classificação por performance
 

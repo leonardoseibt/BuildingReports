@@ -119,8 +119,8 @@ export default function NoiseClassesList() {
       <Sidebar />
       <div className="flex-1 flex flex-col overflow-hidden">
         <Header
-          title="Classes de Ruído do Entorno"
-          description="Gerencie as classes de ruído do entorno"
+          title="Classes de Ruído"
+          description="Gerencie as classes de ruído"
           action={
             <div className="flex items-center gap-2">
               {isFetching && <Loader2 className="h-4 w-4 animate-spin text-slate-400" aria-label="Atualizando" />}
@@ -164,8 +164,7 @@ export default function NoiseClassesList() {
                   <TableRow className="bg-slate-100/60">
                     <TableHead onClick={() => toggleSort('code')} aria-sort={sortBy === 'code' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} className="w-[12%] cursor-pointer select-none">Código {sortBy === 'code' && (sortDir === 'asc' ? <ArrowUp className="inline-block w-3 h-3 ml-1 opacity-70" /> : <ArrowDown className="inline-block w-3 h-3 ml-1 opacity-70" />)}</TableHead>
                     <TableHead onClick={() => toggleSort('label')} aria-sort={sortBy === 'label' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} className="w-[40%] cursor-pointer select-none">Descrição {sortBy === 'label' && (sortDir === 'asc' ? <ArrowUp className="inline-block w-3 h-3 ml-1 opacity-70" /> : <ArrowDown className="inline-block w-3 h-3 ml-1 opacity-70" />)}</TableHead>
-                    <TableHead className="w-[16%]">Faixa Dia (dB)</TableHead>
-                    <TableHead className="w-[16%]">Faixa Noite (dB)</TableHead>
+                    <TableHead className="w-[16%]">Faixa (dB)</TableHead>
                     <TableHead onClick={() => toggleSort('isActive')} aria-sort={sortBy === 'isActive' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} className="w-[10%] cursor-pointer select-none">Ativa {sortBy === 'isActive' && (sortDir === 'asc' ? <ArrowUp className="inline-block w-3 h-3 ml-1 opacity-70" /> : <ArrowDown className="inline-block w-3 h-3 ml-1 opacity-70" />)}</TableHead>
                     <TableHead className="w-[22%] text-right">Ações</TableHead>
                   </TableRow>
@@ -175,8 +174,10 @@ export default function NoiseClassesList() {
                     <TableRow key={t.id}>
                       <TableCell className="font-medium">{t.code}</TableCell>
                       <TableCell>{t.label}</TableCell>
-                      <TableCell>{(t as any).dayMinDb}{(t as any).dayMaxDb!=null ? `–${(t as any).dayMaxDb}` : '+'}</TableCell>
-                      <TableCell>{(t as any).nightMinDb}{(t as any).nightMaxDb!=null ? `–${(t as any).nightMaxDb}` : '+'}</TableCell>
+                      <TableCell>
+                        {(t as any).minDb}
+                        {(t as any).maxDb != null ? `–${(t as any).maxDb}` : '+'}
+                      </TableCell>
                       <TableCell>{(t as any).isActive ? 'Sim' : 'Não'}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1.5">
