@@ -283,12 +283,13 @@ export default function ParameterForm({ onSuccess, onCancel, initialItem }: { on
                         {getAttributeSourceRows().map((row: any) => {
                           const idField = selectedAttribute.valueIdField || 'id';
                           const labelField = selectedAttribute.valueLabelField || 'label';
-                          const code = row.id ?? row[idField];
+                          const optionId = row[idField];
+                          const code = row.code ?? optionId;
                           const description = row.label ?? row[labelField] ?? row.description ?? row.name ?? '';
                           const combined = description ? `${code} - ${description}` : String(code);
                           const truncated = combined.length > 55 ? combined.slice(0, 55) + '…' : combined;
                           return (
-                            <option key={code} value={code} title={combined}>
+                            <option key={optionId} value={optionId} title={combined}>
                               {truncated}
                             </option>
                           );
