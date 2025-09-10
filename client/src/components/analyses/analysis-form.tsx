@@ -114,7 +114,6 @@ export default function AnalysisForm({ onSuccess, onCancel, initialItem }: { onS
                         const val = Number(e.target.value);
                         field.onChange(val);
                       }}
-                      disabled={isEdit}
                       className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 w-full h-9 text-sm"
                     >
                       <option value="">Selecione...</option>
@@ -133,7 +132,7 @@ export default function AnalysisForm({ onSuccess, onCancel, initialItem }: { onS
               <FormItem className="md:col-span-4">
                 <FormControl>
                   <NotchedField label="Critério" requiredMark>
-                    <select {...field} disabled={isEdit} className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 w-full h-9 text-sm">
+                    <select {...field} className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 w-full h-9 text-sm">
                       <option value="">Selecione...</option>
                       {criteria.map(c => <option key={c.id} value={c.id}>{c.code} - {c.label}</option>)}
                     </select>
