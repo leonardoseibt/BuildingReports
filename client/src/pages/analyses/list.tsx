@@ -29,7 +29,7 @@ export default function AnalysesList() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<Analysis | null>(null);
   const [search, setSearch] = useState('');
-  const [sortBy, setSortBy] = useState<'code' | 'label' | 'isActive' | 'criterionId' | 'createdAt' | null>(null);
+  const [sortBy, setSortBy] = useState<'code' | 'label' | 'isActive' | 'criterionId' | 'requirementId' | 'createdAt' | null>(null);
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
   const [criterionFilter, setCriterionFilter] = useState<number | 'all'>('all');
   const [requirementFilter, setRequirementFilter] = useState<number | 'all'>('all');
@@ -62,6 +62,18 @@ export default function AnalysesList() {
     return items.filter(t => normText(t.code).includes(q) || normText(t.label).includes(q));
   }, [items, search]);
 
+  const criteriaById = useMemo(() => {
+    const map: Record<number, any> = {};
+    criteria.forEach(c => { map[c.id] = c; });
+    return map;
+  }, [criteria]);
+
+  const requirementLabelById = useMemo(() => {
+    const map: Record<number, string> = {};
+    requirements.forEach(r => { map[r.id] = r.label; });
+    return map;
+  }, [requirements]);
+
   const sorted = useMemo(() => {
     if (!sortBy) return filtered;
     const arr = [...filtered];
@@ -76,7 +88,15 @@ export default function AnalysesList() {
       } else if (sortBy === 'isActive') {
         cmp = Number((a as any).isActive) - Number((b as any).isActive);
       } else if (sortBy === 'criterionId') {
-        cmp = (a.criterionId ?? 0) - (b.criterionId ?? 0);
+        const ac = criteriaById[a.criterionId ?? 0]?.label ?? '';
+        const bc = criteriaById[b.criterionId ?? 0]?.label ?? '';
+        cmp = comparePt(ac, bc);
+      } else if (sortBy === 'requirementId') {
+        const aReqId = a.requirementId ?? criteriaById[a.criterionId ?? 0]?.requirementId;
+        const bReqId = b.requirementId ?? criteriaById[b.criterionId ?? 0]?.requirementId;
+        const ar = aReqId ? requirementLabelById[aReqId] ?? '' : '';
+        const br = bReqId ? requirementLabelById[bReqId] ?? '' : '';
+        cmp = comparePt(ar, br);
       } else {
         cmp = comparePt(av, bv);
       }
@@ -185,7 +205,15 @@ export default function AnalysesList() {
               <Table className="table-fixed">
                 <TableHeader>
                   <TableRow className="bg-slate-100/60">
-          <TableHead className="w-[18%]">Requisito</TableHead>
+          <TableHead
+            onClick={() => toggleSort('requirementId')}
+            aria-sort={sortBy === 'requirementId' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
+            className="w-[18%] cursor-pointer select-none"
+          >
+            Requisito {sortBy === 'requirementId' && (sortDir === 'asc'
+              ? <ArrowUp className="inline-block w-3 h-3 ml-1 opacity-70" />
+              : <ArrowDown className="inline-block w-3 h-3 ml-1 opacity-70" />)}
+          </TableHead>
           <TableHead onClick={() => toggleSort('criterionId')} aria-sort={sortBy === 'criterionId' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} className="w-[18%] cursor-pointer select-none">Critério {sortBy === 'criterionId' && (sortDir === 'asc' ? <ArrowUp className="inline-block w-3 h-3 ml-1 opacity-70" /> : <ArrowDown className="inline-block w-3 h-3 ml-1 opacity-70" />)}</TableHead>
           <TableHead onClick={() => toggleSort('code')} aria-sort={sortBy === 'code' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} className="w-[10%] cursor-pointer select-none">Código {sortBy === 'code' && (sortDir === 'asc' ? <ArrowUp className="inline-block w-3 h-3 ml-1 opacity-70" /> : <ArrowDown className="inline-block w-3 h-3 ml-1 opacity-70" />)}</TableHead>
           <TableHead onClick={() => toggleSort('label')} aria-sort={sortBy === 'label' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} className="w-[32%] cursor-pointer select-none">Descrição {sortBy === 'label' && (sortDir === 'asc' ? <ArrowUp className="inline-block w-3 h-3 ml-1 opacity-70" /> : <ArrowDown className="inline-block w-3 h-3 ml-1 opacity-70" />)}</TableHead>
