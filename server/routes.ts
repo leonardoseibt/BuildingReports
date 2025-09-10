@@ -1219,8 +1219,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!colSet.has(idField) || !colSet.has(labelField)) {
         return res.status(400).json({ message: 'Campos não encontrados na tabela de origem' });
       }
-      // Build dynamic SQL selecting id + label (identifiers validated)
-      const sqlText = `select ${idField} as id, ${labelField} as label from ${table} where is_active is distinct from false order by 1 limit 500`;
+      // Build dynamic SQL selecting id + label and include code when present (identifiers validated)
+      const hasCode = colSet.has('code');
+      const selectFields = `${idField} as id, ${labelField} as label${hasCode ? ', code' : ''}`;
+      const sqlText = `select ${selectFields} from ${table} where is_active is distinct from false order by 1 limit 500`;
       const rows = await pool.query(sqlText);
       res.json(rows.rows);
     } catch (e:any) {
