@@ -157,7 +157,7 @@ export default function AnalysisForm({ onSuccess, onCancel, initialItem }: { onS
             name="label"
             control={form.control}
             render={({ field }) => (
-              <FormItem className={isEdit ? 'md:col-span-6' : 'md:col-span-8'}>
+              <FormItem className="md:col-span-6">
                 <FormControl>
                   <NotchedField label="Descrição" requiredMark>
                     <Input {...field} placeholder="Descrição da análise" className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" />
