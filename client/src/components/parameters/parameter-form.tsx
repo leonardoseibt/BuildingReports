@@ -287,7 +287,7 @@ export default function ParameterForm({ onSuccess, onCancel, initialItem }: { on
                           const code = row.code ?? optionId;
                           const description = row.label ?? row[labelField] ?? row.description ?? row.name ?? '';
                           const combined = description ? `${code} - ${description}` : String(code);
-                          const truncated = combined.length > 40 ? combined.slice(0, 40) + '…' : combined;
+                          const truncated = combined.length > 55 ? combined.slice(0, 55) + '…' : combined;
                           return (
                             <option key={optionId} value={optionId} title={combined}>
                               {truncated}
