@@ -360,7 +360,7 @@ export const performanceEvaluations = pgTable("performance_evaluations", {
 export const reports = pgTable("reports", {
   id: integer("id").generatedAlwaysAsIdentity().primaryKey(),
   buildingId: integer("building_id").references(() => buildings.id).notNull(),
-  evaluationId: integer("evaluation_id").references(() => performanceEvaluations.id).notNull(),
+  evaluationId: integer("evaluation_id").references(() => performanceEvaluations.id),
   reportData: jsonb("report_data").notNull(), // complete report structure
   version: integer("version").default(1),
   isActive: boolean("is_active").default(true),

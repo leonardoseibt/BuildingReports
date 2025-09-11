@@ -115,6 +115,8 @@ export interface IStorage {
   getReportsByBuilding(buildingId: number): Promise<Report[]>;
   getReportsByUser(userId: number, limit?: number, offset?: number): Promise<{ items: Report[]; total: number }>;
   getReport(id: number): Promise<Report | undefined>;
+  updateReport(id: number, report: Partial<InsertReport>): Promise<Report>;
+  deleteReport(id: number): Promise<boolean>;
   
   // Dashboard statistics
   getUserStats(userId: number): Promise<{
@@ -698,6 +700,23 @@ export class DatabaseStorage implements IStorage {
       .from(reports)
       .where(eq(reports.id, id));
     return report;
+  }
+
+  async updateReport(id: number, report: Partial<InsertReport>): Promise<Report> {
+    const [row] = await db
+      .update(reports)
+      .set(report as any)
+      .where(eq(reports.id, id))
+      .returning();
+    return row as Report;
+  }
+
+  async deleteReport(id: number): Promise<boolean> {
+    const deleted = await db
+      .delete(reports)
+      .where(eq(reports.id, id))
+      .returning({ id: reports.id });
+    return deleted.length > 0;
   }
 
   // Dashboard statistics
