@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { AlertTriangle, Activity, AlertOctagon } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 
 interface ExtendedStats {
   buildingsLast30: number;
@@ -14,8 +14,6 @@ interface ExtendedStats {
   weeklyActivity: Array<{ label: string; buildings: number; reports: number }>;
   alerts: {
     incompleteBuildings: number;
-    buildingsWithoutEvaluation: number;
-    pendingEvaluations: number;
   };
   technicians: Array<{ technicianId: number; name: string; count: number }>;
   forecast?: { reportsCurrentMonth: number; projectedTotal: number; averagePerDay: number; daysSoFar: number; daysInMonth: number; progressPercent: number } | null;
@@ -92,26 +90,12 @@ export function ExtendedInsights() {
       <Card className="shadow-sm border-slate-200 lg:col-span-3">
         <CardHeader className="pb-3"><CardTitle className="text-lg font-semibold">Alertas de Dados</CardTitle></CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 gap-4">
             <div className="p-4 border rounded-lg flex items-start gap-3 bg-amber-50 border-amber-200">
               <AlertTriangle className="w-5 h-5 text-amber-600 mt-0.5" />
               <div>
                 <p className="text-sm font-medium text-slate-900">Edificações incompletas</p>
                 <p className="text-2xl font-semibold text-slate-800">{data.alerts.incompleteBuildings}</p>
-              </div>
-            </div>
-            <div className="p-4 border rounded-lg flex items-start gap-3 bg-rose-50 border-rose-200">
-              <AlertOctagon className="w-5 h-5 text-rose-600 mt-0.5" />
-              <div>
-                <p className="text-sm font-medium text-slate-900">Sem avaliação</p>
-                <p className="text-2xl font-semibold text-slate-800">{data.alerts.buildingsWithoutEvaluation}</p>
-              </div>
-            </div>
-            <div className="p-4 border rounded-lg flex items-start gap-3 bg-blue-50 border-blue-200">
-              <Activity className="w-5 h-5 text-blue-600 mt-0.5" />
-              <div>
-                <p className="text-sm font-medium text-slate-900">Avaliações pendentes</p>
-                <p className="text-2xl font-semibold text-slate-800">{data.alerts.pendingEvaluations}</p>
               </div>
             </div>
           </div>

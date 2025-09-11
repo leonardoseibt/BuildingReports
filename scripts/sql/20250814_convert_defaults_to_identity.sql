@@ -38,15 +38,6 @@ DO $$ BEGIN
     ALTER TABLE roofing_systems ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY;
   EXCEPTION WHEN duplicate_object THEN NULL; END;
 END $$;
-
--- Performance evaluations
-ALTER TABLE IF EXISTS performance_evaluations ALTER COLUMN id DROP DEFAULT;
-DO $$ BEGIN
-  BEGIN
-    ALTER TABLE performance_evaluations ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY;
-  EXCEPTION WHEN duplicate_object THEN NULL; END;
-END $$;
-
 -- Reports
 ALTER TABLE IF EXISTS reports ALTER COLUMN id DROP DEFAULT;
 DO $$ BEGIN
