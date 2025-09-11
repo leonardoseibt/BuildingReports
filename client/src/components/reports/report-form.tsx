@@ -6,8 +6,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Form, FormField, FormItem, FormControl, FormMessage } from '@/components/ui/form';
 import FormHeader from '@/components/ui/form-header';
 import { Button } from '@/components/ui/button';
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Combobox } from '@/components/ui/combobox';
+import { Checkbox } from '@/components/ui/checkbox';
 import type { Building, Requirement, Criterion, Report } from '@shared/schema';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
@@ -40,40 +40,63 @@ export default function ReportForm({ initialItem, onSuccess, onCancel }: { initi
     }
   });
 
-  const [levels, setLevels] = useState<Record<string, string>>(() => {
+  const [levels, setLevels] = useState<Record<string, string[]>>(() => {
     const data: any = initialItem?.reportData;
     if (!data?.evaluations) return {};
-    const map: Record<string, string> = {};
+    const map: Record<string, string[]> = {};
     for (const ev of data.evaluations || []) {
       const key = ev.criterionId ? `crit-${ev.criterionId}` : `req-${ev.requirementId}`;
-      map[key] = ev.level;
+      if (!map[key]) map[key] = [];
+      if (!map[key].includes(ev.level)) map[key].push(ev.level);
     }
     return map;
   });
 
-  function handleLevelChange(id: string, level: string) {
+  function handleLevelChange(id: string, level: string, checked: boolean) {
     setLevels(prev => {
+      const current = prev[id] ? [...prev[id]] : [];
+      const exists = current.includes(level);
+      let nextLevels = current;
+      if (checked && !exists) nextLevels = [...current, level];
+      if (!checked && exists) nextLevels = current.filter(l => l !== level);
       const next = { ...prev };
-      if (level) next[id] = level; else delete next[id];
+      if (nextLevels.length) next[id] = nextLevels; else delete next[id];
       return next;
     });
   }
 
+  function handleSelectAll(select: boolean) {
+    if (select) {
+      const all: Record<string, string[]> = {};
+      for (const req of definitions) {
+        all[`req-${req.id}`] = ['minimum', 'intermediate', 'superior'];
+        for (const c of req.criteria) {
+          all[`crit-${c.id}`] = ['minimum', 'intermediate', 'superior'];
+        }
+      }
+      setLevels(all);
+    } else {
+      setLevels({});
+    }
+  }
+
   const mutation = useMutation({
     mutationFn: async (values: FormData) => {
-      const evaluations = Object.entries(levels).map(([key, level]) => {
-        if (key.startsWith('req-')) {
-          return { requirementId: Number(key.slice(4)), level };
-        }
-        const criterionId = Number(key.slice(5));
-        let requirementId: number | undefined;
-        for (const def of definitions) {
-          if (def.criteria.some(c => c.id === criterionId)) {
-            requirementId = def.id;
-            break;
+      const evaluations = Object.entries(levels).flatMap(([key, arr]) => {
+        return arr.map(level => {
+          if (key.startsWith('req-')) {
+            return { requirementId: Number(key.slice(4)), level };
           }
-        }
-        return { requirementId, criterionId, level };
+          const criterionId = Number(key.slice(5));
+          let requirementId: number | undefined;
+          for (const def of definitions) {
+            if (def.criteria.some(c => c.id === criterionId)) {
+              requirementId = def.id;
+              break;
+            }
+          }
+          return { requirementId, criterionId, level };
+        });
       });
       const payload = { buildingId: values.buildingId, reportData: { evaluations } };
       const method = initialItem ? 'PUT' : 'POST';
@@ -99,42 +122,60 @@ export default function ReportForm({ initialItem, onSuccess, onCancel }: { initi
         <FormField name="buildingId" control={form.control} render={({ field }) => (
           <FormItem>
             <FormControl>
-              <Select onValueChange={value => field.onChange(Number(value))} value={field.value ? String(field.value) : undefined}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Selecione a edificação" />
-                </SelectTrigger>
-                <SelectContent>
-                  {buildings.map(b => (
-                    <SelectItem key={b.id} value={String(b.id)}>{b.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Combobox
+                options={buildings.map(b => ({ value: String(b.id), label: b.name }))}
+                value={field.value ? String(field.value) : undefined}
+                onChange={val => field.onChange(Number(val))}
+                placeholder="Selecione a edificação"
+              />
             </FormControl>
             <FormMessage />
           </FormItem>
         )} />
 
         <div className="space-y-4 max-h-72 overflow-y-auto pr-4">
+          <div className="flex justify-end gap-2">
+            <Button type="button" size="sm" variant="secondary" onClick={() => handleSelectAll(true)}>Marcar todos</Button>
+            <Button type="button" size="sm" variant="ghost" onClick={() => handleSelectAll(false)}>Limpar</Button>
+          </div>
           {definitions.map(req => (
             <div key={req.id} className="space-y-2">
-              <div className="flex items-center gap-2">
-                <h4 className="font-medium text-sm flex-1">{req.code} - {req.label}</h4>
-                <ToggleGroup type="single" size="sm" value={levels[`req-${req.id}`] || ''} onValueChange={v => handleLevelChange(`req-${req.id}`, v)}>
-                  <ToggleGroupItem value="minimum" aria-label="Mínimo">Min</ToggleGroupItem>
-                  <ToggleGroupItem value="intermediate" aria-label="Intermediário">Int</ToggleGroupItem>
-                  <ToggleGroupItem value="superior" aria-label="Superior">Sup</ToggleGroupItem>
-                </ToggleGroup>
-              </div>
-              {req.criteria.map(c => (
-                <div key={c.id} className="flex items-center gap-2 pl-4">
-                  <span className="flex-1 text-sm">{c.code} - {c.label}</span>
-                  <ToggleGroup type="single" size="sm" value={levels[`crit-${c.id}`] || ''} onValueChange={v => handleLevelChange(`crit-${c.id}`, v)}>
-                    <ToggleGroupItem value="minimum" aria-label="Mínimo">Min</ToggleGroupItem>
-                    <ToggleGroupItem value="intermediate" aria-label="Intermediário">Int</ToggleGroupItem>
-                    <ToggleGroupItem value="superior" aria-label="Superior">Sup</ToggleGroupItem>
-                  </ToggleGroup>
-                </div>
-              ))}
+              <table className="w-full text-sm border">
+                <thead>
+                  <tr className="bg-muted">
+                    <th className="text-left p-2">{req.code} - {req.label}</th>
+                    <th className="text-center p-2">Mínimo</th>
+                    <th className="text-center p-2">Intermediário</th>
+                    <th className="text-center p-2">Superior</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr key={`req-${req.id}`} className="border-t">
+                    <td className="p-2 font-medium">Requisito</td>
+                    {['minimum','intermediate','superior'].map(level => (
+                      <td key={level} className="text-center">
+                        <Checkbox
+                          checked={levels[`req-${req.id}`]?.includes(level) || false}
+                          onCheckedChange={checked => handleLevelChange(`req-${req.id}`, level, checked === true)}
+                        />
+                      </td>
+                    ))}
+                  </tr>
+                  {req.criteria.map(c => (
+                    <tr key={c.id} className="border-t">
+                      <td className="p-2 pl-4">{c.code} - {c.label}</td>
+                      {['minimum','intermediate','superior'].map(level => (
+                        <td key={level} className="text-center">
+                          <Checkbox
+                            checked={levels[`crit-${c.id}`]?.includes(level) || false}
+                            onCheckedChange={checked => handleLevelChange(`crit-${c.id}`, level, checked === true)}
+                          />
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           ))}
         </div>
