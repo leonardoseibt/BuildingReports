@@ -21,6 +21,8 @@ interface ComboboxProps {
   searchPlaceholder?: string;
   emptyMessage?: string;
   className?: string;
+  /** Additional classes for the displayed value span */
+  labelClassName?: string;
   disabled?: boolean;
   triggerTestId?: string;
 }
@@ -33,6 +35,7 @@ export function Combobox({
   searchPlaceholder = "Procurar...",
   emptyMessage = "Nenhum item encontrado.",
   className,
+  labelClassName,
   disabled,
   triggerTestId,
 }: ComboboxProps) {
@@ -48,7 +51,11 @@ export function Combobox({
           disabled={disabled}
           className={cn("w-full justify-between", className)}
         >
-          {value ? options.find((o) => o.value === value)?.label : placeholder}
+          <span
+            className={cn("flex-1 text-left", labelClassName)}
+          >
+            {value ? options.find((o) => o.value === value)?.label : placeholder}
+          </span>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
