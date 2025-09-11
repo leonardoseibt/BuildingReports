@@ -6,6 +6,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Form, FormField, FormItem, FormControl, FormMessage } from '@/components/ui/form';
 import FormHeader from '@/components/ui/form-header';
 import { Button } from '@/components/ui/button';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { Building, Requirement, Criterion, Report } from '@shared/schema';
 import { apiRequest } from '@/lib/queryClient';
@@ -33,31 +34,40 @@ export default function ReportForm({ initialItem, onSuccess, onCancel }: { initi
   const { data: buildings = [] } = useQuery<Building[]>({ queryKey: ['/api/buildings'] });
   const { data: definitions = [] } = useQuery<Definition[]>({ queryKey: ['/api/reports/definitions'] });
 
-  const [levels, setLevels] = useState<Record<number, string>>(() => {
+  const [levels, setLevels] = useState<Record<string, string>>(() => {
     const data: any = initialItem?.reportData;
     if (!data?.evaluations) return {};
-    const map: Record<number, string> = {};
+    const map: Record<string, string> = {};
     for (const ev of data.evaluations || []) {
-      map[ev.criterionId] = ev.level;
+      const key = ev.criterionId ? `crit-${ev.criterionId}` : `req-${ev.requirementId}`;
+      map[key] = ev.level;
     }
     return map;
   });
 
-  function handleLevelChange(id: number, level: string) {
-    setLevels(prev => ({ ...prev, [id]: level }));
+  function handleLevelChange(id: string, level: string) {
+    setLevels(prev => {
+      const next = { ...prev };
+      if (level) next[id] = level; else delete next[id];
+      return next;
+    });
   }
 
   const mutation = useMutation({
     mutationFn: async (values: FormData) => {
-      const evaluations = Object.entries(levels).map(([criterionId, level]) => {
+      const evaluations = Object.entries(levels).map(([key, level]) => {
+        if (key.startsWith('req-')) {
+          return { requirementId: Number(key.slice(4)), level };
+        }
+        const criterionId = Number(key.slice(5));
         let requirementId: number | undefined;
         for (const def of definitions) {
-          if (def.criteria.some(c => c.id === Number(criterionId))) {
+          if (def.criteria.some(c => c.id === criterionId)) {
             requirementId = def.id;
             break;
           }
         }
-        return { requirementId, criterionId: Number(criterionId), level };
+        return { requirementId, criterionId, level };
       });
       const payload = { buildingId: values.buildingId, reportData: { evaluations } };
       const method = initialItem ? 'PUT' : 'POST';
@@ -101,20 +111,22 @@ export default function ReportForm({ initialItem, onSuccess, onCancel }: { initi
         <div className="space-y-4 max-h-72 overflow-y-auto pr-4">
           {definitions.map(req => (
             <div key={req.id} className="space-y-2">
-              <h4 className="font-medium text-sm">{req.code} - {req.label}</h4>
+              <div className="flex items-center gap-2">
+                <h4 className="font-medium text-sm flex-1">{req.code} - {req.label}</h4>
+                <ToggleGroup type="single" size="sm" value={levels[`req-${req.id}`] || ''} onValueChange={v => handleLevelChange(`req-${req.id}`, v)}>
+                  <ToggleGroupItem value="minimum" aria-label="Mínimo">Min</ToggleGroupItem>
+                  <ToggleGroupItem value="intermediate" aria-label="Intermediário">Int</ToggleGroupItem>
+                  <ToggleGroupItem value="superior" aria-label="Superior">Sup</ToggleGroupItem>
+                </ToggleGroup>
+              </div>
               {req.criteria.map(c => (
                 <div key={c.id} className="flex items-center gap-2 pl-4">
                   <span className="flex-1 text-sm">{c.code} - {c.label}</span>
-                  <Select value={levels[c.id] || ''} onValueChange={v => handleLevelChange(c.id, v)}>
-                    <SelectTrigger className="w-40">
-                      <SelectValue placeholder="Nível" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="minimum">Mínimo</SelectItem>
-                      <SelectItem value="intermediate">Intermediário</SelectItem>
-                      <SelectItem value="superior">Superior</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <ToggleGroup type="single" size="sm" value={levels[`crit-${c.id}`] || ''} onValueChange={v => handleLevelChange(`crit-${c.id}`, v)}>
+                    <ToggleGroupItem value="minimum" aria-label="Mínimo">Min</ToggleGroupItem>
+                    <ToggleGroupItem value="intermediate" aria-label="Intermediário">Int</ToggleGroupItem>
+                    <ToggleGroupItem value="superior" aria-label="Superior">Sup</ToggleGroupItem>
+                  </ToggleGroup>
                 </div>
               ))}
             </div>
