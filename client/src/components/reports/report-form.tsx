@@ -32,7 +32,13 @@ export default function ReportForm({ initialItem, onSuccess, onCancel }: { initi
   });
 
   const { data: buildings = [] } = useQuery<Building[]>({ queryKey: ['/api/buildings'] });
-  const { data: definitions = [] } = useQuery<Definition[]>({ queryKey: ['/api/reports/definitions'] });
+  const { data: definitions = [] } = useQuery<Definition[]>({
+    queryKey: ['/api/reports/definitions'],
+    queryFn: async () => {
+      const res = await apiRequest('GET', '/api/reports/definitions');
+      return res.json();
+    }
+  });
 
   const [levels, setLevels] = useState<Record<string, string>>(() => {
     const data: any = initialItem?.reportData;
