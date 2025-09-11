@@ -616,6 +616,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.put('/api/reports/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const id = Number(req.params.id);
+      if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' });
+      const data = insertReportSchema.partial().parse(req.body);
+      const existing = await storage.getReport(id);
+      if (!existing) return res.status(404).json({ message: 'Report not found' });
+      const buildingId = data.buildingId ?? existing.buildingId;
+      const building = await storage.getBuilding(buildingId);
+      if (!building || building.userId !== Number(req.user.claims.sub)) {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+      const updated = await storage.updateReport(id, data as any);
+      res.json(updated);
+    } catch (error) {
+      console.error('Error updating report:', error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: 'Validation error', errors: error.errors });
+      }
+      res.status(500).json({ message: 'Failed to update report' });
+    }
+  });
+
+  app.delete('/api/reports/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const id = Number(req.params.id);
+      if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' });
+      const existing = await storage.getReport(id);
+      if (!existing) return res.status(404).json({ message: 'Report not found' });
+      const building = await storage.getBuilding(existing.buildingId);
+      if (!building || building.userId !== Number(req.user.claims.sub)) {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+      const ok = await storage.deleteReport(id);
+      res.json({ ok });
+    } catch (error) {
+      console.error('Error deleting report:', error);
+      res.status(500).json({ message: 'Failed to delete report' });
+    }
+  });
+
+  app.get('/api/reports/definitions', isAuthenticated, async (_req, res) => {
+    try {
+      const reqs = await storage.listRequirements();
+      const result = [] as any[];
+      for (const req of reqs) {
+        const criteria = await storage.listCriteria(req.id);
+        result.push({ ...req, criteria });
+      }
+      res.json(result);
+    } catch (error) {
+      console.error('Error fetching report definitions:', error);
+      res.status(500).json({ message: 'Failed to fetch report definitions' });
+    }
+  });
+
   // CEP lookup route for bioclimatic zone + isopleth determination
   app.get('/api/cep/:cep', isAuthenticated, async (req, res) => {
     try {
