@@ -49,7 +49,6 @@ ALTER TABLE technicians ADD CONSTRAINT technicians_user_id_fkey FOREIGN KEY (use
 ALTER TABLE IF EXISTS structural_systems DROP CONSTRAINT IF EXISTS structural_systems_building_id_buildings_id_fk;
 ALTER TABLE IF EXISTS sealing_systems DROP CONSTRAINT IF EXISTS sealing_systems_building_id_buildings_id_fk;
 ALTER TABLE IF EXISTS roofing_systems DROP CONSTRAINT IF EXISTS roofing_systems_building_id_buildings_id_fk;
-ALTER TABLE IF EXISTS performance_evaluations DROP CONSTRAINT IF EXISTS performance_evaluations_building_id_buildings_id_fk;
 ALTER TABLE IF EXISTS reports DROP CONSTRAINT IF EXISTS reports_building_id_buildings_id_fk;
 
 ALTER TABLE IF EXISTS buildings ADD COLUMN IF NOT EXISTS id_int integer;
@@ -130,28 +129,6 @@ ALTER TABLE roofing_systems DROP CONSTRAINT IF EXISTS roofing_systems_building_i
 ALTER TABLE roofing_systems DROP COLUMN IF EXISTS building_id;
 ALTER TABLE roofing_systems RENAME COLUMN building_id_int TO building_id;
 ALTER TABLE roofing_systems ADD CONSTRAINT roofing_systems_building_id_fkey FOREIGN KEY (building_id) REFERENCES buildings(id) ON DELETE CASCADE;
-
--- PERFORMANCE EVALUATIONS
-ALTER TABLE IF EXISTS reports DROP CONSTRAINT IF EXISTS reports_evaluation_id_performance_evaluations_id_fk;
-ALTER TABLE IF EXISTS performance_evaluations ADD COLUMN IF NOT EXISTS id_int integer;
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_class WHERE relname = 'performance_evaluations_id_int_seq') THEN
-    CREATE SEQUENCE performance_evaluations_id_int_seq OWNED BY performance_evaluations.id_int;
-  END IF;
-END $$;
-UPDATE performance_evaluations SET id_int = nextval('performance_evaluations_id_int_seq') WHERE id_int IS NULL;
-ALTER TABLE performance_evaluations ALTER COLUMN id_int SET DEFAULT nextval('performance_evaluations_id_int_seq');
-ALTER TABLE IF EXISTS performance_evaluations ADD COLUMN IF NOT EXISTS building_id_int integer;
-UPDATE performance_evaluations e SET building_id_int = b.id FROM buildings b WHERE e.building_id::text = b.id::text;
-ALTER TABLE performance_evaluations DROP CONSTRAINT IF EXISTS performance_evaluations_pkey;
-ALTER TABLE performance_evaluations RENAME COLUMN id TO id_old;
-ALTER TABLE performance_evaluations RENAME COLUMN id_int TO id;
-ALTER TABLE performance_evaluations ADD CONSTRAINT performance_evaluations_pkey PRIMARY KEY (id);
-ALTER TABLE performance_evaluations DROP CONSTRAINT IF EXISTS performance_evaluations_building_id_fkey;
-ALTER TABLE performance_evaluations DROP COLUMN IF EXISTS building_id;
-ALTER TABLE performance_evaluations RENAME COLUMN building_id_int TO building_id;
-ALTER TABLE performance_evaluations ADD CONSTRAINT performance_evaluations_building_id_fkey FOREIGN KEY (building_id) REFERENCES buildings(id) ON DELETE CASCADE;
-
 -- REPORTS
 ALTER TABLE IF EXISTS reports ADD COLUMN IF NOT EXISTS id_int integer;
 DO $$ BEGIN
@@ -162,9 +139,7 @@ END $$;
 UPDATE reports SET id_int = nextval('reports_id_int_seq') WHERE id_int IS NULL;
 ALTER TABLE reports ALTER COLUMN id_int SET DEFAULT nextval('reports_id_int_seq');
 ALTER TABLE IF EXISTS reports ADD COLUMN IF NOT EXISTS building_id_int integer;
-ALTER TABLE IF EXISTS reports ADD COLUMN IF NOT EXISTS evaluation_id_int integer;
 UPDATE reports r SET building_id_int = b.id FROM buildings b WHERE r.building_id::text = b.id::text;
-UPDATE reports r SET evaluation_id_int = e.id FROM performance_evaluations e WHERE r.evaluation_id::text = e.id::text;
 ALTER TABLE reports DROP CONSTRAINT IF EXISTS reports_pkey;
 ALTER TABLE reports RENAME COLUMN id TO id_old;
 ALTER TABLE reports RENAME COLUMN id_int TO id;
@@ -173,7 +148,3 @@ ALTER TABLE reports DROP CONSTRAINT IF EXISTS reports_building_id_fkey;
 ALTER TABLE reports DROP COLUMN IF EXISTS building_id;
 ALTER TABLE reports RENAME COLUMN building_id_int TO building_id;
 ALTER TABLE reports ADD CONSTRAINT reports_building_id_fkey FOREIGN KEY (building_id) REFERENCES buildings(id) ON DELETE CASCADE;
-ALTER TABLE reports DROP CONSTRAINT IF EXISTS reports_evaluation_id_fkey;
-ALTER TABLE reports DROP COLUMN IF EXISTS evaluation_id;
-ALTER TABLE reports RENAME COLUMN evaluation_id_int TO evaluation_id;
-ALTER TABLE reports ADD CONSTRAINT reports_evaluation_id_fkey FOREIGN KEY (evaluation_id) REFERENCES performance_evaluations(id) ON DELETE CASCADE;

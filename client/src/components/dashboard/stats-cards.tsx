@@ -1,12 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Building2, FileText, Clock, AlertTriangle, TrendingUp, TrendingDown } from "lucide-react";
+import { Building2, FileText, Clock, TrendingUp, TrendingDown } from "lucide-react";
 
 interface DashboardStats {
   totalBuildings: number;
   totalReports: number;
-  pendingEvaluations: number;
   recentBuildings: any[];
 }
 
@@ -37,16 +36,6 @@ export default function StatsCards() {
       testId: "card-total-reports"
     },
     {
-      title: "Avaliações Pendentes",
-      value: stats?.pendingEvaluations || 0,
-      change: "Requer atenção",
-      trend: "warning",
-      icon: AlertTriangle,
-      iconBg: "bg-yellow-100",
-      iconColor: "text-yellow-600",
-      testId: "card-pending-evaluations"
-    },
-    {
       title: "Tempo Médio/Relatório",
       value: "2.5h",
       change: "-70% vs manual",
@@ -60,8 +49,8 @@ export default function StatsCards() {
 
   if (isLoading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {[...Array(4)].map((_, i) => (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {[...Array(3)].map((_, i) => (
           <Card key={i} className="p-6">
             <div className="flex items-center justify-between">
               <div className="space-y-2">
@@ -78,7 +67,7 @@ export default function StatsCards() {
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {cards.map((card) => {
         const Icon = card.icon;
         const TrendIcon = card.trend === "up" ? TrendingUp : card.trend === "down" ? TrendingDown : Clock;

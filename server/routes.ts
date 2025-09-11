@@ -2,7 +2,7 @@ import express, { type Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated, refreshSession } from "./auth";
-import { insertBuildingSchema, updateBuildingSchema, insertStructuralSystemSchema, insertSealingSystemSchema, insertRoofingSystemSchema, insertPerformanceEvaluationSchema, insertReportSchema, insertTechnicianSchema, updateTechnicianSchema, insertUserSchema, updateUserSchema, insertTypologySchema, insertNoiseClassSchema, insertAggressivenessClassSchema, insertBioclimaticZoneSchema, insertBioclimaticZoneCoverageSchema, insertStateSchema, insertCitySchema, insertConstructiveSystemSchema, insertRequirementSchema, insertCriterionSchema, insertAnalysisSchema, insertIsoplethSchema } from "@shared/schema";
+import { insertBuildingSchema, updateBuildingSchema, insertStructuralSystemSchema, insertSealingSystemSchema, insertRoofingSystemSchema, insertReportSchema, insertTechnicianSchema, updateTechnicianSchema, insertUserSchema, updateUserSchema, insertTypologySchema, insertNoiseClassSchema, insertAggressivenessClassSchema, insertBioclimaticZoneSchema, insertBioclimaticZoneCoverageSchema, insertStateSchema, insertCitySchema, insertConstructiveSystemSchema, insertRequirementSchema, insertCriterionSchema, insertAnalysisSchema, insertIsoplethSchema } from "@shared/schema";
 import { insertParameterSchema, attributeDefinitions } from '@shared/schema';
 import { db } from './db';
 import { eq } from 'drizzle-orm';
@@ -504,57 +504,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Validation error", errors: error.errors });
       }
       res.status(500).json({ message: "Failed to create roofing system" });
-    }
-  });
-
-  // Performance evaluation routes
-  app.post('/api/buildings/:id/evaluation', isAuthenticated, async (req: any, res) => {
-    try {
-      const buildingId = Number(req.params.id);
-  if (!Number.isFinite(buildingId)) return res.status(400).json({ message: 'ID inválido' });
-      const building = await storage.getBuilding(buildingId);
-      
-      const userId: number = Number(req.user.claims.sub);
-      const me = await storage.getUser(userId);
-      const canManageBuildings = !!(me && ((me as any).isAdmin || ((me as any).allowedModules || []).includes('buildings')));
-      if (!building || (building.userId !== userId && !canManageBuildings)) {
-        return res.status(403).json({ message: "Access denied" });
-      }
-      
-      const evaluationData = insertPerformanceEvaluationSchema.parse({
-        ...req.body,
-        buildingId,
-      });
-      
-      const evaluation = await storage.createPerformanceEvaluation(evaluationData);
-      res.json(evaluation);
-    } catch (error) {
-      console.error("Error creating performance evaluation:", error);
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Validation error", errors: error.errors });
-      }
-      res.status(500).json({ message: "Failed to create performance evaluation" });
-    }
-  });
-
-  app.get('/api/buildings/:id/evaluation', isAuthenticated, async (req: any, res) => {
-    try {
-      const buildingId = Number(req.params.id);
-  if (!Number.isFinite(buildingId)) return res.status(400).json({ message: 'ID inválido' });
-      const building = await storage.getBuilding(buildingId);
-      
-      const userId: number = Number(req.user.claims.sub);
-      const me = await storage.getUser(userId);
-      const canManageBuildings = !!(me && ((me as any).isAdmin || ((me as any).allowedModules || []).includes('buildings')));
-      if (!building || (building.userId !== userId && !canManageBuildings)) {
-        return res.status(403).json({ message: "Access denied" });
-      }
-      
-      const evaluation = await storage.getPerformanceEvaluation(buildingId);
-      res.json(evaluation);
-    } catch (error) {
-      console.error("Error fetching performance evaluation:", error);
-      res.status(500).json({ message: "Failed to fetch performance evaluation" });
     }
   });
 

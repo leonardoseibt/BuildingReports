@@ -64,13 +64,6 @@ export const structuralSystemEnum = pgEnum('structural_system', [
   'concrete', 'steel', 'masonry', 'wood'
 ]);
 
-export const performanceLevelEnum = pgEnum('performance_level', [
-  'minimum', 'intermediate', 'superior'
-]);
-
-export const evaluationStatusEnum = pgEnum('evaluation_status', [
-  'pending', 'in_progress', 'completed', 'approved'
-]);
 
 // Aggressiveness risk enum
 export const aggressivenessRiskEnum = pgEnum('aggressiveness_risk', [
@@ -341,26 +334,10 @@ export const roofingSystems = pgTable("roofing_systems", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-// Performance Evaluations
-export const performanceEvaluations = pgTable("performance_evaluations", {
-  id: integer("id").generatedAlwaysAsIdentity().primaryKey(),
-  buildingId: integer("building_id").references(() => buildings.id).notNull(),
-  structuralSafety: performanceLevelEnum("structural_safety"),
-  thermalPerformance: performanceLevelEnum("thermal_performance"),
-  acousticPerformance: performanceLevelEnum("acoustic_performance"),
-  waterTightness: performanceLevelEnum("water_tightness"),
-  fireSafety: performanceLevelEnum("fire_safety"),
-  evaluationData: jsonb("evaluation_data"), // detailed calculation results
-  status: evaluationStatusEnum("status").default('pending'),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
-
 // Reports
 export const reports = pgTable("reports", {
   id: integer("id").generatedAlwaysAsIdentity().primaryKey(),
   buildingId: integer("building_id").references(() => buildings.id).notNull(),
-  evaluationId: integer("evaluation_id").references(() => performanceEvaluations.id),
   reportData: jsonb("report_data").notNull(), // complete report structure
   version: integer("version").default(1),
   isActive: boolean("is_active").default(true),
@@ -407,7 +384,6 @@ export const buildingsRelations = relations(buildings, ({ one, many }) => ({
   structuralSystem: one(structuralSystems),
   sealingSystem: one(sealingSystems),
   roofingSystem: one(roofingSystems),
-  evaluations: many(performanceEvaluations),
   reports: many(reports),
 }));
 
@@ -454,22 +430,10 @@ export const roofingSystemsRelations = relations(roofingSystems, ({ one }) => ({
   }),
 }));
 
-export const performanceEvaluationsRelations = relations(performanceEvaluations, ({ one, many }) => ({
-  building: one(buildings, {
-    fields: [performanceEvaluations.buildingId],
-    references: [buildings.id],
-  }),
-  reports: many(reports),
-}));
-
 export const reportsRelations = relations(reports, ({ one }) => ({
   building: one(buildings, {
     fields: [reports.buildingId],
     references: [buildings.id],
-  }),
-  evaluation: one(performanceEvaluations, {
-    fields: [reports.evaluationId],
-    references: [performanceEvaluations.id],
   }),
 }));
 
@@ -565,16 +529,6 @@ export const insertRoofingSystemSchema = createInsertSchema(roofingSystems)
     slope: decimalInput.optional(),
   });
 
-export const insertPerformanceEvaluationSchema = createInsertSchema(performanceEvaluations)
-  .partial({
-    structuralSafety: true,
-    thermalPerformance: true,
-    acousticPerformance: true,
-    waterTightness: true,
-    fireSafety: true,
-    evaluationData: true,
-  });
-
 export const insertReportSchema = createInsertSchema(reports);
 
 export const insertTechnicianSchema = createInsertSchema(technicians)
@@ -661,8 +615,6 @@ export type InsertSealingSystem = z.infer<typeof insertSealingSystemSchema>;
 export type SealingSystem = typeof sealingSystems.$inferSelect;
 export type InsertRoofingSystem = z.infer<typeof insertRoofingSystemSchema>;
 export type RoofingSystem = typeof roofingSystems.$inferSelect;
-export type InsertPerformanceEvaluation = z.infer<typeof insertPerformanceEvaluationSchema>;
-export type PerformanceEvaluation = typeof performanceEvaluations.$inferSelect;
 export type InsertReport = z.infer<typeof insertReportSchema>;
 export type Report = typeof reports.$inferSelect;
 export type InsertTechnician = z.infer<typeof insertTechnicianSchema>;

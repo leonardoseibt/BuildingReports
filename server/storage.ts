@@ -4,7 +4,6 @@ import {
   structuralSystems,
   sealingSystems,
   roofingSystems,
-  performanceEvaluations,
   reports,
   type User,
   type PublicUser,
@@ -17,8 +16,6 @@ import {
   type InsertSealingSystem,
   type RoofingSystem,
   type InsertRoofingSystem,
-  type PerformanceEvaluation,
-  type InsertPerformanceEvaluation,
   type Report,
   type InsertReport,
   type Technician,
@@ -71,7 +68,7 @@ import {
   type InsertAttributeDefinition,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and, asc, isNull, sql, count } from "drizzle-orm";
+import { eq, desc, and, sql, count } from "drizzle-orm";
 
 // Use a single Portuguese (Brazil) collator for accent-aware, numeric-friendly sorting
 const ptCollator = new Intl.Collator('pt-BR', { usage: 'sort', sensitivity: 'accent', numeric: true, ignorePunctuation: true });
@@ -104,12 +101,7 @@ export interface IStorage {
   getStructuralSystem(buildingId: number): Promise<StructuralSystem | undefined>;
   getSealingSystem(buildingId: number): Promise<SealingSystem | undefined>;
   getRoofingSystem(buildingId: number): Promise<RoofingSystem | undefined>;
-  
-  // Performance evaluation operations
-  createPerformanceEvaluation(evaluation: InsertPerformanceEvaluation): Promise<PerformanceEvaluation>;
-  getPerformanceEvaluation(buildingId: number): Promise<PerformanceEvaluation | undefined>;
-  updatePerformanceEvaluation(id: number, evaluation: Partial<InsertPerformanceEvaluation>): Promise<PerformanceEvaluation>;
-  
+
   // Report operations
   createReport(report: InsertReport): Promise<Report>;
   getReportsByBuilding(buildingId: number): Promise<Report[]>;
@@ -117,12 +109,11 @@ export interface IStorage {
   getReport(id: number): Promise<Report | undefined>;
   updateReport(id: number, report: Partial<InsertReport>): Promise<Report>;
   deleteReport(id: number): Promise<boolean>;
-  
+
   // Dashboard statistics
   getUserStats(userId: number): Promise<{
     totalBuildings: number;
     totalReports: number;
-    pendingEvaluations: number;
     recentBuildings: Building[];
   }>;
 
@@ -519,21 +510,16 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteBuilding(id: number): Promise<boolean> {
-    // Guard: block deletion if dependent records exist (systems, evaluations, reports)
+    // Guard: block deletion if dependent records exist (systems, reports)
     try {
       return await db.transaction(async (tx) => {
         // Only check dependent entities that are actually implemented / have tables.
         const depCounts = await Promise.all([
-          tx.select({ value: count() }).from(performanceEvaluations).where(eq(performanceEvaluations.buildingId, id)),
           tx.select({ value: count() }).from(reports).where(eq(reports.buildingId, id)),
         ]);
-        const [evalC, reportsC] = depCounts.map(r => Number(r[0]?.value ?? 0));
-        const total = evalC + reportsC;
-        if (total > 0) {
-          const parts: string[] = [];
-          if (evalC) parts.push(`${evalC} avaliação(ões)`);
-          if (reportsC) parts.push(`${reportsC} relatório(s)`);
-          const e: any = new Error(`Não é possível excluir: existem ${parts.join(', ')} vinculados à edificação.`);
+        const reportsC = Number(depCounts[0][0]?.value ?? 0);
+        if (reportsC > 0) {
+          const e: any = new Error(`Não é possível excluir: existem ${reportsC} relatório(s) vinculados à edificação.`);
           e.status = 409;
           throw e;
         }
@@ -610,44 +596,10 @@ export class DatabaseStorage implements IStorage {
     return system;
   }
 
-  // Performance evaluation operations
-  async createPerformanceEvaluation(evaluation: InsertPerformanceEvaluation): Promise<PerformanceEvaluation> {
-    const [newEvaluation] = await db.insert(performanceEvaluations).values({
-      buildingId: evaluation.buildingId,
-      structuralSafety: evaluation.structuralSafety,
-      thermalPerformance: evaluation.thermalPerformance,
-      acousticPerformance: evaluation.acousticPerformance,
-      waterTightness: evaluation.waterTightness,
-      fireSafety: evaluation.fireSafety,
-      evaluationData: evaluation.evaluationData,
-      status: evaluation.status,
-    }).returning();
-    return newEvaluation;
-  }
-
-  async getPerformanceEvaluation(buildingId: number): Promise<PerformanceEvaluation | undefined> {
-    const [evaluation] = await db
-      .select()
-      .from(performanceEvaluations)
-      .where(eq(performanceEvaluations.buildingId, buildingId))
-      .orderBy(desc(performanceEvaluations.createdAt));
-    return evaluation;
-  }
-
-  async updatePerformanceEvaluation(id: number, evaluation: Partial<InsertPerformanceEvaluation>): Promise<PerformanceEvaluation> {
-    const [updatedEvaluation] = await db
-      .update(performanceEvaluations)
-      .set({ ...evaluation, updatedAt: new Date() })
-      .where(eq(performanceEvaluations.id, id))
-      .returning();
-    return updatedEvaluation;
-  }
-
   // Report operations
   async createReport(report: InsertReport): Promise<Report> {
     const [newReport] = await db.insert(reports).values({
       buildingId: report.buildingId,
-      evaluationId: report.evaluationId,
       reportData: report.reportData,
       version: report.version,
       isActive: report.isActive,
@@ -674,7 +626,6 @@ export class DatabaseStorage implements IStorage {
       .select({
         id: reports.id,
         buildingId: reports.buildingId,
-        evaluationId: reports.evaluationId,
         reportData: reports.reportData,
         version: reports.version,
         isActive: reports.isActive,
@@ -723,33 +674,14 @@ export class DatabaseStorage implements IStorage {
   async getUserStats(userId: number): Promise<{
     totalBuildings: number;
     totalReports: number;
-    pendingEvaluations: number;
     recentBuildings: Building[];
   }> {
     const { items: userBuildings } = await this.getBuildingsByUser(userId);
     const { items: userReports } = await this.getReportsByUser(userId);
-
-    // Pending evaluations: buildings with no evaluation or last evaluation status = 'pending'
-    const pendingRow = await db.execute(sql`WITH last_eval AS (
-      SELECT DISTINCT ON (pe.building_id)
-             pe.building_id,
-             pe.status,
-             pe.created_at
-      FROM performance_evaluations pe
-      ORDER BY pe.building_id, pe.created_at DESC
-    )
-    SELECT COUNT(b.*)::int AS cnt
-    FROM buildings b
-    LEFT JOIN last_eval le ON le.building_id = b.id
-    WHERE b.user_id = ${userId} AND (le.status IS NULL OR le.status = 'pending')`);
-    const pendingEvaluations = Number(((pendingRow as any).rows ?? [])[0]?.cnt ?? 0);
-
     const recentBuildings = userBuildings.slice(0, 5);
-
     return {
       totalBuildings: userBuildings.length,
       totalReports: userReports.length,
-      pendingEvaluations,
       recentBuildings,
     };
   }
@@ -865,11 +797,6 @@ export class DatabaseStorage implements IStorage {
       .select({ value: count() })
       .from(buildings)
       .where(and(eq(buildings.userId, userId), sql`(technician_id IS NULL OR total_area <= 0 OR bioclimatic_zone IS NULL)`));
-    const [{ value: buildingsWithoutEvaluation } = { value: 0 }] = await db
-      .select({ value: count() })
-      .from(buildings)
-      .leftJoin(performanceEvaluations, eq(performanceEvaluations.buildingId, buildings.id))
-      .where(and(eq(buildings.userId, userId), isNull(performanceEvaluations.id)));
 
     const typologyArr = (typologyRows as any).rows ?? (typologyRows as any);
     const noiseArr = (noiseRows as any).rows ?? (noiseRows as any);
@@ -946,8 +873,6 @@ export class DatabaseStorage implements IStorage {
       weeklyActivity: weeklyArr.map((r: any) => ({ ...r })),
       alerts: {
         incompleteBuildings: Number(incompleteBuildings || 0),
-        buildingsWithoutEvaluation: Number(buildingsWithoutEvaluation || 0),
-        pendingEvaluations: base.pendingEvaluations,
       },
       technicians: techRankArr.map((r: any) => ({ ...r })),
       forecast,
