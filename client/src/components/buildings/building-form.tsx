@@ -743,7 +743,8 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
                         onChange={field.onChange}
                         placeholder="Selecione a classe"
                         triggerTestId="select-noise-class"
-                        className="w-full border-0 bg-transparent shadow-none focus:ring-0 focus:ring-offset-0 h-8 px-2"
+                        className="w-full border-0 bg-transparent shadow-none focus:ring-0 focus:ring-offset-0 px-2 min-h-14 items-start whitespace-normal"
+                        labelClassName="line-clamp-2"
                       />
                     </NotchedField>
                   </FormControl>
@@ -772,7 +773,8 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
                         onChange={field.onChange}
                         placeholder="Selecione a classe"
                         triggerTestId="select-aggressiveness-class"
-                        className="w-full border-0 bg-transparent shadow-none focus:ring-0 focus:ring-offset-0 h-8 px-2"
+                        className="w-full border-0 bg-transparent shadow-none focus:ring-0 focus:ring-offset-0 px-2 min-h-14 items-start whitespace-normal"
+                        labelClassName="line-clamp-2"
                       />
                     </NotchedField>
                   </FormControl>
