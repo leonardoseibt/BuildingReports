@@ -240,81 +240,83 @@ export default function ReportForm({ initialItem, onSuccess, onCancel }: { initi
             </div>
           </div>
           
-          <div className="p-4 max-h-80 overflow-y-auto space-y-6">
-            {groupedData.map(req => (
-              <div key={req.id} className="space-y-4">
-                {/* Cabeçalho do Requisito */}
-                <div className="border-l-4 border-blue-500 pl-4">
-                  <h4 className="font-semibold text-lg text-slate-900">
-                    {req.code} - {req.label}
-                  </h4>
-                </div>
+          <div className="max-h-80 overflow-y-auto">
+            <div className="p-4 space-y-6">
+              {groupedData.map((req, reqIndex) => (
+                <div key={req.id} className="space-y-4">
+                  {/* Cabeçalho do Requisito */}
+                  <div className="border-l-4 border-l-blue-500 pl-4 py-2 bg-blue-50/50">
+                    <h4 className="font-semibold text-lg text-slate-900">
+                      {req.code} - {req.label}
+                    </h4>
+                  </div>
                 
-                {/* Critérios do Requisito */}
-                <div className="ml-6 space-y-4">
-                  {req.criteria.map(criterion => (
-                    <div key={`${req.id}-${criterion.id}`} className="space-y-3">
-                      {/* Cabeçalho do Critério */}
-                      <div className="border-l-2 border-slate-300 pl-3">
-                        <h5 className="font-medium text-slate-700">
-                          {criterion.code} - {criterion.label}
-                        </h5>
-                      </div>
-                      
-                      {/* Tabela de Análises do Critério */}
-                      <div className="ml-4">
-                        <Table>
-                          <TableHeader>
-                            <TableRow className="bg-slate-50">
-                              <TableHead className="w-24">Código</TableHead>
-                              <TableHead>Análise</TableHead>
-                              <TableHead className="text-center w-20">Mínimo</TableHead>
-                              <TableHead className="text-center w-20">Intermediário</TableHead>
-                              <TableHead className="text-center w-20">Superior</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {criterion.analyses.length === 0 ? (
-                              <TableRow>
-                                <TableCell colSpan={5} className="text-center text-slate-500 py-4">
-                                  Nenhuma análise cadastrada para este critério
-                                </TableCell>
+                  {/* Critérios do Requisito */}
+                  <div className="ml-6 space-y-4">
+                    {req.criteria.map((criterion, critIndex) => (
+                      <div key={`${req.id}-${criterion.id}`} className="space-y-3">
+                        {/* Cabeçalho do Critério */}
+                        <div className="border-l-2 border-l-slate-300 pl-3 py-1 bg-slate-50/50">
+                          <h5 className="font-medium text-slate-700">
+                            {criterion.code} - {criterion.label}
+                          </h5>
+                        </div>
+                        
+                        {/* Tabela de Análises do Critério */}
+                        <div className="ml-4">
+                          <Table>
+                            <TableHeader>
+                              <TableRow className="bg-slate-50 border-b">
+                                <TableHead className="w-24">Código</TableHead>
+                                <TableHead>Análise</TableHead>
+                                <TableHead className="text-center w-20">Mínimo</TableHead>
+                                <TableHead className="text-center w-20">Intermediário</TableHead>
+                                <TableHead className="text-center w-20">Superior</TableHead>
                               </TableRow>
-                            ) : (
-                              criterion.analyses.map(analysis => (
-                                <TableRow key={analysis.id} className="hover:bg-slate-50/50">
-                                  <TableCell className="font-mono text-sm text-slate-600">
-                                    {analysis.code}
+                            </TableHeader>
+                            <TableBody>
+                              {criterion.analyses.length === 0 ? (
+                                <TableRow>
+                                  <TableCell colSpan={5} className="text-center text-slate-500 py-8">
+                                    Nenhuma análise cadastrada para este critério
                                   </TableCell>
-                                  <TableCell className="font-medium">
-                                    {analysis.label}
-                                  </TableCell>
-                                  {['minimum', 'intermediate', 'superior'].map(level => (
-                                    <TableCell key={level} className="text-center">
-                                      <Checkbox
-                                        checked={levels[`analysis-${analysis.id}`]?.includes(level) || false}
-                                        onCheckedChange={checked => 
-                                          handleLevelChange(`analysis-${analysis.id}`, level, checked === true)
-                                        }
-                                      />
-                                    </TableCell>
-                                  ))}
                                 </TableRow>
-                              ))
-                            )}
-                          </TableBody>
-                        </Table>
+                              ) : (
+                                criterion.analyses.map(analysis => (
+                                  <TableRow key={analysis.id} className="hover:bg-slate-50/50">
+                                    <TableCell className="font-mono text-sm text-slate-600 py-3">
+                                      {analysis.code}
+                                    </TableCell>
+                                    <TableCell className="font-medium py-3">
+                                      {analysis.label}
+                                    </TableCell>
+                                    {['minimum', 'intermediate', 'superior'].map(level => (
+                                      <TableCell key={level} className="text-center py-3">
+                                        <Checkbox
+                                          checked={levels[`analysis-${analysis.id}`]?.includes(level) || false}
+                                          onCheckedChange={checked => 
+                                            handleLevelChange(`analysis-${analysis.id}`, level, checked === true)
+                                          }
+                                        />
+                                      </TableCell>
+                                    ))}
+                                  </TableRow>
+                                ))
+                              )}
+                            </TableBody>
+                          </Table>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
+                  
+                  {/* Separador entre requisitos (exceto o último) */}
+                  {reqIndex !== groupedData.length - 1 && (
+                    <hr className="border-slate-200 my-6" />
+                  )}
                 </div>
-                
-                {/* Separador entre requisitos (exceto o último) */}
-                {req.id !== groupedData[groupedData.length - 1].id && (
-                  <hr className="border-slate-200 my-6" />
-                )}
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
 
