@@ -121,6 +121,30 @@ export default function ReportForm({ initialItem, onSuccess, onCancel }: { initi
     }
   }
 
+  function handleSelectByCriterionLevel(criterionId: number, level: 'minimum' | 'intermediate' | 'superior') {
+    const updated: Record<string, string[]> = { ...levels };
+    
+    // Encontrar todas as análises do critério específico
+    for (const req of groupedData) {
+      for (const crit of req.criteria) {
+        if (crit.id === criterionId) {
+          for (const analysis of crit.analyses) {
+            const key = `analysis-${analysis.id}`;
+            const currentLevels = updated[key] || [];
+            
+            // Adiciona o nível se não estiver presente
+            if (!currentLevels.includes(level)) {
+              updated[key] = [...currentLevels, level];
+            }
+          }
+          break;
+        }
+      }
+    }
+    
+    setLevels(updated);
+  }
+
   const mutation = useMutation({
     mutationFn: async (values: FormData) => {
       const evaluations = Object.entries(levels).flatMap(([key, arr]) => {
@@ -198,9 +222,9 @@ export default function ReportForm({ initialItem, onSuccess, onCancel }: { initi
                   <Button 
                     type="button" 
                     size="sm" 
-                    variant="secondary" 
+                    variant="ghost" 
                     onClick={() => handleSelectAll(true)}
-                    className="h-8 px-3"
+                    className="h-8 px-3 hover:bg-slate-200"
                   >
                     <CheckCheck className="w-4 h-4" />
                   </Button>
@@ -212,9 +236,10 @@ export default function ReportForm({ initialItem, onSuccess, onCancel }: { initi
                   avoidCollisions={true}
                   className="z-[60]"
                 >
-                  <p>Marcar todas as análises</p>
+                  <p>Marcar todas as análises (todos os níveis)</p>
                 </TooltipContent>
               </Tooltip>
+              
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button 
@@ -256,10 +281,78 @@ export default function ReportForm({ initialItem, onSuccess, onCancel }: { initi
                     {req.criteria.map((criterion, critIndex) => (
                       <div key={`${req.id}-${criterion.id}`} className="space-y-3">
                         {/* Cabeçalho do Critério */}
-                        <div className="border-l-2 border-l-slate-300 pl-3 py-1 bg-slate-50/50">
-                          <h5 className="font-medium text-slate-700">
-                            {criterion.code} - {criterion.label}
-                          </h5>
+                        <div className="border-l-2 border-l-slate-300 pl-3 py-2 bg-slate-50/50">
+                          {/* Layout que replica exatamente a estrutura da tabela */}
+                          <div className="flex items-center">
+                            {/* Espaço para coluna Código - mesmo w-24 da tabela */}
+                            <div className="w-24">
+                            </div>
+                            
+                            {/* Espaço para coluna Análise - flexível como na tabela + título do critério */}
+                            <div className="flex-1 pl-4">
+                              <h5 className="font-medium text-slate-700">
+                                {criterion.code} - {criterion.label}
+                              </h5>
+                            </div>
+                            
+                            {/* Botões alinhados com as colunas de checkboxes - exato w-20 da tabela */}
+                            <div className="w-20 flex justify-center">
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => handleSelectByCriterionLevel(criterion.id, 'minimum')}
+                                    className="h-6 w-6 p-0 hover:bg-blue-100 text-blue-600"
+                                  >
+                                    <CheckCheck className="w-3 h-3" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent side="top" className="z-[60]">
+                                  <p>Selecionar coluna Mínimo para este critério</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </div>
+                            
+                            <div className="w-20 flex justify-center">
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => handleSelectByCriterionLevel(criterion.id, 'intermediate')}
+                                    className="h-6 w-6 p-0 hover:bg-green-100 text-green-600"
+                                  >
+                                    <CheckCheck className="w-3 h-3" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent side="top" className="z-[60]">
+                                  <p>Selecionar coluna Intermediário para este critério</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </div>
+                            
+                            <div className="w-20 flex justify-center">
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => handleSelectByCriterionLevel(criterion.id, 'superior')}
+                                    className="h-6 w-6 p-0 hover:bg-purple-100 text-purple-600"
+                                  >
+                                    <CheckCheck className="w-3 h-3" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent side="top" className="z-[60]">
+                                  <p>Selecionar coluna Superior para este critério</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </div>
+                          </div>
                         </div>
                         
                         {/* Tabela de Análises do Critério */}
@@ -269,9 +362,9 @@ export default function ReportForm({ initialItem, onSuccess, onCancel }: { initi
                               <TableRow className="bg-slate-50 border-b">
                                 <TableHead className="w-24">Código</TableHead>
                                 <TableHead>Análise</TableHead>
-                                <TableHead className="text-center w-20">Mínimo</TableHead>
-                                <TableHead className="text-center w-20">Intermediário</TableHead>
-                                <TableHead className="text-center w-20">Superior</TableHead>
+                                <TableHead className="text-center w-20 text-blue-600 font-semibold">Mínimo</TableHead>
+                                <TableHead className="text-center w-20 text-green-600 font-semibold">Intermediário</TableHead>
+                                <TableHead className="text-center w-20 text-purple-600 font-semibold">Superior</TableHead>
                               </TableRow>
                             </TableHeader>
                             <TableBody>
