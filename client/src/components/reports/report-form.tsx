@@ -121,23 +121,46 @@ export default function ReportForm({ initialItem, onSuccess, onCancel }: { initi
     }
   }
 
-  function handleSelectByCriterionLevel(criterionId: number, level: 'minimum' | 'intermediate' | 'superior') {
+  function handleSelectByCriterionLevel(requirementId: number, criterionId: number, level: 'minimum' | 'intermediate' | 'superior') {
     const updated: Record<string, string[]> = { ...levels };
     
-    // Encontrar todas as análises do critério específico
+    // Encontrar todas as análises do critério específico dentro do requisito específico
+    const targetAnalyses: number[] = [];
     for (const req of groupedData) {
-      for (const crit of req.criteria) {
-        if (crit.id === criterionId) {
-          for (const analysis of crit.analyses) {
-            const key = `analysis-${analysis.id}`;
-            const currentLevels = updated[key] || [];
-            
-            // Adiciona o nível se não estiver presente
-            if (!currentLevels.includes(level)) {
-              updated[key] = [...currentLevels, level];
-            }
+      if (req.id === requirementId) {
+        for (const crit of req.criteria) {
+          if (crit.id === criterionId) {
+            targetAnalyses.push(...crit.analyses.map(a => a.id));
+            break;
           }
-          break;
+        }
+        break;
+      }
+    }
+    
+    // Verificar se todas as análises deste critério já estão marcadas neste nível
+    const allSelected = targetAnalyses.every(analysisId => {
+      const key = `analysis-${analysisId}`;
+      return updated[key]?.includes(level) || false;
+    });
+    
+    // Se todas estão marcadas, desmarcar todas. Caso contrário, marcar todas
+    for (const analysisId of targetAnalyses) {
+      const key = `analysis-${analysisId}`;
+      const currentLevels = updated[key] || [];
+      
+      if (allSelected) {
+        // Desmarcar: remover o nível
+        const newLevels = currentLevels.filter(l => l !== level);
+        if (newLevels.length > 0) {
+          updated[key] = newLevels;
+        } else {
+          delete updated[key];
+        }
+      } else {
+        // Marcar: adicionar o nível se não estiver presente
+        if (!currentLevels.includes(level)) {
+          updated[key] = [...currentLevels, level];
         }
       }
     }
@@ -265,7 +288,7 @@ export default function ReportForm({ initialItem, onSuccess, onCancel }: { initi
             </div>
           </div>
           
-          <div className="max-h-80 overflow-y-auto">
+          <div className="max-h-[41vh] overflow-y-auto">
             <div className="p-4 space-y-6">
               {groupedData.map((req, reqIndex) => (
                 <div key={req.id} className="space-y-4">
@@ -282,75 +305,70 @@ export default function ReportForm({ initialItem, onSuccess, onCancel }: { initi
                       <div key={`${req.id}-${criterion.id}`} className="space-y-3">
                         {/* Cabeçalho do Critério */}
                         <div className="border-l-2 border-l-slate-300 pl-3 py-2 bg-slate-50/50">
-                          {/* Layout que replica exatamente a estrutura da tabela */}
-                          <div className="flex items-center">
-                            {/* Espaço para coluna Código - mesmo w-24 da tabela */}
-                            <div className="w-24">
-                            </div>
+                          <div className="flex items-center justify-between">
+                            {/* Título do critério alinhado à esquerda */}
+                            <h5 className="font-medium text-slate-700">
+                              {criterion.code} - {criterion.label}
+                            </h5>
                             
-                            {/* Espaço para coluna Análise - flexível como na tabela + título do critério */}
-                            <div className="flex-1 pl-4">
-                              <h5 className="font-medium text-slate-700">
-                                {criterion.code} - {criterion.label}
-                              </h5>
-                            </div>
-                            
-                            {/* Botões alinhados com as colunas de checkboxes - exato w-20 da tabela */}
-                            <div className="w-20 flex justify-center">
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button
-                                    type="button"
-                                    size="sm"
-                                    variant="ghost"
-                                    onClick={() => handleSelectByCriterionLevel(criterion.id, 'minimum')}
-                                    className="h-6 w-6 p-0 hover:bg-blue-100 text-blue-600"
-                                  >
-                                    <CheckCheck className="w-3 h-3" />
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent side="top" className="z-[60]">
-                                  <p>Selecionar coluna Mínimo para este critério</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </div>
-                            
-                            <div className="w-20 flex justify-center">
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button
-                                    type="button"
-                                    size="sm"
-                                    variant="ghost"
-                                    onClick={() => handleSelectByCriterionLevel(criterion.id, 'intermediate')}
-                                    className="h-6 w-6 p-0 hover:bg-green-100 text-green-600"
-                                  >
-                                    <CheckCheck className="w-3 h-3" />
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent side="top" className="z-[60]">
-                                  <p>Selecionar coluna Intermediário para este critério</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </div>
-                            
-                            <div className="w-20 flex justify-center">
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button
-                                    type="button"
-                                    size="sm"
-                                    variant="ghost"
-                                    onClick={() => handleSelectByCriterionLevel(criterion.id, 'superior')}
-                                    className="h-6 w-6 p-0 hover:bg-purple-100 text-purple-600"
-                                  >
-                                    <CheckCheck className="w-3 h-3" />
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent side="top" className="z-[60]">
-                                  <p>Selecionar coluna Superior para este critério</p>
-                                </TooltipContent>
-                              </Tooltip>
+                            {/* Botões alinhados com as colunas de checkboxes */}
+                            <div className="flex">
+                              <div className="w-20 flex justify-center">
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      variant="ghost"
+                                      onClick={() => handleSelectByCriterionLevel(req.id, criterion.id, 'minimum')}
+                                      className="h-6 w-6 p-0 hover:bg-blue-100 text-blue-600"
+                                    >
+                                      <CheckCheck className="w-3 h-3" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent side="top" className="z-[60]">
+                                    <p>Selecionar coluna Mínimo para este critério</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </div>
+                              
+                              <div className="w-20 flex justify-center">
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      variant="ghost"
+                                      onClick={() => handleSelectByCriterionLevel(req.id, criterion.id, 'intermediate')}
+                                      className="h-6 w-6 p-0 hover:bg-green-100 text-green-600"
+                                    >
+                                      <CheckCheck className="w-3 h-3" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent side="top" className="z-[60]">
+                                    <p>Selecionar coluna Intermediário para este critério</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </div>
+                              
+                              <div className="w-20 flex justify-center">
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      variant="ghost"
+                                      onClick={() => handleSelectByCriterionLevel(req.id, criterion.id, 'superior')}
+                                      className="h-6 w-6 p-0 hover:bg-purple-100 text-purple-600"
+                                    >
+                                      <CheckCheck className="w-3 h-3" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent side="top" className="z-[60]">
+                                    <p>Selecionar coluna Superior para este critério</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </div>
                             </div>
                           </div>
                         </div>
