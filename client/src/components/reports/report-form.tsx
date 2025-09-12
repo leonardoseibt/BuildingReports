@@ -168,6 +168,45 @@ export default function ReportForm({ initialItem, onSuccess, onCancel }: { initi
     setLevels(updated);
   }
 
+  // Função auxiliar para verificar se todos os itens de uma coluna estão selecionados
+  function isColumnFullySelected(requirementId: number, criterionId: number, level: 'minimum' | 'intermediate' | 'superior'): boolean {
+    // Encontrar todas as análises do critério específico dentro do requisito específico
+    const targetAnalyses: number[] = [];
+    for (const req of groupedData) {
+      if (req.id === requirementId) {
+        for (const crit of req.criteria) {
+          if (crit.id === criterionId) {
+            targetAnalyses.push(...crit.analyses.map(a => a.id));
+            break;
+          }
+        }
+        break;
+      }
+    }
+    
+    // Verificar se todas as análises estão marcadas neste nível
+    return targetAnalyses.length > 0 && targetAnalyses.every(analysisId => {
+      const key = `analysis-${analysisId}`;
+      return levels[key]?.includes(level) || false;
+    });
+  }
+
+  // Função para gerar iniciais do nome da edificação
+  function getBuildingInitials(): string | null {
+    const selectedBuildingId = form.watch('buildingId');
+    if (!selectedBuildingId) return null;
+    
+    const selectedBuilding = buildings.find(b => b.id === selectedBuildingId);
+    if (!selectedBuilding || !selectedBuilding.name) return null;
+    
+    return selectedBuilding.name
+      .split(' ')
+      .filter(word => word.length > 0)
+      .slice(0, 2) // Máximo 2 palavras
+      .map(word => word.charAt(0).toUpperCase())
+      .join('');
+  }
+
   const mutation = useMutation({
     mutationFn: async (values: FormData) => {
       const evaluations = Object.entries(levels).flatMap(([key, arr]) => {
@@ -217,7 +256,7 @@ export default function ReportForm({ initialItem, onSuccess, onCancel }: { initi
     <TooltipProvider delayDuration={300} skipDelayDuration={100}>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(data => mutation.mutate(data))} className="space-y-6" autoComplete="off">
-        <FormHeader title={initialItem ? 'Editar Relatório' : 'Novo Relatório'} subtitle={initialItem ? 'Atualize os dados do relatório.' : 'Cadastre um novo relatório.'} initials={null} />
+        <FormHeader title={initialItem ? 'Editar Relatório' : 'Novo Relatório'} subtitle={initialItem ? 'Atualize os dados do relatório.' : 'Cadastre um novo relatório.'} initials={getBuildingInitials()} />
 
         <FormField name="buildingId" control={form.control} render={({ field }) => (
           <FormItem>
@@ -313,7 +352,12 @@ export default function ReportForm({ initialItem, onSuccess, onCancel }: { initi
                             
                             {/* Botões alinhados com as colunas de checkboxes */}
                             <div className="flex">
-                              <div className="w-20 flex justify-center">
+                              {/* Espaço para coluna Código */}
+                              <div className="w-24"></div>
+                              {/* Espaço para coluna Análise */}
+                              <div className="flex-1"></div>
+                              {/* Botões alinhados com as colunas de checkboxes */}
+                              <div className="w-28 flex justify-center">
                                 <Tooltip>
                                   <TooltipTrigger asChild>
                                     <Button
@@ -321,7 +365,11 @@ export default function ReportForm({ initialItem, onSuccess, onCancel }: { initi
                                       size="sm"
                                       variant="ghost"
                                       onClick={() => handleSelectByCriterionLevel(req.id, criterion.id, 'minimum')}
-                                      className="h-6 w-6 p-0 hover:bg-blue-100 text-blue-600"
+                                      className={`h-6 w-6 p-0 ${
+                                        isColumnFullySelected(req.id, criterion.id, 'minimum')
+                                          ? 'bg-slate-200 text-slate-500 hover:bg-slate-300'
+                                          : 'hover:bg-slate-100'
+                                      }`}
                                     >
                                       <CheckCheck className="w-3 h-3" />
                                     </Button>
@@ -332,7 +380,7 @@ export default function ReportForm({ initialItem, onSuccess, onCancel }: { initi
                                 </Tooltip>
                               </div>
                               
-                              <div className="w-20 flex justify-center">
+                              <div className="w-28 flex justify-center">
                                 <Tooltip>
                                   <TooltipTrigger asChild>
                                     <Button
@@ -340,7 +388,11 @@ export default function ReportForm({ initialItem, onSuccess, onCancel }: { initi
                                       size="sm"
                                       variant="ghost"
                                       onClick={() => handleSelectByCriterionLevel(req.id, criterion.id, 'intermediate')}
-                                      className="h-6 w-6 p-0 hover:bg-green-100 text-green-600"
+                                      className={`h-6 w-6 p-0 ${
+                                        isColumnFullySelected(req.id, criterion.id, 'intermediate')
+                                          ? 'bg-slate-200 text-slate-500 hover:bg-slate-300'
+                                          : 'hover:bg-slate-100'
+                                      }`}
                                     >
                                       <CheckCheck className="w-3 h-3" />
                                     </Button>
@@ -351,7 +403,7 @@ export default function ReportForm({ initialItem, onSuccess, onCancel }: { initi
                                 </Tooltip>
                               </div>
                               
-                              <div className="w-20 flex justify-center">
+                              <div className="w-28 flex justify-center">
                                 <Tooltip>
                                   <TooltipTrigger asChild>
                                     <Button
@@ -359,7 +411,11 @@ export default function ReportForm({ initialItem, onSuccess, onCancel }: { initi
                                       size="sm"
                                       variant="ghost"
                                       onClick={() => handleSelectByCriterionLevel(req.id, criterion.id, 'superior')}
-                                      className="h-6 w-6 p-0 hover:bg-purple-100 text-purple-600"
+                                      className={`h-6 w-6 p-0 ${
+                                        isColumnFullySelected(req.id, criterion.id, 'superior')
+                                          ? 'bg-slate-200 text-slate-500 hover:bg-slate-300'
+                                          : 'hover:bg-slate-100'
+                                      }`}
                                     >
                                       <CheckCheck className="w-3 h-3" />
                                     </Button>
@@ -380,9 +436,9 @@ export default function ReportForm({ initialItem, onSuccess, onCancel }: { initi
                               <TableRow className="bg-slate-50 border-b">
                                 <TableHead className="w-24">Código</TableHead>
                                 <TableHead>Análise</TableHead>
-                                <TableHead className="text-center w-20 text-blue-600 font-semibold">Mínimo</TableHead>
-                                <TableHead className="text-center w-20 text-green-600 font-semibold">Intermediário</TableHead>
-                                <TableHead className="text-center w-20 text-purple-600 font-semibold">Superior</TableHead>
+                                <TableHead className="text-center w-28 font-semibold">Mínimo</TableHead>
+                                <TableHead className="text-center w-28 font-semibold">Intermediário</TableHead>
+                                <TableHead className="text-center w-28 font-semibold">Superior</TableHead>
                               </TableRow>
                             </TableHeader>
                             <TableBody>
