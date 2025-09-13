@@ -82,7 +82,134 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
   })).filter(req => req.criteria.length > 0);
 
   const handlePrint = () => {
-    window.print();
+    // Criar uma nova janela para impressão apenas do conteúdo do relatório
+    const printWindow = window.open('', '_blank', 'width=800,height=600');
+    
+    if (printWindow) {
+      // Obter o conteúdo HTML do relatório
+      const reportContent = document.querySelector('.print-content');
+      
+      if (reportContent) {
+        // Clonar o conteúdo para não afetar o original
+        const clonedContent = reportContent.cloneNode(true) as HTMLElement;
+        
+        // Remover todos os botões e elementos com classe print:hidden
+        const buttonsToRemove = clonedContent.querySelectorAll('button, .print\\:hidden');
+        buttonsToRemove.forEach(element => element.remove());
+        
+        // Remover divs que contenham botões
+        const buttonContainers = clonedContent.querySelectorAll('.print\\:hidden, [class*="print:hidden"]');
+        buttonContainers.forEach(element => element.remove());
+        
+        // Criar o HTML completo para a janela de impressão
+        printWindow.document.write(`
+          <!DOCTYPE html>
+          <html>
+            <head>
+              <title>Relatório de Desempenho - ${building?.name || `ID ${item.buildingId}`}</title>
+              <meta charset="utf-8">
+              <style>
+                @page {
+                  margin: 1.5cm;
+                  size: A4;
+                }
+                
+                body {
+                  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+                  line-height: 1.5;
+                  color: #334155;
+                  background: white;
+                  margin: 0;
+                  padding: 20px;
+                  -webkit-print-color-adjust: exact;
+                  print-color-adjust: exact;
+                }
+                
+                h1 { font-size: 24px; font-weight: bold; color: #1e293b; margin-bottom: 16px; }
+                h2 { font-size: 18px; font-weight: 600; color: #1e293b; margin: 16px 0 12px 0; }
+                h3 { font-size: 16px; font-weight: 500; color: #475569; margin: 12px 0 8px 0; }
+                h4 { font-size: 14px; font-weight: 500; color: #64748b; margin: 8px 0 6px 0; }
+                
+                .header-info { font-size: 12px; color: #64748b; margin-bottom: 24px; }
+                .header-info p { margin: 4px 0; }
+                
+                .requirement-header {
+                  border-left: 4px solid #3b82f6;
+                  padding: 8px 16px;
+                  background: #f1f5f9;
+                  margin: 16px 0 12px 0;
+                }
+                
+                .criterion-header {
+                  border-left: 2px solid #94a3b8;
+                  padding: 6px 12px;
+                  background: #f8fafc;
+                  margin: 12px 0 8px 0;
+                }
+                
+                table {
+                  width: 100%;
+                  border-collapse: collapse;
+                  margin: 12px 0;
+                  table-layout: fixed;
+                }
+                
+                th, td {
+                  border: 1px solid #d1d5db;
+                  padding: 8px;
+                  font-size: 12px;
+                  text-align: left;
+                  vertical-align: top;
+                }
+                
+                th {
+                  background: #f9fafb;
+                  font-weight: 600;
+                  text-align: center;
+                }
+                
+                .text-center { text-align: center; }
+                .align-middle { vertical-align: middle; }
+                .font-medium { font-weight: 500; }
+                .italic { font-style: italic; }
+                
+                .w-20 { width: 5rem; min-width: 5rem; max-width: 5rem; }
+                .w-24 { width: 6rem; min-width: 6rem; max-width: 6rem; }
+                
+                .observations {
+                  font-size: 11px;
+                  color: #64748b;
+                  margin-top: 6px;
+                }
+                
+                .observations-label {
+                  font-weight: 600;
+                  color: #475569;
+                }
+                
+                hr { border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0; }
+                
+                /* Ocultar elementos que não devem aparecer na impressão */
+                button, .print\\:hidden, [class*="print:hidden"] {
+                  display: none !important;
+                }
+              </style>
+            </head>
+            <body>
+              ${clonedContent.innerHTML}
+            </body>
+          </html>
+        `);
+        
+        printWindow.document.close();
+        
+        // Aguardar o carregamento e iniciar a impressão
+        printWindow.onload = function() {
+          printWindow.print();
+          printWindow.close();
+        };
+      }
+    }
   };
 
   // Função helper para quebrar linhas no texto
@@ -97,7 +224,7 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
   };
 
   return (
-    <div className="print:p-0 p-6">
+    <div className="print:p-0 p-6 print-content">
       {/* Cabeçalho - visível na tela e impressão */}
       <div className="flex justify-between items-start mb-6 print:mb-4">
         <div>
@@ -355,7 +482,7 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
                                               <div className="flex items-start gap-1">
                                                 <span className="font-semibold text-slate-700 min-w-fit">
                                                   <span className="print:hidden">💬 </span>
-                                                  Observações:
+                                                  Observações: 
                                                 </span>
                                                 <span className="italic leading-relaxed">{renderTextWithLineBreaks(row.parameter.notes)}</span>
                                               </div>
