@@ -9,8 +9,9 @@ import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Plus, Pencil, Trash2, FileText, MapPin, Search } from 'lucide-react';
+import { Plus, Pencil, Trash2, FileText, MapPin, Search, Printer } from 'lucide-react';
 import ReportForm from '@/components/reports/report-form';
+import ReportPrint from '@/components/reports/report-print';
 import type { Report } from '@shared/schema';
 import { apiRequest } from '@/lib/queryClient';
 import { showError, showSuccess } from '@/lib/toast-messages';
@@ -35,6 +36,8 @@ export default function ReportsList() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<ReportItem | null>(null);
   const [search, setSearch] = useState("");
+  const [printItem, setPrintItem] = useState<ReportItem | null>(null);
+  const [printOpen, setPrintOpen] = useState(false);
 
   const { data: allItems = [] } = useQuery<ReportItem[]>({ queryKey: ['/api/reports'], enabled: isAuthenticated });
 
@@ -79,6 +82,11 @@ export default function ReportsList() {
   function askDelete(item: ReportItem) {
     setSelectedItem(item);
     setConfirmOpen(true);
+  }
+
+  function openPrint(item: ReportItem) {
+    setPrintItem(item);
+    setPrintOpen(true);
   }
 
   function confirmDelete() {
@@ -176,6 +184,9 @@ export default function ReportsList() {
                           <Button variant="ghost" size="icon" onClick={() => { setEditItem(r); setFormKey(k => k + 1); setOpen(true); }}>
                             <Pencil className="h-4 w-4" />
                           </Button>
+                          <Button variant="ghost" size="icon" onClick={() => openPrint(r)}>
+                            <Printer className="h-4 w-4" />
+                          </Button>
                           <Button variant="ghost" size="icon" className="text-rose-600 hover:bg-rose-50 hover:text-rose-700" onClick={() => askDelete(r)}>
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -194,6 +205,14 @@ export default function ReportsList() {
         <DialogContent className="max-w-5xl h-[66vh] p-0 overflow-hidden">
           <div className="h-[calc(66vh-1rem)] overflow-y-auto my-7 px-7">
             <ReportForm key={formKey} initialItem={editItem} onSuccess={() => { queryClient.invalidateQueries({ queryKey: ['/api/reports'] }); if (editItem) { setEditItem(null); setOpen(false); } }} onCancel={() => setOpen(false)} />
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={printOpen} onOpenChange={(v) => { setPrintOpen(v); if (!v) setPrintItem(null); }}>
+        <DialogContent className="max-w-7xl max-h-[90vh] p-0 overflow-hidden">
+          <div className="h-[85vh] overflow-y-auto">
+            {printItem && <ReportPrint item={printItem} onClose={() => setPrintOpen(false)} />}
           </div>
         </DialogContent>
       </Dialog>
