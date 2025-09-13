@@ -176,6 +176,147 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
                             return hasMinimum || hasIntermediate || hasSuperior;
                           }
                         });
+
+                        // Separar parâmetros com múltiplos valores dos com valores únicos
+                        const multiValueParameters: typeof filteredParameters = [];
+                        const singleValueCombinations: Array<{
+                          parameter: typeof analysis.parameters[0];
+                          level: 'minimum' | 'intermediate' | 'superior';
+                          value: string;
+                          numericValue: number;
+                        }> = [];
+
+                        filteredParameters.forEach(parameter => {
+                          // Contar quantos níveis selecionados têm valores
+                          const levelsWithValues = selectedLevels.filter(levelStr => {
+                            const level = levelStr as 'minimum' | 'intermediate' | 'superior';
+                            switch(level) {
+                              case 'minimum':
+                                return parameter.minimumValue && parameter.minimumValue.trim() !== '';
+                              case 'intermediate':
+                                return parameter.intermediateValue && parameter.intermediateValue.trim() !== '';
+                              case 'superior':
+                                return parameter.superiorValue && parameter.superiorValue.trim() !== '';
+                              default:
+                                return false;
+                            }
+                          });
+
+                          if (levelsWithValues.length >= 2) {
+                            // Parâmetro com 2 ou mais valores - será mostrado em uma linha
+                            multiValueParameters.push(parameter);
+                          } else {
+                            // Parâmetro com apenas 1 valor - criar combinações individuais
+                            selectedLevels.forEach(levelStr => {
+                              const level = levelStr as 'minimum' | 'intermediate' | 'superior';
+                              let value = '';
+                              switch(level) {
+                                case 'minimum':
+                                  value = parameter.minimumValue || '';
+                                  break;
+                                case 'intermediate':
+                                  value = parameter.intermediateValue || '';
+                                  break;
+                                case 'superior':
+                                  value = parameter.superiorValue || '';
+                                  break;
+                              }
+                              
+                              if (value && value.trim() !== '') {
+                                const numericValue = parseFloat(value.replace(',', '.')) || 0;
+                                singleValueCombinations.push({
+                                  parameter,
+                                  level,
+                                  value,
+                                  numericValue
+                                });
+                              }
+                            });
+                          }
+                        });
+
+                        // Criar uma única lista unificada com todos os parâmetros para ordenação correta
+                        const allParameterEntries: Array<{
+                          parameter: typeof analysis.parameters[0];
+                          isMultiValue: boolean;
+                          specificLevel?: 'minimum' | 'intermediate' | 'superior';
+                          sortValue: number;
+                          levelPriority: number;
+                        }> = [];
+
+                        // Adicionar parâmetros com múltiplos valores
+                        multiValueParameters.forEach(parameter => {
+                          const getMinValue = () => {
+                            const values = [];
+                            if (selectedLevels.includes('minimum') && parameter.minimumValue && parameter.minimumValue.trim() !== '') {
+                              values.push(parseFloat(parameter.minimumValue.replace(',', '.')) || 0);
+                            }
+                            if (selectedLevels.includes('intermediate') && parameter.intermediateValue && parameter.intermediateValue.trim() !== '') {
+                              values.push(parseFloat(parameter.intermediateValue.replace(',', '.')) || 0);
+                            }
+                            if (selectedLevels.includes('superior') && parameter.superiorValue && parameter.superiorValue.trim() !== '') {
+                              values.push(parseFloat(parameter.superiorValue.replace(',', '.')) || 0);
+                            }
+                            return values.length > 0 ? Math.min(...values) : 0;
+                          };
+
+                          const getLevelPriority = () => {
+                            if (selectedLevels.includes('minimum') && parameter.minimumValue && parameter.minimumValue.trim() !== '') {
+                              return 1; // Mínimo tem prioridade
+                            }
+                            if (selectedLevels.includes('intermediate') && parameter.intermediateValue && parameter.intermediateValue.trim() !== '') {
+                              return 2; // Intermediário
+                            }
+                            if (selectedLevels.includes('superior') && parameter.superiorValue && parameter.superiorValue.trim() !== '') {
+                              return 3; // Superior
+                            }
+                            return 4;
+                          };
+
+                          allParameterEntries.push({
+                            parameter,
+                            isMultiValue: true,
+                            sortValue: getMinValue(),
+                            levelPriority: getLevelPriority()
+                          });
+                        });
+
+                        // Adicionar parâmetros com valor único
+                        singleValueCombinations.forEach(combo => {
+                          const levelOrder = { 'minimum': 1, 'intermediate': 2, 'superior': 3 };
+                          
+                          allParameterEntries.push({
+                            parameter: combo.parameter,
+                            isMultiValue: false,
+                            specificLevel: combo.level,
+                            sortValue: combo.numericValue,
+                            levelPriority: levelOrder[combo.level]
+                          });
+                        });
+
+                        // Ordenar a lista unificada
+                        allParameterEntries.sort((a, b) => {
+                          // Primeiro critério: ordenação alfabética por descrição
+                          const labelComparison = a.parameter.label.localeCompare(b.parameter.label, 'pt-BR');
+                          if (labelComparison !== 0) {
+                            return labelComparison;
+                          }
+                          
+                          // Segundo critério: por valor numérico
+                          if (a.sortValue !== b.sortValue) {
+                            return a.sortValue - b.sortValue;
+                          }
+                          
+                          // Terceiro critério: por prioridade de nível
+                          return a.levelPriority - b.levelPriority;
+                        });
+
+                        // Criar array final para renderização
+                        const parametersToRender = allParameterEntries.map(entry => ({
+                          parameter: entry.parameter,
+                          isMultiValue: entry.isMultiValue,
+                          specificLevel: entry.specificLevel
+                        }));
                         
                         return (
                           <div key={analysis.id} className="mb-4 print:mb-3">
@@ -186,7 +327,7 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
                             </div>
                             
                             {/* Tabela de Parâmetros */}
-                            {filteredParameters.length > 0 && (
+                            {parametersToRender.length > 0 && (
                               <Table className="border table-fixed w-full">
                                 <TableHeader>
                                   <TableRow className="bg-slate-50 print:bg-gray-100">
@@ -204,40 +345,43 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
                                   </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                  {filteredParameters.map(parameter => (
-                                    <TableRow key={parameter.id}>
+                                  {parametersToRender.map((row, index) => (
+                                    <TableRow key={`${row.parameter.id}-${index}`}>
                                       <TableCell className="border font-medium print:text-xs align-top">
                                         <div className="space-y-2">
-                                          <div className="font-medium">{renderTextWithLineBreaks(parameter.label)}</div>
-                                          {parameter.notes && parameter.notes.trim() !== '' && (
+                                          <div className="font-medium">{renderTextWithLineBreaks(row.parameter.label)}</div>
+                                          {row.parameter.notes && row.parameter.notes.trim() !== '' && (
                                             <div className="text-xs text-slate-600 print:text-xs">
                                               <div className="flex items-start gap-1">
                                                 <span className="font-semibold text-slate-700 min-w-fit">
                                                   <span className="print:hidden">💬 </span>
                                                   Observações:
                                                 </span>
-                                                <span className="italic leading-relaxed">{renderTextWithLineBreaks(parameter.notes)}</span>
+                                                <span className="italic leading-relaxed">{renderTextWithLineBreaks(row.parameter.notes)}</span>
                                               </div>
                                             </div>
                                           )}
                                         </div>
                                       </TableCell>
                                       <TableCell className="text-center border print:text-xs w-24 align-middle">
-                                        {parameter.unit || '—'}
+                                        {row.parameter.unit || '—'}
                                       </TableCell>
                                       {selectedLevels.includes('minimum') && (
                                         <TableCell className="text-center border print:text-xs w-32 align-middle">
-                                          {parameter.minimumValue || '—'}
+                                          {row.isMultiValue || row.specificLevel === 'minimum' ? 
+                                            (row.parameter.minimumValue || '—') : '—'}
                                         </TableCell>
                                       )}
                                       {selectedLevels.includes('intermediate') && (
                                         <TableCell className="text-center border print:text-xs w-32 align-middle">
-                                          {parameter.intermediateValue || '—'}
+                                          {row.isMultiValue || row.specificLevel === 'intermediate' ? 
+                                            (row.parameter.intermediateValue || '—') : '—'}
                                         </TableCell>
                                       )}
                                       {selectedLevels.includes('superior') && (
                                         <TableCell className="text-center border print:text-xs w-32 align-middle">
-                                          {parameter.superiorValue || '—'}
+                                          {row.isMultiValue || row.specificLevel === 'superior' ? 
+                                            (row.parameter.superiorValue || '—') : '—'}
                                         </TableCell>
                                       )}
                                     </TableRow>
