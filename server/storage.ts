@@ -70,6 +70,21 @@ import {
 import { db } from "./db";
 import { eq, desc, and, sql, count } from "drizzle-orm";
 
+// Type for report with building details
+export interface ReportWithBuilding {
+  id: number;
+  buildingId: number;
+  reportData: any;
+  version: number | null;
+  isActive: boolean | null;
+  generatedAt: Date | null;
+  buildingName: string | null;
+  buildingLocation: string | null;
+  buildingArea: string | null;
+  buildingHeight: string | null;
+  buildingFloors: number | null;
+}
+
 // Use a single Portuguese (Brazil) collator for accent-aware, numeric-friendly sorting
 const ptCollator = new Intl.Collator('pt-BR', { usage: 'sort', sensitivity: 'accent', numeric: true, ignorePunctuation: true });
 
@@ -615,13 +630,15 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(reports.generatedAt));
   }
 
-  async getReportsByUser(userId: number, limit?: number, offset?: number): Promise<{ items: Report[]; total: number }> {
+  async getReportsByUser(userId: number, limit?: number, offset?: number): Promise<{ items: ReportWithBuilding[]; total: number }> {
     const totalRes = await db
       .select({ value: count() })
       .from(reports)
       .leftJoin(buildings, eq(reports.buildingId, buildings.id))
       .where(and(eq(buildings.userId, userId), eq(reports.isActive, true)));
     const total = Number(totalRes[0]?.value ?? 0);
+    
+    // Add building fields gradually
     let query = db
       .select({
         id: reports.id,
@@ -631,14 +648,16 @@ export class DatabaseStorage implements IStorage {
         isActive: reports.isActive,
         generatedAt: reports.generatedAt,
         buildingName: buildings.name,
+        buildingLocation: sql<string>`${buildings.city} || ', ' || ${buildings.state}`,
+        buildingArea: buildings.totalArea,
+        buildingHeight: buildings.buildingHeight,
+        buildingFloors: buildings.floors,
       })
       .from(reports)
       .leftJoin(buildings, eq(reports.buildingId, buildings.id))
-      .where(and(
-        eq(buildings.userId, userId),
-        eq(reports.isActive, true)
-      ))
+      .where(and(eq(buildings.userId, userId), eq(reports.isActive, true)))
       .orderBy(desc(reports.generatedAt));
+      
     if (limit !== undefined) query = (query as any).limit(limit);
     if (offset !== undefined) query = (query as any).offset(offset);
     const items = await query;

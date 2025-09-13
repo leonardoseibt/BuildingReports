@@ -1,14 +1,15 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import Sidebar from '@/components/layout/sidebar';
 import Header from '@/components/layout/header';
 import { useAuth } from '@/hooks/useAuth';
 import { useAuthRedirect } from '@/hooks/useAuthRedirect';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Plus, Pencil, Trash2, FileText } from 'lucide-react';
+import { Plus, Pencil, Trash2, FileText, MapPin, Search } from 'lucide-react';
 import ReportForm from '@/components/reports/report-form';
 import type { Report } from '@shared/schema';
 import { apiRequest } from '@/lib/queryClient';
@@ -17,6 +18,10 @@ import { useToast } from '@/hooks/use-toast';
 
 interface ReportItem extends Report {
   buildingName?: string;
+  buildingLocation?: string;
+  buildingArea?: string;
+  buildingHeight?: string;
+  buildingFloors?: number;
 }
 
 export default function ReportsList() {
@@ -29,8 +34,35 @@ export default function ReportsList() {
   const [editItem, setEditItem] = useState<ReportItem | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<ReportItem | null>(null);
+  const [search, setSearch] = useState("");
 
-  const { data: items = [] } = useQuery<ReportItem[]>({ queryKey: ['/api/reports'], enabled: isAuthenticated });
+  const { data: allItems = [] } = useQuery<ReportItem[]>({ queryKey: ['/api/reports'], enabled: isAuthenticated });
+
+  // Função helper para normalizar texto (remove acentos, lowercase)
+  const normText = (v: any) => String(v ?? "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]+/g, "");
+  
+  // Filtrar itens baseado na busca
+  const filteredItems = useMemo(() => {
+    if (!search) return allItems;
+    const q = normText(search);
+    return allItems.filter((item) => {
+      const buildingName = normText(item.buildingName || "");
+      const buildingLocation = normText(item.buildingLocation || "");
+      const buildingArea = normText(item.buildingArea || "");
+      const buildingHeight = normText(item.buildingHeight || "");
+      const floors = normText(item.buildingFloors || "");
+      const date = normText(item.generatedAt ? new Date(item.generatedAt as any).toLocaleDateString('pt-BR') : "");
+      
+      return (
+        buildingName.includes(q) ||
+        buildingLocation.includes(q) ||
+        buildingArea.includes(q) ||
+        buildingHeight.includes(q) ||
+        floors.includes(q) ||
+        date.includes(q)
+      );
+    });
+  }, [allItems, search]);
 
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
@@ -72,7 +104,23 @@ export default function ReportsList() {
           }
         />
         <main className="flex-1 overflow-y-auto p-6">
-          {items.length === 0 ? (
+          {/* Search Card */}
+          <div className="rounded-2xl border bg-white/80 backdrop-blur px-5 py-4 md:px-6 md:py-5 shadow-sm mb-4">
+            <div className="flex items-center gap-3">
+              <div className="relative w-full max-w-lg">
+                <Input
+                  type="text"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Buscar relatórios (edificação, localização, área, altura, data)"
+                  className="h-9 pl-9"
+                />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
+              </div>
+            </div>
+          </div>
+          
+          {filteredItems.length === 0 && allItems.length === 0 ? (
             <div className="text-center py-12">
               <FileText className="w-16 h-16 text-slate-300 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-slate-900 mb-2">Nenhum relatório cadastrado</h3>
@@ -81,20 +129,47 @@ export default function ReportsList() {
                 <Plus className="w-4 h-4 mr-2" /> Cadastrar Relatório
               </Button>
             </div>
+          ) : filteredItems.length === 0 ? (
+            <div className="text-center py-12">
+              <FileText className="w-16 h-16 text-slate-300 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-slate-900 mb-2">Nenhum resultado encontrado</h3>
+              <p className="text-slate-500 mb-6">Tente ajustar os termos da busca para encontrar relatórios.</p>
+            </div>
           ) : (
             <div className="rounded-2xl bg-white shadow-sm ring-1 ring-slate-200/60">
               <Table>
                 <TableHeader>
                   <TableRow className="bg-slate-100/60">
                     <TableHead>Edificação</TableHead>
+                    <TableHead>Localização</TableHead>
+                    <TableHead className="text-right">Área</TableHead>
+                    <TableHead className="text-right">Altura</TableHead>
+                    <TableHead className="text-right">Pav.</TableHead>
                     <TableHead>Gerado em</TableHead>
                     <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {items.map((r) => (
+                  {filteredItems.map((r) => (
                     <TableRow key={r.id}>
-                      <TableCell>{r.buildingName || r.buildingId}</TableCell>
+                      <TableCell className="font-medium">{r.buildingName || r.buildingId}</TableCell>
+                      <TableCell>
+                        {r.buildingLocation ? (
+                          <div className="flex items-center gap-1">
+                            <MapPin className="w-3 h-3 shrink-0" />
+                            {r.buildingLocation}
+                          </div>
+                        ) : '—'}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {r.buildingArea ? `${r.buildingArea}m²` : '—'}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {r.buildingHeight != null ? `${r.buildingHeight}m` : '—'}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {r.buildingFloors || '—'}
+                      </TableCell>
                       <TableCell>{r.generatedAt ? new Date(r.generatedAt as any).toLocaleDateString('pt-BR') : ''}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1.5">
