@@ -82,6 +82,13 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
   })).filter(req => req.criteria.length > 0);
 
   const handlePrint = () => {
+    // Calcular quantos níveis de desempenho únicos estão selecionados no total
+    const allSelectedLevels = new Set<string>();
+    selectedEvaluations.forEach(levels => {
+      levels.forEach(level => allSelectedLevels.add(level));
+    });
+    const totalSelectedLevels = allSelectedLevels.size;
+
     // Criar uma nova janela para impressão apenas do conteúdo do relatório
     const printWindow = window.open('', '_blank', 'width=800,height=600');
     
@@ -173,8 +180,19 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
                 .font-medium { font-weight: 500; }
                 .italic { font-style: italic; }
                 
+                .w-16 { width: 4rem; min-width: 4rem; max-width: 4rem; }
                 .w-20 { width: 5rem; min-width: 5rem; max-width: 5rem; }
                 .w-24 { width: 6rem; min-width: 6rem; max-width: 6rem; }
+                .w-32 { width: 8rem; min-width: 8rem; max-width: 8rem; }
+                
+                /* Larguras condicionais para impressão baseadas no número de níveis */
+                ${totalSelectedLevels === 3 ? `
+                  .print-unit-width { width: 4rem; min-width: 4rem; max-width: 4rem; }
+                  .print-level-width { width: 5rem; min-width: 5rem; max-width: 5rem; }
+                ` : `
+                  .print-unit-width { width: 6rem; min-width: 6rem; max-width: 6rem; }
+                  .print-level-width { width: 8rem; min-width: 8rem; max-width: 8rem; }
+                `}
                 
                 .observations {
                   font-size: 11px;
@@ -459,15 +477,15 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
                                 <TableHeader>
                                   <TableRow className="bg-slate-50 print:bg-gray-100">
                                     <TableHead className="border print:text-xs">Parâmetro</TableHead>
-                                    <TableHead className="text-center border print:text-xs w-24">Unidade</TableHead>
+                                    <TableHead className="text-center border print:text-xs w-24 print-unit-width">Unidade</TableHead>
                                     {selectedLevels.includes('minimum') && (
-                                      <TableHead className="text-center border print:text-xs w-32">Mínimo</TableHead>
+                                      <TableHead className="text-center border print:text-xs w-32 print-level-width">Mínimo</TableHead>
                                     )}
                                     {selectedLevels.includes('intermediate') && (
-                                      <TableHead className="text-center border print:text-xs w-32">Intermediário</TableHead>
+                                      <TableHead className="text-center border print:text-xs w-32 print-level-width">Intermediário</TableHead>
                                     )}
                                     {selectedLevels.includes('superior') && (
-                                      <TableHead className="text-center border print:text-xs w-32">Superior</TableHead>
+                                      <TableHead className="text-center border print:text-xs w-32 print-level-width">Superior</TableHead>
                                     )}
                                   </TableRow>
                                 </TableHeader>
@@ -490,23 +508,23 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
                                           )}
                                         </div>
                                       </TableCell>
-                                      <TableCell className="text-center border print:text-xs w-24 align-middle">
+                                      <TableCell className="text-center border print:text-xs w-24 align-middle print-unit-width">
                                         {row.parameter.unit || '—'}
                                       </TableCell>
                                       {selectedLevels.includes('minimum') && (
-                                        <TableCell className="text-center border print:text-xs w-32 align-middle">
+                                        <TableCell className="text-center border print:text-xs w-32 align-middle print-level-width">
                                           {row.isMultiValue || row.specificLevel === 'minimum' ? 
                                             (row.parameter.minimumValue || '—') : '—'}
                                         </TableCell>
                                       )}
                                       {selectedLevels.includes('intermediate') && (
-                                        <TableCell className="text-center border print:text-xs w-32 align-middle">
+                                        <TableCell className="text-center border print:text-xs w-32 align-middle print-level-width">
                                           {row.isMultiValue || row.specificLevel === 'intermediate' ? 
                                             (row.parameter.intermediateValue || '—') : '—'}
                                         </TableCell>
                                       )}
                                       {selectedLevels.includes('superior') && (
-                                        <TableCell className="text-center border print:text-xs w-32 align-middle">
+                                        <TableCell className="text-center border print:text-xs w-32 align-middle print-level-width">
                                           {row.isMultiValue || row.specificLevel === 'superior' ? 
                                             (row.parameter.superiorValue || '—') : '—'}
                                         </TableCell>
