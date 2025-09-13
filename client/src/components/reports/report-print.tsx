@@ -201,6 +201,7 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
                                 <TableHeader>
                                   <TableRow className="bg-slate-50 print:bg-gray-100">
                                     <TableHead className="border print:text-xs">Parâmetro</TableHead>
+                                    <TableHead className="text-center border print:text-xs w-24">Unidade</TableHead>
                                     {selectedLevels.includes('minimum') && (
                                       <TableHead className="text-center border print:text-xs w-32">Mínimo</TableHead>
                                     )}
@@ -215,24 +216,37 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
                                 <TableBody>
                                   {filteredParameters.map(parameter => (
                                     <TableRow key={parameter.id}>
-                                      <TableCell className="border font-medium print:text-xs">
-                                        <div>
+                                      <TableCell className="border font-medium print:text-xs align-top">
+                                        <div className="space-y-2">
                                           <div className="font-medium">{renderTextWithLineBreaks(parameter.label)}</div>
-                                          {parameter.unit && <span className="text-slate-500 text-xs">({parameter.unit})</span>}
+                                          {parameter.notes && parameter.notes.trim() !== '' && (
+                                            <div className="text-xs text-slate-600 print:text-xs">
+                                              <div className="flex items-start gap-1">
+                                                <span className="font-semibold text-slate-700 min-w-fit">
+                                                  <span className="print:hidden">💬 </span>
+                                                  Observações:
+                                                </span>
+                                                <span className="italic leading-relaxed">{renderTextWithLineBreaks(parameter.notes)}</span>
+                                              </div>
+                                            </div>
+                                          )}
                                         </div>
                                       </TableCell>
+                                      <TableCell className="text-center border print:text-xs w-24 align-middle">
+                                        {parameter.unit || '—'}
+                                      </TableCell>
                                       {selectedLevels.includes('minimum') && (
-                                        <TableCell className="text-center border print:text-xs w-32">
+                                        <TableCell className="text-center border print:text-xs w-32 align-middle">
                                           {parameter.minimumValue || '—'}
                                         </TableCell>
                                       )}
                                       {selectedLevels.includes('intermediate') && (
-                                        <TableCell className="text-center border print:text-xs w-32">
+                                        <TableCell className="text-center border print:text-xs w-32 align-middle">
                                           {parameter.intermediateValue || '—'}
                                         </TableCell>
                                       )}
                                       {selectedLevels.includes('superior') && (
-                                        <TableCell className="text-center border print:text-xs w-32">
+                                        <TableCell className="text-center border print:text-xs w-32 align-middle">
                                           {parameter.superiorValue || '—'}
                                         </TableCell>
                                       )}
@@ -271,7 +285,13 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
             print-color-adjust: exact;
           }
           
-          /* Larguras fixas para colunas de níveis */
+          /* Larguras fixas para colunas */
+          .w-24 {
+            width: 6rem !important;
+            min-width: 6rem !important;
+            max-width: 6rem !important;
+          }
+          
           .w-32 {
             width: 8rem !important;
             min-width: 8rem !important;
