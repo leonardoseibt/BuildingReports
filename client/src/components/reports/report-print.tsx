@@ -183,16 +183,6 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
                               <h4 className="font-medium text-sm text-slate-800 print:text-xs">
                                 {analysis.code} - {analysis.label}
                               </h4>
-                              <p className="text-xs text-slate-600 print:text-xs">
-                                Níveis selecionados: {selectedLevels.map(level => {
-                                  switch(level) {
-                                    case 'minimum': return 'Mínimo';
-                                    case 'intermediate': return 'Intermediário';
-                                    case 'superior': return 'Superior';
-                                    default: return level;
-                                  }
-                                }).join(', ')}
-                              </p>
                             </div>
                             
                             {/* Tabela de Parâmetros */}
