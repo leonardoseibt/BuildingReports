@@ -53,6 +53,31 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
     return text.replace(/\n/g, ' • ');
   };
 
+  // Função para verificar se um parâmetro tem valores nos níveis selecionados
+  const hasValuesForSelectedLevels = (parameter: any, selectedLevels: string[]): boolean => {
+    if (!selectedLevels || selectedLevels.length === 0) {
+      return true; // Se nenhum nível selecionado, mostrar todos
+    }
+
+    // Verificar se pelo menos um nível selecionado tem valor não-vazio
+    const hasMinimum = selectedLevels.includes('minimum') && 
+      parameter.minimumValue !== null && 
+      parameter.minimumValue !== undefined && 
+      String(parameter.minimumValue).trim() !== '';
+
+    const hasIntermediate = selectedLevels.includes('intermediate') && 
+      parameter.intermediateValue !== null && 
+      parameter.intermediateValue !== undefined && 
+      String(parameter.intermediateValue).trim() !== '';
+
+    const hasSuperior = selectedLevels.includes('superior') && 
+      parameter.superiorValue !== null && 
+      parameter.superiorValue !== undefined && 
+      String(parameter.superiorValue).trim() !== '';
+
+    return hasMinimum || hasIntermediate || hasSuperior;
+  };
+
   /**
    * Função para verificar se um parâmetro deve ser exibido baseado em seus atributos condicionais
    * 
@@ -280,10 +305,16 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
               .filter(param => param.analysisId === analysis.id)
               .filter(param => shouldShowParameter(param))
           }))
+          // Filtrar análises que não têm parâmetros visíveis
+          .filter(analysis => analysis.parameters.length > 0)
       }))
-  })).filter(req => req.criteria.length > 0);
+      // Filtrar critérios que não têm análises com parâmetros
+      .filter(crit => crit.analyses.length > 0)
+  }))
+  // Filtrar requisitos que não têm critérios com análises
+  .filter(req => req.criteria.length > 0);
 
-  // Filtrar apenas análises que têm avaliações selecionadas
+  // Filtrar apenas análises que têm avaliações selecionadas e aplicar filtro de níveis
   const filteredData = groupedData.map(req => ({
     ...req,
     criteria: req.criteria.map(crit => ({
@@ -291,9 +322,25 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
       analyses: crit.analyses.filter(analysis => {
         const key = `analysis-${analysis.id}`;
         return selectedEvaluations.has(key) && selectedEvaluations.get(key)!.length > 0;
+      }).map(analysis => {
+        const analysisKey = `analysis-${analysis.id}`;
+        const selectedLevels = selectedEvaluations.get(analysisKey) || [];
+        
+        return {
+          ...analysis,
+          parameters: analysis.parameters.filter(param => 
+            hasValuesForSelectedLevels(param, selectedLevels)
+          )
+        };
       })
-    })).filter(crit => crit.analyses.length > 0)
-  })).filter(req => req.criteria.length > 0);
+      // Filtrar análises que não têm parâmetros após filtro de níveis
+      .filter(analysis => analysis.parameters.length > 0)
+    }))
+    // Aplicar novamente o filtro de critérios após filtrar por avaliações
+    .filter(crit => crit.analyses.length > 0)
+  }))
+  // Aplicar novamente o filtro de requisitos após filtrar por avaliações
+  .filter(req => req.criteria.length > 0);
 
   // Aplicar ordenação nos dados filtrados
   const sortedData = filteredData
