@@ -1,7 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { X } from 'lucide-react';
 import type { Building, Requirement, Criterion, Analysis, Parameter } from '@shared/schema';
 
 interface ReportItem {
@@ -33,9 +32,116 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
   const { data: criteria = [] } = useQuery<Criterion[]>({ queryKey: ['/api/criteria'] });
   const { data: analyses = [] } = useQuery<Analysis[]>({ queryKey: ['/api/analyses'] });
   const { data: parameters = [] } = useQuery<Parameter[]>({ queryKey: ['/api/parameters'] });
+  
+  // Buscar dados para filtros de atributos
+  const { data: attributes = [] } = useQuery<any[]>({ 
+    queryKey: ['/api/attributes'],
+    queryFn: async () => {
+      const r = await fetch('/api/attributes', { credentials: 'include' });
+      if (!r.ok) return [];
+      return r.json();
+    }
+  });
 
   const building = buildings.find(b => b.id === item.buildingId);
   const evaluations = item.reportData?.evaluations || [];
+
+  /**
+   * Função para verificar se um parâmetro deve ser exibido baseado em seus atributos condicionais
+   * 
+   * Lógica:
+   * 1. Se o parâmetro não tem attributeId, sempre exibe
+   * 2. Se tem attributeId, busca a definição do atributo
+   * 3. Se tem attributeValueId, verifica se o valor da edificação corresponde
+   * 4. Se tem minLimit/maxLimit, verifica se o valor está dentro dos limites
+   */
+  const shouldShowParameter = (parameter: any): boolean => {
+    // Se não tem atributo definido, sempre mostra
+    if (!parameter.attributeId) {
+      return true;
+    }
+
+    // Buscar definição do atributo
+    const attribute = attributes.find((attr: any) => attr.id === parameter.attributeId);
+    if (!attribute) {
+      return true; // Se atributo não encontrado, mostra por segurança
+    }
+
+    // Obter valor da edificação para este atributo
+    const buildingValue = getBuildingAttributeValue(building, attribute);
+    
+    // Se não conseguiu obter valor da edificação, não mostra
+    if (buildingValue === null || buildingValue === undefined) {
+      return false;
+    }
+
+    // Verificar valor específico do atributo (attributeValueId)
+    if (parameter.attributeValueId !== null && parameter.attributeValueId !== undefined) {
+      // Comparar valores convertidos para string
+      const paramValue = String(parameter.attributeValueId);
+      const buildingValueStr = String(buildingValue);
+      
+      if (paramValue !== buildingValueStr) {
+        return false;
+      }
+    }
+
+    // Verificar limites numéricos (minLimit/maxLimit)
+    const numericValue = parseFloat(String(buildingValue));
+    if (!isNaN(numericValue)) {
+      if (parameter.minLimit !== null && parameter.minLimit !== undefined) {
+        const minLimit = parseFloat(String(parameter.minLimit));
+        if (!isNaN(minLimit) && numericValue < minLimit) {
+          return false;
+        }
+      }
+      
+      if (parameter.maxLimit !== null && parameter.maxLimit !== undefined) {
+        const maxLimit = parseFloat(String(parameter.maxLimit));
+        if (!isNaN(maxLimit) && numericValue > maxLimit) {
+          return false;
+        }
+      }
+    }
+
+    return true;
+  };
+
+  /**
+   * Função para obter valor do atributo da edificação baseado na definição do atributo
+   */
+  const getBuildingAttributeValue = (building: any, attribute: any): any => {
+    if (!building || !attribute) {
+      return null;
+    }
+
+    // Mapeamento direto das colunas para propriedades da edificação
+    const columnToProperty: Record<string, string> = {
+      'typology_id': 'typologyId',
+      'noise_class_id': 'noiseClassId',
+      'aggressiveness_class_id': 'aggressivenessClassId',
+      'bioclimatic_zone': 'bioclimaticZone',
+      'isopleth_code': 'isoplethCode',
+      'total_area': 'totalArea',
+      'building_height': 'buildingHeight',
+      'floors': 'floors',
+      'units': 'units',
+    };
+
+    // Buscar propriedade correspondente
+    const propertyName = columnToProperty[attribute.sourceColumn];
+    
+    if (propertyName && building[propertyName] !== undefined && building[propertyName] !== null) {
+      return building[propertyName];
+    }
+
+    // Fallback: tentar acesso direto
+    if (building[attribute.sourceColumn] !== undefined && building[attribute.sourceColumn] !== null) {
+      return building[attribute.sourceColumn];
+    }
+
+    return null;
+  };
 
   /**
    * Função dinâmica para ordenação de parâmetros
@@ -163,7 +269,9 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
           )
           .map(analysis => ({
             ...analysis,
-            parameters: parameters.filter(param => param.analysisId === analysis.id)
+            parameters: parameters
+              .filter(param => param.analysisId === analysis.id)
+              .filter(param => shouldShowParameter(param))
           }))
       }))
   })).filter(req => req.criteria.length > 0);
@@ -231,13 +339,6 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
             <div><span className="font-semibold">Gerado em:</span> {new Date(item.generatedAt).toLocaleDateString('pt-BR')}</div>
           )}
           <div><span className="font-semibold">Versão:</span> {item.version || 1}</div>
-        </div>
-
-        <div className="flex justify-end">
-          <Button variant="outline" size="sm" onClick={onClose}>
-            <X className="h-4 w-4 mr-2" />
-            Fechar
-          </Button>
         </div>
       </div>
 
