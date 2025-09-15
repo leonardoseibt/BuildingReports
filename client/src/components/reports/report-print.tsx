@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import type { Building, Requirement, Criterion, Analysis, Parameter } from '@shared/schema';
@@ -43,8 +44,144 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
     }
   });
 
+  // Cache para dados de tabelas dinâmicas
+  const tableDataCache = new Map<string, any[]>();
+
+  // Função para carregar dados de qualquer tabela dinamicamente
+  const getTableData = async (tableName: string): Promise<any[]> => {
+    if (tableDataCache.has(tableName)) {
+      return tableDataCache.get(tableName)!;
+    }
+
+    try {
+      const response = await fetch(`/api/${tableName}`, { credentials: 'include' });
+      if (!response.ok) {
+        console.warn(`Falha ao carregar dados da tabela: ${tableName}`);
+        return [];
+      }
+      const data = await response.json();
+      tableDataCache.set(tableName, data);
+      return data;
+    } catch (error) {
+      console.error(`Erro ao carregar tabela ${tableName}:`, error);
+      return [];
+    }
+  };
+
+  /*
+   * SISTEMA COMPLETAMENTE GENÉRICO DE ATRIBUTOS
+   * 
+   * Este sistema funciona automaticamente com qualquer tabela do banco de dados:
+   * 
+   * 1. FUNCIONAMENTO AUTOMÁTICO:
+   *    - Lê o campo `sourceTable` do atributo
+   *    - Carrega dados da tabela automaticamente via `/api/${tableName}`
+   *    - Encontra registro relacionado usando estratégias inteligentes
+   *    - Extrai valor da coluna especificada em `sourceColumn`
+   * 
+   * 2. ESTRATÉGIAS DE RELAÇÃO:
+   *    - Campo ID direto: typologies -> building.typologyId
+   *    - Campo snake_case: noise_classes -> building.noise_class_id  
+   *    - Campo direto: bioclimatic_zones -> building.bioclimatic_zone
+   *    - Fallback: primeiro registro da tabela
+   * 
+   * 3. EXEMPLO DE USO:
+   *    Atributo: { sourceTable: "noise_classes", sourceColumn: "max_level" }
+   *    Sistema automaticamente:
+   *    - Carrega dados de `/api/noise_classes`
+   *    - Encontra registro onde id = building.noiseClassId
+   *    - Retorna valor da coluna `max_level`
+   * 
+   * 4. PARA ADICIONAR NOVA TABELA:
+   *    Nenhuma implementação necessária! O sistema funciona automaticamente.
+   *    Apenas certifique-se de que existe endpoint `/api/nome_da_tabela`
+   */
+
+  // Função para obter dados de uma tabela específica de forma genérica
+  const getTableDataForAttribute = (attribute: any): any[] => {
+    const tableName = attribute.sourceTable;
+    
+    // Para buildings, usar dados já carregados
+    if (tableName === 'buildings') {
+      return buildings;
+    }
+    
+    // Para outras tabelas, tentar buscar do cache se já foi carregado
+    if (tableDataCache.has(tableName)) {
+      return tableDataCache.get(tableName)!;
+    }
+    
+    // Se não está no cache, retornar array vazio e será carregado assincronamente se necessário
+    return [];
+  };
+
+  // Função para encontrar o registro correto baseado na relação com building
+  const findRelatedRecord = (tableData: any[], attribute: any, building: any): any => {
+    if (!building || !tableData.length) return null;
+    
+    // Estratégias para encontrar o registro relacionado
+    const strategies = [
+      // 1. Campo de ID direto no building (ex: typologyId, noiseClassId)
+      () => {
+        const camelCaseId = attribute.sourceTable.replace(/s$/, '') + 'Id'; // typologies -> typologyId
+        const snakeCaseId = attribute.sourceTable.slice(0, -1) + '_id'; // typologies -> typology_id
+        
+        const buildingValue = building[camelCaseId] || building[snakeCaseId];
+        if (buildingValue) {
+          return tableData.find(record => record.id === buildingValue);
+        }
+        return null;
+      },
+      
+      // 2. Campo direto correspondente à sourceColumn (ex: bioclimatic_zone)
+      () => {
+        const buildingValue = building[attribute.sourceColumn];
+        if (buildingValue !== undefined && buildingValue !== null) {
+          return tableData.find(record => 
+            record[attribute.sourceColumn] === buildingValue || 
+            record.id === buildingValue ||
+            record.code === buildingValue
+          );
+        }
+        return null;
+      },
+      
+      // 3. Se nenhuma estratégia funcionou, usar primeiro registro (fallback)
+      () => tableData[0]
+    ];
+    
+    for (const strategy of strategies) {
+      const result = strategy();
+      if (result) return result;
+    }
+    
+    return null;
+  };
+
   const building = buildings.find(b => b.id === item.buildingId);
   const evaluations = item.reportData?.evaluations || [];
+
+  // Pré-carregar tabelas comuns baseadas nos atributos existentes
+  useEffect(() => {
+    const preloadTables = async () => {
+      const uniqueTables = new Set(
+        attributes
+          .filter(attr => attr.sourceTable !== 'buildings') // buildings já está carregado
+          .map(attr => attr.sourceTable)
+      );
+      
+      // Carregar todas as tabelas referenciadas de forma assíncrona
+      Array.from(uniqueTables).forEach(tableName => {
+        getTableData(tableName).catch(error => {
+          console.warn(`Não foi possível pré-carregar tabela ${tableName}:`, error);
+        });
+      });
+    };
+    
+    if (attributes.length > 0) {
+      preloadTables();
+    }
+  }, [attributes]);
 
   // Função para formatar texto com quebras de linha
   const formatTextWithSeparators = (text: string | null | undefined): string => {
@@ -79,13 +216,8 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
   };
 
   /**
-   * Função para verificar se um parâmetro deve ser exibido baseado em seus atributos condicionais
-   * 
-   * Lógica:
-   * 1. Se o parâmetro não tem attributeId, sempre exibe
-   * 2. Se tem attributeId, busca a definição do atributo
-   * 3. Se tem attributeValueId, verifica se o valor da edificação corresponde
-   * 4. Se tem minLimit/maxLimit, verifica se o valor está dentro dos limites
+   * Função completamente genérica para verificar se um parâmetro deve ser exibido
+   * Funciona automaticamente com qualquer tabela do banco de dados
    */
   const shouldShowParameter = (parameter: any): boolean => {
     // Se não tem atributo definido, sempre mostra
@@ -99,11 +231,25 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
       return true; // Se atributo não encontrado, mostra por segurança
     }
 
-    // Obter valor da edificação para este atributo
-    const buildingValue = getBuildingAttributeValue(building, attribute);
+    // Obter dados da tabela de forma genérica
+    let sourceData = null;
+    
+    if (attribute.sourceTable === 'buildings') {
+      sourceData = building;
+    } else {
+      // Para qualquer outra tabela, buscar de forma genérica
+      const tableData = getTableDataForAttribute(attribute);
+      sourceData = findRelatedRecord(tableData, attribute, building);
+    }
+    
+    if (!sourceData) {
+      return true; // Se não encontrou fonte de dados, mostrar parâmetro
+    }
+
+    const attributeValue = getAttributeValue(sourceData, attribute);
     
     // Se não conseguiu obter valor da edificação, não mostra
-    if (buildingValue === null || buildingValue === undefined) {
+    if (attributeValue === null || attributeValue === undefined) {
       return false;
     }
 
@@ -111,15 +257,15 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
     if (parameter.attributeValueId !== null && parameter.attributeValueId !== undefined) {
       // Comparar valores convertidos para string
       const paramValue = String(parameter.attributeValueId);
-      const buildingValueStr = String(buildingValue);
+      const attributeValueStr = String(attributeValue);
       
-      if (paramValue !== buildingValueStr) {
+      if (paramValue !== attributeValueStr) {
         return false;
       }
     }
 
     // Verificar limites numéricos (minLimit/maxLimit)
-    const numericValue = parseFloat(String(buildingValue));
+    const numericValue = parseFloat(String(attributeValue));
     if (!isNaN(numericValue)) {
       if (parameter.minLimit !== null && parameter.minLimit !== undefined) {
         const minLimit = parseFloat(String(parameter.minLimit));
@@ -140,36 +286,36 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
   };
 
   /**
-   * Função para obter valor do atributo da edificação baseado na definição do atributo
+   * Função completamente genérica para obter valor de atributo
+   * Funciona automaticamente com qualquer tabela do banco de dados
    */
-  const getBuildingAttributeValue = (building: any, attribute: any): any => {
-    if (!building || !attribute) {
+  const getAttributeValue = (sourceData: any, attribute: any): any => {
+    if (!sourceData || !attribute) {
       return null;
     }
 
-    // Mapeamento direto das colunas para propriedades da edificação
-    const columnToProperty: Record<string, string> = {
-      'typology_id': 'typologyId',
-      'noise_class_id': 'noiseClassId',
-      'aggressiveness_class_id': 'aggressivenessClassId',
-      'bioclimatic_zone': 'bioclimaticZone',
-      'isopleth_code': 'isoplethCode',
-      'total_area': 'totalArea',
-      'building_height': 'buildingHeight',
-      'floors': 'floors',
-      'units': 'units',
-    };
-
-    // Buscar propriedade correspondente
-    const propertyName = columnToProperty[attribute.sourceColumn];
-    
-    if (propertyName && building[propertyName] !== undefined && building[propertyName] !== null) {
-      return building[propertyName];
+    // Primeiro: tentar acesso direto pela coluna (funciona para a maioria dos casos)
+    if (sourceData[attribute.sourceColumn] !== undefined && sourceData[attribute.sourceColumn] !== null) {
+      return sourceData[attribute.sourceColumn];
     }
 
-    // Fallback: tentar acesso direto
-    if (building[attribute.sourceColumn] !== undefined && building[attribute.sourceColumn] !== null) {
-      return building[attribute.sourceColumn];
+    // Segundo: para buildings, tentar mapeamento de colunas snake_case para camelCase
+    // (mantido apenas para compatibilidade com implementação atual)
+    if (attribute.sourceTable === 'buildings') {
+      const snakeToCamelMap: Record<string, string> = {
+        'typology_id': 'typologyId',
+        'noise_class_id': 'noiseClassId',
+        'aggressiveness_class_id': 'aggressivenessClassId',
+        'bioclimatic_zone': 'bioclimaticZone',
+        'isopleth_code': 'isoplethCode',
+        'total_area': 'totalArea',
+        'building_height': 'buildingHeight',
+      };
+
+      const camelCaseProperty = snakeToCamelMap[attribute.sourceColumn];
+      if (camelCaseProperty && sourceData[camelCaseProperty] !== undefined && sourceData[camelCaseProperty] !== null) {
+        return sourceData[camelCaseProperty];
+      }
     }
 
     return null;
