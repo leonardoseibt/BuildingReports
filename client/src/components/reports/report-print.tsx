@@ -46,6 +46,13 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
   const building = buildings.find(b => b.id === item.buildingId);
   const evaluations = item.reportData?.evaluations || [];
 
+  // Função para formatar texto com quebras de linha
+  const formatTextWithSeparators = (text: string | null | undefined): string => {
+    if (!text) return '';
+    // Substitui quebras de linha por separador visual
+    return text.replace(/\n/g, ' • ');
+  };
+
   /**
    * Função para verificar se um parâmetro deve ser exibido baseado em seus atributos condicionais
    * 
@@ -312,7 +319,7 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
       <div className="mb-4">
         <div className="border-b-2 border-slate-300 pb-2 mb-3">
           <h1 className="text-2xl font-bold text-slate-900">
-            Relatório de Desempenho - {building?.name || `Edificação ID ${item.buildingId}`}
+            PDE - Perfil de Desempenho da Edificação: {building?.name || `Edificação ID ${item.buildingId}`}
           </h1>
         </div>
         
@@ -410,11 +417,11 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
                                   <TableCell className="border align-middle py-1 px-2 font-medium">
                                     <div>
                                       <div className="font-medium text-slate-900">
-                                        {parameter.label}
+                                        {formatTextWithSeparators(parameter.label)}
                                       </div>
                                       {parameter.notes && (
                                         <div className="text-xs text-slate-600 mt-1 italic bg-slate-50 p-2 rounded border-l-2 border-blue-300">
-                                          <span className="font-semibold text-blue-700">Observação:</span> {parameter.notes}
+                                          <span className="font-semibold text-blue-700">Observação:</span> {formatTextWithSeparators(parameter.notes)}
                                         </div>
                                       )}
                                     </div>
