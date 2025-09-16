@@ -75,9 +75,13 @@ export default function ReportForm({ initialItem, onSuccess, onCancel }: { initi
 
   const [levels, setLevels] = useState<Record<string, string[]>>(() => {
     const data: any = initialItem?.reportData;
-    if (!data?.evaluations) return {};
+    if (!data) return {};
+    
+    // Usar allEvaluations se disponível (novo formato), senão usar evaluations (formato antigo)
+    const evaluationsToUse = data.allEvaluations || data.evaluations || [];
     const map: Record<string, string[]> = {};
-    for (const ev of data.evaluations || []) {
+    
+    for (const ev of evaluationsToUse) {
       let key: string;
       if (ev.analysisId) {
         key = `analysis-${ev.analysisId}`;
@@ -91,6 +95,52 @@ export default function ReportForm({ initialItem, onSuccess, onCancel }: { initi
     }
     return map;
   });
+
+  // Estado para controlar quais requisitos estão habilitados para geração de relatório
+  const [enabledRequirements, setEnabledRequirements] = useState<Record<number, boolean>>(() => {
+    const data: any = initialItem?.reportData;
+    
+    // Se há informação específica sobre requisitos habilitados, usar essa
+    if (data?.enabledRequirements) {
+      return { ...data.enabledRequirements };
+    }
+    
+    // Fallback para formato antigo ou novos relatórios
+    if (!data?.evaluations) {
+      // Por padrão, todos os requisitos ficam habilitados se não há dados iniciais
+      const enabled: Record<number, boolean> = {};
+      groupedData.forEach(req => {
+        enabled[req.id] = true;
+      });
+      return enabled;
+    }
+    
+    // Se há dados iniciais mas não há informação específica de requisitos habilitados,
+    // assumir que requisitos com avaliações estão habilitados
+    const enabled: Record<number, boolean> = {};
+    const requirementIds = new Set();
+    
+    // Coletar todos os requisitos que têm avaliações
+    for (const ev of data.evaluations || []) {
+      if (ev.requirementId) {
+        requirementIds.add(ev.requirementId);
+      }
+    }
+    
+    // Marcar requisitos encontrados como habilitados
+    groupedData.forEach(req => {
+      enabled[req.id] = requirementIds.has(req.id);
+    });
+    
+    return enabled;
+  });
+
+  function handleRequirementToggle(requirementId: number, enabled: boolean) {
+    setEnabledRequirements(prev => ({
+      ...prev,
+      [requirementId]: enabled
+    }));
+  }
 
   function handleLevelChange(id: string, level: string, checked: boolean) {
     setLevels(prev => {
@@ -109,9 +159,12 @@ export default function ReportForm({ initialItem, onSuccess, onCancel }: { initi
     if (select) {
       const all: Record<string, string[]> = {};
       for (const req of groupedData) {
-        for (const crit of req.criteria) {
-          for (const analysis of crit.analyses) {
-            all[`analysis-${analysis.id}`] = ['minimum', 'intermediate', 'superior'];
+        // Apenas incluir se o requisito estiver habilitado
+        if (enabledRequirements[req.id]) {
+          for (const crit of req.criteria) {
+            for (const analysis of crit.analyses) {
+              all[`analysis-${analysis.id}`] = ['minimum', 'intermediate', 'superior'];
+            }
           }
         }
       }
@@ -122,6 +175,11 @@ export default function ReportForm({ initialItem, onSuccess, onCancel }: { initi
   }
 
   function handleSelectByCriterionLevel(requirementId: number, criterionId: number, level: 'minimum' | 'intermediate' | 'superior') {
+    // Não permitir alteração se o requisito não estiver habilitado
+    if (!enabledRequirements[requirementId]) {
+      return;
+    }
+    
     const updated: Record<string, string[]> = { ...levels };
     
     // Encontrar todas as análises do critério específico dentro do requisito específico
@@ -209,21 +267,25 @@ export default function ReportForm({ initialItem, onSuccess, onCancel }: { initi
 
   const mutation = useMutation({
     mutationFn: async (values: FormData) => {
-      const evaluations = Object.entries(levels).flatMap(([key, arr]) => {
+      // Gerar todas as avaliações (incluindo as de requisitos desabilitados)
+      const allEvaluations = Object.entries(levels).flatMap(([key, arr]) => {
         return arr.map(level => {
           if (key.startsWith('analysis-')) {
             const analysisId = Number(key.slice(9));
             // Encontrar o requisito e critério da análise
             const analysis = analyses.find(a => a.id === analysisId);
+            const requirementId = (analysis as any)?.requirementId;
+            
             return { 
               analysisId,
-              requirementId: (analysis as any)?.requirementId,
+              requirementId,
               criterionId: analysis?.criterionId,
               level 
             };
           }
           if (key.startsWith('req-')) {
-            return { requirementId: Number(key.slice(4)), level };
+            const requirementId = Number(key.slice(4));
+            return { requirementId, level };
           }
           const criterionId = Number(key.slice(5));
           let requirementId: number | undefined;
@@ -236,7 +298,20 @@ export default function ReportForm({ initialItem, onSuccess, onCancel }: { initi
           return { requirementId, criterionId, level };
         });
       });
-      const payload = { buildingId: values.buildingId, reportData: { evaluations } };
+
+      // Gerar apenas as avaliações dos requisitos habilitados para o relatório
+      const enabledEvaluations = allEvaluations.filter(ev => {
+        return enabledRequirements[ev.requirementId];
+      });
+      
+      const payload = { 
+        buildingId: values.buildingId, 
+        reportData: { 
+          evaluations: enabledEvaluations, // Apenas avaliações habilitadas para o relatório
+          allEvaluations, // Todas as avaliações para preservar configurações
+          enabledRequirements // Informação dos requisitos habilitados
+        } 
+      };
       const method = initialItem ? 'PUT' : 'POST';
       const url = initialItem ? `/api/reports/${initialItem.id}` : '/api/reports';
       const res = await apiRequest(method as any, url, payload);
@@ -285,6 +360,68 @@ export default function ReportForm({ initialItem, onSuccess, onCancel }: { initi
                     type="button" 
                     size="sm" 
                     variant="ghost" 
+                    onClick={() => {
+                      // Habilitar todos os requisitos
+                      const allEnabled: Record<number, boolean> = {};
+                      groupedData.forEach(req => {
+                        allEnabled[req.id] = true;
+                      });
+                      setEnabledRequirements(allEnabled);
+                    }}
+                    className="h-8 px-3 hover:bg-slate-200 text-xs"
+                  >
+                    Todos Req.
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent 
+                  side="bottom" 
+                  sideOffset={8} 
+                  collisionPadding={10}
+                  avoidCollisions={true}
+                  className="z-[60]"
+                >
+                  <p>Habilitar todos os requisitos para relatório</p>
+                </TooltipContent>
+              </Tooltip>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    type="button" 
+                    size="sm" 
+                    variant="ghost" 
+                    onClick={() => {
+                      // Desabilitar todos os requisitos
+                      const allDisabled: Record<number, boolean> = {};
+                      groupedData.forEach(req => {
+                        allDisabled[req.id] = false;
+                      });
+                      setEnabledRequirements(allDisabled);
+                    }}
+                    className="h-8 px-3 hover:bg-slate-200 text-xs"
+                  >
+                    Nenhum Req.
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent 
+                  side="bottom" 
+                  sideOffset={8} 
+                  collisionPadding={10}
+                  avoidCollisions={true}
+                  className="z-[60]"
+                >
+                  <p>Desabilitar todos os requisitos para relatório</p>
+                </TooltipContent>
+              </Tooltip>
+
+              <div className="border-l border-slate-200 mx-2"></div>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    type="button" 
+                    size="sm" 
+                    variant="ghost" 
                     onClick={() => handleSelectAll(true)}
                     className="h-8 px-3 hover:bg-slate-200"
                   >
@@ -298,7 +435,7 @@ export default function ReportForm({ initialItem, onSuccess, onCancel }: { initi
                   avoidCollisions={true}
                   className="z-[60]"
                 >
-                  <p>Marcar todas as análises (todos os níveis)</p>
+                  <p>Marcar todas as análises (todos os níveis) dos requisitos habilitados</p>
                 </TooltipContent>
               </Tooltip>
               
@@ -321,25 +458,54 @@ export default function ReportForm({ initialItem, onSuccess, onCancel }: { initi
                   avoidCollisions={true}
                   className="z-[60]"
                 >
-                  <p>Limpar todas as seleções</p>
+                  <p>Limpar todas as seleções de níveis</p>
                 </TooltipContent>
               </Tooltip>
             </div>
           </div>
           
           <div className="max-h-[41vh] overflow-y-auto">
+            {/* Resumo dos Requisitos */}
+            <div className="px-4 py-3 bg-blue-50/30 border-b border-blue-100">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-slate-600">
+                  <strong>{Object.values(enabledRequirements).filter(Boolean).length}</strong> de <strong>{groupedData.length}</strong> requisitos habilitados para relatório
+                </span>
+                <span className="text-slate-500 text-xs">
+                  {Object.values(enabledRequirements).filter(Boolean).length === 0 
+                    ? 'Nenhum requisito será incluído no relatório'
+                    : Object.values(enabledRequirements).filter(Boolean).length === groupedData.length
+                    ? 'Todos os requisitos serão incluídos'
+                    : 'Alguns requisitos serão incluídos'
+                  }
+                </span>
+              </div>
+            </div>
+
             <div className="p-4 space-y-6">
               {groupedData.map((req, reqIndex) => (
                 <div key={req.id} className="space-y-4">
                   {/* Cabeçalho do Requisito */}
                   <div className="border-l-4 border-l-blue-500 pl-4 py-2 bg-blue-50/50">
-                    <h4 className="font-semibold text-lg text-slate-900">
-                      {req.code} - {req.label}
-                    </h4>
+                    <div className="flex items-center gap-3">
+                      <Checkbox
+                        checked={enabledRequirements[req.id] || false}
+                        onCheckedChange={(checked) => handleRequirementToggle(req.id, checked === true)}
+                        className="mt-0.5"
+                      />
+                      <div className="flex-1">
+                        <h4 className={`font-semibold text-lg ${enabledRequirements[req.id] ? 'text-slate-900' : 'text-slate-400'}`}>
+                          {req.code} - {req.label}
+                        </h4>
+                        <p className="text-xs text-slate-500 mt-1">
+                          {enabledRequirements[req.id] ? 'Incluir no relatório' : 'Não incluir no relatório'}
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 
                   {/* Critérios do Requisito */}
-                  <div className="ml-6 space-y-4">
+                  <div className={`ml-6 space-y-4 ${enabledRequirements[req.id] ? '' : 'opacity-50 pointer-events-none'}`}>
                     {req.criteria.map((criterion, critIndex) => (
                       <div key={`${req.id}-${criterion.id}`} className="space-y-3">
                         {/* Cabeçalho do Critério */}
@@ -365,6 +531,7 @@ export default function ReportForm({ initialItem, onSuccess, onCancel }: { initi
                                       size="sm"
                                       variant="ghost"
                                       onClick={() => handleSelectByCriterionLevel(req.id, criterion.id, 'minimum')}
+                                      disabled={!enabledRequirements[req.id]}
                                       className={`h-6 w-6 p-0 ${
                                         isColumnFullySelected(req.id, criterion.id, 'minimum')
                                           ? 'bg-slate-200 text-slate-500 hover:bg-slate-300'
@@ -388,6 +555,7 @@ export default function ReportForm({ initialItem, onSuccess, onCancel }: { initi
                                       size="sm"
                                       variant="ghost"
                                       onClick={() => handleSelectByCriterionLevel(req.id, criterion.id, 'intermediate')}
+                                      disabled={!enabledRequirements[req.id]}
                                       className={`h-6 w-6 p-0 ${
                                         isColumnFullySelected(req.id, criterion.id, 'intermediate')
                                           ? 'bg-slate-200 text-slate-500 hover:bg-slate-300'
@@ -411,6 +579,7 @@ export default function ReportForm({ initialItem, onSuccess, onCancel }: { initi
                                       size="sm"
                                       variant="ghost"
                                       onClick={() => handleSelectByCriterionLevel(req.id, criterion.id, 'superior')}
+                                      disabled={!enabledRequirements[req.id]}
                                       className={`h-6 w-6 p-0 ${
                                         isColumnFullySelected(req.id, criterion.id, 'superior')
                                           ? 'bg-slate-200 text-slate-500 hover:bg-slate-300'
@@ -464,6 +633,7 @@ export default function ReportForm({ initialItem, onSuccess, onCancel }: { initi
                                           onCheckedChange={checked => 
                                             handleLevelChange(`analysis-${analysis.id}`, level, checked === true)
                                           }
+                                          disabled={!enabledRequirements[req.id]}
                                         />
                                       </TableCell>
                                     ))}
