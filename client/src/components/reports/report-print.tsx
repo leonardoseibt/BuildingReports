@@ -757,119 +757,118 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
             </div>
           </div>
 
-          
         </div>
-      </div>      {/* Conteúdo do Relatório */}
+      </div>
+
+      {/* Conteúdo do Relatório */}
       <div className="print-content">
         {sortedData.map((requirement) => (
           <div key={requirement.id} className="mb-8">
-            {/* Título do Requisito */}
-            <div className="bg-blue-50 border-l-4 border-blue-500 p-4 mb-4">
-              <h2 className="text-xl font-bold text-blue-900">
+            {/* Seção: Requisito */}
+            <div className="mb-6">
+              <h3 className="text-lg font-bold text-gray-800 uppercase tracking-wide mb-4 pb-3 border-b-2 border-blue-500">
                 Requisito: {requirement.label}
-              </h2>
-            </div>
+              </h3>
 
-            {requirement.criteria.map((criterion) => (
-              <div key={criterion.id} className="ml-4 mb-6">
-                {/* Título do Critério */}
-                <div className="bg-green-50 border-l-4 border-green-500 p-3 mb-3">
-                  <h3 className="text-lg font-semibold text-green-900">
+              {requirement.criteria.map((criterion) => (
+                <div key={criterion.id} className="mb-6">
+                  {/* Título do Critério */}
+                  <h4 className="text-base font-semibold text-gray-700 uppercase tracking-wide mb-3 pb-2 border-b border-gray-200">
                     Critério: {criterion.label}
-                  </h3>
-                </div>
+                  </h4>
 
-                {criterion.analyses.map((analysis) => {
-                  const analysisKey = `analysis-${analysis.id}`;
-                  const selectedLevels = selectedEvaluations.get(analysisKey) || [];
+                  {criterion.analyses.map((analysis) => {
+                    const analysisKey = `analysis-${analysis.id}`;
+                    const selectedLevels = selectedEvaluations.get(analysisKey) || [];
 
-                  return (
-                    <div key={analysis.id} className="ml-4 mb-4">
-                      {/* Título da Análise */}
-                      <div className="bg-orange-50 border-l-4 border-orange-500 p-3 mb-3">
-                        <h4 className="text-base font-semibold text-orange-900">
-                          Análise: {analysis.label}
-                        </h4>
-                      </div>
+                    return (
+                      <div key={analysis.id} className="mb-4 ml-4">
+                        {/* Card da Análise */}
+                        <div className="bg-gray-50 border border-gray-200 rounded p-4 mb-4">
+                          <h5 className="text-sm font-medium text-gray-600 mb-3">
+                            Análise: {analysis.label}
+                          </h5>
 
-                      {/* Tabela de Parâmetros */}
-                      {analysis.parameters.length > 0 && (
-                        <div className="ml-4">
-                          <Table className="border">
-                            <TableHeader>
-                              <TableRow className="bg-slate-100">
-                                <TableHead className="border font-semibold text-slate-900 text-center align-middle py-2 px-2">
-                                  Parâmetro
-                                </TableHead>
-                                <TableHead className="border font-semibold text-slate-900 text-center align-middle py-2 px-2 w-16">
-                                  Unidade
-                                </TableHead>
-                                {selectedLevels.includes('minimum') && (
-                                  <TableHead className="border font-semibold text-slate-900 text-center align-middle py-2 px-2 w-20">
-                                    Mínimo
-                                  </TableHead>
-                                )}
-                                {selectedLevels.includes('intermediate') && (
-                                  <TableHead className="border font-semibold text-slate-900 text-center align-middle py-2 px-2 w-20">
-                                    Intermediário
-                                  </TableHead>
-                                )}
-                                {selectedLevels.includes('superior') && (
-                                  <TableHead className="border font-semibold text-slate-900 text-center align-middle py-2 px-2 w-20">
-                                    Superior
-                                  </TableHead>
-                                )}
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {analysis.parameters.map((parameter) => (
-                                <TableRow key={parameter.id} className="hover:bg-slate-50">
-                                  <TableCell className="border align-middle py-1 px-2 font-medium">
-                                    <div>
-                                      <div className="font-medium text-slate-900">
-                                        {formatTextWithSeparators(parameter.label)}
-                                      </div>
-                                      {parameter.notes && (
-                                        <div className="text-xs text-slate-600 mt-1 italic bg-slate-50 p-2 rounded border-l-2 border-blue-300">
-                                          <span className="font-semibold text-blue-700">Observação:</span> {formatTextWithSeparators(parameter.notes)}
+                          {/* Tabela de Parâmetros */}
+                          {analysis.parameters.length > 0 && (
+                            <div className="bg-white rounded border border-gray-300 overflow-hidden">
+                              <Table>
+                                <TableHeader>
+                                  <TableRow className="bg-gray-100 border-b border-gray-300">
+                                    <TableHead className="border-r border-gray-300 font-semibold text-gray-800 text-center align-middle py-3 px-3">
+                                      Parâmetro
+                                    </TableHead>
+                                    <TableHead className="border-r border-gray-300 font-semibold text-gray-800 text-center align-middle py-3 px-3 w-20">
+                                      Unidade
+                                    </TableHead>
+                                    {selectedLevels.includes('minimum') && (
+                                      <TableHead className="border-r border-gray-300 font-semibold text-gray-800 text-center align-middle py-3 px-3 w-20">
+                                        Mínimo
+                                      </TableHead>
+                                    )}
+                                    {selectedLevels.includes('intermediate') && (
+                                      <TableHead className="border-r border-gray-300 font-semibold text-gray-800 text-center align-middle py-3 px-3 w-20">
+                                        Intermediário
+                                      </TableHead>
+                                    )}
+                                    {selectedLevels.includes('superior') && (
+                                      <TableHead className="border-r border-gray-300 font-semibold text-gray-800 text-center align-middle py-3 px-3 w-20">
+                                        Superior
+                                      </TableHead>
+                                    )}
+                                  </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                  {analysis.parameters.map((parameter) => (
+                                    <TableRow key={parameter.id} className="hover:bg-gray-50 border-b border-gray-200">
+                                      <TableCell className="border-r border-gray-300 align-middle py-3 px-3 font-medium">
+                                        <div>
+                                          <div className="font-medium text-gray-900">
+                                            {formatTextWithSeparators(parameter.label)}
+                                          </div>
+                                          {parameter.notes && (
+                                            <div className="text-xs text-gray-600 mt-2 italic bg-blue-50 p-2 rounded border-l-2 border-blue-300">
+                                              <span className="font-semibold text-blue-700">Observação:</span> {formatTextWithSeparators(parameter.notes)}
+                                            </div>
+                                          )}
                                         </div>
+                                      </TableCell>
+                                      <TableCell className="text-center border-r border-gray-300 align-middle py-3 px-3 w-20">
+                                        {parameter.unit || '—'}
+                                      </TableCell>
+                                      {selectedLevels.includes('minimum') && (
+                                        <TableCell className="text-center border-r border-gray-300 align-middle py-3 px-3 w-20">
+                                          {parameter.minimumValue || '—'}
+                                        </TableCell>
                                       )}
-                                    </div>
-                                  </TableCell>
-                                  <TableCell className="text-center border align-middle py-1 px-1 w-16">
-                                    {parameter.unit || '—'}
-                                  </TableCell>
-                                  {selectedLevels.includes('minimum') && (
-                                    <TableCell className="text-center border align-middle py-1 px-1 w-20">
-                                      {parameter.minimumValue || '—'}
-                                    </TableCell>
-                                  )}
-                                  {selectedLevels.includes('intermediate') && (
-                                    <TableCell className="text-center border align-middle py-1 px-1 w-20">
-                                      {parameter.intermediateValue || '—'}
-                                    </TableCell>
-                                  )}
-                                  {selectedLevels.includes('superior') && (
-                                    <TableCell className="text-center border align-middle py-1 px-1 w-20">
-                                      {parameter.superiorValue || '—'}
-                                    </TableCell>
-                                  )}
-                                </TableRow>
-                              ))}
-                            </TableBody>
-                          </Table>
+                                      {selectedLevels.includes('intermediate') && (
+                                        <TableCell className="text-center border-r border-gray-300 align-middle py-3 px-3 w-20">
+                                          {parameter.intermediateValue || '—'}
+                                        </TableCell>
+                                      )}
+                                      {selectedLevels.includes('superior') && (
+                                        <TableCell className="text-center border-r border-gray-300 align-middle py-3 px-3 w-20">
+                                          {parameter.superiorValue || '—'}
+                                        </TableCell>
+                                      )}
+                                    </TableRow>
+                                  ))}
+                                </TableBody>
+                              </Table>
+                            </div>
+                          )}
                         </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            ))}
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
+            </div>
           </div>
         ))}
 
         {sortedData.length === 0 && (
-          <div className="text-center py-8 text-slate-500">
+          <div className="text-center py-8 text-gray-500">
             <p>Nenhum dado encontrado para este relatório.</p>
             <p className="text-sm mt-2">Verifique se há avaliações de desempenho selecionadas.</p>
           </div>
