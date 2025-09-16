@@ -2,6 +2,7 @@ import * as React from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { apiRequest } from "@/lib/queryClient";
+import { parseApiError } from "@/lib/api-error";
 import { useToast } from "@/hooks/use-toast";
 import { showSuccess, showError } from "@/lib/toast-messages";
 
@@ -143,12 +144,17 @@ export default function UserForm({ onSuccess, onCancel, initialUser }: UserFormP
       await res.json();
       showSuccess(toast, isEdit ? "Usuário atualizado." : "Usuário cadastrado.");
       onSuccess?.();
-    } catch (e) {
+    } catch (error) {
+      const parsed = parseApiError(error);
       let description = isEdit ? "Não foi possível atualizar." : "Não foi possível cadastrar.";
-      if (e instanceof Error && e.message.startsWith("409")) {
-        description = "E-mail já cadastrado.";
+      if (parsed.status === 409) {
+        description = parsed.message || "E-mail já cadastrado.";
         form.setError("email", { message: description });
         if (form.setFocus) form.setFocus("email");
+      } else if (parsed.status === 403) {
+        description = parsed.message || "Você não tem permissão para executar esta ação.";
+      } else if (parsed.message) {
+        description = parsed.message;
       }
       showError(toast, description);
     } finally {

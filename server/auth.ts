@@ -1,4 +1,4 @@
-import express, { type Express, type RequestHandler } from "express";
+import express, { type Express, type Request, type RequestHandler } from "express";
 import passport from "passport";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
@@ -29,6 +29,8 @@ const authSchema = z.object({
 const require = createRequire(import.meta.url);
 const MAX_ATTEMPTS = 5;
 const WINDOW_MS = 60_000; // 1 minute
+
+const CURRENT_USER_CACHE_KEY = Symbol.for("app.currentUserRecord");
 
 let loginRateLimit: RequestHandler;
 try {
@@ -305,3 +307,42 @@ export const refreshSession: RequestHandler = async (req, res) => {
   }
   res.json({ expires_at: sessionUser.expires_at, now: nowSec });
 };
+
+async function loadRequestUser(req: Request) {
+  const cached = (req as any)[CURRENT_USER_CACHE_KEY];
+  if (cached) return cached;
+  const sessionUser: any = (req as any).user || (req as any).session?.passport?.user;
+  const claimId = sessionUser?.claims?.sub ?? sessionUser?.sub ?? sessionUser?.id;
+  const userId = typeof claimId === "string" ? Number.parseInt(claimId, 10) : claimId;
+  if (!Number.isFinite(userId)) return null;
+  const dbUser = await storage.getUser(Number(userId));
+  if (dbUser) {
+    (req as any)[CURRENT_USER_CACHE_KEY] = dbUser;
+  }
+  return dbUser ?? null;
+}
+
+export function requireModuleAccess(moduleName: string): RequestHandler {
+  const normalizedModule = moduleName.toLowerCase();
+  return async (req, res, next) => {
+    try {
+      const dbUser = await loadRequestUser(req);
+      if (!dbUser) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      if (dbUser.isAdmin) {
+        return next();
+      }
+      const modules = Array.isArray((dbUser as any).allowedModules)
+        ? (dbUser as any).allowedModules.map((m: unknown) => (typeof m === "string" ? m.toLowerCase() : ""))
+        : [];
+      if (modules.includes(normalizedModule)) {
+        return next();
+      }
+      return res.status(403).json({ message: "Access denied" });
+    } catch (err) {
+      console.error(`requireModuleAccess(${moduleName}) failed`, err);
+      return res.status(500).json({ message: "Falha ao verificar permissões" });
+    }
+  };
+}

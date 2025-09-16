@@ -3,6 +3,8 @@ import assert from 'node:assert';
 import { EventEmitter } from 'node:events';
 import type { Request, Response, NextFunction } from 'express';
 import { sanitizeLogData, createLoggingMiddleware } from './index';
+import './__tests__/buildings.test.js';
+import './__tests__/users-auth.test.ts';
 
 test('sanitizeLogData removes sensitive fields recursively', () => {
   const input = { passwordHash: 'abc', nested: { token: 'x', value: 1 } };
