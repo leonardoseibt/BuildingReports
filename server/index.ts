@@ -79,6 +79,8 @@ app.use((req, res, next) => {
 // Security: HTTP headers (relax CSP in development for Vite HMR / inline react-refresh)
 app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" },
+  // Desabilitar X-Frame-Options em desenvolvimento para VS Code Simple Browser
+  frameguard: process.env.NODE_ENV === 'development' ? false : { action: 'sameorigin' },
   contentSecurityPolicy: process.env.NODE_ENV === 'development'
     ? false
     : {
