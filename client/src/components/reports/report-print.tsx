@@ -766,7 +766,7 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
           <div key={requirement.id} className="mb-8">
             {/* Seção: Requisito */}
             <div className="mb-6">
-              <h3 className="text-lg font-bold text-gray-800 uppercase tracking-wide mb-4 pb-3 border-b-2 border-blue-500">
+              <h3 className="text-lg font-bold text-gray-800 uppercase tracking-wide mb-4 pb-3 border-b-2 border-gray-600">
                 Requisito: {requirement.label}
               </h3>
 
@@ -827,8 +827,8 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
                                             {formatTextWithSeparators(parameter.label)}
                                           </div>
                                           {parameter.notes && (
-                                            <div className="text-xs text-gray-600 mt-2 italic bg-blue-50 p-2 rounded border-l-2 border-blue-300">
-                                              <span className="font-semibold text-blue-700">Observação:</span> {formatTextWithSeparators(parameter.notes)}
+                                            <div className="text-xs text-gray-600 mt-2 italic bg-gray-100 p-2 rounded border-l-2 border-gray-400">
+                                              <span className="font-semibold text-gray-800">Observação:</span> {formatTextWithSeparators(parameter.notes)}
                                             </div>
                                           )}
                                         </div>

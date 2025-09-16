@@ -2,8 +2,6 @@ import {
   users,
   buildings,
   structuralSystems,
-  sealingSystems,
-  roofingSystems,
   reports,
   type User,
   type PublicUser,
@@ -12,10 +10,6 @@ import {
   type InsertBuilding,
   type StructuralSystem,
   type InsertStructuralSystem,
-  type SealingSystem,
-  type InsertSealingSystem,
-  type RoofingSystem,
-  type InsertRoofingSystem,
   type Report,
   type InsertReport,
   type Technician,
@@ -110,12 +104,8 @@ export interface IStorage {
   
   // Building systems operations
   createStructuralSystem(system: InsertStructuralSystem): Promise<StructuralSystem>;
-  createSealingSystem(system: InsertSealingSystem): Promise<SealingSystem>;
-  createRoofingSystem(system: InsertRoofingSystem): Promise<RoofingSystem>;
   
   getStructuralSystem(buildingId: number): Promise<StructuralSystem | undefined>;
-  getSealingSystem(buildingId: number): Promise<SealingSystem | undefined>;
-  getRoofingSystem(buildingId: number): Promise<RoofingSystem | undefined>;
 
   // Report operations
   createReport(report: InsertReport): Promise<Report>;
@@ -568,50 +558,11 @@ export class DatabaseStorage implements IStorage {
     return newSystem;
   }
 
-  async createSealingSystem(system: InsertSealingSystem): Promise<SealingSystem> {
-    const [newSystem] = await db.insert(sealingSystems).values({
-      buildingId: system.buildingId,
-      externalWalls: system.externalWalls,
-      internalWalls: system.internalWalls,
-      acousticProperties: system.acousticProperties,
-      thermalProperties: system.thermalProperties,
-    }).returning();
-    return newSystem;
-  }
-
-  async createRoofingSystem(system: InsertRoofingSystem): Promise<RoofingSystem> {
-    const [newSystem] = await db.insert(roofingSystems).values({
-      buildingId: system.buildingId,
-      roofingType: system.roofingType,
-      thermalProperties: system.thermalProperties,
-      waterproofing: system.waterproofing,
-      slope: system.slope,
-      thermalInsulation: system.thermalInsulation,
-    }).returning();
-    return newSystem;
-  }
-
   async getStructuralSystem(buildingId: number): Promise<StructuralSystem | undefined> {
     const [system] = await db
       .select()
       .from(structuralSystems)
       .where(eq(structuralSystems.buildingId, buildingId));
-    return system;
-  }
-
-  async getSealingSystem(buildingId: number): Promise<SealingSystem | undefined> {
-    const [system] = await db
-      .select()
-      .from(sealingSystems)
-      .where(eq(sealingSystems.buildingId, buildingId));
-    return system;
-  }
-
-  async getRoofingSystem(buildingId: number): Promise<RoofingSystem | undefined> {
-    const [system] = await db
-      .select()
-      .from(roofingSystems)
-      .where(eq(roofingSystems.buildingId, buildingId));
     return system;
   }
 

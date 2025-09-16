@@ -1,4 +1,4 @@
-import type { Building, StructuralSystem, SealingSystem, RoofingSystem } from "@shared/schema";
+import type { Building, StructuralSystem } from "@shared/schema";
 
 // NBR 15575 Performance Calculation Engine
 
@@ -147,16 +147,13 @@ export function calculateThermalTransmittance(
  * Calculate thermal performance based on transmittance and bioclimatic zone
  */
 export function calculateThermalPerformance(
-  building: Building,
-  sealingSystem: SealingSystem | null,
-  roofingSystem: RoofingSystem | null
+  building: Building
 ): ThermalPerformanceResult {
   const zoneLimit = THERMAL_LIMITS[building.bioclimaticZone]?.wall || 3.7;
   
-  // Extract thermal properties from sealing system
-  const thermalProps = sealingSystem?.thermalProperties as any;
-  const thermalTransmittance = thermalProps?.transmittance || 4.0; // Default conservative value
-  const thermalCapacity = thermalProps?.capacity || 130; // Default value
+  // Use default conservative values for calculation
+  const thermalTransmittance = 4.0; // Default conservative value
+  const thermalCapacity = 130; // Default value
   
   let classification: "minimum" | "intermediate" | "superior";
   let compliance = false;
@@ -205,16 +202,14 @@ export function calculateThermalPerformance(
  * Calculate acoustic performance based on sound insulation
  */
 export function calculateAcousticPerformance(
-  building: Building,
-  sealingSystem: SealingSystem | null
+  building: Building
 ): AcousticPerformanceResult {
   const nc: any = (building as any);
   const noiseKey = nc.noiseClassCode || nc.noiseClass || '';
   const noiseClassLimit = ACOUSTIC_LIMITS[noiseKey] || 45;
   
-  // Extract acoustic properties from sealing system
-  const acousticProps = sealingSystem?.acousticProperties as any;
-  const soundInsulation = acousticProps?.isolation || 35; // Default conservative value
+  // Use default conservative value for calculation
+  const soundInsulation = 35; // Default conservative value
   
   let classification: "minimum" | "intermediate" | "superior";
   let compliance = false;
@@ -260,24 +255,24 @@ export function calculateAcousticPerformance(
  * Calculate water tightness performance
  */
 export function calculateWaterTightness(
-  building: Building,
-  roofingSystem: RoofingSystem | null,
-  sealingSystem: SealingSystem | null
+  building: Building
 ): WaterTightnessResult {
   let waterproofingScore = 0;
   let drainageScore = 0;
   const recommendations: string[] = [];
   
-  // Evaluate waterproofing
-  if (roofingSystem?.waterproofing) {
-    waterproofingScore += 50;
+  // Use default values for basic evaluation
+  const hasWaterproofing = false; // Default conservative assumption
+  waterproofingScore = hasWaterproofing ? 50 : 0;
+  
+  if (hasWaterproofing) {
     recommendations.push("Impermeabilização de cobertura presente");
   } else {
     recommendations.push("ATENÇÃO: Especificar impermeabilização de cobertura");
   }
   
-  // Evaluate slope for drainage
-  const slope = Number((roofingSystem as any)?.slope ?? 0);
+  // Use default slope for evaluation
+  const slope = 2; // Default minimum slope
   if (slope >= 5) {
     drainageScore += 50;
     recommendations.push(`Inclinação adequada para drenagem (${slope}%)`);
@@ -288,9 +283,9 @@ export function calculateWaterTightness(
     recommendations.push("ATENÇÃO: Inclinação insuficiente - risco de acúmulo de água");
   }
   
-  // Evaluate thermal insulation (affects condensation)
-  const thermalInsulation = roofingSystem?.thermalInsulation as any;
-  if (thermalInsulation) {
+  // Use default thermal insulation evaluation
+  const hasThermalInsulation = false; // Default conservative assumption
+  if (hasThermalInsulation) {
     waterproofingScore += 25;
     drainageScore += 25;
     recommendations.push("Isolamento térmico reduz risco de condensação");
@@ -405,14 +400,12 @@ export function calculateFireSafety(
  */
 export function calculateBuildingPerformance(
   building: Building,
-  structuralSystem?: StructuralSystem | null,
-  sealingSystem?: SealingSystem | null,
-  roofingSystem?: RoofingSystem | null
+  structuralSystem?: StructuralSystem | null
 ): PerformanceCalculationResult {
   const structuralSafety = calculateStructuralSafety(structuralSystem || null);
-  const thermalPerformance = calculateThermalPerformance(building, sealingSystem || null, roofingSystem || null);
-  const acousticPerformance = calculateAcousticPerformance(building, sealingSystem || null);
-  const waterTightness = calculateWaterTightness(building, roofingSystem || null, sealingSystem || null);
+  const thermalPerformance = calculateThermalPerformance(building);
+  const acousticPerformance = calculateAcousticPerformance(building);
+  const waterTightness = calculateWaterTightness(building);
   const fireSafety = calculateFireSafety(building);
   
   return {

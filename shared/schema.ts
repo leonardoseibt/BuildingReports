@@ -311,29 +311,6 @@ export const structuralSystems = pgTable("structural_systems", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-// Sealing Systems (Vedações)
-export const sealingSystems = pgTable("sealing_systems", {
-  id: integer("id").generatedAlwaysAsIdentity().primaryKey(),
-  buildingId: integer("building_id").references(() => buildings.id).notNull(),
-  externalWalls: jsonb("external_walls"), // {materials: [], thickness: number, thermalTransmittance: number}
-  internalWalls: jsonb("internal_walls"),
-  acousticProperties: jsonb("acoustic_properties"), // {isolation: number, materials: []}
-  thermalProperties: jsonb("thermal_properties"), // {transmittance: number, capacity: number}
-  createdAt: timestamp("created_at").defaultNow(),
-});
-
-// Roofing Systems
-export const roofingSystems = pgTable("roofing_systems", {
-  id: integer("id").generatedAlwaysAsIdentity().primaryKey(),
-  buildingId: integer("building_id").references(() => buildings.id).notNull(),
-  roofingType: text("roofing_type").notNull(),
-  thermalProperties: jsonb("thermal_properties"),
-  waterproofing: boolean("waterproofing").default(false),
-  slope: decimal("slope", { precision: 4, scale: 2 }),
-  thermalInsulation: jsonb("thermal_insulation"),
-  createdAt: timestamp("created_at").defaultNow(),
-});
-
 // Reports
 export const reports = pgTable("reports", {
   id: integer("id").generatedAlwaysAsIdentity().primaryKey(),
@@ -382,8 +359,6 @@ export const buildingsRelations = relations(buildings, ({ one, many }) => ({
     references: [technicians.id],
   }),
   structuralSystem: one(structuralSystems),
-  sealingSystem: one(sealingSystems),
-  roofingSystem: one(roofingSystems),
   reports: many(reports),
 }));
 
@@ -412,20 +387,6 @@ export const citiesRelations = relations(cities, ({ one }) => ({
 export const structuralSystemsRelations = relations(structuralSystems, ({ one }) => ({
   building: one(buildings, {
     fields: [structuralSystems.buildingId],
-    references: [buildings.id],
-  }),
-}));
-
-export const sealingSystemsRelations = relations(sealingSystems, ({ one }) => ({
-  building: one(buildings, {
-    fields: [sealingSystems.buildingId],
-    references: [buildings.id],
-  }),
-}));
-
-export const roofingSystemsRelations = relations(roofingSystems, ({ one }) => ({
-  building: one(buildings, {
-    fields: [roofingSystems.buildingId],
     references: [buildings.id],
   }),
 }));
@@ -522,13 +483,6 @@ export const insertStructuralSystemSchema = createInsertSchema(structuralSystems
     designLoads: decimalInput.optional(),
   });
 
-export const insertSealingSystemSchema = createInsertSchema(sealingSystems);
-
-export const insertRoofingSystemSchema = createInsertSchema(roofingSystems)
-  .extend({
-    slope: decimalInput.optional(),
-  });
-
 export const insertReportSchema = createInsertSchema(reports);
 
 export const insertTechnicianSchema = createInsertSchema(technicians)
@@ -611,10 +565,6 @@ export type Building = typeof buildings.$inferSelect;
 export type UpdateBuilding = z.infer<typeof updateBuildingSchema>;
 export type InsertStructuralSystem = z.infer<typeof insertStructuralSystemSchema>;
 export type StructuralSystem = typeof structuralSystems.$inferSelect;
-export type InsertSealingSystem = z.infer<typeof insertSealingSystemSchema>;
-export type SealingSystem = typeof sealingSystems.$inferSelect;
-export type InsertRoofingSystem = z.infer<typeof insertRoofingSystemSchema>;
-export type RoofingSystem = typeof roofingSystems.$inferSelect;
 export type InsertReport = z.infer<typeof insertReportSchema>;
 export type Report = typeof reports.$inferSelect;
 export type InsertTechnician = z.infer<typeof insertTechnicianSchema>;
