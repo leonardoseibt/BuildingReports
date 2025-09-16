@@ -34,6 +34,14 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
   const { data: analyses = [] } = useQuery<Analysis[]>({ queryKey: ['/api/analyses'] });
   const { data: parameters = [] } = useQuery<Parameter[]>({ queryKey: ['/api/parameters'] });
   
+  // Buscar dados das tabelas relacionadas para o cabeçalho
+  const { data: typologies = [] } = useQuery<any[]>({ queryKey: ['/api/typologies'] });
+  const { data: noiseClasses = [] } = useQuery<any[]>({ queryKey: ['/api/noise-classes'] });
+  const { data: aggressivenessClasses = [] } = useQuery<any[]>({ queryKey: ['/api/aggressiveness-classes'] });
+  const { data: technicians = [] } = useQuery<any[]>({ queryKey: ['/api/technicians'] });
+  const { data: bioclimaticZones = [] } = useQuery<any[]>({ queryKey: ['/api/bioclimatic-zones'] });
+  const { data: isopleths = [] } = useQuery<any[]>({ queryKey: ['/api/isopleths'] });
+  
   // Buscar dados para filtros de atributos
   const { data: attributes = [] } = useQuery<any[]>({ 
     queryKey: ['/api/attributes'],
@@ -160,6 +168,81 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
 
   const building = buildings.find(b => b.id === item.buildingId);
   const evaluations = item.reportData?.evaluations || [];
+
+  // Funções auxiliares para buscar dados relacionados com código e descrição
+  const getTypologyInfo = () => {
+    if (!building?.typologyId) return null;
+    const typology = typologies.find(t => t.id === building.typologyId);
+    return typology ? `${typology.code} - ${typology.label}` : null;
+  };
+
+  const getNoiseClassInfo = () => {
+    if (!building?.noiseClassId) return null;
+    const noiseClass = noiseClasses.find(nc => nc.id === building.noiseClassId);
+    return noiseClass ? `${noiseClass.code} - ${noiseClass.label}` : null;
+  };
+
+  const getAggressivenessClassInfo = () => {
+    if (!building?.aggressivenessClassId) return null;
+    const aggressivenessClass = aggressivenessClasses.find(ac => ac.id === building.aggressivenessClassId);
+    return aggressivenessClass ? `${aggressivenessClass.code} - ${aggressivenessClass.label}` : null;
+  };
+
+  const getTechnicianInfo = () => {
+    if (!building?.technicianId) return null;
+    const technician = technicians.find(t => t.id === building.technicianId);
+    return technician ? `${technician.fullName} (${technician.creaCau})` : `ID ${building.technicianId}`;
+  };
+
+  const getBioclimaticZoneInfo = () => {
+    if (!building?.bioclimaticZone) return null;
+    const zone = bioclimaticZones.find(bz => bz.code === building.bioclimaticZone);
+    return zone ? `${zone.code} - ${zone.label}` : building.bioclimaticZone;
+  };
+
+  const getIsoplethInfo = () => {
+    if (!building?.isoplethCode) return null;
+    const isopleth = isopleths.find(i => i.code === building.isoplethCode);
+    return isopleth ? `${isopleth.code} - ${isopleth.label}` : building.isoplethCode;
+  };
+
+  // Função para formatar endereço brasileiro
+  const getFormattedAddress = () => {
+    if (!building) return null;
+    
+    const parts = [];
+    
+    // Logradouro e número
+    if (building.street) {
+      let streetPart = building.street;
+      if (building.addressNumber) {
+        streetPart += `, ${building.addressNumber}`;
+      }
+      parts.push(streetPart);
+    }
+    
+    // Bairro
+    if (building.neighborhood) {
+      parts.push(building.neighborhood);
+    }
+    
+    // Cidade e Estado
+    if (building.city || building.state) {
+      let cityState = '';
+      if (building.city) cityState += building.city;
+      if (building.state) {
+        cityState += cityState ? ` - ${building.state}` : building.state;
+      }
+      if (cityState) parts.push(cityState);
+    }
+    
+    // CEP
+    if (building.cep) {
+      parts.push(`CEP: ${building.cep}`);
+    }
+    
+    return parts.length > 0 ? parts.join(', ') : null;
+  };
 
   // Pré-carregar tabelas comuns baseadas nos atributos existentes
   useEffect(() => {
@@ -508,41 +591,159 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
 
   return (
     <div className="p-6">
-      {/* Cabeçalho */}
-      <div className="mb-4">
-        <div className="border-b-2 border-slate-300 pb-2 mb-3">
-          <h1 className="text-2xl font-bold text-slate-900">
-            PDE - Perfil de Desempenho da Edificação: {building?.name || `Edificação ID ${item.buildingId}`}
-          </h1>
+      {/* Cabeçalho Profissional e Discreto */}
+      <div className="mb-8">
+        {/* Header Principal */}
+        <div className="bg-gray-800 text-white rounded-t-lg p-6 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-semibold text-white mb-1">
+                PDE - Perfil de Desempenho da Edificação
+              </h1>
+              <p className="text-lg text-gray-200">
+                {building?.name || `Edificação ID ${item.buildingId}`}
+              </p>
+            </div>
+            <div className="text-right text-gray-300 text-sm">
+              <div>Relatório Técnico</div>
+              <div className="font-medium">
+                {item.generatedAt ? new Date(item.generatedAt).toLocaleDateString('pt-BR') : 'Hoje'}
+              </div>
+              <div>Versão {item.version || 1}</div>
+            </div>
+          </div>
         </div>
         
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-1 text-xs text-slate-600 mb-3">
-          {item.buildingLocation && (
-            <div><span className="font-semibold">Local:</span> {item.buildingLocation}</div>
-          )}
-          {item.buildingArea && (
-            <div><span className="font-semibold">Área:</span> {item.buildingArea}</div>
-          )}
-          {item.buildingHeight && (
-            <div><span className="font-semibold">Altura:</span> {item.buildingHeight}</div>
-          )}
-          {item.buildingFloors && (
-            <div><span className="font-semibold">Pavimentos:</span> {item.buildingFloors}</div>
-          )}
-          {building?.technicianId && (
-            <div><span className="font-semibold">Responsável:</span> ID {building.technicianId}</div>
-          )}
-          {building?.bioclimaticZone && (
-            <div><span className="font-semibold">Zona Bioclimática:</span> {building.bioclimaticZone}</div>
-          )}
-          {item.generatedAt && (
-            <div><span className="font-semibold">Gerado em:</span> {new Date(item.generatedAt).toLocaleDateString('pt-BR')}</div>
-          )}
-          <div><span className="font-semibold">Versão:</span> {item.version || 1}</div>
-        </div>
-      </div>
+        {/* Informações da Edificação */}
+        <div className="bg-white border border-gray-300 rounded-b-lg p-6 shadow-sm">
+          
+          {/* Seção: Identificação */}
+          <div className="mb-6">
+            <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wide mb-3 pb-2 border-b border-gray-200">
+              Identificação
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              
+              <div className="bg-gray-50 border border-gray-200 rounded p-3">
+                <div className="text-xs font-medium text-gray-500 mb-1">Nome da Edificação</div>
+                <div className="text-sm font-medium text-gray-900">{building?.name || '—'}</div>
+              </div>
 
-      {/* Conteúdo do Relatório */}
+              {getTypologyInfo() && (
+                <div className="bg-gray-50 border border-gray-200 rounded p-3">
+                  <div className="text-xs font-medium text-gray-500 mb-1">Tipologia</div>
+                  <div className="text-sm font-medium text-gray-900">{getTypologyInfo()}</div>
+                </div>
+              )}
+
+              {getTechnicianInfo() && (
+                <div className="bg-gray-50 border border-gray-200 rounded p-3">
+                  <div className="text-xs font-medium text-gray-500 mb-1">Responsável Técnico</div>
+                  <div className="text-sm font-medium text-gray-900">{getTechnicianInfo()}</div>
+                </div>
+              )}
+              
+            </div>
+          </div>
+
+          {/* Seção: Localização */}
+          <div className="mb-6">
+            <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wide mb-3 pb-2 border-b border-gray-200">
+              Localização
+            </h3>
+            <div className="grid grid-cols-1 gap-4">
+              
+              {getFormattedAddress() && (
+                <div className="bg-gray-50 border border-gray-200 rounded p-3">
+                  <div className="text-xs font-medium text-gray-500 mb-1">Endereço Completo</div>
+                  <div className="text-sm font-medium text-gray-900">{getFormattedAddress()}</div>
+                </div>
+              )}
+              
+            </div>
+          </div>
+
+          {/* Seção: Características Técnicas */}
+          <div className="mb-6">
+            <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wide mb-3 pb-2 border-b border-gray-200">
+              Características Técnicas
+            </h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              
+              {building?.totalArea && (
+                <div className="bg-gray-50 border border-gray-200 rounded p-3">
+                  <div className="text-xs font-medium text-gray-500 mb-1">Área Total</div>
+                  <div className="text-sm font-medium text-gray-900">{building.totalArea} m²</div>
+                </div>
+              )}
+
+              {building?.buildingHeight && (
+                <div className="bg-gray-50 border border-gray-200 rounded p-3">
+                  <div className="text-xs font-medium text-gray-500 mb-1">Altura</div>
+                  <div className="text-sm font-medium text-gray-900">{building.buildingHeight} m</div>
+                </div>
+              )}
+
+              {building?.floors && (
+                <div className="bg-gray-50 border border-gray-200 rounded p-3">
+                  <div className="text-xs font-medium text-gray-500 mb-1">Pavimentos</div>
+                  <div className="text-sm font-medium text-gray-900">{building.floors}</div>
+                </div>
+              )}
+
+              {building?.units && (
+                <div className="bg-gray-50 border border-gray-200 rounded p-3">
+                  <div className="text-xs font-medium text-gray-500 mb-1">Unidades</div>
+                  <div className="text-sm font-medium text-gray-900">{building.units}</div>
+                </div>
+              )}
+              
+            </div>
+          </div>
+
+          {/* Seção: Condições Ambientais */}
+          <div className="mb-4">
+            <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wide mb-3 pb-2 border-b border-gray-200">
+              Condições Ambientais e Classificações
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              
+              {/* Card Zona Bioclimática */}
+              {getBioclimaticZoneInfo() && (
+                <div className="bg-gray-50 border border-gray-200 rounded p-3">
+                  <div className="text-xs font-medium text-gray-500 mb-1">Zona Bioclimática</div>
+                  <div className="text-sm font-medium text-gray-900">{getBioclimaticZoneInfo()}</div>
+                </div>
+              )}
+
+              {/* Card Isopleta */}
+              {getIsoplethInfo() && (
+                <div className="bg-gray-50 border border-gray-200 rounded p-3">
+                  <div className="text-xs font-medium text-gray-500 mb-1">Isopleta</div>
+                  <div className="text-sm font-medium text-gray-900">{getIsoplethInfo()}</div>
+                </div>
+              )}
+
+              {getNoiseClassInfo() && (
+                <div className="bg-gray-50 border border-gray-200 rounded p-3">
+                  <div className="text-xs font-medium text-gray-500 mb-1">Classe de Ruído</div>
+                  <div className="text-sm font-medium text-gray-900">{getNoiseClassInfo()}</div>
+                </div>
+              )}
+
+              {getAggressivenessClassInfo() && (
+                <div className="bg-gray-50 border border-gray-200 rounded p-3">
+                  <div className="text-xs font-medium text-gray-500 mb-1">Classe de Agressividade</div>
+                  <div className="text-sm font-medium text-gray-900">{getAggressivenessClassInfo()}</div>
+                </div>
+              )}
+              
+            </div>
+          </div>
+
+          
+        </div>
+      </div>      {/* Conteúdo do Relatório */}
       <div className="print-content">
         {sortedData.map((requirement) => (
           <div key={requirement.id} className="mb-8">
