@@ -1,7 +1,7 @@
 import express, { type Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { setupAuth, isAuthenticated, refreshSession } from "./auth";
+import { setupAuth, isAuthenticated, refreshSession, requireModuleAccess } from "./auth";
 import { insertBuildingSchema, updateBuildingSchema, insertStructuralSystemSchema, insertReportSchema, insertTechnicianSchema, updateTechnicianSchema, insertUserSchema, updateUserSchema, insertTypologySchema, insertNoiseClassSchema, insertAggressivenessClassSchema, insertBioclimaticZoneSchema, insertBioclimaticZoneCoverageSchema, insertStateSchema, insertCitySchema, insertConstructiveSystemSchema, insertRequirementSchema, insertCriterionSchema, insertAnalysisSchema, insertIsoplethSchema } from "@shared/schema";
 import { insertParameterSchema, attributeDefinitions } from '@shared/schema';
 import { db } from './db';
@@ -64,7 +64,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // User management routes
-  app.get('/api/users', isAuthenticated, async (req: any, res) => {
+  app.get('/api/users', isAuthenticated, requireModuleAccess('users'), async (req: any, res) => {
     try {
       const { limit, offset, page } = getPaginationParams(req.query);
       const { items, total } = await storage.listUsers(limit, offset);
@@ -157,7 +157,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         res.json({ success: ok });
       } catch { res.status(500).json({ message: 'Falha ao excluir atributo' }); }
     });
-  app.get('/api/users/:id', isAuthenticated, async (req: any, res) => {
+  app.get('/api/users/:id', isAuthenticated, requireModuleAccess('users'), async (req: any, res) => {
     try {
       const id = Number(req.params.id);
   if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' });
@@ -170,7 +170,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/users', isAuthenticated, express.json(), async (req, res) => {
+  app.post('/api/users', isAuthenticated, requireModuleAccess('users'), express.json(), async (req, res) => {
     try {
       const data = insertUserSchema.parse(req.body);
       const normalizedEmail = data.email.trim().toLowerCase();
@@ -221,7 +221,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put('/api/users/:id', isAuthenticated, express.json(), async (req, res) => {
+  app.put('/api/users/:id', isAuthenticated, requireModuleAccess('users'), express.json(), async (req, res) => {
     try {
       const id = Number(req.params.id);
   if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' });
@@ -252,7 +252,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/users/:id', isAuthenticated, async (req: any, res) => {
+  app.delete('/api/users/:id', isAuthenticated, requireModuleAccess('users'), async (req: any, res) => {
     try {
       const id = Number(req.params.id);
       if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' });
