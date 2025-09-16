@@ -203,7 +203,23 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
   const getIsoplethInfo = () => {
     if (!building?.isoplethCode) return null;
     const isopleth = isopleths.find(i => i.code === building.isoplethCode);
-    return isopleth ? `${isopleth.code} - ${isopleth.label}` : building.isoplethCode;
+    if (!isopleth) return building.isoplethCode;
+    
+    // Formatar faixa de velocidade
+    const min = isopleth.windMinMS != null ? parseFloat(isopleth.windMinMS as any) : null;
+    const max = isopleth.windMaxMS != null ? parseFloat(isopleth.windMaxMS as any) : null;
+    const fmt = (v: number | null) => (v == null || Number.isNaN(v) ? null : v.toFixed(1).replace(/\.0$/, ''));
+    
+    let range = '';
+    if (min !== null && max !== null) {
+      range = ` (${fmt(min)} - ${fmt(max)} m/s)`;
+    } else if (min !== null) {
+      range = ` (≥ ${fmt(min)} m/s)`;
+    } else if (max !== null) {
+      range = ` (≤ ${fmt(max)} m/s)`;
+    }
+    
+    return `${isopleth.code} - ${isopleth.label}${range}`;
   };
 
   // Função para formatar endereço brasileiro
@@ -706,7 +722,7 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
             <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wide mb-3 pb-2 border-b border-gray-200">
               Condições Ambientais e Classificações
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               
               {/* Card Zona Bioclimática */}
               {getBioclimaticZoneInfo() && (

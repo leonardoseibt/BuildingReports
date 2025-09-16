@@ -395,6 +395,7 @@ export class DatabaseStorage implements IStorage {
       city: (building as any).city,
       state: (building as any).state,
       bioclimaticZone: building.bioclimaticZone,
+      isoplethCode: (building as any).isoplethCode,
       totalArea: building.totalArea,
       buildingHeight: (building as any).buildingHeight,
       floors: building.floors,
@@ -427,6 +428,7 @@ export class DatabaseStorage implements IStorage {
   city: buildings.city,
   state: buildings.state,
         bioclimaticZone: buildings.bioclimaticZone,
+        isoplethCode: buildings.isoplethCode,
         totalArea: buildings.totalArea,
   buildingHeight: buildings.buildingHeight,
         floors: buildings.floors,
@@ -469,6 +471,7 @@ export class DatabaseStorage implements IStorage {
   city: buildings.city,
   state: buildings.state,
         bioclimaticZone: buildings.bioclimaticZone,
+        isoplethCode: buildings.isoplethCode,
         totalArea: buildings.totalArea,
   buildingHeight: buildings.buildingHeight,
         floors: buildings.floors,
@@ -503,6 +506,7 @@ export class DatabaseStorage implements IStorage {
   if (rest.city !== undefined) updates.city = rest.city as any;
   if (rest.state !== undefined) updates.state = rest.state as any;
     if (rest.bioclimaticZone != null) updates.bioclimaticZone = rest.bioclimaticZone;
+    if (rest.isoplethCode !== undefined) updates.isoplethCode = rest.isoplethCode;
     if (rest.totalArea != null) updates.totalArea = rest.totalArea;
   if (rest.buildingHeight !== undefined) updates.buildingHeight = rest.buildingHeight as any;
     if (rest.floors != null) updates.floors = rest.floors;
@@ -724,6 +728,7 @@ export class DatabaseStorage implements IStorage {
         city: buildings.city,
         state: buildings.state,
         bioclimaticZone: buildings.bioclimaticZone,
+        isoplethCode: buildings.isoplethCode,
         totalArea: buildings.totalArea,
         buildingHeight: buildings.buildingHeight,
         floors: buildings.floors,
