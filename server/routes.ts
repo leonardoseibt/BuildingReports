@@ -550,13 +550,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/reports/definitions', isAuthenticated, async (_req, res) => {
     try {
-      const reqs = await storage.listRequirements();
-      const result = [] as any[];
-      for (const req of reqs) {
-        const criteria = await storage.listCriteria(req.id);
-        result.push({ ...req, criteria });
-      }
-      res.json(result);
+      const definitions = await storage.listRequirementsWithCriteria();
+      res.json(definitions);
     } catch (error) {
       console.error('Error fetching report definitions:', error);
       res.status(500).json({ message: 'Failed to fetch report definitions' });
