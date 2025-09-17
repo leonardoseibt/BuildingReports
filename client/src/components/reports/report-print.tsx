@@ -103,6 +103,20 @@ const applyCommonEncodingFixes = (text: string): string => {
   return fixedText;
 };
 
+const sanitizeComparisonCharacters = (text: string): string => {
+  if (!text) return '';
+
+  return text
+    .replace(/<\s*=\s*/g, '≤')
+    .replace(/>\s*=\s*/g, '≥')
+    .replace(/<\s*>\s*/g, '≠')
+    .replace(/<=/g, '≤')
+    .replace(/>=/g, '≥')
+    .replace(/<>/g, '≠')
+    .replace(/</g, '‹')
+    .replace(/>/g, '›');
+};
+
 export default function ReportPrint({ item, onClose }: ReportPrintProps) {
   const { data: buildings = [] } = useQuery<Building[]>({ queryKey: ['/api/buildings'] });
   const { data: requirements = [] } = useQuery<Requirement[]>({ queryKey: ['/api/requirements'] });
@@ -401,7 +415,7 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
   };
 
   const normalizePdfText = (text: string): string => {
-    const baseText = decodeMisencodedText(text);
+    const baseText = sanitizeComparisonCharacters(decodeMisencodedText(text));
 
     return baseText
       .replace(/\u00a0/g, ' ')
@@ -859,18 +873,11 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
       // Título do relatório
       doc.setFontSize(20);
       doc.setFont('DejaVuSans', 'bold');
-      doc.text('Relatório de Desempenho da Edificação (PDE)', margin, yPosition);
-      yPosition += 15;
+      doc.text('Perfil de Desempenho da Edificação - PDE', pageWidth / 2, yPosition, { align: 'center' });
+      yPosition += 14;
 
-      // Informações do edifício
+      // Informações do edifício com layout profissional
       if (building) {
-        const ensureSpaceFor = (height: number) => {
-          if (yPosition + height > pageHeight - margin) {
-            doc.addPage();
-            yPosition = margin;
-          }
-        };
-
         const formatNumericValue = (value: unknown, unit?: string) => {
           if (value === null || value === undefined) {
             return null;
@@ -929,15 +936,30 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
           }
         ];
 
-        doc.setFontSize(13);
-        doc.setFont('DejaVuSans', 'bold');
-        doc.text('Informações da Edificação', margin, yPosition);
-        yPosition += 9;
+        const detailRows: any[] = [];
+        let hasDetailContent = false;
 
-        const availableWidth = pageWidth - margin * 2 - 6;
+        const labelBaseStyles = {
+          fillColor: [248, 250, 252],
+          textColor: [79, 70, 229],
+          fontStyle: 'bold' as const,
+          fontSize: 9,
+          halign: 'left' as const,
+          cellPadding: { top: 4, right: 4, bottom: 4, left: 8 },
+          lineHeight: 1.2
+        };
 
-        const addInfoSection = (sectionTitle: string, sectionItems: { label: string; value: string | null }[]) => {
-          const validItems = sectionItems
+        const valueBaseStyles = {
+          textColor: [31, 41, 55],
+          fontStyle: 'normal' as const,
+          fontSize: 9,
+          halign: 'left' as const,
+          cellPadding: { top: 4, right: 8, bottom: 4, left: 6 },
+          lineHeight: 1.2
+        };
+
+        buildingInfoSections.forEach(section => {
+          const validItems = section.items
             .map(item => ({
               label: compactPdfText(item.label),
               value: item.value ? compactPdfText(item.value) : null
@@ -948,44 +970,157 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
             return;
           }
 
-          const estimatedHeight = validItems.reduce((acc, item) => {
-            const line = `${item.label}: ${item.value}`;
-            const lines = doc.splitTextToSize(line, availableWidth).length;
-            return acc + lines * 5 + 2;
-          }, 12);
+          if (!hasDetailContent) {
+            detailRows.push([
+              {
+                content: 'Informações da Edificação',
+                colSpan: 4,
+                styles: {
+                  fillColor: [30, 64, 175],
+                  textColor: [255, 255, 255],
+                  fontSize: 11,
+                  fontStyle: 'bold',
+                  halign: 'left',
+                  cellPadding: { top: 6, right: 8, bottom: 6, left: 10 }
+                }
+              }
+            ]);
+            hasDetailContent = true;
+          }
 
-          ensureSpaceFor(estimatedHeight);
+          detailRows.push([
+            {
+              content: section.title,
+              colSpan: 4,
+              styles: {
+                fillColor: [243, 244, 246],
+                textColor: [55, 65, 81],
+                fontSize: 10,
+                fontStyle: 'bold',
+                halign: 'left',
+                cellPadding: { top: 5, right: 8, bottom: 4, left: 10 }
+              }
+            }
+          ]);
 
-          doc.setFontSize(11);
-          doc.setFont('DejaVuSans', 'bold');
-          doc.text(sectionTitle, margin, yPosition);
-          yPosition += 6;
+          for (let index = 0; index < validItems.length; index += 2) {
+            const leftItem = validItems[index];
+            const rightItem = validItems[index + 1];
 
-          doc.setFontSize(9);
-          doc.setFont('DejaVuSans', 'normal');
+            detailRows.push([
+              {
+                content: leftItem.label,
+                styles: { ...labelBaseStyles }
+              },
+              {
+                content: leftItem.value ?? '—',
+                styles: { ...valueBaseStyles }
+              },
+              rightItem
+                ? {
+                    content: rightItem.label,
+                    styles: { ...labelBaseStyles }
+                  }
+                : {
+                    content: '',
+                    styles: { ...labelBaseStyles, fillColor: [255, 255, 255], textColor: [148, 163, 184] }
+                  },
+              rightItem
+                ? {
+                    content: rightItem.value ?? '—',
+                    styles: { ...valueBaseStyles }
+                  }
+                : {
+                    content: '',
+                    styles: { ...valueBaseStyles }
+                  }
+            ]);
+          }
+        });
 
-          validItems.forEach((item, index) => {
-            const fullText = `${item.label}: ${item.value}`;
-            const lines = doc.splitTextToSize(fullText, availableWidth);
-            lines.forEach((lineText: string) => {
-              doc.text(lineText, margin + 4, yPosition);
-              yPosition += 5;
-            });
+        if (hasDetailContent) {
+          const detailTableWidth = pageWidth - margin * 2;
+          const labelColumnWidth = 34;
+          const valueColumnWidth = detailTableWidth / 2 - labelColumnWidth;
 
-            if (index < validItems.length - 1) {
-              yPosition += 2;
+          autoTable(doc, {
+            startY: yPosition,
+            margin: { left: margin, right: margin },
+            body: detailRows,
+            tableWidth: detailTableWidth,
+            styles: {
+              font: 'DejaVuSans',
+              fontSize: 9,
+              textColor: [31, 41, 55],
+              lineColor: [226, 232, 240],
+              lineWidth: 0.1,
+              cellPadding: { top: 4, right: 6, bottom: 4, left: 6 },
+              overflow: 'linebreak',
+              cellWidth: 'wrap',
+              minCellHeight: 8
+            },
+            theme: 'grid',
+            columnStyles: {
+              0: {
+                cellWidth: labelColumnWidth,
+                fillColor: labelBaseStyles.fillColor,
+                textColor: labelBaseStyles.textColor,
+                fontStyle: labelBaseStyles.fontStyle,
+                fontSize: labelBaseStyles.fontSize,
+                halign: labelBaseStyles.halign,
+                cellPadding: { ...labelBaseStyles.cellPadding },
+                lineHeight: labelBaseStyles.lineHeight
+              },
+              1: {
+                cellWidth: valueColumnWidth,
+                textColor: valueBaseStyles.textColor,
+                fontStyle: valueBaseStyles.fontStyle,
+                fontSize: valueBaseStyles.fontSize,
+                halign: valueBaseStyles.halign,
+                cellPadding: { ...valueBaseStyles.cellPadding },
+                lineHeight: valueBaseStyles.lineHeight
+              },
+              2: {
+                cellWidth: labelColumnWidth,
+                fillColor: labelBaseStyles.fillColor,
+                textColor: labelBaseStyles.textColor,
+                fontStyle: labelBaseStyles.fontStyle,
+                fontSize: labelBaseStyles.fontSize,
+                halign: labelBaseStyles.halign,
+                cellPadding: { ...labelBaseStyles.cellPadding },
+                lineHeight: labelBaseStyles.lineHeight
+              },
+              3: {
+                cellWidth: valueColumnWidth,
+                textColor: valueBaseStyles.textColor,
+                fontStyle: valueBaseStyles.fontStyle,
+                fontSize: valueBaseStyles.fontSize,
+                halign: valueBaseStyles.halign,
+                cellPadding: { ...valueBaseStyles.cellPadding },
+                lineHeight: valueBaseStyles.lineHeight
+              }
+            },
+            rowPageBreak: 'avoid',
+            didParseCell: (data: any) => {
+              if (data.cell.raw && typeof data.cell.raw === 'object' && 'colSpan' in data.cell.raw && data.cell.raw.colSpan === 4) {
+                const isTitleRow = data.row.index === 0;
+                data.cell.styles.halign = 'left';
+                data.cell.styles.font = 'DejaVuSans';
+                data.cell.styles.fontStyle = 'bold';
+                data.cell.styles.fontSize = isTitleRow ? 11 : 10;
+                data.cell.styles.textColor = isTitleRow ? [255, 255, 255] : [55, 65, 81];
+                data.cell.styles.fillColor = isTitleRow ? [30, 64, 175] : [243, 244, 246];
+                data.cell.styles.cellPadding = isTitleRow
+                  ? { top: 6, right: 8, bottom: 6, left: 10 }
+                  : { top: 5, right: 8, bottom: 4, left: 10 };
+              }
             }
           });
 
-          yPosition += 6;
-        };
-
-        buildingInfoSections.forEach(section => {
-          addInfoSection(section.title, section.items);
-        });
-
-        yPosition += 4;
-
+          const headerTableInfo = (doc as any).lastAutoTable;
+          const finalY = headerTableInfo?.finalY ?? yPosition;
+          yPosition = finalY + 12;
+        }
       }
 
       // Processar cada requisito
@@ -1030,7 +1165,7 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
               tableHeaders.push(levelLabels[levelId] || levelId);
             });
 
-            const parameterColumnWidth = 108;
+            const parameterColumnWidth = 104;
             const unitColumnWidth = 18;
             const levelColumnWidth = 18;
             const narrowLevelIds = new Set(['minimum', 'intermediate', 'superior']);
@@ -1298,7 +1433,7 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
             <div className="flex items-center justify-between">
               <div>
                 <h1 className="text-2xl font-semibold text-white mb-1">
-                  PDE - Perfil de Desempenho da Edificação
+                  Perfil de Desempenho da Edificação - PDE
                 </h1>
                 <p className="text-lg text-gray-200">
                   {building?.name || `Edificação ID ${item.buildingId}`}
@@ -1480,7 +1615,7 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
                                 <TableHeader>
                                   {/* Cabeçalho principal da tabela */}
                                   <TableRow className="bg-gray-100 border-b border-gray-300">
-                                    <TableHead className="border-r border-gray-300 font-semibold text-gray-800 text-center align-middle py-3 pl-4 pr-6 min-w-[18rem]">
+                                    <TableHead className="border-r border-gray-300 font-semibold text-gray-800 text-center align-middle py-3 pl-4 pr-5 min-w-[17rem]">
                                       Parâmetro
                                     </TableHead>
                                     <TableHead className="border-r border-gray-300 font-semibold text-gray-800 text-center align-middle py-3 px-2.5 w-16">
@@ -1509,7 +1644,7 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
 
                                     return (
                                       <TableRow key={parameter.id} className="hover:bg-gray-50 border-b border-gray-200">
-                                        <TableCell className="border-r border-gray-300 align-middle py-3 pl-4 pr-6 font-medium min-w-[18rem]">
+                                      <TableCell className="border-r border-gray-300 align-middle py-3 pl-4 pr-5 font-medium min-w-[17rem]">
                                           <div>
                                             <div className="font-medium text-gray-900">
                                               {formatTextWithSeparators(parameter.label)}
