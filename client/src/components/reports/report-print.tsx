@@ -39,6 +39,70 @@ interface ReportPrintProps {
   onClose: () => void;
 }
 
+const WINDOWS_1252_EXTENDED_MAP: Record<string, number> = {
+  '€': 0x80,
+  '‚': 0x82,
+  'ƒ': 0x83,
+  '„': 0x84,
+  '…': 0x85,
+  '†': 0x86,
+  '‡': 0x87,
+  'ˆ': 0x88,
+  '‰': 0x89,
+  'Š': 0x8a,
+  '‹': 0x8b,
+  'Œ': 0x8c,
+  'Ž': 0x8e,
+  '‘': 0x91,
+  '’': 0x92,
+  '“': 0x93,
+  '”': 0x94,
+  '•': 0x95,
+  '–': 0x96,
+  '—': 0x97,
+  '˜': 0x98,
+  '™': 0x99,
+  'š': 0x9a,
+  '›': 0x9b,
+  'œ': 0x9c,
+  'ž': 0x9e,
+  'Ÿ': 0x9f
+};
+
+const COMMON_ENCODING_REPLACEMENTS: Record<string, string> = {
+  'â€¢': '•',
+  'â€“': '–',
+  'â€”': '—',
+  'â€˜': '‘',
+  'â€™': '’',
+  'â€œ': '“',
+  'â€¦': '…',
+  'â„¢': '™',
+  'âˆ’': '−',
+  'âˆ†': '∆',
+  'âˆƒ': '∃',
+  'âˆ…': '∅',
+  'âˆ‡': '∇',
+  'âˆˆ': '∈',
+  'â‰¤': '≤',
+  'â‰¥': '≥'
+};
+
+const COMMON_ENCODING_REGEXES = Object.entries(COMMON_ENCODING_REPLACEMENTS).map(([encoded, decoded]) => ({
+  pattern: new RegExp(encoded, 'g'),
+  decoded
+}));
+
+const applyCommonEncodingFixes = (text: string): string => {
+  let fixedText = text;
+
+  for (const { pattern, decoded } of COMMON_ENCODING_REGEXES) {
+    fixedText = fixedText.replace(pattern, decoded);
+  }
+
+  return fixedText;
+};
+
 export default function ReportPrint({ item, onClose }: ReportPrintProps) {
   const { data: buildings = [] } = useQuery<Building[]>({ queryKey: ['/api/buildings'] });
   const { data: requirements = [] } = useQuery<Requirement[]>({ queryKey: ['/api/requirements'] });
@@ -297,18 +361,42 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
   const decodeMisencodedText = (text: string): string => {
     if (!text) return '';
 
-    const misencodedPattern = /[ÃÂ][\u0080-\u00BF]/;
-    if (!misencodedPattern.test(text)) {
-      return text;
+    const suspiciousPattern = /(Ã[\u0080-\u00FF]|Â[\u0080-\u00FF]|â[\u0080-\u00FF]|â[\u2000-\u20FF])/;
+    if (!suspiciousPattern.test(text)) {
+      return applyCommonEncodingFixes(text);
+    }
+
+    const byteValues: number[] = [];
+    let hasUnmappedChar = false;
+
+    for (const char of text) {
+      const code = char.charCodeAt(0);
+
+      if (code <= 0xff) {
+        byteValues.push(code);
+        continue;
+      }
+
+      if (WINDOWS_1252_EXTENDED_MAP[char] !== undefined) {
+        byteValues.push(WINDOWS_1252_EXTENDED_MAP[char]);
+        continue;
+      }
+
+      hasUnmappedChar = true;
+      break;
+    }
+
+    if (hasUnmappedChar) {
+      return applyCommonEncodingFixes(text);
     }
 
     try {
-      const bytes = new Uint8Array(Array.from(text, char => char.charCodeAt(0)));
       const decoder = new TextDecoder('utf-8', { fatal: false });
-      return decoder.decode(bytes);
+      const decoded = decoder.decode(new Uint8Array(byteValues));
+      return applyCommonEncodingFixes(decoded);
     } catch (error) {
       console.warn('Não foi possível corrigir codificação do texto:', error);
-      return text;
+      return applyCommonEncodingFixes(text);
     }
   };
 
@@ -330,6 +418,17 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
     if (!text) return '';
     const normalized = normalizePdfText(text);
     return compactPdfText(normalized.replace(/\r?\n/g, ' • '));
+  };
+
+  const normalizeDisplayValue = (value: unknown): string => {
+    if (value === null || value === undefined) {
+      return '—';
+    }
+
+    const rawText = typeof value === 'string' ? value : String(value);
+    const normalized = normalizePdfText(rawText).trim();
+
+    return normalized === '' ? '—' : normalized;
   };
 
   // Função para verificar se um parâmetro tem valores nos níveis selecionados
@@ -886,10 +985,7 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
         });
 
         yPosition += 4;
-        
-        // NOVA PÁGINA para o relatório
-        doc.addPage();
-        yPosition = margin;
+
       }
 
       // Processar cada requisito
@@ -906,11 +1002,7 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
         for (const criterion of requirement.criteria) {
           const hasAnalyses = criterion.analyses.some(analysis => analysis.parameters?.length);
           const criterionEstimatedHeight = 8 + (hasAnalyses ? 14 : 0);
-          // Verificação menos restritiva para critérios
-          if (yPosition + criterionEstimatedHeight > pageHeight - margin - 40) {
-            doc.addPage();
-            yPosition = margin;
-          }
+          checkSectionBreak('criterion', criterionEstimatedHeight);
 
           doc.setFontSize(12);
           doc.setFont('DejaVuSans', 'bold');
@@ -938,9 +1030,9 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
               tableHeaders.push(levelLabels[levelId] || levelId);
             });
 
-            const parameterColumnWidth = 104;
-            const unitColumnWidth = 20;
-            const levelColumnWidth = 20;
+            const parameterColumnWidth = 108;
+            const unitColumnWidth = 18;
+            const levelColumnWidth = 18;
             const narrowLevelIds = new Set(['minimum', 'intermediate', 'superior']);
 
             const columnWidths = [parameterColumnWidth, unitColumnWidth];
@@ -974,7 +1066,9 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
                 halign: 'center',
                 valign: 'middle',
                 font: 'DejaVuSans',
-                fontStyle: 'normal'
+                fontStyle: 'normal',
+                fontSize: 8,
+                lineHeight: 1.15
               };
             });
 
@@ -1386,64 +1480,68 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
                                 <TableHeader>
                                   {/* Cabeçalho principal da tabela */}
                                   <TableRow className="bg-gray-100 border-b border-gray-300">
-                                    <TableHead className="border-r border-gray-300 font-semibold text-gray-800 text-center align-middle py-3 pl-4 pr-5 min-w-[18rem]">
+                                    <TableHead className="border-r border-gray-300 font-semibold text-gray-800 text-center align-middle py-3 pl-4 pr-6 min-w-[18rem]">
                                       Parâmetro
                                     </TableHead>
-                                    <TableHead className="border-r border-gray-300 font-semibold text-gray-800 text-center align-middle py-3 px-4 w-24">
+                                    <TableHead className="border-r border-gray-300 font-semibold text-gray-800 text-center align-middle py-3 px-2.5 w-16">
                                       UN
                                     </TableHead>
                                     {selectedLevels.includes('minimum') && (
-                                      <TableHead className="border-r border-gray-300 font-semibold text-gray-800 text-center align-middle py-3 px-4 w-24">
+                                      <TableHead className="border-r border-gray-300 font-semibold text-gray-800 text-center align-middle py-3 px-2.5 w-16">
                                         Min
                                       </TableHead>
                                     )}
                                     {selectedLevels.includes('intermediate') && (
-                                      <TableHead className="border-r border-gray-300 font-semibold text-gray-800 text-center align-middle py-3 px-4 w-24">
+                                      <TableHead className="border-r border-gray-300 font-semibold text-gray-800 text-center align-middle py-3 px-2.5 w-16">
                                         Int
                                       </TableHead>
                                     )}
                                     {selectedLevels.includes('superior') && (
-                                      <TableHead className="border-r border-gray-300 font-semibold text-gray-800 text-center align-middle py-3 px-4 w-24">
+                                      <TableHead className="border-r border-gray-300 font-semibold text-gray-800 text-center align-middle py-3 px-2.5 w-16">
                                         Sup
                                       </TableHead>
                                     )}
                                   </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                  {analysis.parameters.map((parameter) => (
-                                    <TableRow key={parameter.id} className="hover:bg-gray-50 border-b border-gray-200">
-                                      <TableCell className="border-r border-gray-300 align-middle py-3 pl-4 pr-5 font-medium min-w-[18rem]">
-                                        <div>
-                                          <div className="font-medium text-gray-900">
-                                            {formatTextWithSeparators(parameter.label)}
-                                          </div>
-                                          {parameter.notes && (
-                                            <div className="text-xs text-gray-600 mt-2 italic bg-gray-100 p-2 rounded border-l-2 border-gray-400">
-                                              <span className="font-semibold text-gray-800">Observação:</span> {formatTextWithSeparators(parameter.notes)}
+                                  {analysis.parameters.map((parameter) => {
+                                    const observationText = parameter.notes ?? parameter.observation;
+
+                                    return (
+                                      <TableRow key={parameter.id} className="hover:bg-gray-50 border-b border-gray-200">
+                                        <TableCell className="border-r border-gray-300 align-middle py-3 pl-4 pr-6 font-medium min-w-[18rem]">
+                                          <div>
+                                            <div className="font-medium text-gray-900">
+                                              {formatTextWithSeparators(parameter.label)}
                                             </div>
-                                          )}
-                                        </div>
-                                      </TableCell>
-                                      <TableCell className="text-center border-r border-gray-300 align-middle py-3 px-4 w-24">
-                                        {parameter.unit || '—'}
-                                      </TableCell>
-                                      {selectedLevels.includes('minimum') && (
-                                        <TableCell className="text-center border-r border-gray-300 align-middle py-3 px-4 w-24">
-                                          {parameter.minimumValue || '—'}
+                                            {observationText && (
+                                              <div className="text-xs text-gray-600 mt-2 italic bg-gray-100 p-2 rounded border-l-2 border-gray-400">
+                                                <span className="font-semibold text-gray-800">Observação:</span> {formatTextWithSeparators(observationText)}
+                                              </div>
+                                            )}
+                                          </div>
                                         </TableCell>
-                                      )}
-                                      {selectedLevels.includes('intermediate') && (
-                                        <TableCell className="text-center border-r border-gray-300 align-middle py-3 px-4 w-24">
-                                          {parameter.intermediateValue || '—'}
+                                        <TableCell className="text-center border-r border-gray-300 align-middle py-3 px-2.5 w-16">
+                                          {normalizeDisplayValue(parameter.unit)}
                                         </TableCell>
-                                      )}
-                                      {selectedLevels.includes('superior') && (
-                                        <TableCell className="text-center border-r border-gray-300 align-middle py-3 px-4 w-24">
-                                          {parameter.superiorValue || '—'}
-                                        </TableCell>
-                                      )}
-                                    </TableRow>
-                                  ))}
+                                        {selectedLevels.includes('minimum') && (
+                                          <TableCell className="text-center border-r border-gray-300 align-middle py-3 px-2.5 w-16">
+                                            {normalizeDisplayValue(parameter.minimumValue)}
+                                          </TableCell>
+                                        )}
+                                        {selectedLevels.includes('intermediate') && (
+                                          <TableCell className="text-center border-r border-gray-300 align-middle py-3 px-2.5 w-16">
+                                            {normalizeDisplayValue(parameter.intermediateValue)}
+                                          </TableCell>
+                                        )}
+                                        {selectedLevels.includes('superior') && (
+                                          <TableCell className="text-center border-r border-gray-300 align-middle py-3 px-2.5 w-16">
+                                            {normalizeDisplayValue(parameter.superiorValue)}
+                                          </TableCell>
+                                        )}
+                                      </TableRow>
+                                    );
+                                  })}
                                 </TableBody>
                               </Table>
                             </div>
