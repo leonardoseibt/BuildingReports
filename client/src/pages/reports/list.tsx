@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { PaginationSimple as Pagination } from '@/components/ui/pagination';
 import { Plus, Pencil, Trash2, FileText, MapPin, Search, Printer } from 'lucide-react';
 import ReportForm from '@/components/reports/report-form';
 import ReportPrint from '@/components/reports/report-print';
@@ -38,6 +39,10 @@ export default function ReportsList() {
   const [search, setSearch] = useState("");
   const [printItem, setPrintItem] = useState<ReportItem | null>(null);
   const [printOpen, setPrintOpen] = useState(false);
+  
+  // Variáveis de paginação
+  const pageSize = 15;
+  const [page, setPage] = useState(1);
 
   const { data: allItems = [] } = useQuery<ReportItem[]>({ queryKey: ['/api/reports'], enabled: isAuthenticated });
 
@@ -66,6 +71,14 @@ export default function ReportsList() {
       );
     });
   }, [allItems, search]);
+
+  // Paginação
+  const pagedItems = useMemo(() => {
+    const startIndex = (page - 1) * pageSize;
+    return filteredItems.slice(startIndex, startIndex + pageSize);
+  }, [filteredItems, page, pageSize]);
+
+  const totalPages = Math.ceil(filteredItems.length / pageSize);
 
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
@@ -158,7 +171,7 @@ export default function ReportsList() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredItems.map((r) => (
+                  {pagedItems.map((r) => (
                     <TableRow key={r.id}>
                       <TableCell className="font-medium">{r.buildingName || r.buildingId}</TableCell>
                       <TableCell>
@@ -196,6 +209,17 @@ export default function ReportsList() {
                   ))}
                 </TableBody>
               </Table>
+              <div className="flex items-center justify-between gap-4 border-t px-4 py-3 text-sm text-slate-600">
+                <p>
+                  Mostrando <span className="font-semibold">{pagedItems.length}</span> de {" "}
+                  <span className="font-semibold">{filteredItems.length}</span> relatórios
+                </p>
+                <Pagination 
+                  totalPages={totalPages} 
+                  page={page} 
+                  onPageChange={setPage} 
+                />
+              </div>
             </div>
           )}
         </main>
