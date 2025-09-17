@@ -82,6 +82,8 @@ export interface ReportWithBuilding {
 // Use a single Portuguese (Brazil) collator for accent-aware, numeric-friendly sorting
 const ptCollator = new Intl.Collator('pt-BR', { usage: 'sort', sensitivity: 'accent', numeric: true, ignorePunctuation: true });
 
+export type RequirementWithCriteria = Requirement & { criteria: Criterion[] };
+
 export interface IStorage {
   // User operations
   getUser(id: number): Promise<PublicUser | undefined>;
@@ -157,6 +159,7 @@ export interface IStorage {
 
   // Requirements
   listRequirements(): Promise<Requirement[]>;
+  listRequirementsWithCriteria(): Promise<RequirementWithCriteria[]>;
   createRequirement(item: InsertRequirement): Promise<Requirement>;
   updateRequirement(id: number, item: Partial<InsertRequirement>): Promise<Requirement>;
   deleteRequirement(id: number): Promise<boolean>;
@@ -1104,6 +1107,74 @@ export class DatabaseStorage implements IStorage {
         sql`${requirements.code} collate "pt-BR-x-icu"`
       );
     return rows as any;
+  }
+  async listRequirementsWithCriteria(): Promise<RequirementWithCriteria[]> {
+    const rows = await db
+      .select({
+        id: requirements.id,
+        code: requirements.code,
+        label: requirements.label,
+        isActive: requirements.isActive,
+        createdAt: requirements.createdAt,
+        updatedAt: requirements.updatedAt,
+        criteria: sql<any>`coalesce(json_agg(json_build_object(
+          'id', ${criteria.id},
+          'code', ${criteria.code},
+          'label', ${criteria.label},
+          'isActive', ${criteria.isActive},
+          'createdAt', ${criteria.createdAt},
+          'updatedAt', ${criteria.updatedAt}
+        ) order by length(${criteria.code}), ${criteria.code} collate "pt-BR-x-icu")
+        filter (where ${criteria.id} is not null), '[]'::json)`
+      })
+      .from(requirements)
+      .leftJoin(requirementsCriteria, eq(requirements.id, requirementsCriteria.requirementId))
+      .leftJoin(criteria, eq(criteria.id, requirementsCriteria.criterionId))
+      .groupBy(
+        requirements.id,
+        requirements.code,
+        requirements.label,
+        requirements.isActive,
+        requirements.createdAt,
+        requirements.updatedAt
+      )
+      .orderBy(
+        sql`length(${requirements.code})`,
+        sql`${requirements.code} collate "pt-BR-x-icu"`
+      );
+
+    return rows.map((row) => {
+      const rawCriteria = (row as any).criteria;
+      let parsed: any[] = [];
+      if (Array.isArray(rawCriteria)) {
+        parsed = rawCriteria;
+      } else if (typeof rawCriteria === 'string') {
+        try {
+          parsed = JSON.parse(rawCriteria) ?? [];
+        } catch {
+          parsed = [];
+        }
+      } else if (rawCriteria && typeof rawCriteria === 'object') {
+        parsed = rawCriteria as any[];
+      }
+      const normalized = Array.isArray(parsed)
+        ? parsed
+            .filter((item) => item != null)
+            .map((item) => {
+              const createdAt = item.createdAt;
+              const updatedAt = item.updatedAt;
+              return {
+                ...item,
+                createdAt: typeof createdAt === 'string' ? new Date(createdAt) : createdAt,
+                updatedAt: typeof updatedAt === 'string' ? new Date(updatedAt) : updatedAt,
+              };
+            })
+        : [];
+      return {
+        ...row,
+        criteria: normalized as Criterion[],
+      } as RequirementWithCriteria;
+    });
   }
   async createRequirement(item: InsertRequirement): Promise<Requirement> {
     const [row] = await db.insert(requirements).values({ code: (item as any).code, label: (item as any).label, isActive: (item as any).isActive ?? true }).returning();
