@@ -294,8 +294,28 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
     }
   }, [attributes]);
 
+  const decodeMisencodedText = (text: string): string => {
+    if (!text) return '';
+
+    const misencodedPattern = /[ÃÂ][\u0080-\u00BF]/;
+    if (!misencodedPattern.test(text)) {
+      return text;
+    }
+
+    try {
+      const bytes = new Uint8Array(Array.from(text, char => char.charCodeAt(0)));
+      const decoder = new TextDecoder('utf-8', { fatal: false });
+      return decoder.decode(bytes);
+    } catch (error) {
+      console.warn('Não foi possível corrigir codificação do texto:', error);
+      return text;
+    }
+  };
+
   const normalizePdfText = (text: string): string => {
-    return text
+    const baseText = decodeMisencodedText(text);
+
+    return baseText
       .replace(/\u00a0/g, ' ')
       .replace(/\t/g, ' ')
       .normalize('NFKC');
@@ -745,41 +765,149 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
 
       // Informações do edifício
       if (building) {
-        doc.setFontSize(14);
+        const ensureSpaceFor = (height: number) => {
+          if (yPosition + height > pageHeight - margin) {
+            doc.addPage();
+            yPosition = margin;
+          }
+        };
+
+        const formatNumericValue = (value: unknown, unit?: string) => {
+          if (value === null || value === undefined) {
+            return null;
+          }
+
+          const rawValue = typeof value === 'string' ? value.trim() : String(value);
+          if (rawValue === '') {
+            return null;
+          }
+
+          const numeric = Number(value);
+          if (!Number.isNaN(numeric) && Number.isFinite(numeric)) {
+            const hasDecimal = Math.abs(numeric % 1) > 1e-6;
+            const formatted = numeric.toLocaleString('pt-BR', {
+              minimumFractionDigits: hasDecimal ? 2 : 0,
+              maximumFractionDigits: hasDecimal ? 2 : 0
+            });
+            return unit ? `${formatted} ${unit}` : formatted;
+          }
+
+          return compactPdfText(rawValue);
+        };
+
+        const buildingInfoSections: { title: string; items: { label: string; value: string | null }[] }[] = [
+          {
+            title: 'Identificação',
+            items: [
+              { label: 'Nome da Edificação', value: building.name || '—' },
+              { label: 'Tipologia', value: getTypologyInfo() || null },
+              { label: 'Responsável Técnico', value: getTechnicianInfo() || null }
+            ]
+          },
+          {
+            title: 'Localização',
+            items: [
+              { label: 'Endereço Completo', value: getFormattedAddress() || null }
+            ]
+          },
+          {
+            title: 'Características Técnicas',
+            items: [
+              { label: 'Área Total', value: formatNumericValue(building.totalArea, 'm²') },
+              { label: 'Altura', value: formatNumericValue(building.buildingHeight, 'm') },
+              { label: 'Pavimentos', value: formatNumericValue(building.floors) },
+              { label: 'Unidades', value: formatNumericValue(building.units) }
+            ]
+          },
+          {
+            title: 'Condições Ambientais e Classificações',
+            items: [
+              { label: 'Zona Bioclimática', value: getBioclimaticZoneInfo() || null },
+              { label: 'Isopleta', value: getIsoplethInfo() || null },
+              { label: 'Classe de Ruído', value: getNoiseClassInfo() || null },
+              { label: 'Classe de Agressividade', value: getAggressivenessClassInfo() || null }
+            ]
+          }
+        ];
+
+        doc.setFontSize(13);
         doc.setFont('DejaVuSans', 'bold');
         doc.text('Informações da Edificação', margin, yPosition);
-        yPosition += 10;
+        yPosition += 9;
 
-        doc.setFontSize(10);
-        doc.setFont('DejaVuSans', 'normal');
-        doc.text(`Nome: ${building.name || 'Não informado'}`, margin, yPosition);
-        yPosition += 6;
-        doc.text(`Endereço: ${building.street || 'Não informado'}`, margin, yPosition);
-        yPosition += 6;
-        doc.text(`Cidade: ${building.city || 'Não informada'}`, margin, yPosition);
-        yPosition += 15;
+        const availableWidth = pageWidth - margin * 2 - 6;
+
+        const addInfoSection = (sectionTitle: string, sectionItems: { label: string; value: string | null }[]) => {
+          const validItems = sectionItems
+            .map(item => ({
+              label: compactPdfText(item.label),
+              value: item.value ? compactPdfText(item.value) : null
+            }))
+            .filter(item => item.value && item.value.trim() !== '');
+
+          if (validItems.length === 0) {
+            return;
+          }
+
+          const estimatedHeight = validItems.reduce((acc, item) => {
+            const line = `${item.label}: ${item.value}`;
+            const lines = doc.splitTextToSize(line, availableWidth).length;
+            return acc + lines * 5 + 2;
+          }, 12);
+
+          ensureSpaceFor(estimatedHeight);
+
+          doc.setFontSize(11);
+          doc.setFont('DejaVuSans', 'bold');
+          doc.text(sectionTitle, margin, yPosition);
+          yPosition += 6;
+
+          doc.setFontSize(9);
+          doc.setFont('DejaVuSans', 'normal');
+
+          validItems.forEach((item, index) => {
+            const fullText = `${item.label}: ${item.value}`;
+            const lines = doc.splitTextToSize(fullText, availableWidth);
+            lines.forEach((lineText: string) => {
+              doc.text(lineText, margin + 4, yPosition);
+              yPosition += 5;
+            });
+
+            if (index < validItems.length - 1) {
+              yPosition += 2;
+            }
+          });
+
+          yPosition += 6;
+        };
+
+        buildingInfoSections.forEach(section => {
+          addInfoSection(section.title, section.items);
+        });
+
+        yPosition += 4;
       }
 
       // Processar cada requisito
       for (const requirement of sortedData) {
         const hasCriteria = requirement.criteria.length > 0;
-        const requirementEstimatedHeight = 12 + (hasCriteria ? 18 : 0);
+        const requirementEstimatedHeight = 10 + (hasCriteria ? 16 : 0);
         checkSectionBreak('requirement', requirementEstimatedHeight);
 
-        doc.setFontSize(16);
+        doc.setFontSize(14);
         doc.setFont('DejaVuSans', 'bold');
         doc.text(`Requisito: ${requirement.label}`, margin, yPosition);
-        yPosition += 12;
+        yPosition += 10;
 
         for (const criterion of requirement.criteria) {
           const hasAnalyses = criterion.analyses.some(analysis => analysis.parameters?.length);
-          const criterionEstimatedHeight = 10 + (hasAnalyses ? 16 : 0);
+          const criterionEstimatedHeight = 8 + (hasAnalyses ? 14 : 0);
           checkSectionBreak('criterion', criterionEstimatedHeight);
 
-          doc.setFontSize(14);
+          doc.setFontSize(12);
           doc.setFont('DejaVuSans', 'bold');
           doc.text(`Critério: ${criterion.label}`, margin + 5, yPosition);
-          yPosition += 10;
+          yPosition += 8;
 
           for (const analysis of criterion.analyses) {
             if (!analysis.parameters?.length) continue;
@@ -802,9 +930,9 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
               tableHeaders.push(levelLabels[levelId] || levelId);
             });
 
-            const parameterColumnWidth = 96;
-            const unitColumnWidth = 18;
-            const levelColumnWidth = 18;
+            const parameterColumnWidth = 104;
+            const unitColumnWidth = 20;
+            const levelColumnWidth = 20;
             const narrowLevelIds = new Set(['minimum', 'intermediate', 'superior']);
 
             const columnWidths = [parameterColumnWidth, unitColumnWidth];
@@ -909,13 +1037,13 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
             });
 
             const estimatedTableHeight = estimateTableHeight(tableData, columnWidths);
-            const analysisHeadingHeight = 8;
-            const analysisSpacing = 10;
+            const analysisHeadingHeight = 7;
+            const analysisSpacing = 9;
             const totalAnalysisHeight = analysisHeadingHeight + estimatedTableHeight + analysisSpacing;
 
             checkSectionBreak('analysis', totalAnalysisHeight);
 
-            doc.setFontSize(12);
+            doc.setFontSize(10);
             doc.setFont('DejaVuSans', 'bold');
             doc.text(`Análise: ${analysis.label}`, margin + 10, yPosition);
             yPosition += analysisHeadingHeight;
@@ -1213,14 +1341,14 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
           <div key={requirement.id} className={`mb-8 ${reqIndex === 0 ? '' : 'page-break-before'}`}>
             {/* Seção: Requisito */}
             <div className="mb-6">
-              <h3 className="text-lg font-bold text-gray-800 uppercase tracking-wide mb-4 pb-3 border-b-2 border-gray-600">
+              <h3 className="text-base font-bold text-gray-800 uppercase tracking-wide mb-4 pb-3 border-b-2 border-gray-600">
                 Requisito: {requirement.label}
               </h3>
 
               {requirement.criteria.map((criterion) => (
                 <div key={criterion.id} className="mb-6">
                   {/* Título do Critério */}
-                  <h4 className="text-base font-semibold text-gray-700 uppercase tracking-wide mb-3 pb-2 border-b border-gray-200">
+                  <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3 pb-2 border-b border-gray-200">
                     Critério: {criterion.label}
                   </h4>
 
@@ -1232,7 +1360,7 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
                       <div key={analysis.id} className="mb-4 ml-4">
                         {/* Card da Análise */}
                         <div className="bg-gray-50 border border-gray-200 rounded p-4 mb-4">
-                          <h5 className="text-sm font-medium text-gray-600 mb-3">
+                          <h5 className="text-xs font-medium text-gray-600 mb-3">
                             Análise: {analysis.label}
                           </h5>
 
@@ -1243,7 +1371,7 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
                                 <TableHeader>
                                   {/* Cabeçalho principal da tabela */}
                                   <TableRow className="bg-gray-100 border-b border-gray-300">
-                                    <TableHead className="border-r border-gray-300 font-semibold text-gray-800 text-center align-middle py-3 px-3">
+                                    <TableHead className="border-r border-gray-300 font-semibold text-gray-800 text-center align-middle py-3 pl-4 pr-5 min-w-[18rem]">
                                       Parâmetro
                                     </TableHead>
                                     <TableHead className="border-r border-gray-300 font-semibold text-gray-800 text-center align-middle py-3 px-3 w-20">
@@ -1269,7 +1397,7 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
                                 <TableBody>
                                   {analysis.parameters.map((parameter) => (
                                     <TableRow key={parameter.id} className="hover:bg-gray-50 border-b border-gray-200">
-                                      <TableCell className="border-r border-gray-300 align-middle py-3 px-3 font-medium">
+                                      <TableCell className="border-r border-gray-300 align-middle py-3 pl-4 pr-5 font-medium min-w-[18rem]">
                                         <div>
                                           <div className="font-medium text-gray-900">
                                             {formatTextWithSeparators(parameter.label)}
