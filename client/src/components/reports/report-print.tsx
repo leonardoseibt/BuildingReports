@@ -881,27 +881,8 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
       doc.setTextColor(255, 255, 255); // Texto branco
       doc.setFontSize(18);
       doc.setFont('DejaVuSans', 'bold');
-      const titleY = margin + 12;
-      doc.text('PERFIL DE DESEMPENHO DA EDIFICAÇÃO', pageWidth / 2, titleY, { align: 'center' });
-      
-      // Subtítulo
-      doc.setFontSize(14);
-      doc.setFont('DejaVuSans', 'normal');
-      const subtitleY = titleY + 8;
-      doc.text('PDE - Relatório Técnico', pageWidth / 2, subtitleY, { align: 'center' });
-      
-      // Data e versão no canto direito
-      doc.setFontSize(9);
-      doc.setFont('DejaVuSans', 'normal');
-      const dateText = new Date().toLocaleDateString('pt-BR');
-      const versionText = 'Versão 1.0';
-      doc.text(dateText, pageWidth - margin - 5, titleY, { align: 'right' });
-      doc.text(versionText, pageWidth - margin - 5, titleY + 6, { align: 'right' });
-      
-      // Resetar cor do texto para preto
-      doc.setTextColor(0, 0, 0);
-      
-      yPosition = margin + headerHeight + 10;
+      doc.text('Perfil de Desempenho da Edificação - PDE', pageWidth / 2, yPosition, { align: 'center' });
+      yPosition += 14;
 
       // Informações do edifício com layout profissional
       if (building) {
@@ -1003,7 +984,7 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
                 content: 'Informações da Edificação',
                 colSpan: 4,
                 styles: {
-                  fillColor: [80, 80, 80], // Cinza escuro profissional
+                  fillColor: [30, 64, 175],
                   textColor: [255, 255, 255],
                   fontSize: 11,
                   fontStyle: 'bold',
@@ -1020,8 +1001,8 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
               content: section.title,
               colSpan: 4,
               styles: {
-                fillColor: [220, 220, 220], // Cinza claro profissional
-                textColor: [40, 40, 40], // Texto cinza escuro
+                fillColor: [243, 244, 246],
+                textColor: [55, 65, 81],
                 fontSize: 10,
                 fontStyle: 'bold',
                 halign: 'left',
