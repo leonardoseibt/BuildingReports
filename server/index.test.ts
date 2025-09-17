@@ -7,6 +7,7 @@ import './__tests__/buildings.test.js';
 import './__tests__/users-auth.test.ts';
 import './__tests__/reports-definitions.test.ts';
 import './__tests__/pagination.test.ts';
+import './__tests__/dashboard-stats.test.ts';
 
 test('sanitizeLogData removes sensitive fields recursively', () => {
   const input = { passwordHash: 'abc', nested: { token: 'x', value: 1 } };
