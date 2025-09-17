@@ -773,6 +773,15 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
               return textValue === '' ? '—' : textValue;
             };
 
+            const formatParameterValue = (value: unknown): string => {
+              if (value === null || value === undefined) {
+                return '—';
+              }
+
+              const textValue = String(value).trim();
+              return textValue === '' ? '—' : textValue;
+            };
+
             // Processar parâmetros
             analysis.parameters.forEach(parameter => {
               const row: string[] = [];
