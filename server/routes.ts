@@ -10,12 +10,29 @@ import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { pool } from './db';
 
-function getPaginationParams(query: any) {
-  const limit = Math.min(parseInt(query?.limit as string) || 10, 100);
-  const offset = query?.offset !== undefined ? parseInt(query.offset as string) || 0 : undefined;
-  const pageParam = query?.page !== undefined ? parseInt(query.page as string) || 1 : undefined;
-  const computedOffset = offset ?? ((pageParam && pageParam > 0 ? pageParam - 1 : 0) * limit);
-  const currentPage = pageParam ?? Math.floor(computedOffset / limit) + 1;
+export function getPaginationParams(query: any) {
+  const rawLimit = Number.parseInt(query?.limit as string, 10);
+  let limit = Number.isFinite(rawLimit) ? rawLimit : 10;
+  if (limit < 1) limit = 1;
+  if (limit > 100) limit = 100;
+
+  let offset: number | undefined;
+  if (query?.offset !== undefined) {
+    const rawOffset = Number.parseInt(query.offset as string, 10);
+    offset = Number.isFinite(rawOffset) ? rawOffset : 0;
+    if (offset < 0) offset = 0;
+  }
+
+  let page: number | undefined;
+  if (query?.page !== undefined) {
+    const rawPage = Number.parseInt(query.page as string, 10);
+    page = Number.isFinite(rawPage) ? rawPage : 1;
+    if (page < 1) page = 1;
+  }
+
+  const computedOffset = offset ?? ((page ?? 1) - 1) * limit;
+  const currentPage = Math.max(1, page ?? Math.floor(computedOffset / limit) + 1);
+
   return { limit, offset: computedOffset, page: currentPage };
 }
 
@@ -1059,9 +1076,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const rows = await storage.listParameters(analysisId, criterionId, requirementId);
         return res.json(rows);
       }
-      const page = req.query.page ? Number(req.query.page) : 1;
-      const limit = req.query.limit ? Math.min(Number(req.query.limit), 100) : 250;
-      const search = req.query.search ? String(req.query.search) : undefined;
+      const { page, limit } = getPaginationParams(req.query);
+      const search = typeof req.query.search === 'string' ? req.query.search : undefined;
       const { items, total } = await storage.listParametersPaginated({ analysisId, criterionId, requirementId, page, limit, search });
       return res.json({ items, total, page, limit, totalPages: Math.max(1, Math.ceil(total / limit)) });
     } catch (err:any) {
