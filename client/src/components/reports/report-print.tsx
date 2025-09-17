@@ -2,7 +2,18 @@ import { useQuery } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { FileDown } from 'lucide-react';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import type { Building, Requirement, Criterion, Analysis, Parameter } from '@shared/schema';
+import '../../styles/pdf-print.css';
+
+// Declaração de tipos para jspdf-autotable
+declare module 'jspdf' {
+  interface jsPDF {
+    autoTable: typeof autoTable;
+  }
+}
 
 interface ReportItem {
   id: number;
@@ -516,20 +527,23 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
     });
   };
 
-  // Criar um mapa de avaliações selecionadas
-  const selectedEvaluations = new Map<string, string[]>();
-  evaluations.forEach((ev: any) => {
-    const key = ev.analysisId ? `analysis-${ev.analysisId}` : ev.criterionId ? `crit-${ev.criterionId}` : `req-${ev.requirementId}`;
-    if (!selectedEvaluations.has(key)) {
-      selectedEvaluations.set(key, []);
-    }
-    // Fix: usando 'level' ao invés de 'performanceLevel' conforme o schema original
-    if (ev.level && !selectedEvaluations.get(key)!.includes(ev.level)) {
-      selectedEvaluations.get(key)!.push(ev.level);
-    }
-  });
-
-  // Agrupar dados por Requisito -> Critério -> Análises com Parâmetros
+      // Criar um mapa de avaliações selecionadas
+      const selectedEvaluations = new Map<string, string[]>();
+      console.log('Processing evaluations:', evaluations);
+      
+      evaluations.forEach((ev: any) => {
+        console.log('Evaluation item:', ev);
+        const key = ev.analysisId ? `analysis-${ev.analysisId}` : ev.criterionId ? `crit-${ev.criterionId}` : `req-${ev.requirementId}`;
+        if (!selectedEvaluations.has(key)) {
+          selectedEvaluations.set(key, []);
+        }
+        // Fix: usando 'level' ao invés de 'performanceLevel' conforme o schema original
+        if (ev.level && !selectedEvaluations.get(key)!.includes(ev.level)) {
+          selectedEvaluations.get(key)!.push(ev.level);
+        }
+      });
+      
+      console.log('Final selectedEvaluations map:', selectedEvaluations);  // Agrupar dados por Requisito -> Critério -> Análises com Parâmetros
   const groupedData: RequirementWithCriteria[] = requirements.map(req => ({
     ...req,
     criteria: criteria
@@ -605,23 +619,295 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
         }))
     }));
 
+  // Função para gerar PDF
+  const generatePDF = async (buildingName?: string) => {
+    if (!sortedData || !building) {
+      alert('Dados do relatório não carregados.');
+      return;
+    }
+
+    // Mostrar feedback de loading
+    const originalButton = document.querySelector('.pdf-button') as HTMLButtonElement;
+    if (originalButton) {
+      originalButton.disabled = true;
+      originalButton.textContent = 'Gerando PDF...';
+    }
+
+    try {
+      console.log('=== DEBUG PDF GENERATION ===');
+      console.log('Evaluations:', evaluations);
+      console.log('Item reportData:', item.reportData);
+      console.log('Iniciando geração do PDF com jsPDF...');
+      
+      // Criar novo documento PDF
+      const doc = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+
+      // Configurações de página
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const margin = 15;
+      
+      let yPosition = margin;
+
+      // Função para adicionar nova página se necessário
+      const checkPageBreak = (requiredHeight: number) => {
+        if (yPosition + requiredHeight > pageHeight - margin) {
+          doc.addPage();
+          yPosition = margin;
+          return true;
+        }
+        return false;
+      };
+
+      // Função melhorada para verificar espaço para seções
+      const checkSectionBreak = (sectionType: 'requirement' | 'criterion' | 'analysis', estimatedHeight: number) => {
+        const minSpaceRequired = sectionType === 'requirement' ? 50 : 
+                                 sectionType === 'criterion' ? 35 : 25;
+        
+        if (yPosition + Math.max(estimatedHeight, minSpaceRequired) > pageHeight - margin) {
+          doc.addPage();
+          yPosition = margin;
+          return true;
+        }
+        return false;
+      };
+
+      // Título do relatório
+      doc.setFontSize(20);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Relatório de Desempenho da Edificação (PDE)', margin, yPosition);
+      yPosition += 15;
+
+      // Informações do edifício
+      if (building) {
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Informações da Edificação', margin, yPosition);
+        yPosition += 10;
+
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`Nome: ${building.name || 'Não informado'}`, margin, yPosition);
+        yPosition += 6;
+        doc.text(`Endereço: ${building.street || 'Não informado'}`, margin, yPosition);
+        yPosition += 6;
+        doc.text(`Cidade: ${building.city || 'Não informada'}`, margin, yPosition);
+        yPosition += 15;
+      }
+
+      // Processar cada requisito
+      for (const requirement of sortedData) {
+        // Verificar quebra de página para requisito
+        checkSectionBreak('requirement', 50);
+        
+        // Título do Requisito
+        doc.setFontSize(16);
+        doc.setFont('helvetica', 'bold');
+        doc.text(`Requisito: ${requirement.label}`, margin, yPosition);
+        yPosition += 12;
+
+        // Processar critérios
+        for (const criterion of requirement.criteria) {
+          // Verificar quebra de página para critério
+          checkSectionBreak('criterion', 35);
+          
+          // Título do Critério
+          doc.setFontSize(14);
+          doc.setFont('helvetica', 'bold');
+          doc.text(`Critério: ${criterion.label}`, margin + 5, yPosition);
+          yPosition += 10;
+
+          // Processar análises
+          for (const analysis of criterion.analyses) {
+            if (!analysis.parameters?.length) continue;
+
+            // Verificar quebra de página para análise
+            checkSectionBreak('analysis', 25);
+            
+            // Título da Análise
+            doc.setFontSize(12);
+            doc.setFont('helvetica', 'bold');
+            doc.text(`Análise: ${analysis.label}`, margin + 10, yPosition);
+            yPosition += 8;
+
+            // Obter níveis selecionados para esta análise
+            const analysisKey = `${requirement.id}-${criterion.id}-${analysis.id}`;
+            let selectedLevels = selectedEvaluations.get(analysisKey) || [];
+            
+            console.log(`Analysis Key: ${analysisKey}, Selected Levels:`, selectedLevels);
+            console.log('Full selectedEvaluations map:', selectedEvaluations);
+            
+            // FALLBACK: Se não há níveis selecionados, usar todos os níveis padrão
+            if (selectedLevels.length === 0) {
+              selectedLevels = ['minimum', 'intermediate', 'superior'];
+              console.log('No selected levels found, using default:', selectedLevels);
+            }
+
+            // Preparar dados da tabela
+            const tableHeaders = ['Parâmetro', 'UN'];
+            
+            // Mapear IDs dos níveis para labels
+            const levelLabels: { [key: string]: string } = {
+              'minimum': 'Min',
+              'intermediate': 'Int', 
+              'superior': 'Sup'
+            };
+            
+            // Adicionar colunas dos níveis selecionados
+            selectedLevels.forEach(levelId => {
+              tableHeaders.push(levelLabels[levelId] || levelId);
+            });
+
+            const tableData: string[][] = [];
+
+            // Processar parâmetros
+            analysis.parameters.forEach(parameter => {
+              const row: string[] = [];
+              
+              console.log('=== PARAMETER DEBUG ===');
+              console.log('Parameter full object:', parameter);
+              console.log('Parameter label:', parameter.label);
+              console.log('Parameter observation:', parameter.observation);
+              console.log('Parameter values object:', parameter.values);
+              console.log('Selected levels:', selectedLevels);
+              
+              // Nome do parâmetro
+              row.push(parameter.label || 'Parâmetro');
+              
+              // Unidade
+              row.push(parameter.unit || '—');
+
+              // Valores dos níveis
+              selectedLevels.forEach(levelId => {
+                const value = parameter.values?.[levelId];
+                console.log(`Level ${levelId}:`, value);
+                
+                if (value?.value !== undefined && value.value !== null) {
+                  row.push(String(value.value));
+                } else {
+                  row.push('—');
+                }
+              });
+
+              tableData.push(row);
+
+              // Adicionar observação se existir - SEMPRE mostrar observações
+              if (parameter.observation && parameter.observation.trim()) {
+                console.log('Adding observation row for:', parameter.label);
+                const obsRow = [`    Obs: ${parameter.observation}`, '', ...Array(selectedLevels.length).fill('')];
+                tableData.push(obsRow);
+              } else {
+                console.log('No observation found for parameter:', parameter.label);
+              }
+            });
+
+            // Verificar se há espaço para a tabela
+            const estimatedTableHeight = (tableData.length + 2) * 6;
+            checkPageBreak(estimatedTableHeight);
+
+            // Gerar tabela com autoTable
+            autoTable(doc, {
+              head: [tableHeaders],
+              body: tableData,
+              startY: yPosition,
+              margin: { left: margin + 10, right: margin },
+              styles: {
+                fontSize: 9,
+                cellPadding: 3,
+                overflow: 'linebreak',
+                lineColor: [200, 200, 200],
+                lineWidth: 0.1
+              },
+              headStyles: {
+                fillColor: [240, 240, 240],
+                textColor: [50, 50, 50],
+                fontStyle: 'bold',
+                fontSize: 10
+              },
+              bodyStyles: {
+                textColor: [60, 60, 60]
+              },
+              alternateRowStyles: {
+                fillColor: [250, 250, 250]
+              },
+              columnStyles: {
+                0: { cellWidth: 60 }, // Parâmetro - mais largo
+                1: { cellWidth: 15, halign: 'center' } // UN - centralizado
+              },
+              didParseCell: (data) => {
+                // Estilo especial para linhas de observação
+                if (data.cell.text[0] && data.cell.text[0].startsWith('    Obs:')) {
+                  data.cell.styles.fillColor = [245, 245, 245];
+                  data.cell.styles.fontStyle = 'italic';
+                  data.cell.styles.fontSize = 8;
+                  data.cell.styles.textColor = [100, 100, 100];
+                }
+              },
+              didDrawPage: (data) => {
+                // Atualizar posição Y após a tabela
+                yPosition = data.cursor?.y || yPosition;
+              }
+            });
+
+            yPosition += 10; // Espaço após cada análise
+          }
+          yPosition += 5; // Espaço após cada critério
+        }
+        yPosition += 10; // Espaço após cada requisito
+      }
+
+      // Salvar o PDF
+      const filename = `PDE_${buildingName || 'Relatorio'}_${new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')}.pdf`;
+      doc.save(filename);
+      
+      console.log('PDF gerado com sucesso!');
+    } catch (error) {
+      console.error('Erro ao gerar PDF:', error);
+      alert('Erro ao gerar PDF. Tente novamente.');
+    } finally {
+      // Restaurar botão
+      if (originalButton) {
+        originalButton.disabled = false;
+        originalButton.innerHTML = '<svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>Gerar PDF';
+      }
+    }
+  };
+
   return (
     <div className="p-6">
-      {/* Cabeçalho Profissional e Discreto */}
-      <div className="mb-8">
-        {/* Header Principal */}
-        <div className="bg-gray-800 text-white rounded-t-lg p-6 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-semibold text-white mb-1">
-                PDE - Perfil de Desempenho da Edificação
-              </h1>
-              <p className="text-lg text-gray-200">
-                {building?.name || `Edificação ID ${item.buildingId}`}
-              </p>
-            </div>
-            <div className="text-right text-gray-300 text-sm">
-              <div>Relatório Técnico</div>
+      {/* Botão de Gerar PDF */}
+      <div className="mb-6 no-print">
+        <Button 
+          onClick={() => generatePDF(building?.name)}
+          className="bg-blue-600 hover:bg-blue-700 text-white"
+          size="sm"
+        >
+          <FileDown className="w-4 h-4 mr-2" />
+          Gerar PDF
+        </Button>
+      </div>
+
+      {/* Conteúdo do relatório para PDF */}
+      <div id="report-content" className="pdf-optimized print-content">
+        {/* Cabeçalho Profissional e Discreto */}
+        <div className="mb-8">
+          {/* Header Principal */}
+          <div className="bg-gray-800 text-white rounded-t-lg p-6 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-2xl font-semibold text-white mb-1">
+                  PDE - Perfil de Desempenho da Edificação
+                </h1>
+                <p className="text-lg text-gray-200">
+                  {building?.name || `Edificação ID ${item.buildingId}`}
+                </p>
+              </div>
+              <div className="text-right text-gray-300 text-sm">
+                <div>Relatório Técnico</div>
               <div className="font-medium">
                 {item.generatedAt ? new Date(item.generatedAt).toLocaleDateString('pt-BR') : 'Hoje'}
               </div>
@@ -631,10 +917,10 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
         </div>
         
         {/* Informações da Edificação */}
-        <div className="bg-white border border-gray-300 rounded-b-lg p-6 shadow-sm">
+        <div className="bg-white border border-gray-300 rounded-b-lg p-6 shadow-sm no-page-break">
           
           {/* Seção: Identificação */}
-          <div className="mb-6">
+          <div className="mb-6 no-page-break">
             <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wide mb-3 pb-2 border-b border-gray-200">
               Identificação
             </h3>
@@ -762,8 +1048,8 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
 
       {/* Conteúdo do Relatório */}
       <div className="print-content">
-        {sortedData.map((requirement) => (
-          <div key={requirement.id} className="mb-8">
+        {sortedData.map((requirement, reqIndex) => (
+          <div key={requirement.id} className={`mb-8 ${reqIndex === 0 ? '' : 'page-break-before'}`}>
             {/* Seção: Requisito */}
             <div className="mb-6">
               <h3 className="text-lg font-bold text-gray-800 uppercase tracking-wide mb-4 pb-3 border-b-2 border-gray-600">
@@ -794,26 +1080,27 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
                             <div className="bg-white rounded border border-gray-300 overflow-hidden">
                               <Table>
                                 <TableHeader>
+                                  {/* Cabeçalho principal da tabela */}
                                   <TableRow className="bg-gray-100 border-b border-gray-300">
                                     <TableHead className="border-r border-gray-300 font-semibold text-gray-800 text-center align-middle py-3 px-3">
                                       Parâmetro
                                     </TableHead>
                                     <TableHead className="border-r border-gray-300 font-semibold text-gray-800 text-center align-middle py-3 px-3 w-20">
-                                      Unidade
+                                      UN
                                     </TableHead>
                                     {selectedLevels.includes('minimum') && (
                                       <TableHead className="border-r border-gray-300 font-semibold text-gray-800 text-center align-middle py-3 px-3 w-20">
-                                        Mínimo
+                                        Min
                                       </TableHead>
                                     )}
                                     {selectedLevels.includes('intermediate') && (
                                       <TableHead className="border-r border-gray-300 font-semibold text-gray-800 text-center align-middle py-3 px-3 w-20">
-                                        Intermediário
+                                        Int
                                       </TableHead>
                                     )}
                                     {selectedLevels.includes('superior') && (
                                       <TableHead className="border-r border-gray-300 font-semibold text-gray-800 text-center align-middle py-3 px-3 w-20">
-                                        Superior
+                                        Sup
                                       </TableHead>
                                     )}
                                   </TableRow>
@@ -873,6 +1160,7 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
             <p className="text-sm mt-2">Verifique se há avaliações de desempenho selecionadas.</p>
           </div>
         )}
+      </div>
       </div>
     </div>
   );

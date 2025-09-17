@@ -1,0 +1,23 @@
+/* Estilos para ocultar elementos na impressão/PDF */
+@media print {
+  .no-print { 
+    display: none !important; 
+  }
+}
+
+/* Estilos para melhor apresentação na tela */
+.print-content {
+  background: white;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Manter cores nos backgrounds */
+.pdf-optimized {
+  -webkit-print-color-adjust: exact !important;
+  print-color-adjust: exact !important;
+}
+
+.pdf-optimized * {
+  -webkit-print-color-adjust: exact !important;
+  print-color-adjust: exact !important;
+}
