@@ -294,11 +294,22 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
     }
   }, [attributes]);
 
+  const normalizePdfText = (text: string): string => {
+    return text
+      .replace(/\u00a0/g, ' ')
+      .replace(/\t/g, ' ')
+      .normalize('NFKC');
+  };
+
+  const compactPdfText = (text: string): string => {
+    return normalizePdfText(text).replace(/\s+/g, ' ').trim();
+  };
+
   // Função para formatar texto com quebras de linha
   const formatTextWithSeparators = (text: string | null | undefined): string => {
     if (!text) return '';
-    const normalized = text.normalize('NFC');
-    return normalized.replace(/\r?\n/g, ' • ');
+    const normalized = normalizePdfText(text);
+    return compactPdfText(normalized.replace(/\r?\n/g, ' • '));
   };
 
   // Função para verificar se um parâmetro tem valores nos níveis selecionados
@@ -625,14 +636,14 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
   const formatTextWithLineBreaks = (text: string): string => {
     if (!text) return '';
 
-    const normalized = text.normalize('NFC');
+    const normalized = normalizePdfText(text);
 
-    return normalized
-      .replace(/\r\n/g, ' • ')
-      .replace(/\n/g, ' • ')
-      .replace(/\r/g, ' • ')
-      .replace(/\s+/g, ' ')
-      .trim();
+    return compactPdfText(
+      normalized
+        .replace(/\r\n/g, ' • ')
+        .replace(/\n/g, ' • ')
+        .replace(/\r/g, ' • ')
+    );
   };
 
   const generatePDF = async (buildingName?: string) => {
@@ -791,21 +802,44 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
               tableHeaders.push(levelLabels[levelId] || levelId);
             });
 
-            const parameterColumnWidth = 90;
-            const unitColumnWidth = 15;
+            const parameterColumnWidth = 96;
+            const unitColumnWidth = 18;
             const levelColumnWidth = 18;
             const narrowLevelIds = new Set(['minimum', 'intermediate', 'superior']);
 
             const columnWidths = [parameterColumnWidth, unitColumnWidth];
             const columnStyles: Record<number, any> = {
-              0: { cellWidth: parameterColumnWidth, halign: 'left', valign: 'top', overflow: 'linebreak' },
-              1: { cellWidth: unitColumnWidth, halign: 'center', valign: 'middle' }
+              0: {
+                cellWidth: parameterColumnWidth,
+                halign: 'left',
+                valign: 'top',
+                overflow: 'linebreak',
+                font: 'DejaVuSans',
+                fontStyle: 'normal',
+                fontSize: 8,
+                lineHeight: 1.2
+              },
+              1: {
+                cellWidth: unitColumnWidth,
+                halign: 'center',
+                valign: 'middle',
+                font: 'DejaVuSans',
+                fontStyle: 'normal',
+                fontSize: 8,
+                lineHeight: 1.15
+              }
             };
 
             selectedLevels.forEach((levelId, index) => {
               const width = narrowLevelIds.has(levelId) ? levelColumnWidth : levelColumnWidth + 6;
               columnWidths.push(width);
-              columnStyles[index + 2] = { cellWidth: width, halign: 'center', valign: 'middle' };
+              columnStyles[index + 2] = {
+                cellWidth: width,
+                halign: 'center',
+                valign: 'middle',
+                font: 'DejaVuSans',
+                fontStyle: 'normal'
+              };
             });
 
             const tableData: any[] = [];
@@ -815,7 +849,7 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
                 return '—';
               }
 
-              const textValue = String(value).normalize('NFC').trim();
+              const textValue = compactPdfText(String(value));
               return textValue === '' ? '—' : textValue;
             };
 
@@ -825,7 +859,8 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
               const parameterName = formatTextWithLineBreaks(parameter.label || 'Parâmetro');
               row.push(parameterName);
 
-              const unitText = (parameter.unit || '—').toString().normalize('NFC');
+              const rawUnit = parameter.unit ? String(parameter.unit) : '—';
+              const unitText = compactPdfText(rawUnit) || '—';
               row.push(unitText);
 
               const directValueMap: Record<string, unknown> = {
@@ -889,7 +924,7 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
               head: [tableHeaders],
               body: tableData,
               startY: yPosition,
-              margin: { left: margin + 8, right: margin + 8 },
+              margin: { left: margin + 6, right: margin + 6 },
               tableWidth: 'auto',
               styles: {
                 fontSize: 9,
@@ -929,6 +964,7 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
                   data.cell.styles.valign = 'middle';
                   data.cell.styles.font = 'DejaVuSans';
                   data.cell.styles.fontStyle = 'bold';
+                  data.cell.styles.fontSize = 10;
                 }
 
                 if (typeof data.cell.raw === 'object' && data.cell.raw?.colSpan === tableHeaders.length) {
@@ -945,11 +981,26 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
                     const processedText = formatTextWithLineBreaks(data.cell.raw.content);
                     data.cell.text = [processedText];
                   }
+
+                  return;
+                }
+
+                if (data.section === 'body') {
+                  data.cell.styles.font = 'DejaVuSans';
+
+                  if (data.column.index === 0) {
+                    data.cell.styles.halign = 'left';
+                    data.cell.styles.valign = 'top';
+                    data.cell.styles.fontSize = 8;
+                    data.cell.styles.lineHeight = 1.2;
+                  } else if (data.column.index === 1) {
+                    data.cell.styles.halign = 'center';
+                    data.cell.styles.fontSize = 8;
+                    data.cell.styles.lineHeight = 1.15;
+                  }
                 }
 
                 if (data.section === 'body' && data.cell.raw && typeof data.cell.raw === 'string') {
-                  data.cell.styles.font = 'DejaVuSans';
-                  data.cell.styles.fontStyle = 'normal';
                   if (data.cell.text && data.cell.text.length > 0) {
                     data.cell.text = data.cell.text.map((text: string) =>
                       formatTextWithLineBreaks(text)
