@@ -764,41 +764,58 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
 
             const tableData: string[][] = [];
 
+            const formatParameterValue = (value: unknown): string => {
+              if (value === null || value === undefined) {
+                return '—';
+              }
+
+              const textValue = String(value).trim();
+              return textValue === '' ? '—' : textValue;
+            };
+
             // Processar parâmetros
             analysis.parameters.forEach(parameter => {
               const row: string[] = [];
-              
+
               console.log('=== PARAMETER DEBUG ===');
               console.log('Parameter full object:', parameter);
               console.log('Parameter label:', parameter.label);
-              console.log('Parameter observation:', parameter.observation);
-              console.log('Parameter values object:', parameter.values);
+              console.log('Parameter notes/observation:', parameter.notes ?? parameter.observation);
               console.log('Selected levels:', selectedLevels);
-              
+
               // Nome do parâmetro
               row.push(parameter.label || 'Parâmetro');
-              
+
               // Unidade
               row.push(parameter.unit || '—');
 
+              const directValueMap: Record<string, unknown> = {
+                minimum: parameter.minimumValue,
+                intermediate: parameter.intermediateValue,
+                superior: parameter.superiorValue,
+              };
+
               // Valores dos níveis
               selectedLevels.forEach(levelId => {
-                const value = parameter.values?.[levelId];
-                console.log(`Level ${levelId}:`, value);
-                
-                if (value?.value !== undefined && value.value !== null) {
-                  row.push(String(value.value));
-                } else {
-                  row.push('—');
+                let resolvedValue = directValueMap[levelId];
+
+                if (resolvedValue === undefined || resolvedValue === null) {
+                  const nestedValue = parameter.values?.[levelId];
+                  resolvedValue = nestedValue?.value ?? null;
                 }
+
+                console.log(`Level ${levelId}:`, resolvedValue);
+
+                row.push(formatParameterValue(resolvedValue));
               });
 
               tableData.push(row);
 
               // Adicionar observação se existir - SEMPRE mostrar observações
-              if (parameter.observation && parameter.observation.trim()) {
+              const observationText = formatTextWithSeparators(parameter.notes ?? parameter.observation);
+              if (observationText && observationText.trim()) {
                 console.log('Adding observation row for:', parameter.label);
-                const obsRow = [`    Obs: ${parameter.observation}`, '', ...Array(selectedLevels.length).fill('')];
+                const obsRow = [`    Obs: ${observationText}`, '', ...Array(selectedLevels.length).fill('')];
                 tableData.push(obsRow);
               } else {
                 console.log('No observation found for parameter:', parameter.label);
@@ -810,6 +827,15 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
             checkPageBreak(estimatedTableHeight);
 
             // Gerar tabela com autoTable
+            const columnStyles: Record<number, any> = {
+              0: { cellWidth: 60 }, // Parâmetro - mais largo
+              1: { cellWidth: 15, halign: 'center' } // UN - centralizado
+            };
+
+            selectedLevels.forEach((_, index) => {
+              columnStyles[index + 2] = { halign: 'center' };
+            });
+
             autoTable(doc, {
               head: [tableHeaders],
               body: tableData,
@@ -834,11 +860,8 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
               alternateRowStyles: {
                 fillColor: [250, 250, 250]
               },
-              columnStyles: {
-                0: { cellWidth: 60 }, // Parâmetro - mais largo
-                1: { cellWidth: 15, halign: 'center' } // UN - centralizado
-              },
-              didParseCell: (data) => {
+              columnStyles,
+              didParseCell: (data: any) => {
                 // Estilo especial para linhas de observação
                 if (data.cell.text[0] && data.cell.text[0].startsWith('    Obs:')) {
                   data.cell.styles.fillColor = [245, 245, 245];
@@ -847,7 +870,7 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
                   data.cell.styles.textColor = [100, 100, 100];
                 }
               },
-              didDrawPage: (data) => {
+              didDrawPage: (data: any) => {
                 // Atualizar posição Y após a tabela
                 yPosition = data.cursor?.y || yPosition;
               }
