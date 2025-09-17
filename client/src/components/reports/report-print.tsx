@@ -5,6 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { FileDown } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { ensurePdfFonts } from '@/lib/pdf-font-loader';
 import type { Building, Requirement, Criterion, Analysis, Parameter } from '@shared/schema';
 import '../../styles/pdf-print.css';
 
@@ -296,8 +297,8 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
   // Função para formatar texto com quebras de linha
   const formatTextWithSeparators = (text: string | null | undefined): string => {
     if (!text) return '';
-    // Substitui quebras de linha por separador visual
-    return text.replace(/\n/g, ' • ');
+    const normalized = text.normalize('NFC');
+    return normalized.replace(/\r?\n/g, ' • ');
   };
 
   // Função para verificar se um parâmetro tem valores nos níveis selecionados
@@ -623,12 +624,14 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
   // Função para formatar texto com separadores ao invés de quebras de linha
   const formatTextWithLineBreaks = (text: string): string => {
     if (!text) return '';
-    
-    return text
-      .replace(/\r\n/g, ' • ') // Substituir quebras de linha Windows por separador
-      .replace(/\n/g, ' • ')   // Substituir quebras de linha Unix por separador
-      .replace(/\r/g, ' • ')   // Substituir quebras de linha Mac por separador
-      .replace(/\s+/g, ' ')    // Normalizar espaços múltiplos
+
+    const normalized = text.normalize('NFC');
+
+    return normalized
+      .replace(/\r\n/g, ' • ')
+      .replace(/\n/g, ' • ')
+      .replace(/\r/g, ' • ')
+      .replace(/\s+/g, ' ')
       .trim();
   };
 
@@ -659,9 +662,9 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
         putOnlyUsedFonts: true,
         compress: false
       });
-      
-      // Configurar encoding para suportar caracteres especiais
-      doc.setFont('helvetica', 'normal');
+
+      await ensurePdfFonts(doc);
+      doc.setFont('DejaVuSans', 'normal');
       doc.setCharSpace(0);
 
       // Configurações de página
@@ -671,9 +674,14 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
       
       let yPosition = margin;
 
-      // Função para adicionar nova página se necessário
-      const checkPageBreak = (requiredHeight: number) => {
-        if (yPosition + requiredHeight > pageHeight - margin) {
+      // Função para verificar espaço para seções
+      const checkSectionBreak = (sectionType: 'requirement' | 'criterion' | 'analysis', estimatedHeight: number) => {
+        const minSpaceRequired = sectionType === 'requirement' ? 50 :
+                                 sectionType === 'criterion' ? 35 : 25;
+
+        const requiredSpace = Math.max(estimatedHeight, minSpaceRequired);
+
+        if (yPosition + requiredSpace > pageHeight - margin) {
           doc.addPage();
           yPosition = margin;
           return true;
@@ -681,34 +689,58 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
         return false;
       };
 
-      // Função melhorada para verificar espaço para seções
-      const checkSectionBreak = (sectionType: 'requirement' | 'criterion' | 'analysis', estimatedHeight: number) => {
-        const minSpaceRequired = sectionType === 'requirement' ? 50 : 
-                                 sectionType === 'criterion' ? 35 : 25;
-        
-        if (yPosition + Math.max(estimatedHeight, minSpaceRequired) > pageHeight - margin) {
-          doc.addPage();
-          yPosition = margin;
-          return true;
-        }
-        return false;
+      const estimateObservationHeight = (text: string, columnWidths: number[]) => {
+        if (!text) return 8;
+        const totalWidth = columnWidths.reduce((acc, width) => acc + width, 0);
+        const approxCharsPerLine = Math.max(1, Math.floor(totalWidth / 2.4));
+        const lines = Math.max(1, Math.ceil(text.length / approxCharsPerLine));
+        return lines * 6 + 4;
+      };
+
+      const estimateStandardRowHeight = (row: string[], columnWidths: number[]) => {
+        let maxLines = 1;
+
+        row.forEach((cell, index) => {
+          const textValue = (cell ?? '').toString().normalize('NFC');
+          if (!textValue) return;
+
+          const approxCharsPerLine = Math.max(1, Math.floor(columnWidths[index] / 2.4));
+          const lines = Math.max(1, Math.ceil(textValue.length / approxCharsPerLine));
+          maxLines = Math.max(maxLines, lines);
+        });
+
+        return maxLines * 6 + 2;
+      };
+
+      const estimateTableHeight = (rows: any[], columnWidths: number[]) => {
+        const headerHeight = 10;
+
+        return rows.reduce((height, row) => {
+          if (Array.isArray(row) && row.length > 0 && typeof row[0] === 'object' && 'colSpan' in row[0]) {
+            const textValue = (row[0] as { content?: string }).content ?? '';
+            return height + estimateObservationHeight(textValue, columnWidths);
+          }
+
+          const normalizedRow = (row as string[]).map(cell => (cell ?? '').toString());
+          return height + estimateStandardRowHeight(normalizedRow, columnWidths);
+        }, headerHeight);
       };
 
       // Título do relatório
       doc.setFontSize(20);
-      doc.setFont('helvetica', 'bold');
+      doc.setFont('DejaVuSans', 'bold');
       doc.text('Relatório de Desempenho da Edificação (PDE)', margin, yPosition);
       yPosition += 15;
 
       // Informações do edifício
       if (building) {
         doc.setFontSize(14);
-        doc.setFont('helvetica', 'bold');
+        doc.setFont('DejaVuSans', 'bold');
         doc.text('Informações da Edificação', margin, yPosition);
         yPosition += 10;
 
         doc.setFontSize(10);
-        doc.setFont('helvetica', 'normal');
+        doc.setFont('DejaVuSans', 'normal');
         doc.text(`Nome: ${building.name || 'Não informado'}`, margin, yPosition);
         yPosition += 6;
         doc.text(`Endereço: ${building.street || 'Não informado'}`, margin, yPosition);
@@ -719,65 +751,61 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
 
       // Processar cada requisito
       for (const requirement of sortedData) {
-        // Verificar quebra de página para requisito
-        checkSectionBreak('requirement', 50);
-        
-        // Título do Requisito
+        const hasCriteria = requirement.criteria.length > 0;
+        const requirementEstimatedHeight = 12 + (hasCriteria ? 18 : 0);
+        checkSectionBreak('requirement', requirementEstimatedHeight);
+
         doc.setFontSize(16);
-        doc.setFont('helvetica', 'bold');
+        doc.setFont('DejaVuSans', 'bold');
         doc.text(`Requisito: ${requirement.label}`, margin, yPosition);
         yPosition += 12;
 
-        // Processar critérios
         for (const criterion of requirement.criteria) {
-          // Verificar quebra de página para critério
-          checkSectionBreak('criterion', 35);
-          
-          // Título do Critério
+          const hasAnalyses = criterion.analyses.some(analysis => analysis.parameters?.length);
+          const criterionEstimatedHeight = 10 + (hasAnalyses ? 16 : 0);
+          checkSectionBreak('criterion', criterionEstimatedHeight);
+
           doc.setFontSize(14);
-          doc.setFont('helvetica', 'bold');
+          doc.setFont('DejaVuSans', 'bold');
           doc.text(`Critério: ${criterion.label}`, margin + 5, yPosition);
           yPosition += 10;
 
-          // Processar análises
           for (const analysis of criterion.analyses) {
             if (!analysis.parameters?.length) continue;
 
-            // Verificar quebra de página para análise
-            checkSectionBreak('analysis', 25);
-            
-            // Título da Análise
-            doc.setFontSize(12);
-            doc.setFont('helvetica', 'bold');
-            doc.text(`Análise: ${analysis.label}`, margin + 10, yPosition);
-            yPosition += 8;
-
-            // Obter níveis selecionados para esta análise
             const analysisKey = `${requirement.id}-${criterion.id}-${analysis.id}`;
             let selectedLevels = selectedEvaluations.get(analysisKey) || [];
-            
-            console.log(`Analysis Key: ${analysisKey}, Selected Levels:`, selectedLevels);
-            console.log('Full selectedEvaluations map:', selectedEvaluations);
-            
-            // FALLBACK: Se não há níveis selecionados, usar todos os níveis padrão
+
             if (selectedLevels.length === 0) {
               selectedLevels = ['minimum', 'intermediate', 'superior'];
-              console.log('No selected levels found, using default:', selectedLevels);
             }
 
-            // Preparar dados da tabela
-            const tableHeaders = ['Parâmetro', 'UN'];
-            
-            // Mapear IDs dos níveis para labels
             const levelLabels: { [key: string]: string } = {
-              'minimum': 'Min',
-              'intermediate': 'Int', 
-              'superior': 'Sup'
+              minimum: 'Min',
+              intermediate: 'Int',
+              superior: 'Sup'
             };
-            
-            // Adicionar colunas dos níveis selecionados
+
+            const tableHeaders = ['Parâmetro', 'UN'];
             selectedLevels.forEach(levelId => {
               tableHeaders.push(levelLabels[levelId] || levelId);
+            });
+
+            const parameterColumnWidth = 90;
+            const unitColumnWidth = 15;
+            const levelColumnWidth = 18;
+            const narrowLevelIds = new Set(['minimum', 'intermediate', 'superior']);
+
+            const columnWidths = [parameterColumnWidth, unitColumnWidth];
+            const columnStyles: Record<number, any> = {
+              0: { cellWidth: parameterColumnWidth, halign: 'left', valign: 'top', overflow: 'linebreak' },
+              1: { cellWidth: unitColumnWidth, halign: 'center', valign: 'middle' }
+            };
+
+            selectedLevels.forEach((levelId, index) => {
+              const width = narrowLevelIds.has(levelId) ? levelColumnWidth : levelColumnWidth + 6;
+              columnWidths.push(width);
+              columnStyles[index + 2] = { cellWidth: width, halign: 'center', valign: 'middle' };
             });
 
             const tableData: any[] = [];
@@ -787,34 +815,25 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
                 return '—';
               }
 
-              const textValue = String(value).trim();
+              const textValue = String(value).normalize('NFC').trim();
               return textValue === '' ? '—' : textValue;
             };
 
-            // Processar parâmetros
             analysis.parameters.forEach(parameter => {
               const row: string[] = [];
 
-              console.log('=== PARAMETER DEBUG ===');
-              console.log('Parameter full object:', parameter);
-              console.log('Parameter label:', parameter.label);
-              console.log('Parameter notes/observation:', parameter.notes ?? parameter.observation);
-              console.log('Selected levels:', selectedLevels);
-
-              // Nome do parâmetro - preservar caracteres especiais e tratar quebras de linha
               const parameterName = formatTextWithLineBreaks(parameter.label || 'Parâmetro');
               row.push(parameterName);
 
-              // Unidade
-              row.push(parameter.unit || '—');
+              const unitText = (parameter.unit || '—').toString().normalize('NFC');
+              row.push(unitText);
 
               const directValueMap: Record<string, unknown> = {
                 minimum: parameter.minimumValue,
                 intermediate: parameter.intermediateValue,
-                superior: parameter.superiorValue,
+                superior: parameter.superiorValue
               };
 
-              // Valores dos níveis
               selectedLevels.forEach(levelId => {
                 let resolvedValue = directValueMap[levelId];
 
@@ -823,24 +842,18 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
                   resolvedValue = nestedValue?.value ?? null;
                 }
 
-                console.log(`Level ${levelId}:`, resolvedValue);
-
                 row.push(formatParameterValue(resolvedValue));
               });
 
               tableData.push(row);
 
-              // Adicionar observação se existir - SEMPRE mostrar observações
               const observationText = formatTextWithSeparators(parameter.notes ?? parameter.observation);
               if (observationText && observationText.trim()) {
-                console.log('Adding observation row for:', parameter.label);
-                
-                // Tratar quebras de linha e preservar caracteres especiais
                 const cleanText = formatTextWithLineBreaks(observationText);
-                
+
                 tableData.push([
                   {
-                    content: cleanText, // Removido o "Obs.: "
+                    content: cleanText,
                     colSpan: tableHeaders.length,
                     styles: {
                       halign: 'left',
@@ -852,47 +865,32 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
                       cellPadding: { top: 4, right: 8, bottom: 4, left: 12 },
                       overflow: 'linebreak',
                       cellWidth: 'auto',
-                      // Forçar fonte específica para consistência
-                      font: 'helvetica',
+                      font: 'DejaVuSans',
                       lineHeight: 1.2
                     }
                   }
                 ]);
-              } else {
-                console.log('No observation found for parameter:', parameter.label);
               }
             });
 
-            // Verificar se há espaço para a tabela
-            const estimatedTableHeight = (tableData.length + 2) * 6;
-            checkPageBreak(estimatedTableHeight);
+            const estimatedTableHeight = estimateTableHeight(tableData, columnWidths);
+            const analysisHeadingHeight = 8;
+            const analysisSpacing = 10;
+            const totalAnalysisHeight = analysisHeadingHeight + estimatedTableHeight + analysisSpacing;
 
-            // Gerar tabela com autoTable
-            const parameterColumnWidth = 100;
-            const unitColumnWidth = 18;
-            const levelColumnWidth = 16;
-            const narrowLevelIds = new Set(['minimum', 'intermediate', 'superior']);
+            checkSectionBreak('analysis', totalAnalysisHeight);
 
-            const columnStyles: Record<number, any> = {
-              0: { cellWidth: parameterColumnWidth, halign: 'left', valign: 'middle' },
-              1: { cellWidth: unitColumnWidth, halign: 'center', valign: 'middle' }
-            };
-
-            selectedLevels.forEach((levelId, index) => {
-              const isStandardLevel = narrowLevelIds.has(levelId);
-              columnStyles[index + 2] = {
-                cellWidth: isStandardLevel ? levelColumnWidth : levelColumnWidth + 6,
-                halign: 'center',
-                valign: 'middle'
-              };
-            });
+            doc.setFontSize(12);
+            doc.setFont('DejaVuSans', 'bold');
+            doc.text(`Análise: ${analysis.label}`, margin + 10, yPosition);
+            yPosition += analysisHeadingHeight;
 
             autoTable(doc, {
               head: [tableHeaders],
               body: tableData,
               startY: yPosition,
-              margin: { left: margin + 8, right: margin + 8 }, // Margens balanceadas
-              tableWidth: 'auto', // Usar largura automática baseada nas colunas
+              margin: { left: margin + 8, right: margin + 8 },
+              tableWidth: 'auto',
               styles: {
                 fontSize: 9,
                 cellPadding: 3,
@@ -901,8 +899,7 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
                 lineWidth: 0.1,
                 valign: 'top',
                 cellWidth: 'wrap',
-                // Forçar fonte helvetica para consistência
-                font: 'helvetica',
+                font: 'DejaVuSans',
                 fontStyle: 'normal',
                 lineHeight: 1.2
               },
@@ -913,85 +910,64 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
                 fontSize: 10,
                 halign: 'center',
                 valign: 'middle',
-                font: 'helvetica'
+                font: 'DejaVuSans'
               },
               bodyStyles: {
                 textColor: [60, 60, 60],
                 overflow: 'linebreak',
                 cellWidth: 'wrap',
-                font: 'helvetica',
+                font: 'DejaVuSans',
                 fontStyle: 'normal'
               },
               alternateRowStyles: {
                 fillColor: [250, 250, 250]
               },
-              columnStyles: {
-                0: { 
-                  cellWidth: 90, // Reduzir largura da coluna Parâmetro
-                  halign: 'left', 
-                  valign: 'top',
-                  overflow: 'linebreak'
-                },
-                1: { 
-                  cellWidth: 15, // Voltar largura menor para UN
-                  halign: 'center', 
-                  valign: 'middle' 
-                },
-                // Colunas de níveis com largura menor para caber na página
-                2: { cellWidth: 18, halign: 'center', valign: 'middle' },
-                3: { cellWidth: 18, halign: 'center', valign: 'middle' },
-                4: { cellWidth: 18, halign: 'center', valign: 'middle' }
-              },
+              columnStyles,
               didParseCell: (data: any) => {
                 if (data.section === 'head') {
                   data.cell.styles.halign = 'center';
                   data.cell.styles.valign = 'middle';
-                  data.cell.styles.font = 'helvetica';
+                  data.cell.styles.font = 'DejaVuSans';
                   data.cell.styles.fontStyle = 'bold';
                 }
-                
-                // Estilo especial para linhas de observação
+
                 if (typeof data.cell.raw === 'object' && data.cell.raw?.colSpan === tableHeaders.length) {
                   data.cell.styles.halign = 'left';
                   data.cell.styles.valign = 'top';
                   data.cell.styles.overflow = 'linebreak';
                   data.cell.styles.cellWidth = 'auto';
-                  data.cell.styles.font = 'helvetica';
+                  data.cell.styles.font = 'DejaVuSans';
                   data.cell.styles.fontStyle = 'italic';
                   data.cell.styles.fontSize = 8;
                   data.cell.styles.lineHeight = 1.2;
-                  
-                  // Forçar reprocessamento do texto para evitar problemas de renderização
+
                   if (data.cell.raw.content && typeof data.cell.raw.content === 'string') {
-                    // Preservar caracteres especiais, tratar quebras de linha
                     const processedText = formatTextWithLineBreaks(data.cell.raw.content);
                     data.cell.text = [processedText];
                   }
                 }
-                
-                // Garantir fonte consistente para todas as células e preservar caracteres especiais
+
                 if (data.section === 'body' && data.cell.raw && typeof data.cell.raw === 'string') {
-                  data.cell.styles.font = 'helvetica';
+                  data.cell.styles.font = 'DejaVuSans';
                   data.cell.styles.fontStyle = 'normal';
-                  // Processar texto preservando caracteres especiais
                   if (data.cell.text && data.cell.text.length > 0) {
-                    data.cell.text = data.cell.text.map((text: string) => 
+                    data.cell.text = data.cell.text.map((text: string) =>
                       formatTextWithLineBreaks(text)
                     );
                   }
                 }
-              },
-              didDrawPage: (data: any) => {
-                // Atualizar posição Y após a tabela
-                yPosition = data.cursor?.y || yPosition;
               }
             });
 
-            yPosition += 10; // Espaço após cada análise
+            const tableInfo = (doc as any).lastAutoTable;
+            const finalY = tableInfo?.finalY ?? yPosition;
+            yPosition = finalY + analysisSpacing;
           }
-          yPosition += 5; // Espaço após cada critério
+
+          yPosition += 5;
         }
-        yPosition += 10; // Espaço após cada requisito
+
+        yPosition += 10;
       }
 
       // Salvar o PDF
