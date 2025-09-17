@@ -818,14 +818,14 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
       
       let yPosition = margin;
 
-      // Função para verificar espaço para seções
+      // Função para verificar espaço para seções (menos restritiva)
       const checkSectionBreak = (sectionType: 'requirement' | 'criterion' | 'analysis', estimatedHeight: number) => {
-        const minSpaceRequired = sectionType === 'requirement' ? 50 :
-                                 sectionType === 'criterion' ? 35 : 25;
+        // Usar estimativa real ao invés de valores mínimos fixos
+        const adjustedHeight = sectionType === 'requirement' ? estimatedHeight + 10 :
+                              sectionType === 'criterion' ? estimatedHeight + 8 : 
+                              estimatedHeight + 5;
 
-        const requiredSpace = Math.max(estimatedHeight, minSpaceRequired);
-
-        if (yPosition + requiredSpace > pageHeight - margin) {
+        if (yPosition + adjustedHeight > pageHeight - margin - 20) { // Margem de segurança menor
           doc.addPage();
           yPosition = margin;
           return true;
@@ -1278,7 +1278,11 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
             const analysisSpacing = 9;
             const totalAnalysisHeight = analysisHeadingHeight + estimatedTableHeight + analysisSpacing;
 
-            checkSectionBreak('analysis', totalAnalysisHeight);
+            // Verificação mais suave para análise - só quebra se não couber nem o título
+            if (yPosition + analysisHeadingHeight + 15 > pageHeight - margin) {
+              doc.addPage();
+              yPosition = margin;
+            }
 
             doc.setFontSize(10);
             doc.setFont('DejaVuSans', 'bold');
@@ -1291,6 +1295,9 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
               startY: yPosition,
               margin: { left: margin + 6, right: margin + 6 },
               tableWidth: 'auto',
+              // Permitir quebra de página no meio da tabela
+              pageBreak: 'auto',
+              showHead: 'everyPage', // Mostrar cabeçalho em todas as páginas
               styles: {
                 fontSize: 9,
                 cellPadding: 3,
