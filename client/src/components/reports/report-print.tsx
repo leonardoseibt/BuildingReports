@@ -39,6 +39,84 @@ interface ReportPrintProps {
   onClose: () => void;
 }
 
+const WINDOWS_1252_EXTENDED_MAP: Record<string, number> = {
+  '€': 0x80,
+  '‚': 0x82,
+  'ƒ': 0x83,
+  '„': 0x84,
+  '…': 0x85,
+  '†': 0x86,
+  '‡': 0x87,
+  'ˆ': 0x88,
+  '‰': 0x89,
+  'Š': 0x8a,
+  '‹': 0x8b,
+  'Œ': 0x8c,
+  'Ž': 0x8e,
+  '‘': 0x91,
+  '’': 0x92,
+  '“': 0x93,
+  '”': 0x94,
+  '•': 0x95,
+  '–': 0x96,
+  '—': 0x97,
+  '˜': 0x98,
+  '™': 0x99,
+  'š': 0x9a,
+  '›': 0x9b,
+  'œ': 0x9c,
+  'ž': 0x9e,
+  'Ÿ': 0x9f
+};
+
+const COMMON_ENCODING_REPLACEMENTS: Record<string, string> = {
+  'â€¢': '•',
+  'â€“': '–',
+  'â€”': '—',
+  'â€˜': '‘',
+  'â€™': '’',
+  'â€œ': '“',
+  'â€¦': '…',
+  'â„¢': '™',
+  'âˆ’': '−',
+  'âˆ†': '∆',
+  'âˆƒ': '∃',
+  'âˆ…': '∅',
+  'âˆ‡': '∇',
+  'âˆˆ': '∈',
+  'â‰¤': '≤',
+  'â‰¥': '≥'
+};
+
+const COMMON_ENCODING_REGEXES = Object.entries(COMMON_ENCODING_REPLACEMENTS).map(([encoded, decoded]) => ({
+  pattern: new RegExp(encoded, 'g'),
+  decoded
+}));
+
+const applyCommonEncodingFixes = (text: string): string => {
+  let fixedText = text;
+
+  for (const { pattern, decoded } of COMMON_ENCODING_REGEXES) {
+    fixedText = fixedText.replace(pattern, decoded);
+  }
+
+  return fixedText;
+};
+
+const sanitizeComparisonCharacters = (text: string): string => {
+  if (!text) return '';
+
+  return text
+    .replace(/<\s*=\s*/g, '≤')
+    .replace(/>\s*=\s*/g, '≥')
+    .replace(/<\s*>\s*/g, '≠')
+    .replace(/<=/g, '≤')
+    .replace(/>=/g, '≥')
+    .replace(/<>/g, '≠')
+    .replace(/</g, '‹')
+    .replace(/>/g, '›');
+};
+
 export default function ReportPrint({ item, onClose }: ReportPrintProps) {
   const { data: buildings = [] } = useQuery<Building[]>({ queryKey: ['/api/buildings'] });
   const { data: requirements = [] } = useQuery<Requirement[]>({ queryKey: ['/api/requirements'] });
@@ -294,8 +372,52 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
     }
   }, [attributes]);
 
+  const decodeMisencodedText = (text: string): string => {
+    if (!text) return '';
+
+    const suspiciousPattern = /(Ã[\u0080-\u00FF]|Â[\u0080-\u00FF]|â[\u0080-\u00FF]|â[\u2000-\u20FF])/;
+    if (!suspiciousPattern.test(text)) {
+      return applyCommonEncodingFixes(text);
+    }
+
+    const byteValues: number[] = [];
+    let hasUnmappedChar = false;
+
+    for (const char of text) {
+      const code = char.charCodeAt(0);
+
+      if (code <= 0xff) {
+        byteValues.push(code);
+        continue;
+      }
+
+      if (WINDOWS_1252_EXTENDED_MAP[char] !== undefined) {
+        byteValues.push(WINDOWS_1252_EXTENDED_MAP[char]);
+        continue;
+      }
+
+      hasUnmappedChar = true;
+      break;
+    }
+
+    if (hasUnmappedChar) {
+      return applyCommonEncodingFixes(text);
+    }
+
+    try {
+      const decoder = new TextDecoder('utf-8', { fatal: false });
+      const decoded = decoder.decode(new Uint8Array(byteValues));
+      return applyCommonEncodingFixes(decoded);
+    } catch (error) {
+      console.warn('Não foi possível corrigir codificação do texto:', error);
+      return applyCommonEncodingFixes(text);
+    }
+  };
+
   const normalizePdfText = (text: string): string => {
-    return text
+    const baseText = sanitizeComparisonCharacters(decodeMisencodedText(text));
+
+    return baseText
       .replace(/\u00a0/g, ' ')
       .replace(/\t/g, ' ')
       .normalize('NFKC');
@@ -310,6 +432,17 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
     if (!text) return '';
     const normalized = normalizePdfText(text);
     return compactPdfText(normalized.replace(/\r?\n/g, ' • '));
+  };
+
+  const normalizeDisplayValue = (value: unknown): string => {
+    if (value === null || value === undefined) {
+      return '—';
+    }
+
+    const rawText = typeof value === 'string' ? value : String(value);
+    const normalized = normalizePdfText(rawText).trim();
+
+    return normalized === '' ? '—' : normalized;
   };
 
   // Função para verificar se um parâmetro tem valores nos níveis selecionados
@@ -740,46 +873,276 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
       // Título do relatório
       doc.setFontSize(20);
       doc.setFont('DejaVuSans', 'bold');
-      doc.text('Relatório de Desempenho da Edificação (PDE)', margin, yPosition);
-      yPosition += 15;
+      doc.text('Perfil de Desempenho da Edificação - PDE', pageWidth / 2, yPosition, { align: 'center' });
+      yPosition += 14;
 
-      // Informações do edifício
+      // Informações do edifício com layout profissional
       if (building) {
-        doc.setFontSize(14);
-        doc.setFont('DejaVuSans', 'bold');
-        doc.text('Informações da Edificação', margin, yPosition);
-        yPosition += 10;
+        const formatNumericValue = (value: unknown, unit?: string) => {
+          if (value === null || value === undefined) {
+            return null;
+          }
 
-        doc.setFontSize(10);
-        doc.setFont('DejaVuSans', 'normal');
-        doc.text(`Nome: ${building.name || 'Não informado'}`, margin, yPosition);
-        yPosition += 6;
-        doc.text(`Endereço: ${building.street || 'Não informado'}`, margin, yPosition);
-        yPosition += 6;
-        doc.text(`Cidade: ${building.city || 'Não informada'}`, margin, yPosition);
-        yPosition += 15;
+          const rawValue = typeof value === 'string' ? value.trim() : String(value);
+          if (rawValue === '') {
+            return null;
+          }
+
+          const numeric = Number(value);
+          if (!Number.isNaN(numeric) && Number.isFinite(numeric)) {
+            const hasDecimal = Math.abs(numeric % 1) > 1e-6;
+            const formatted = numeric.toLocaleString('pt-BR', {
+              minimumFractionDigits: hasDecimal ? 2 : 0,
+              maximumFractionDigits: hasDecimal ? 2 : 0
+            });
+            return unit ? `${formatted} ${unit}` : formatted;
+          }
+
+          return compactPdfText(rawValue);
+        };
+
+        const buildingInfoSections: { title: string; items: { label: string; value: string | null }[] }[] = [
+          {
+            title: 'Identificação',
+            items: [
+              { label: 'Nome da Edificação', value: building.name || '—' },
+              { label: 'Tipologia', value: getTypologyInfo() || null },
+              { label: 'Responsável Técnico', value: getTechnicianInfo() || null }
+            ]
+          },
+          {
+            title: 'Localização',
+            items: [
+              { label: 'Endereço Completo', value: getFormattedAddress() || null }
+            ]
+          },
+          {
+            title: 'Características Técnicas',
+            items: [
+              { label: 'Área Total', value: formatNumericValue(building.totalArea, 'm²') },
+              { label: 'Altura', value: formatNumericValue(building.buildingHeight, 'm') },
+              { label: 'Pavimentos', value: formatNumericValue(building.floors) },
+              { label: 'Unidades', value: formatNumericValue(building.units) }
+            ]
+          },
+          {
+            title: 'Condições Ambientais e Classificações',
+            items: [
+              { label: 'Zona Bioclimática', value: getBioclimaticZoneInfo() || null },
+              { label: 'Isopleta', value: getIsoplethInfo() || null },
+              { label: 'Classe de Ruído', value: getNoiseClassInfo() || null },
+              { label: 'Classe de Agressividade', value: getAggressivenessClassInfo() || null }
+            ]
+          }
+        ];
+
+        const detailRows: any[] = [];
+        let hasDetailContent = false;
+
+        const labelBaseStyles = {
+          fillColor: [248, 250, 252],
+          textColor: [79, 70, 229],
+          fontStyle: 'bold' as const,
+          fontSize: 9,
+          halign: 'left' as const,
+          cellPadding: { top: 4, right: 4, bottom: 4, left: 8 },
+          lineHeight: 1.2
+        };
+
+        const valueBaseStyles = {
+          textColor: [31, 41, 55],
+          fontStyle: 'normal' as const,
+          fontSize: 9,
+          halign: 'left' as const,
+          cellPadding: { top: 4, right: 8, bottom: 4, left: 6 },
+          lineHeight: 1.2
+        };
+
+        buildingInfoSections.forEach(section => {
+          const validItems = section.items
+            .map(item => ({
+              label: compactPdfText(item.label),
+              value: item.value ? compactPdfText(item.value) : null
+            }))
+            .filter(item => item.value && item.value.trim() !== '');
+
+          if (validItems.length === 0) {
+            return;
+          }
+
+          if (!hasDetailContent) {
+            detailRows.push([
+              {
+                content: 'Informações da Edificação',
+                colSpan: 4,
+                styles: {
+                  fillColor: [30, 64, 175],
+                  textColor: [255, 255, 255],
+                  fontSize: 11,
+                  fontStyle: 'bold',
+                  halign: 'left',
+                  cellPadding: { top: 6, right: 8, bottom: 6, left: 10 }
+                }
+              }
+            ]);
+            hasDetailContent = true;
+          }
+
+          detailRows.push([
+            {
+              content: section.title,
+              colSpan: 4,
+              styles: {
+                fillColor: [243, 244, 246],
+                textColor: [55, 65, 81],
+                fontSize: 10,
+                fontStyle: 'bold',
+                halign: 'left',
+                cellPadding: { top: 5, right: 8, bottom: 4, left: 10 }
+              }
+            }
+          ]);
+
+          for (let index = 0; index < validItems.length; index += 2) {
+            const leftItem = validItems[index];
+            const rightItem = validItems[index + 1];
+
+            detailRows.push([
+              {
+                content: leftItem.label,
+                styles: { ...labelBaseStyles }
+              },
+              {
+                content: leftItem.value ?? '—',
+                styles: { ...valueBaseStyles }
+              },
+              rightItem
+                ? {
+                    content: rightItem.label,
+                    styles: { ...labelBaseStyles }
+                  }
+                : {
+                    content: '',
+                    styles: { ...labelBaseStyles, fillColor: [255, 255, 255], textColor: [148, 163, 184] }
+                  },
+              rightItem
+                ? {
+                    content: rightItem.value ?? '—',
+                    styles: { ...valueBaseStyles }
+                  }
+                : {
+                    content: '',
+                    styles: { ...valueBaseStyles }
+                  }
+            ]);
+          }
+        });
+
+        if (hasDetailContent) {
+          const detailTableWidth = pageWidth - margin * 2;
+          const labelColumnWidth = 34;
+          const valueColumnWidth = detailTableWidth / 2 - labelColumnWidth;
+
+          autoTable(doc, {
+            startY: yPosition,
+            margin: { left: margin, right: margin },
+            body: detailRows,
+            tableWidth: detailTableWidth,
+            styles: {
+              font: 'DejaVuSans',
+              fontSize: 9,
+              textColor: [31, 41, 55],
+              lineColor: [226, 232, 240],
+              lineWidth: 0.1,
+              cellPadding: { top: 4, right: 6, bottom: 4, left: 6 },
+              overflow: 'linebreak',
+              cellWidth: 'wrap',
+              minCellHeight: 8
+            },
+            theme: 'grid',
+            columnStyles: {
+              0: {
+                cellWidth: labelColumnWidth,
+                fillColor: labelBaseStyles.fillColor,
+                textColor: labelBaseStyles.textColor,
+                fontStyle: labelBaseStyles.fontStyle,
+                fontSize: labelBaseStyles.fontSize,
+                halign: labelBaseStyles.halign,
+                cellPadding: { ...labelBaseStyles.cellPadding },
+                lineHeight: labelBaseStyles.lineHeight
+              },
+              1: {
+                cellWidth: valueColumnWidth,
+                textColor: valueBaseStyles.textColor,
+                fontStyle: valueBaseStyles.fontStyle,
+                fontSize: valueBaseStyles.fontSize,
+                halign: valueBaseStyles.halign,
+                cellPadding: { ...valueBaseStyles.cellPadding },
+                lineHeight: valueBaseStyles.lineHeight
+              },
+              2: {
+                cellWidth: labelColumnWidth,
+                fillColor: labelBaseStyles.fillColor,
+                textColor: labelBaseStyles.textColor,
+                fontStyle: labelBaseStyles.fontStyle,
+                fontSize: labelBaseStyles.fontSize,
+                halign: labelBaseStyles.halign,
+                cellPadding: { ...labelBaseStyles.cellPadding },
+                lineHeight: labelBaseStyles.lineHeight
+              },
+              3: {
+                cellWidth: valueColumnWidth,
+                textColor: valueBaseStyles.textColor,
+                fontStyle: valueBaseStyles.fontStyle,
+                fontSize: valueBaseStyles.fontSize,
+                halign: valueBaseStyles.halign,
+                cellPadding: { ...valueBaseStyles.cellPadding },
+                lineHeight: valueBaseStyles.lineHeight
+              }
+            },
+            rowPageBreak: 'avoid',
+            didParseCell: (data: any) => {
+              if (data.cell.raw && typeof data.cell.raw === 'object' && 'colSpan' in data.cell.raw && data.cell.raw.colSpan === 4) {
+                const isTitleRow = data.row.index === 0;
+                data.cell.styles.halign = 'left';
+                data.cell.styles.font = 'DejaVuSans';
+                data.cell.styles.fontStyle = 'bold';
+                data.cell.styles.fontSize = isTitleRow ? 11 : 10;
+                data.cell.styles.textColor = isTitleRow ? [255, 255, 255] : [55, 65, 81];
+                data.cell.styles.fillColor = isTitleRow ? [30, 64, 175] : [243, 244, 246];
+                data.cell.styles.cellPadding = isTitleRow
+                  ? { top: 6, right: 8, bottom: 6, left: 10 }
+                  : { top: 5, right: 8, bottom: 4, left: 10 };
+              }
+            }
+          });
+
+          const headerTableInfo = (doc as any).lastAutoTable;
+          const finalY = headerTableInfo?.finalY ?? yPosition;
+          yPosition = finalY + 12;
+        }
       }
 
       // Processar cada requisito
       for (const requirement of sortedData) {
         const hasCriteria = requirement.criteria.length > 0;
-        const requirementEstimatedHeight = 12 + (hasCriteria ? 18 : 0);
+        const requirementEstimatedHeight = 10 + (hasCriteria ? 16 : 0);
         checkSectionBreak('requirement', requirementEstimatedHeight);
 
-        doc.setFontSize(16);
+        doc.setFontSize(14);
         doc.setFont('DejaVuSans', 'bold');
         doc.text(`Requisito: ${requirement.label}`, margin, yPosition);
-        yPosition += 12;
+        yPosition += 10;
 
         for (const criterion of requirement.criteria) {
           const hasAnalyses = criterion.analyses.some(analysis => analysis.parameters?.length);
-          const criterionEstimatedHeight = 10 + (hasAnalyses ? 16 : 0);
+          const criterionEstimatedHeight = 8 + (hasAnalyses ? 14 : 0);
           checkSectionBreak('criterion', criterionEstimatedHeight);
 
-          doc.setFontSize(14);
+          doc.setFontSize(12);
           doc.setFont('DejaVuSans', 'bold');
           doc.text(`Critério: ${criterion.label}`, margin + 5, yPosition);
-          yPosition += 10;
+          yPosition += 8;
 
           for (const analysis of criterion.analyses) {
             if (!analysis.parameters?.length) continue;
@@ -802,7 +1165,7 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
               tableHeaders.push(levelLabels[levelId] || levelId);
             });
 
-            const parameterColumnWidth = 96;
+            const parameterColumnWidth = 104;
             const unitColumnWidth = 18;
             const levelColumnWidth = 18;
             const narrowLevelIds = new Set(['minimum', 'intermediate', 'superior']);
@@ -838,7 +1201,9 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
                 halign: 'center',
                 valign: 'middle',
                 font: 'DejaVuSans',
-                fontStyle: 'normal'
+                fontStyle: 'normal',
+                fontSize: 8,
+                lineHeight: 1.15
               };
             });
 
@@ -909,13 +1274,13 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
             });
 
             const estimatedTableHeight = estimateTableHeight(tableData, columnWidths);
-            const analysisHeadingHeight = 8;
-            const analysisSpacing = 10;
+            const analysisHeadingHeight = 7;
+            const analysisSpacing = 9;
             const totalAnalysisHeight = analysisHeadingHeight + estimatedTableHeight + analysisSpacing;
 
             checkSectionBreak('analysis', totalAnalysisHeight);
 
-            doc.setFontSize(12);
+            doc.setFontSize(10);
             doc.setFont('DejaVuSans', 'bold');
             doc.text(`Análise: ${analysis.label}`, margin + 10, yPosition);
             yPosition += analysisHeadingHeight;
@@ -1061,7 +1426,7 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
             <div className="flex items-center justify-between">
               <div>
                 <h1 className="text-2xl font-semibold text-white mb-1">
-                  PDE - Perfil de Desempenho da Edificação
+                  Perfil de Desempenho da Edificação - PDE
                 </h1>
                 <p className="text-lg text-gray-200">
                   {building?.name || `Edificação ID ${item.buildingId}`}
@@ -1213,14 +1578,14 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
           <div key={requirement.id} className={`mb-8 ${reqIndex === 0 ? '' : 'page-break-before'}`}>
             {/* Seção: Requisito */}
             <div className="mb-6">
-              <h3 className="text-lg font-bold text-gray-800 uppercase tracking-wide mb-4 pb-3 border-b-2 border-gray-600">
+              <h3 className="text-base font-bold text-gray-800 uppercase tracking-wide mb-4 pb-3 border-b-2 border-gray-600">
                 Requisito: {requirement.label}
               </h3>
 
               {requirement.criteria.map((criterion) => (
                 <div key={criterion.id} className="mb-6">
                   {/* Título do Critério */}
-                  <h4 className="text-base font-semibold text-gray-700 uppercase tracking-wide mb-3 pb-2 border-b border-gray-200">
+                  <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3 pb-2 border-b border-gray-200">
                     Critério: {criterion.label}
                   </h4>
 
@@ -1232,7 +1597,7 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
                       <div key={analysis.id} className="mb-4 ml-4">
                         {/* Card da Análise */}
                         <div className="bg-gray-50 border border-gray-200 rounded p-4 mb-4">
-                          <h5 className="text-sm font-medium text-gray-600 mb-3">
+                          <h5 className="text-xs font-medium text-gray-600 mb-3">
                             Análise: {analysis.label}
                           </h5>
 
@@ -1243,64 +1608,68 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
                                 <TableHeader>
                                   {/* Cabeçalho principal da tabela */}
                                   <TableRow className="bg-gray-100 border-b border-gray-300">
-                                    <TableHead className="border-r border-gray-300 font-semibold text-gray-800 text-center align-middle py-3 px-3">
+                                    <TableHead className="border-r border-gray-300 font-semibold text-gray-800 text-center align-middle py-3 pl-4 pr-5 min-w-[17rem]">
                                       Parâmetro
                                     </TableHead>
-                                    <TableHead className="border-r border-gray-300 font-semibold text-gray-800 text-center align-middle py-3 px-3 w-20">
+                                    <TableHead className="border-r border-gray-300 font-semibold text-gray-800 text-center align-middle py-3 px-2.5 w-16">
                                       UN
                                     </TableHead>
                                     {selectedLevels.includes('minimum') && (
-                                      <TableHead className="border-r border-gray-300 font-semibold text-gray-800 text-center align-middle py-3 px-3 w-20">
+                                      <TableHead className="border-r border-gray-300 font-semibold text-gray-800 text-center align-middle py-3 px-2.5 w-16">
                                         Min
                                       </TableHead>
                                     )}
                                     {selectedLevels.includes('intermediate') && (
-                                      <TableHead className="border-r border-gray-300 font-semibold text-gray-800 text-center align-middle py-3 px-3 w-20">
+                                      <TableHead className="border-r border-gray-300 font-semibold text-gray-800 text-center align-middle py-3 px-2.5 w-16">
                                         Int
                                       </TableHead>
                                     )}
                                     {selectedLevels.includes('superior') && (
-                                      <TableHead className="border-r border-gray-300 font-semibold text-gray-800 text-center align-middle py-3 px-3 w-20">
+                                      <TableHead className="border-r border-gray-300 font-semibold text-gray-800 text-center align-middle py-3 px-2.5 w-16">
                                         Sup
                                       </TableHead>
                                     )}
                                   </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                  {analysis.parameters.map((parameter) => (
-                                    <TableRow key={parameter.id} className="hover:bg-gray-50 border-b border-gray-200">
-                                      <TableCell className="border-r border-gray-300 align-middle py-3 px-3 font-medium">
-                                        <div>
-                                          <div className="font-medium text-gray-900">
-                                            {formatTextWithSeparators(parameter.label)}
-                                          </div>
-                                          {parameter.notes && (
-                                            <div className="text-xs text-gray-600 mt-2 italic bg-gray-100 p-2 rounded border-l-2 border-gray-400">
-                                              <span className="font-semibold text-gray-800">Observação:</span> {formatTextWithSeparators(parameter.notes)}
+                                  {analysis.parameters.map((parameter) => {
+                                    const observationText = parameter.notes ?? parameter.observation;
+
+                                    return (
+                                      <TableRow key={parameter.id} className="hover:bg-gray-50 border-b border-gray-200">
+                                      <TableCell className="border-r border-gray-300 align-middle py-3 pl-4 pr-5 font-medium min-w-[17rem]">
+                                          <div>
+                                            <div className="font-medium text-gray-900">
+                                              {formatTextWithSeparators(parameter.label)}
                                             </div>
-                                          )}
-                                        </div>
-                                      </TableCell>
-                                      <TableCell className="text-center border-r border-gray-300 align-middle py-3 px-3 w-20">
-                                        {parameter.unit || '—'}
-                                      </TableCell>
-                                      {selectedLevels.includes('minimum') && (
-                                        <TableCell className="text-center border-r border-gray-300 align-middle py-3 px-3 w-20">
-                                          {parameter.minimumValue || '—'}
+                                            {observationText && (
+                                              <div className="text-xs text-gray-600 mt-2 italic bg-gray-100 p-2 rounded border-l-2 border-gray-400">
+                                                <span className="font-semibold text-gray-800">Observação:</span> {formatTextWithSeparators(observationText)}
+                                              </div>
+                                            )}
+                                          </div>
                                         </TableCell>
-                                      )}
-                                      {selectedLevels.includes('intermediate') && (
-                                        <TableCell className="text-center border-r border-gray-300 align-middle py-3 px-3 w-20">
-                                          {parameter.intermediateValue || '—'}
+                                        <TableCell className="text-center border-r border-gray-300 align-middle py-3 px-2.5 w-16">
+                                          {normalizeDisplayValue(parameter.unit)}
                                         </TableCell>
-                                      )}
-                                      {selectedLevels.includes('superior') && (
-                                        <TableCell className="text-center border-r border-gray-300 align-middle py-3 px-3 w-20">
-                                          {parameter.superiorValue || '—'}
-                                        </TableCell>
-                                      )}
-                                    </TableRow>
-                                  ))}
+                                        {selectedLevels.includes('minimum') && (
+                                          <TableCell className="text-center border-r border-gray-300 align-middle py-3 px-2.5 w-16">
+                                            {normalizeDisplayValue(parameter.minimumValue)}
+                                          </TableCell>
+                                        )}
+                                        {selectedLevels.includes('intermediate') && (
+                                          <TableCell className="text-center border-r border-gray-300 align-middle py-3 px-2.5 w-16">
+                                            {normalizeDisplayValue(parameter.intermediateValue)}
+                                          </TableCell>
+                                        )}
+                                        {selectedLevels.includes('superior') && (
+                                          <TableCell className="text-center border-r border-gray-300 align-middle py-3 px-2.5 w-16">
+                                            {normalizeDisplayValue(parameter.superiorValue)}
+                                          </TableCell>
+                                        )}
+                                      </TableRow>
+                                    );
+                                  })}
                                 </TableBody>
                               </Table>
                             </div>
