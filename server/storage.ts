@@ -653,12 +653,23 @@ export class DatabaseStorage implements IStorage {
     totalReports: number;
     recentBuildings: Building[];
   }> {
-    const { items: userBuildings } = await this.getBuildingsByUser(userId);
-    const { items: userReports } = await this.getReportsByUser(userId);
-    const recentBuildings = userBuildings.slice(0, 5);
+    const { items: recentBuildings, total: totalBuildings } = await this.getBuildingsByUser(
+      userId,
+      5,
+      0,
+    );
+
+    const [{ value: reportTotal } = { value: 0 }] = await db
+      .select({ value: count() })
+      .from(reports)
+      .leftJoin(buildings, eq(reports.buildingId, buildings.id))
+      .where(and(eq(buildings.userId, userId), eq(reports.isActive, true)));
+
+    const totalReports = Number(reportTotal ?? 0);
+
     return {
-      totalBuildings: userBuildings.length,
-      totalReports: userReports.length,
+      totalBuildings,
+      totalReports,
       recentBuildings,
     };
   }
@@ -710,7 +721,7 @@ export class DatabaseStorage implements IStorage {
   // Extended dashboard statistics (aggregations & distributions)
   async getUserExtendedStats(userId: number): Promise<any> {
     // Basic counts reuse existing helper to avoid duplication
-    const base = await this.getUserStats(userId);
+    const { totalBuildings, totalReports, recentBuildings } = await this.getUserStats(userId);
 
     // Buildings created & reports generated last 30 days
     const [{ value: buildingsLast30 } = { value: 0 }] = await db
@@ -839,7 +850,9 @@ export class DatabaseStorage implements IStorage {
     const totalStateCount = stateArr.reduce((acc: number, r: any) => acc + Number(r.count || 0), 0) || 1;
 
     return {
-      ...base,
+      totalBuildings,
+      totalReports,
+      recentBuildings,
       buildingsLast30: Number(buildingsLast30 || 0),
       reportsLast30: Number(reportsLast30 || 0),
       distributions: {
