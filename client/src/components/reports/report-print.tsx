@@ -930,7 +930,7 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
               tableHeaders.push(levelLabels[levelId] || levelId);
             });
 
-            const parameterColumnWidth = 112;
+            const parameterColumnWidth = 104;
             const unitColumnWidth = 20;
             const levelColumnWidth = 20;
             const narrowLevelIds = new Set(['minimum', 'intermediate', 'superior']);
@@ -1371,7 +1371,7 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
                                 <TableHeader>
                                   {/* Cabeçalho principal da tabela */}
                                   <TableRow className="bg-gray-100 border-b border-gray-300">
-                                    <TableHead className="border-r border-gray-300 font-semibold text-gray-800 text-center align-middle py-3 pl-4 pr-6 min-w-[20rem]">
+                                    <TableHead className="border-r border-gray-300 font-semibold text-gray-800 text-center align-middle py-3 pl-4 pr-5 min-w-[18rem]">
                                       Parâmetro
                                     </TableHead>
                                     <TableHead className="border-r border-gray-300 font-semibold text-gray-800 text-center align-middle py-3 px-4 w-24">
@@ -1397,7 +1397,7 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
                                 <TableBody>
                                   {analysis.parameters.map((parameter) => (
                                     <TableRow key={parameter.id} className="hover:bg-gray-50 border-b border-gray-200">
-                                      <TableCell className="border-r border-gray-300 align-middle py-3 pl-4 pr-6 font-medium min-w-[20rem]">
+                                      <TableCell className="border-r border-gray-300 align-middle py-3 pl-4 pr-5 font-medium min-w-[18rem]">
                                         <div>
                                           <div className="font-medium text-gray-900">
                                             {formatTextWithSeparators(parameter.label)}
