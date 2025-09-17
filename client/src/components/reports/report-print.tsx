@@ -1374,21 +1374,21 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
                                     <TableHead className="border-r border-gray-300 font-semibold text-gray-800 text-center align-middle py-3 pl-4 pr-5 min-w-[18rem]">
                                       Parâmetro
                                     </TableHead>
-                                    <TableHead className="border-r border-gray-300 font-semibold text-gray-800 text-center align-middle py-3 px-3 w-20">
+                                    <TableHead className="border-r border-gray-300 font-semibold text-gray-800 text-center align-middle py-3 px-4 w-24">
                                       UN
                                     </TableHead>
                                     {selectedLevels.includes('minimum') && (
-                                      <TableHead className="border-r border-gray-300 font-semibold text-gray-800 text-center align-middle py-3 px-3 w-20">
+                                      <TableHead className="border-r border-gray-300 font-semibold text-gray-800 text-center align-middle py-3 px-4 w-24">
                                         Min
                                       </TableHead>
                                     )}
                                     {selectedLevels.includes('intermediate') && (
-                                      <TableHead className="border-r border-gray-300 font-semibold text-gray-800 text-center align-middle py-3 px-3 w-20">
+                                      <TableHead className="border-r border-gray-300 font-semibold text-gray-800 text-center align-middle py-3 px-4 w-24">
                                         Int
                                       </TableHead>
                                     )}
                                     {selectedLevels.includes('superior') && (
-                                      <TableHead className="border-r border-gray-300 font-semibold text-gray-800 text-center align-middle py-3 px-3 w-20">
+                                      <TableHead className="border-r border-gray-300 font-semibold text-gray-800 text-center align-middle py-3 px-4 w-24">
                                         Sup
                                       </TableHead>
                                     )}
@@ -1409,21 +1409,21 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
                                           )}
                                         </div>
                                       </TableCell>
-                                      <TableCell className="text-center border-r border-gray-300 align-middle py-3 px-3 w-20">
+                                      <TableCell className="text-center border-r border-gray-300 align-middle py-3 px-4 w-24">
                                         {parameter.unit || '—'}
                                       </TableCell>
                                       {selectedLevels.includes('minimum') && (
-                                        <TableCell className="text-center border-r border-gray-300 align-middle py-3 px-3 w-20">
+                                        <TableCell className="text-center border-r border-gray-300 align-middle py-3 px-4 w-24">
                                           {parameter.minimumValue || '—'}
                                         </TableCell>
                                       )}
                                       {selectedLevels.includes('intermediate') && (
-                                        <TableCell className="text-center border-r border-gray-300 align-middle py-3 px-3 w-20">
+                                        <TableCell className="text-center border-r border-gray-300 align-middle py-3 px-4 w-24">
                                           {parameter.intermediateValue || '—'}
                                         </TableCell>
                                       )}
                                       {selectedLevels.includes('superior') && (
-                                        <TableCell className="text-center border-r border-gray-300 align-middle py-3 px-3 w-20">
+                                        <TableCell className="text-center border-r border-gray-300 align-middle py-3 px-4 w-24">
                                           {parameter.superiorValue || '—'}
                                         </TableCell>
                                       )}
