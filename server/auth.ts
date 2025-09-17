@@ -322,6 +322,15 @@ async function loadRequestUser(req: Request) {
   return dbUser ?? null;
 }
 
+export function hasModule(user: { isAdmin?: boolean; allowedModules?: unknown } | null | undefined, moduleName: string) {
+  if (!user) return false;
+  if ((user as any).isAdmin) return true;
+  const modules = Array.isArray((user as any).allowedModules)
+    ? (user as any).allowedModules.map((m: unknown) => (typeof m === "string" ? m.toLowerCase() : ""))
+    : [];
+  return modules.includes(moduleName.toLowerCase());
+}
+
 export function requireModuleAccess(moduleName: string): RequestHandler {
   const normalizedModule = moduleName.toLowerCase();
   return async (req, res, next) => {
@@ -330,13 +339,7 @@ export function requireModuleAccess(moduleName: string): RequestHandler {
       if (!dbUser) {
         return res.status(403).json({ message: "Access denied" });
       }
-      if (dbUser.isAdmin) {
-        return next();
-      }
-      const modules = Array.isArray((dbUser as any).allowedModules)
-        ? (dbUser as any).allowedModules.map((m: unknown) => (typeof m === "string" ? m.toLowerCase() : ""))
-        : [];
-      if (modules.includes(normalizedModule)) {
+      if (hasModule(dbUser as any, normalizedModule)) {
         return next();
       }
       return res.status(403).json({ message: "Access denied" });

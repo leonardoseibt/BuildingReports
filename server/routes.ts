@@ -77,7 +77,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Dynamic metadata: list all user tables (public schema) excluding system/internal ones
-  app.get('/api/metadata/tables', isAuthenticated, async (_req, res) => {
+  app.get('/api/metadata/tables', isAuthenticated, requireModuleAccess('attributes'), async (_req, res) => {
     try {
       const result = await pool.query<{ table_name: string }>(
         `select table_name from information_schema.tables
@@ -97,7 +97,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Dynamic metadata: list columns for a specific table
-  app.get('/api/metadata/tables/:table/columns', isAuthenticated, async (req, res) => {
+  app.get('/api/metadata/tables/:table/columns', isAuthenticated, requireModuleAccess('attributes'), async (req, res) => {
     try {
       const table = req.params.table;
       if (!/^[a-zA-Z0-9_]+$/.test(table)) return res.status(400).json({ message: 'Tabela inválida' });
@@ -114,7 +114,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
     // Attribute Definitions (independent CRUD for validation phase)
-    app.get('/api/attributes', isAuthenticated, async (req, res) => {
+    app.get('/api/attributes', isAuthenticated, requireModuleAccess('attributes'), async (req, res) => {
       try {
         const dataKind = typeof req.query.dataKind === 'string' ? req.query.dataKind : undefined;
         const valueSource = typeof req.query.valueSource === 'string' ? req.query.valueSource : undefined;
@@ -125,7 +125,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.error('Erro ao listar atributos', err); res.status(500).json({ message: 'Falha ao listar atributos' });
       }
     });
-    app.post('/api/attributes', isAuthenticated, express.json(), async (req, res) => {
+    app.post('/api/attributes', isAuthenticated, requireModuleAccess('attributes'), express.json(), async (req, res) => {
       try {
         const item = req.body || {};
         if (!item.friendlyName || !item.sourceTable || !item.sourceColumn || !item.dataKind) {
@@ -140,7 +140,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         res.status(500).json({ message: 'Falha ao criar atributo' });
       }
     });
-    app.put('/api/attributes/:id', isAuthenticated, express.json(), async (req, res) => {
+    app.put('/api/attributes/:id', isAuthenticated, requireModuleAccess('attributes'), express.json(), async (req, res) => {
       try {
         const id = Number(req.params.id);
         const body = { ...(req.body||{}) };
@@ -150,7 +150,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         res.json(row);
       } catch { res.status(500).json({ message: 'Falha ao atualizar atributo' }); }
     });
-    app.delete('/api/attributes/:id', isAuthenticated, async (req, res) => {
+    app.delete('/api/attributes/:id', isAuthenticated, requireModuleAccess('attributes'), async (req, res) => {
       try {
         const id = Number(req.params.id);
         const ok = await storage.deleteAttributeDefinition(id);
@@ -595,28 +595,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Bioclimatic Zones API
-  app.get('/api/bioclimatic-zones', isAuthenticated, async (_req, res) => {
+  app.get('/api/bioclimatic-zones', isAuthenticated, requireModuleAccess('bioclimatic-zones'), async (_req, res) => {
     try { res.json(await storage.listBioclimaticZones()); } catch { res.status(500).json({ message: 'Failed to fetch zones' }); }
   });
-  app.post('/api/bioclimatic-zones', isAuthenticated, express.json(), async (req, res) => {
+  app.post('/api/bioclimatic-zones', isAuthenticated, requireModuleAccess('bioclimatic-zones'), express.json(), async (req, res) => {
     try { const data = insertBioclimaticZoneSchema.parse(req.body); const row = await storage.createBioclimaticZone(data as any); res.json(row); }
     catch (error) { if (error instanceof z.ZodError) return res.status(400).json({ message: 'Validation error', errors: error.errors }); if ((error as any)?.code === '23505') return res.status(409).json({ message: 'Código já cadastrado.' }); res.status(500).json({ message: 'Failed to create zone' }); }
   });
-  app.put('/api/bioclimatic-zones/:id', isAuthenticated, express.json(), async (req, res) => {
+  app.put('/api/bioclimatic-zones/:id', isAuthenticated, requireModuleAccess('bioclimatic-zones'), express.json(), async (req, res) => {
     try { const id = Number(req.params.id); if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' }); const data = insertBioclimaticZoneSchema.partial().parse(req.body); const row = await storage.updateBioclimaticZone(id, data as any); res.json(row); }
     catch (error) { if (error instanceof z.ZodError) return res.status(400).json({ message: 'Validation error', errors: error.errors }); if ((error as any)?.code === '23505') return res.status(409).json({ message: 'Código já cadastrado.' }); res.status(500).json({ message: 'Failed to update zone' }); }
   });
-  app.delete('/api/bioclimatic-zones/:id', isAuthenticated, async (req, res) => {
+  app.delete('/api/bioclimatic-zones/:id', isAuthenticated, requireModuleAccess('bioclimatic-zones'), async (req, res) => {
     try { const id = Number(req.params.id); if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' }); const ok = await storage.deleteBioclimaticZone(id); res.json({ ok }); }
     catch (error: any) { const status = (error as any)?.status || 500; const message = (error as any)?.message || 'Failed to delete zone'; res.status(status).json({ message }); }
   });
   // Coverages
-  app.get('/api/bioclimatic-zones/:id/coverages', isAuthenticated, async (req, res) => {
+  app.get('/api/bioclimatic-zones/:id/coverages', isAuthenticated, requireModuleAccess('bioclimatic-zones'), async (req, res) => {
     try { const id = Number(req.params.id); if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' }); res.json(await storage.listBioclimaticZoneCoverages(id)); }
     catch { res.status(500).json({ message: 'Failed to fetch coverages' }); }
   });
   // Find zones by city name (for filtering zones by city search)
-  app.get('/api/bioclimatic-zones/search-by-city', isAuthenticated, async (req, res) => {
+  app.get('/api/bioclimatic-zones/search-by-city', isAuthenticated, requireModuleAccess('bioclimatic-zones'), async (req, res) => {
     try {
       const q = String((req.query.q ?? '') as string).trim();
       if (!q) return res.json([]);
@@ -626,7 +626,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: 'Failed to search zones by city' });
     }
   });
-  app.post('/api/bioclimatic-zones/:id/coverages', isAuthenticated, express.json(), async (req, res) => {
+  app.post('/api/bioclimatic-zones/:id/coverages', isAuthenticated, requireModuleAccess('bioclimatic-zones'), express.json(), async (req, res) => {
     try {
       const id = Number(req.params.id);
   if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' });
@@ -638,7 +638,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: 'Failed to create coverage' });
     }
   });
-  app.put('/api/bioclimatic-zones/coverages/:coverageId', isAuthenticated, express.json(), async (req, res) => {
+  app.put('/api/bioclimatic-zones/coverages/:coverageId', isAuthenticated, requireModuleAccess('bioclimatic-zones'), express.json(), async (req, res) => {
     try {
       const coverageId = Number(req.params.coverageId);
   if (!Number.isFinite(coverageId)) return res.status(400).json({ message: 'ID inválido' });
@@ -650,77 +650,77 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: 'Failed to update coverage' });
     }
   });
-  app.delete('/api/bioclimatic-zones/coverages/:coverageId', isAuthenticated, async (req, res) => {
+  app.delete('/api/bioclimatic-zones/coverages/:coverageId', isAuthenticated, requireModuleAccess('bioclimatic-zones'), async (req, res) => {
     try { const coverageId = Number(req.params.coverageId); if (!Number.isFinite(coverageId)) return res.status(400).json({ message: 'ID inválido' }); const ok = await storage.deleteBioclimaticZoneCoverage(coverageId); res.json({ ok }); }
     catch { res.status(500).json({ message: 'Failed to delete coverage' }); }
   });
 
   // Isopleths (Isopletas) API
-  app.get('/api/isopleths', isAuthenticated, async (_req, res) => {
+  app.get('/api/isopleths', isAuthenticated, requireModuleAccess('isopleths'), async (_req, res) => {
     try { res.json(await storage.listIsopleths()); } catch { res.status(500).json({ message: 'Failed to fetch isopletas' }); }
   });
-  app.post('/api/isopleths', isAuthenticated, express.json(), async (req, res) => {
+  app.post('/api/isopleths', isAuthenticated, requireModuleAccess('isopleths'), express.json(), async (req, res) => {
     try { const data = insertIsoplethSchema.parse(req.body); const row = await storage.createIsopleth(data as any); res.json(row); }
     catch (error) { if (error instanceof z.ZodError) return res.status(400).json({ message: 'Validation error', errors: error.errors }); if ((error as any)?.code === '23505') return res.status(409).json({ message: 'Código já cadastrado.' }); res.status(500).json({ message: 'Failed to create isopleth' }); }
   });
-  app.put('/api/isopleths/:id', isAuthenticated, express.json(), async (req, res) => {
+  app.put('/api/isopleths/:id', isAuthenticated, requireModuleAccess('isopleths'), express.json(), async (req, res) => {
     try { const id = Number(req.params.id); if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' }); const data = insertIsoplethSchema.partial().parse(req.body); const row = await storage.updateIsopleth(id, data as any); res.json(row); }
     catch (error) { if (error instanceof z.ZodError) return res.status(400).json({ message: 'Validation error', errors: error.errors }); if ((error as any)?.code === '23505') return res.status(409).json({ message: 'Código já cadastrado.' }); res.status(500).json({ message: 'Failed to update isopleth' }); }
   });
-  app.delete('/api/isopleths/:id', isAuthenticated, async (req, res) => {
+  app.delete('/api/isopleths/:id', isAuthenticated, requireModuleAccess('isopleths'), async (req, res) => {
     try { const id = Number(req.params.id); if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' }); const ok = await storage.deleteIsopleth(id); res.json({ ok }); }
     catch { res.status(500).json({ message: 'Failed to delete isopleth' }); }
   });
 
   // Isopleths coverages
-  app.get('/api/isopleths/:id/coverages', isAuthenticated, async (req, res) => {
+  app.get('/api/isopleths/:id/coverages', isAuthenticated, requireModuleAccess('isopleths'), async (req, res) => {
     try { const id = Number(req.params.id); if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' }); res.json(await storage.listIsoplethCoverages(id)); }
     catch { res.status(500).json({ message: 'Failed to fetch isopleth coverages' }); }
   });
-  app.get('/api/isopleths/coverages-index', isAuthenticated, async (_req, res) => {
+  app.get('/api/isopleths/coverages-index', isAuthenticated, requireModuleAccess('isopleths'), async (_req, res) => {
     try { res.json(await storage.listIsoplethsCoveragesIndex()); } catch { res.status(500).json({ message: 'Failed to fetch isopleth coverages index' }); }
   });
-  app.post('/api/isopleths/:id/coverages', isAuthenticated, express.json(), async (req, res) => {
+  app.post('/api/isopleths/:id/coverages', isAuthenticated, requireModuleAccess('isopleths'), express.json(), async (req, res) => {
     try { const id = Number(req.params.id); if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' }); const payload = { cityId: Number((req.body as any).cityId) }; const row = await storage.createIsoplethCoverage(id, payload as any); res.json(row); }
     catch (error) { if (error instanceof z.ZodError) return res.status(400).json({ message: 'Validation error', errors: error.errors }); res.status(500).json({ message: 'Failed to create isopleth coverage' }); }
   });
-  app.delete('/api/isopleths/coverages/:coverageId', isAuthenticated, async (req, res) => {
+  app.delete('/api/isopleths/coverages/:coverageId', isAuthenticated, requireModuleAccess('isopleths'), async (req, res) => {
     try { const coverageId = Number(req.params.coverageId); if (!Number.isFinite(coverageId)) return res.status(400).json({ message: 'ID inválido' }); const ok = await storage.deleteIsoplethCoverage(coverageId); res.json({ ok }); }
     catch { res.status(500).json({ message: 'Failed to delete isopleth coverage' }); }
   });
 
   // States & Cities endpoints
-  app.get('/api/states', isAuthenticated, async (_req, res) => {
+  app.get('/api/states', isAuthenticated, requireModuleAccess('states'), async (_req, res) => {
     try { res.json(await storage.listStates()); } catch { res.status(500).json({ message: 'Failed to fetch states' }); }
   });
-  app.post('/api/states', isAuthenticated, express.json(), async (req, res) => {
+  app.post('/api/states', isAuthenticated, requireModuleAccess('states'), express.json(), async (req, res) => {
     try { const data = insertStateSchema.parse(req.body); const row = await storage.createState(data as any); res.json(row); }
     catch (error) { if (error instanceof z.ZodError) return res.status(400).json({ message: 'Validation error', errors: error.errors }); res.status(500).json({ message: 'Failed to create state' }); }
   });
-  app.put('/api/states/:id', isAuthenticated, express.json(), async (req, res) => {
+  app.put('/api/states/:id', isAuthenticated, requireModuleAccess('states'), express.json(), async (req, res) => {
     try { const id = Number(req.params.id); if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' }); const row = await storage.updateState(id, insertStateSchema.partial().parse(req.body) as any); res.json(row); }
     catch (error) { if (error instanceof z.ZodError) return res.status(400).json({ message: 'Validation error', errors: error.errors }); res.status(500).json({ message: 'Failed to update state' }); }
   });
-  app.delete('/api/states/:id', isAuthenticated, async (req, res) => {
+  app.delete('/api/states/:id', isAuthenticated, requireModuleAccess('states'), async (req, res) => {
     try { const id = Number(req.params.id); if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' }); const ok = await storage.deleteState(id); res.json({ ok }); }
     catch { res.status(500).json({ message: 'Failed to delete state' }); }
   });
-  app.get('/api/states/:stateId/cities', isAuthenticated, async (req, res) => {
+  app.get('/api/states/:stateId/cities', isAuthenticated, requireModuleAccess('cities'), async (req, res) => {
     try { const stateId = Number(req.params.stateId); if (!Number.isFinite(stateId)) return res.status(400).json({ message: 'ID inválido' }); res.json(await storage.listCitiesByState(stateId)); }
     catch { res.status(500).json({ message: 'Failed to fetch cities' }); }
   });
-  app.get('/api/cities', isAuthenticated, async (_req, res) => {
+  app.get('/api/cities', isAuthenticated, requireModuleAccess('cities'), async (_req, res) => {
     try { res.json(await storage.listCities()); } catch { res.status(500).json({ message: 'Failed to fetch cities' }); }
   });
-  app.post('/api/cities', isAuthenticated, express.json(), async (req, res) => {
+  app.post('/api/cities', isAuthenticated, requireModuleAccess('cities'), express.json(), async (req, res) => {
     try { const data = insertCitySchema.parse(req.body); const row = await storage.createCity(data as any); res.json(row); }
     catch (error) { if (error instanceof z.ZodError) return res.status(400).json({ message: 'Validation error', errors: error.errors }); res.status(500).json({ message: 'Failed to create city' }); }
   });
-  app.put('/api/cities/:id', isAuthenticated, express.json(), async (req, res) => {
+  app.put('/api/cities/:id', isAuthenticated, requireModuleAccess('cities'), express.json(), async (req, res) => {
     try { const id = Number(req.params.id); if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' }); const row = await storage.updateCity(id, insertCitySchema.partial().parse(req.body) as any); res.json(row); }
     catch (error) { if (error instanceof z.ZodError) return res.status(400).json({ message: 'Validation error', errors: error.errors }); res.status(500).json({ message: 'Failed to update city' }); }
   });
-  app.delete('/api/cities/:id', isAuthenticated, async (req, res) => {
+  app.delete('/api/cities/:id', isAuthenticated, requireModuleAccess('cities'), async (req, res) => {
     try { const id = Number(req.params.id); if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' }); const ok = await storage.deleteCity(id); res.json({ ok }); }
     catch { res.status(500).json({ message: 'Failed to delete city' }); }
   });
@@ -818,18 +818,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Master tables: Typologies
-  app.get('/api/typologies', isAuthenticated, async (_req, res) => {
+  app.get('/api/typologies', isAuthenticated, requireModuleAccess('typologies'), async (_req, res) => {
     try { res.json(await storage.listTypologies()); } catch (e) { res.status(500).json({ message: 'Failed to fetch typologies' }); }
   });
-  app.post('/api/typologies', isAuthenticated, express.json(), async (req, res) => {
+  app.post('/api/typologies', isAuthenticated, requireModuleAccess('typologies'), express.json(), async (req, res) => {
     try { const data = insertTypologySchema.parse(req.body); const row = await storage.createTypology(data as any); res.json(row); }
     catch (error) { if (error instanceof z.ZodError) return res.status(400).json({ message: 'Validation error', errors: error.errors }); if ((error as any)?.code === '23505') return res.status(409).json({ message: 'Código já cadastrado.' }); res.status(500).json({ message: 'Failed to create typology' }); }
   });
-  app.put('/api/typologies/:id', isAuthenticated, express.json(), async (req, res) => {
+  app.put('/api/typologies/:id', isAuthenticated, requireModuleAccess('typologies'), express.json(), async (req, res) => {
     try { const id = Number(req.params.id); if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' }); const data = insertTypologySchema.partial().parse(req.body); const row = await storage.updateTypology(id, data as any); res.json(row); }
     catch (error) { if (error instanceof z.ZodError) return res.status(400).json({ message: 'Validation error', errors: error.errors }); if ((error as any)?.code === '23505') return res.status(409).json({ message: 'Código já cadastrado.' }); res.status(500).json({ message: 'Failed to update typology' }); }
   });
-  app.delete('/api/typologies/:id', isAuthenticated, async (req: any, res) => {
+  app.delete('/api/typologies/:id', isAuthenticated, requireModuleAccess('typologies'), async (req: any, res) => {
     try {
       const id = Number(req.params.id);
       if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' });
@@ -843,18 +843,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Master tables: Noise classes
-  app.get('/api/noise-classes', isAuthenticated, async (_req, res) => {
+  app.get('/api/noise-classes', isAuthenticated, requireModuleAccess('noise-classes'), async (_req, res) => {
     try { res.json(await storage.listNoiseClasses()); } catch (e) { res.status(500).json({ message: 'Failed to fetch noise classes' }); }
   });
-  app.post('/api/noise-classes', isAuthenticated, express.json(), async (req, res) => {
+  app.post('/api/noise-classes', isAuthenticated, requireModuleAccess('noise-classes'), express.json(), async (req, res) => {
     try { const data = insertNoiseClassSchema.parse(req.body); const row = await storage.createNoiseClass(data as any); res.json(row); }
     catch (error) { if (error instanceof z.ZodError) return res.status(400).json({ message: 'Validation error', errors: error.errors }); if ((error as any)?.code === '23505') return res.status(409).json({ message: 'Código já cadastrado.' }); res.status(500).json({ message: 'Failed to create noise class' }); }
   });
-  app.put('/api/noise-classes/:id', isAuthenticated, express.json(), async (req, res) => {
+  app.put('/api/noise-classes/:id', isAuthenticated, requireModuleAccess('noise-classes'), express.json(), async (req, res) => {
     try { const id = Number(req.params.id); if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' }); const data = insertNoiseClassSchema.partial().parse(req.body); const row = await storage.updateNoiseClass(id, data as any); res.json(row); }
     catch (error) { if (error instanceof z.ZodError) return res.status(400).json({ message: 'Validation error', errors: error.errors }); if ((error as any)?.code === '23505') return res.status(409).json({ message: 'Código já cadastrado.' }); res.status(500).json({ message: 'Failed to update noise class' }); }
   });
-  app.delete('/api/noise-classes/:id', isAuthenticated, async (req: any, res) => {
+  app.delete('/api/noise-classes/:id', isAuthenticated, requireModuleAccess('noise-classes'), async (req: any, res) => {
     try {
       const id = Number(req.params.id);
       if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' });
@@ -868,18 +868,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Master tables: Aggressiveness classes
-  app.get('/api/aggressiveness-classes', isAuthenticated, async (_req, res) => {
+  app.get('/api/aggressiveness-classes', isAuthenticated, requireModuleAccess('aggressiveness-classes'), async (_req, res) => {
     try { res.json(await storage.listAggressivenessClasses()); } catch (e) { res.status(500).json({ message: 'Failed to fetch aggressiveness classes' }); }
   });
-  app.post('/api/aggressiveness-classes', isAuthenticated, express.json(), async (req, res) => {
+  app.post('/api/aggressiveness-classes', isAuthenticated, requireModuleAccess('aggressiveness-classes'), express.json(), async (req, res) => {
     try { const data = insertAggressivenessClassSchema.parse(req.body); const row = await storage.createAggressivenessClass(data as any); res.json(row); }
     catch (error) { if (error instanceof z.ZodError) return res.status(400).json({ message: 'Validation error', errors: error.errors }); if ((error as any)?.code === '23505') return res.status(409).json({ message: 'Código já cadastrado.' }); res.status(500).json({ message: 'Failed to create aggressiveness class' }); }
   });
-  app.put('/api/aggressiveness-classes/:id', isAuthenticated, express.json(), async (req, res) => {
+  app.put('/api/aggressiveness-classes/:id', isAuthenticated, requireModuleAccess('aggressiveness-classes'), express.json(), async (req, res) => {
     try { const id = Number(req.params.id); if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' }); const data = insertAggressivenessClassSchema.partial().parse(req.body); const row = await storage.updateAggressivenessClass(id, data as any); res.json(row); }
     catch (error) { if (error instanceof z.ZodError) return res.status(400).json({ message: 'Validation error', errors: error.errors }); if ((error as any)?.code === '23505') return res.status(409).json({ message: 'Código já cadastrado.' }); res.status(500).json({ message: 'Failed to update aggressiveness class' }); }
   });
-  app.delete('/api/aggressiveness-classes/:id', isAuthenticated, async (req: any, res) => {
+  app.delete('/api/aggressiveness-classes/:id', isAuthenticated, requireModuleAccess('aggressiveness-classes'), async (req: any, res) => {
     try {
       const id = Number(req.params.id);
       if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' });
@@ -893,47 +893,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Master tables: Constructive systems
-  app.get('/api/constructive-systems', isAuthenticated, async (_req, res) => {
+  app.get('/api/constructive-systems', isAuthenticated, requireModuleAccess('constructive-systems'), async (_req, res) => {
     try { res.json(await storage.listConstructiveSystems()); } catch (e) { res.status(500).json({ message: 'Failed to fetch constructive systems' }); }
   });
-  app.post('/api/constructive-systems', isAuthenticated, express.json(), async (req, res) => {
+  app.post('/api/constructive-systems', isAuthenticated, requireModuleAccess('constructive-systems'), express.json(), async (req, res) => {
     try { const data = insertConstructiveSystemSchema.parse(req.body); const row = await storage.createConstructiveSystem(data as any); res.json(row); }
     catch (error) { if (error instanceof z.ZodError) return res.status(400).json({ message: 'Validation error', errors: error.errors }); if ((error as any)?.code === '23505') return res.status(409).json({ message: 'Código já cadastrado.' }); res.status(500).json({ message: 'Failed to create constructive system' }); }
   });
-  app.put('/api/constructive-systems/:id', isAuthenticated, express.json(), async (req, res) => {
+  app.put('/api/constructive-systems/:id', isAuthenticated, requireModuleAccess('constructive-systems'), express.json(), async (req, res) => {
     try { const id = Number(req.params.id); if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' }); const data = insertConstructiveSystemSchema.partial().parse(req.body); const row = await storage.updateConstructiveSystem(id, data as any); res.json(row); }
     catch (error) { if (error instanceof z.ZodError) return res.status(400).json({ message: 'Validation error', errors: error.errors }); if ((error as any)?.code === '23505') return res.status(409).json({ message: 'Código já cadastrado.' }); res.status(500).json({ message: 'Failed to update constructive system' }); }
   });
-  app.delete('/api/constructive-systems/:id', isAuthenticated, async (req, res) => {
+  app.delete('/api/constructive-systems/:id', isAuthenticated, requireModuleAccess('constructive-systems'), async (req, res) => {
     try { const id = Number(req.params.id); if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' }); const ok = await storage.deleteConstructiveSystem(id); res.json({ ok }); }
     catch { res.status(500).json({ message: 'Failed to delete constructive system' }); }
   });
 
   // Master tables: Requirements
-  app.get('/api/requirements', isAuthenticated, async (_req, res) => {
+  app.get('/api/requirements', isAuthenticated, requireModuleAccess('requirements'), async (_req, res) => {
     try { res.json(await storage.listRequirements()); } catch (e) { res.status(500).json({ message: 'Failed to fetch requirements' }); }
   });
-  app.post('/api/requirements', isAuthenticated, express.json(), async (req, res) => {
+  app.post('/api/requirements', isAuthenticated, requireModuleAccess('requirements'), express.json(), async (req, res) => {
     try { const data = insertRequirementSchema.parse(req.body); const row = await storage.createRequirement(data as any); res.json(row); }
     catch (error) { if (error instanceof z.ZodError) return res.status(400).json({ message: 'Validation error', errors: error.errors }); if ((error as any)?.code === '23505') return res.status(409).json({ message: 'Código já cadastrado.' }); res.status(500).json({ message: 'Failed to create requirement' }); }
   });
-  app.put('/api/requirements/:id', isAuthenticated, express.json(), async (req, res) => {
+  app.put('/api/requirements/:id', isAuthenticated, requireModuleAccess('requirements'), express.json(), async (req, res) => {
     try { const id = Number(req.params.id); if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' }); const data = insertRequirementSchema.partial().parse(req.body); const row = await storage.updateRequirement(id, data as any); res.json(row); }
     catch (error) { if (error instanceof z.ZodError) return res.status(400).json({ message: 'Validation error', errors: error.errors }); if ((error as any)?.code === '23505') return res.status(409).json({ message: 'Código já cadastrado.' }); res.status(500).json({ message: 'Failed to update requirement' }); }
   });
-  app.delete('/api/requirements/:id', isAuthenticated, async (req, res) => {
+  app.delete('/api/requirements/:id', isAuthenticated, requireModuleAccess('requirements'), async (req, res) => {
     try { const id = Number(req.params.id); if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' }); const ok = await storage.deleteRequirement(id); res.json({ ok }); }
     catch { res.status(500).json({ message: 'Failed to delete requirement' }); }
   });
 
   // Criteria (Critérios) endpoints
-  app.get('/api/criteria', isAuthenticated, async (req, res) => {
+  app.get('/api/criteria', isAuthenticated, requireModuleAccess('criteria'), async (req, res) => {
     try {
       const requirementId = req.query.requirementId ? Number(req.query.requirementId) : undefined;
       res.json(await storage.listCriteria(requirementId));
     } catch { res.status(500).json({ message: 'Failed to fetch criteria' }); }
   });
-  app.post('/api/requirements/:requirementId/criteria/:criterionId', isAuthenticated, async (req, res) => {
+  app.post('/api/requirements/:requirementId/criteria/:criterionId', isAuthenticated, requireModuleAccess('requirements'), async (req, res) => {
     try {
       const requirementId = Number(req.params.requirementId);
       const criterionId = Number(req.params.criterionId);
@@ -942,7 +942,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ ok: true });
     } catch { res.status(500).json({ message: 'Failed to link criterion to requirement' }); }
   });
-  app.delete('/api/requirements/:requirementId/criteria/:criterionId', isAuthenticated, async (req, res) => {
+  app.delete('/api/requirements/:requirementId/criteria/:criterionId', isAuthenticated, requireModuleAccess('requirements'), async (req, res) => {
     try {
       const requirementId = Number(req.params.requirementId);
       const criterionId = Number(req.params.criterionId);
@@ -951,7 +951,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ ok });
     } catch { res.status(500).json({ message: 'Failed to unlink criterion from requirement' }); }
   });
-  app.post('/api/criteria', isAuthenticated, express.json(), async (req, res) => {
+  app.post('/api/criteria', isAuthenticated, requireModuleAccess('criteria'), express.json(), async (req, res) => {
     try {
       const data = insertCriterionSchema.parse(req.body);
       const row = await storage.createCriterion(data as any);
@@ -962,7 +962,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: 'Failed to create criterion' });
     }
   });
-  app.put('/api/criteria/:id', isAuthenticated, express.json(), async (req, res) => {
+  app.put('/api/criteria/:id', isAuthenticated, requireModuleAccess('criteria'), express.json(), async (req, res) => {
     try {
       const id = Number(req.params.id);
   if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' });
@@ -974,7 +974,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: 'Failed to update criterion' });
     }
   });
-  app.delete('/api/criteria/:id', isAuthenticated, async (req, res) => {
+  app.delete('/api/criteria/:id', isAuthenticated, requireModuleAccess('criteria'), async (req, res) => {
     try {
       const id = Number(req.params.id);
       if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' });
@@ -987,7 +987,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Analyses endpoints
-  app.get('/api/analyses', isAuthenticated, async (req, res) => {
+  app.get('/api/analyses', isAuthenticated, requireModuleAccess('analyses'), async (req, res) => {
     try {
       const criterionId = req.query.criterionId ? Number(req.query.criterionId) : undefined;
       const requirementId = req.query.requirementId ? Number(req.query.requirementId) : undefined;
@@ -1004,7 +1004,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: 'Failed to fetch analyses' });
     }
   });
-  app.get('/api/analyses/next-code', isAuthenticated, async (req, res) => {
+  app.get('/api/analyses/next-code', isAuthenticated, requireModuleAccess('analyses'), async (req, res) => {
     const requirementId = Number(req.query.requirementId);
     const criterionId = Number(req.query.criterionId);
     if (!Number.isFinite(requirementId) || !Number.isFinite(criterionId)) {
@@ -1017,7 +1017,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: 'Failed to generate analysis code' });
     }
   });
-  app.post('/api/analyses', isAuthenticated, express.json(), async (req, res) => {
+  app.post('/api/analyses', isAuthenticated, requireModuleAccess('analyses'), express.json(), async (req, res) => {
     try {
       const data = insertAnalysisSchema.parse(req.body);
       const row = await storage.createAnalysis(data as any);
@@ -1028,7 +1028,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: 'Failed to create analysis' });
     }
   });
-  app.put('/api/analyses/:id', isAuthenticated, express.json(), async (req, res) => {
+  app.put('/api/analyses/:id', isAuthenticated, requireModuleAccess('analyses'), express.json(), async (req, res) => {
     try {
       const id = Number(req.params.id);
   if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' });
@@ -1041,7 +1041,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: 'Failed to update analysis' });
     }
   });
-  app.delete('/api/analyses/:id', isAuthenticated, async (req, res) => {
+  app.delete('/api/analyses/:id', isAuthenticated, requireModuleAccess('analyses'), async (req, res) => {
     try {
       const id = Number(req.params.id);
       if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' });
@@ -1054,7 +1054,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Parameters endpoints
-  app.get('/api/parameters', isAuthenticated, async (req, res) => {
+  app.get('/api/parameters', isAuthenticated, requireModuleAccess('parameters'), async (req, res) => {
     try {
       const analysisId = req.query.analysisId ? Number(req.query.analysisId) : undefined;
       const criterionId = req.query.criterionId ? Number(req.query.criterionId) : undefined;
@@ -1074,7 +1074,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: 'Failed to fetch parameters' });
     }
   });
-  app.post('/api/parameters', isAuthenticated, express.json(), async (req, res) => {
+  app.post('/api/parameters', isAuthenticated, requireModuleAccess('parameters'), express.json(), async (req, res) => {
     try {
       const data = insertParameterSchema.parse(req.body);
       // Nova validação baseada em attributeId
@@ -1104,7 +1104,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: 'Failed to create parameter' });
     }
   });
-  app.put('/api/parameters/:id', isAuthenticated, express.json(), async (req, res) => {
+  app.put('/api/parameters/:id', isAuthenticated, requireModuleAccess('parameters'), express.json(), async (req, res) => {
     try {
       const id = Number(req.params.id);
       if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' });
@@ -1133,13 +1133,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: 'Failed to update parameter' });
     }
   });
-  app.delete('/api/parameters/:id', isAuthenticated, async (req, res) => {
+  app.delete('/api/parameters/:id', isAuthenticated, requireModuleAccess('parameters'), async (req, res) => {
     try { const id = Number(req.params.id); if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' }); const ok = await storage.deleteParameter(id); res.json({ ok }); }
     catch { res.status(500).json({ message: 'Failed to delete parameter' }); }
   });
 
   // Unified attribute value options endpoint
-  app.get('/api/attributes/:id/values', isAuthenticated, async (req, res) => {
+  app.get('/api/attributes/:id/values', isAuthenticated, requireModuleAccess('attributes'), async (req, res) => {
     try {
       const id = Number(req.params.id);
       if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' });

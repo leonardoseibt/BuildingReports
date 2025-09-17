@@ -7,11 +7,27 @@ import { storage } from '../storage';
 
 const originalGetUser = storage.getUser;
 
-const ENDPOINTS: Array<{ method: string; path: string; body?: unknown }> = [
-  { method: 'GET', path: '/api/users' },
-  { method: 'POST', path: '/api/users', body: { fullName: 'John' } },
-  { method: 'PUT', path: '/api/users/1', body: { fullName: 'John' } },
-  { method: 'DELETE', path: '/api/users/1' },
+type Endpoint = { method: string; path: string; module: string; body?: unknown };
+
+const ENDPOINTS: Endpoint[] = [
+  { method: 'GET', path: '/api/users', module: 'users' },
+  { method: 'POST', path: '/api/users', module: 'users', body: { fullName: 'John' } },
+  { method: 'PUT', path: '/api/users/1', module: 'users', body: { fullName: 'John' } },
+  { method: 'DELETE', path: '/api/users/1', module: 'users' },
+  { method: 'GET', path: '/api/attributes', module: 'attributes' },
+  { method: 'GET', path: '/api/metadata/tables', module: 'attributes' },
+  { method: 'GET', path: '/api/typologies', module: 'typologies' },
+  { method: 'GET', path: '/api/noise-classes', module: 'noise-classes' },
+  { method: 'GET', path: '/api/aggressiveness-classes', module: 'aggressiveness-classes' },
+  { method: 'GET', path: '/api/constructive-systems', module: 'constructive-systems' },
+  { method: 'GET', path: '/api/requirements', module: 'requirements' },
+  { method: 'GET', path: '/api/criteria', module: 'criteria' },
+  { method: 'GET', path: '/api/analyses', module: 'analyses' },
+  { method: 'GET', path: '/api/parameters', module: 'parameters' },
+  { method: 'GET', path: '/api/states', module: 'states' },
+  { method: 'GET', path: '/api/cities', module: 'cities' },
+  { method: 'GET', path: '/api/bioclimatic-zones', module: 'bioclimatic-zones' },
+  { method: 'GET', path: '/api/isopleths', module: 'isopleths' },
 ];
 
 function makeUser(overrides: Partial<any> = {}) {
@@ -29,25 +45,23 @@ function makeUser(overrides: Partial<any> = {}) {
   };
 }
 
-function createApp(): Express {
+function createApp(routes: Endpoint[] = ENDPOINTS): Express {
   const app = express();
   app.use(express.json());
   app.use((req, _res, next) => {
     (req as any).user = { claims: { sub: 1 } };
     next();
   });
-  app.get('/api/users', requireModuleAccess('users'), (_req, res) => {
-    res.json({ ok: true, method: 'GET' });
-  });
-  app.post('/api/users', requireModuleAccess('users'), (_req, res) => {
-    res.json({ ok: true, method: 'POST' });
-  });
-  app.put('/api/users/:id', requireModuleAccess('users'), (_req, res) => {
-    res.json({ ok: true, method: 'PUT' });
-  });
-  app.delete('/api/users/:id', requireModuleAccess('users'), (_req, res) => {
-    res.json({ ok: true, method: 'DELETE' });
-  });
+  for (const route of routes) {
+    const handler = (_req: any, res: any) => {
+      res.json({ ok: true, method: route.method, path: route.path, module: route.module });
+    };
+    const method = route.method.toLowerCase();
+    if (typeof (app as any)[method] !== 'function') {
+      throw new Error(`Unsupported method in test: ${route.method}`);
+    }
+    (app as any)[method](route.path, requireModuleAccess(route.module), handler);
+  }
   return app;
 }
 
@@ -97,11 +111,11 @@ test('users with explicit module access can manage users', async (t) => {
   t.after(() => {
     storage.getUser = originalGetUser;
   });
-  storage.getUser = async () => makeUser({ allowedModules: ['users'] });
-  const app = createApp();
-  for (const { method, path, body } of ENDPOINTS) {
-    const res = await request(app, method, path, body);
-    assert.equal(res.status, 200, `${method} ${path} should return 200`);
+  for (const route of ENDPOINTS) {
+    storage.getUser = async () => makeUser({ allowedModules: [route.module] });
+    const app = createApp([route]);
+    const res = await request(app, route.method, route.path, route.body);
+    assert.equal(res.status, 200, `${route.method} ${route.path} should return 200`);
     assert.ok(res.body?.ok, 'response should indicate success');
   }
 });

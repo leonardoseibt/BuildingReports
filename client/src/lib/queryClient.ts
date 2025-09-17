@@ -34,19 +34,50 @@ async function ensureCsrfToken(force = false) {
 }
 
 export async function throwIfResNotOk(res: Response) {
-  if (!res.ok) {
-    const text = (await res.text()) || res.statusText;
-    const path = window.location.pathname;
-    const shouldRedirect = !path.startsWith('/login') && (res.status === 440 || res.status === 401);
-    if (shouldRedirect) {
-      // Distinguish messages slightly
-      const expired = res.status === 440 || /expirad/i.test(text);
-      toast({ title: 'Sessão finalizada', description: expired ? 'Faça login novamente para continuar.' : 'Autenticação necessária.', variant: 'destructive' });
-      // Small timeout so toast can render
-      setTimeout(() => { window.location.href = '/login'; }, 150);
-    }
-    throw new Error(`${res.status}: ${text}`);
+  if (res.ok) return;
+  let rawText = '';
+  try {
+    rawText = await res.text();
+  } catch {
+    rawText = '';
   }
+  let message: string | undefined = rawText || res.statusText || '';
+  if (rawText) {
+    try {
+      const parsed = JSON.parse(rawText);
+      if (typeof parsed === 'string' && parsed.trim().length > 0) {
+        message = parsed;
+      } else if (parsed && typeof parsed === 'object' && 'message' in parsed && typeof (parsed as any).message === 'string') {
+        const maybe = String((parsed as any).message);
+        if (maybe.trim().length > 0) message = maybe;
+      }
+    } catch {
+      // ignore JSON parse errors and keep original text
+    }
+  }
+  if (typeof message === 'string') {
+    message = message.trim();
+  }
+  if (!message) {
+    message = res.statusText || 'Erro inesperado';
+  }
+  if (res.status === 403) {
+    if (!message || /access denied/i.test(message)) {
+      message = 'Você não tem permissão para acessar este módulo.';
+    }
+  }
+  const path = window.location.pathname;
+  const shouldRedirect = !path.startsWith('/login') && (res.status === 440 || res.status === 401);
+  if (shouldRedirect) {
+    const expired = res.status === 440 || /expirad/i.test(message);
+    toast({ title: 'Sessão finalizada', description: expired ? 'Faça login novamente para continuar.' : 'Autenticação necessária.', variant: 'destructive' });
+    setTimeout(() => { window.location.href = '/login'; }, 150);
+  }
+  const error = new Error(message);
+  (error as any).status = res.status;
+  (error as any).statusText = res.statusText;
+  (error as any).payload = rawText;
+  throw error;
 }
 
 export async function apiRequest(

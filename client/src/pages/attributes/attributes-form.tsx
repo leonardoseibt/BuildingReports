@@ -5,6 +5,10 @@ import { SmartInput } from '@/components/ui/smart-inputs';
 import FormHeader from '@/components/ui/form-header';
 import { Button } from '@/components/ui/button';
 import { AttributeDefinitionFormData, DATA_KINDS } from './types';
+import { useToast } from '@/hooks/use-toast';
+import { showError } from '@/lib/toast-messages';
+import { throwIfResNotOk } from '@/lib/queryClient';
+import { parseApiError } from '@/lib/api-error';
 
 interface Props {
   open: boolean;
@@ -16,6 +20,7 @@ interface Props {
 }
 
 export function AttributesFormDialog({ open, onOpenChange, editItem, onSubmit, loading, tables }: Props) {
+  const { toast } = useToast();
   const [friendlyName, setFriendlyName] = useState('');
   const [sourceTable, setSourceTable] = useState('');
   const [sourceColumn, setSourceColumn] = useState('');
@@ -45,7 +50,27 @@ export function AttributesFormDialog({ open, onOpenChange, editItem, onSubmit, l
   useEffect(()=> {
     if (!sourceTable) { setColumns([]); return; }
     let abort=false; (async()=> {
-      try { setLoadingColumns(true); const res = await fetch(`/api/metadata/tables/${sourceTable}/columns`, { credentials: 'include' }); if (!res.ok) throw new Error(); const cols:string[] = await res.json(); if (!abort) { setColumns(cols); if (sourceColumn && !cols.includes(sourceColumn)) setSourceColumn(''); }} catch { if (!abort) setColumns([]); } finally { if (!abort) setLoadingColumns(false);} })();
+      try {
+        setLoadingColumns(true);
+        const res = await fetch(`/api/metadata/tables/${sourceTable}/columns`, { credentials: 'include' });
+        if (!res.ok) {
+          await throwIfResNotOk(res);
+          return;
+        }
+        const cols:string[] = await res.json();
+        if (!abort) {
+          setColumns(cols);
+          if (sourceColumn && !cols.includes(sourceColumn)) setSourceColumn('');
+        }
+      } catch (err) {
+        if (!abort) {
+          setColumns([]);
+          const parsed = parseApiError(err);
+          if (parsed.status === 403) {
+            showError(toast, parsed.message || 'Você não tem permissão para carregar as colunas.');
+          }
+        }
+      } finally { if (!abort) setLoadingColumns(false);} })();
     return ()=> { abort=true; };
   }, [sourceTable]);
 
@@ -53,7 +78,28 @@ export function AttributesFormDialog({ open, onOpenChange, editItem, onSubmit, l
   useEffect(()=> {
     if (dataKind !== 'reference' || !valueSource) return;
     let abort=false; (async()=> {
-      try { setLoadingRefColumns(true); const res = await fetch(`/api/metadata/tables/${valueSource}/columns`, { credentials: 'include' }); if (!res.ok) throw new Error(); const cols:string[] = await res.json(); if (!abort) { setColumnsRef(cols); if (valueIdField && !cols.includes(valueIdField)) setValueIdField(''); if (valueLabelField && !cols.includes(valueLabelField)) setValueLabelField(''); }} catch { if (!abort) setColumnsRef([]); } finally { if (!abort) setLoadingRefColumns(false);} })();
+      try {
+        setLoadingRefColumns(true);
+        const res = await fetch(`/api/metadata/tables/${valueSource}/columns`, { credentials: 'include' });
+        if (!res.ok) {
+          await throwIfResNotOk(res);
+          return;
+        }
+        const cols:string[] = await res.json();
+        if (!abort) {
+          setColumnsRef(cols);
+          if (valueIdField && !cols.includes(valueIdField)) setValueIdField('');
+          if (valueLabelField && !cols.includes(valueLabelField)) setValueLabelField('');
+        }
+      } catch (err) {
+        if (!abort) {
+          setColumnsRef([]);
+          const parsed = parseApiError(err);
+          if (parsed.status === 403) {
+            showError(toast, parsed.message || 'Você não tem permissão para carregar as colunas de referência.');
+          }
+        }
+      } finally { if (!abort) setLoadingRefColumns(false);} })();
     return ()=> { abort=true; };
   }, [dataKind, valueSource]);
 
