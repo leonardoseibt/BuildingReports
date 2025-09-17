@@ -827,7 +827,8 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
 
         if (yPosition + adjustedHeight > pageHeight - margin - 20) { // Margem de segurança menor
           doc.addPage();
-          yPosition = margin;
+          // Após nova página, reposiciona abaixo do cabeçalho simples
+          yPosition = margin + 20;
           return true;
         }
         return false;
@@ -870,19 +871,15 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
         }, headerHeight);
       };
 
-      // Cabeçalho profissional
-      const headerHeight = 35;
-      
-      // Fundo do cabeçalho - cinza escuro
-      doc.setFillColor(60, 60, 60);
-      doc.rect(margin, margin, pageWidth - 2 * margin, headerHeight, 'F');
-      
-      // Título principal
-      doc.setTextColor(255, 255, 255); // Texto branco
-      doc.setFontSize(18);
+      // ==== Cabeçalho simples (versão anterior) ==== //
+      doc.setTextColor(0, 0, 0);
       doc.setFont('DejaVuSans', 'bold');
-      doc.text('Perfil de Desempenho da Edificação - PDE', pageWidth / 2, yPosition, { align: 'center' });
-      yPosition += 14;
+      doc.setFontSize(14);
+      doc.text('Perfil de Desempenho da Edificação', pageWidth / 2, margin + 6, { align: 'center' });
+      doc.setFontSize(10);
+      doc.setFont('DejaVuSans', 'normal');
+      doc.text('Relatório Técnico (PDE)', pageWidth / 2, margin + 12, { align: 'center' });
+      yPosition = margin + 20;
 
       // Informações do edifício com layout profissional
       if (building) {
@@ -1289,7 +1286,7 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
             // Verificação mais suave para análise - só quebra se não couber nem o título
             if (yPosition + analysisHeadingHeight + 15 > pageHeight - margin) {
               doc.addPage();
-              yPosition = margin;
+              yPosition = margin + 20;
             }
 
             doc.setFontSize(10);
@@ -1301,7 +1298,7 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
               head: [tableHeaders],
               body: tableData,
               startY: yPosition,
-              margin: { left: margin + 6, right: margin + 6 },
+              margin: { top: margin + 20, left: margin + 6, right: margin + 6, bottom: margin },
               tableWidth: 'auto',
               // Permitir quebra de página no meio da tabela
               pageBreak: 'auto',
@@ -1318,6 +1315,7 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
                 fontStyle: 'normal',
                 lineHeight: 1.2
               },
+              // Sem redesenho de cabeçalho por página (reversão da última alteração)
               headStyles: {
                 fillColor: [240, 240, 240],
                 textColor: [50, 50, 50],
