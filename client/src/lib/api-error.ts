@@ -34,6 +34,13 @@ function normalizeMessage(payload: string, raw: string) {
 
 export function parseApiError(error: unknown): ParsedApiError {
   if (error instanceof Error) {
+    const statusFromError = (error as any).status;
+    const payloadFromError = (error as any).payload;
+    if (typeof statusFromError === 'number') {
+      const rawMessage = typeof payloadFromError === 'string' && payloadFromError.length > 0 ? payloadFromError : error.message;
+      const message = error.message || `Erro ${statusFromError}`;
+      return { status: statusFromError, message, rawMessage };
+    }
     const raw = error.message;
     const { status, payload } = extractStatusAndPayload(raw);
     const message = normalizeMessage(payload, raw);

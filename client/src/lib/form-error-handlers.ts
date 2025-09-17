@@ -1,5 +1,6 @@
 import type { FieldValues, UseFormReturn } from "react-hook-form";
 import { showError, type ToastFn } from "./toast-messages";
+import { parseApiError } from "./api-error";
 
 // Centralized handler for 409 duplicate code errors.
 export async function handleCodeUniquenessError(
@@ -8,15 +9,13 @@ export async function handleCodeUniquenessError(
   toast: ToastFn,
   fallbackDescription: string
 ) {
-  try {
-    const body = await (error?.response?.json?.() ?? Promise.resolve(null));
-    if ((error?.response?.status === 409) || body?.message?.includes?.('já cadastrado')) {
-      // Mark field level error
-      form.setError('code', { message: 'Já existe um registro com este código.' });
-      showError(toast, 'Código já cadastrado. Escolha um código único.');
-      return true;
-    }
-  } catch { /* swallow parse errors */ }
-  showError(toast, fallbackDescription);
+  const parsed = parseApiError(error);
+  if (parsed.status === 409 || /já cadastrado/i.test(parsed.message)) {
+    form.setError('code', { message: 'Já existe um registro com este código.' });
+    showError(toast, 'Código já cadastrado. Escolha um código único.');
+    return true;
+  }
+  const description = parsed.message || fallbackDescription;
+  showError(toast, description);
   return false;
 }
