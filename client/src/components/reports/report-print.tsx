@@ -695,9 +695,10 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
 
     const lines = normalizedLineBreaks.split('\n').map(line => {
       return line.replace(/\s+/g, ' ').trim();
-    });
+    }).filter(line => line.length > 0); // Remove linhas vazias
 
-    const sanitized = lines.join('\n');
+    // Usa " • " como separador ao invés de quebras de linha (mesmo que na visualização)
+    const sanitized = lines.join(' • ');
     return sanitized.trim();
   };
 
@@ -1218,15 +1219,7 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
             analysis.parameters.forEach(parameter => {
               const row: any[] = [];
 
-              // Debug: log do valor original do parâmetro
-              console.log('Parâmetro original do banco:', {
-                id: parameter.id,
-                label: parameter.label,
-                hasSpecialChars: /[≥≤±°μ×÷≠]/.test(parameter.label || '')
-              });
-
               const parameterName = formatTextWithLineBreaks(parameter.label || 'Parâmetro');
-              console.log('Parâmetro após formatTextWithLineBreaks:', parameterName);
               
               const observationRaw = parameter.notes ?? parameter.observation;
               const observationContent = observationRaw ? formatTextWithLineBreaks(observationRaw) : '';
@@ -1387,7 +1380,7 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
                         const observationLines = splitPdfTextIntoLines(doc, observationText, availableWidth);
                         rawCell._observationLines = observationLines;
 
-                        const observationFontSize = 8;
+                        const observationFontSize = 7; // Reduzido de 8 para 7
                         const observationLineHeightFactor = 1.15;
                         const observationLineHeight = (observationFontSize * observationLineHeightFactor) / doc.internal.scaleFactor;
                         rawCell._observationLineHeight = observationLineHeight;
@@ -1458,20 +1451,25 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
                       doc.setTextColor(60, 60, 60);
 
                       descriptionLines.forEach((line: string) => {
-                        doc.text(line, startX, currentY, { baseline: 'top' } as any);
-                        currentY += baseLineHeight;
+                        if (line === '') {
+                          // Linha vazia - adicionar espaçamento de linha vazia
+                          currentY += baseLineHeight * 0.5; // Metade da altura para linhas vazias
+                        } else {
+                          doc.text(line, startX, currentY, { baseline: 'top' } as any);
+                          currentY += baseLineHeight;
+                        }
                       });
                     }
 
                     const observationLines = rawCell._observationLines ?? [];
                     if (observationLines.length > 0) {
                       currentY += 0.6;
-                      doc.setFont('DejaVuSans', 'italic');
-                      doc.setFontSize(8);
-                      doc.setTextColor(100, 100, 100);
+                      doc.setFont('DejaVuSans', 'normal'); // Mudado de 'italic' para 'normal'
+                      doc.setFontSize(7); // Reduzido de 8 para 7
+                      doc.setTextColor(120, 120, 120); // Mudado para cinza mais claro
 
                       const observationLineHeight =
-                        rawCell._observationLineHeight ?? (8 * 1.15) / doc.internal.scaleFactor;
+                        rawCell._observationLineHeight ?? (7 * 1.15) / doc.internal.scaleFactor; // Ajustado para fontSize 7
 
                       observationLines.forEach((line: string) => {
                         const normalizedLine = ensureUnicodeSupport(line, doc);
