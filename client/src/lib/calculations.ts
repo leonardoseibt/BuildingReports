@@ -92,7 +92,7 @@ export function calculateStructuralSafety(
   if (designLife >= 100) {
     classification = "superior";
     compliance = true;
-    recommendations.push("Vida útil de projeto excelente (≥100 anos)");
+    recommendations.push("Vida útil de projeto excelente (>=100 anos)");
   } else if (designLife >= 75) {
     classification = "intermediate";
     compliance = true;
@@ -163,15 +163,15 @@ export function calculateThermalPerformance(
   if (thermalTransmittance <= zoneLimit * 0.7) {
     classification = "superior";
     compliance = true;
-    recommendations.push(`Excelente desempenho térmico (U=${thermalTransmittance.toFixed(2)} ≤ ${(zoneLimit * 0.7).toFixed(2)} W/m²K)`);
+    recommendations.push(`Excelente desempenho térmico (U=${thermalTransmittance.toFixed(2)} <= ${(zoneLimit * 0.7).toFixed(2)} W/m²K)`);
   } else if (thermalTransmittance <= zoneLimit * 0.85) {
     classification = "intermediate";
     compliance = true;
-    recommendations.push(`Bom desempenho térmico (U=${thermalTransmittance.toFixed(2)} ≤ ${(zoneLimit * 0.85).toFixed(2)} W/m²K)`);
+    recommendations.push(`Bom desempenho térmico (U=${thermalTransmittance.toFixed(2)} <= ${(zoneLimit * 0.85).toFixed(2)} W/m²K)`);
   } else if (thermalTransmittance <= zoneLimit) {
     classification = "minimum";
     compliance = true;
-    recommendations.push(`Desempenho térmico mínimo (U=${thermalTransmittance.toFixed(2)} ≤ ${zoneLimit} W/m²K)`);
+    recommendations.push(`Desempenho térmico mínimo (U=${thermalTransmittance.toFixed(2)} <= ${zoneLimit} W/m²K)`);
   } else {
     classification = "minimum";
     compliance = false;
@@ -219,15 +219,15 @@ export function calculateAcousticPerformance(
   if (soundInsulation >= noiseClassLimit + 10) {
     classification = "superior";
     compliance = true;
-    recommendations.push(`Excelente isolamento acústico (${soundInsulation} ≥ ${noiseClassLimit + 10} dB)`);
+    recommendations.push(`Excelente isolamento acústico (${soundInsulation} >= ${noiseClassLimit + 10} dB)`);
   } else if (soundInsulation >= noiseClassLimit + 5) {
     classification = "intermediate";
     compliance = true;
-    recommendations.push(`Bom isolamento acústico (${soundInsulation} ≥ ${noiseClassLimit + 5} dB)`);
+    recommendations.push(`Bom isolamento acústico (${soundInsulation} >= ${noiseClassLimit + 5} dB)`);
   } else if (soundInsulation >= noiseClassLimit) {
     classification = "minimum";
     compliance = true;
-    recommendations.push(`Isolamento acústico mínimo (${soundInsulation} ≥ ${noiseClassLimit} dB)`);
+    recommendations.push(`Isolamento acústico mínimo (${soundInsulation} >= ${noiseClassLimit} dB)`);
   } else {
     classification = "minimum";
     compliance = false;
