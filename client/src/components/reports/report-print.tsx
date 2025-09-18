@@ -679,12 +679,39 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
   const formatTextWithLineBreaks = (text: string): string => {
     if (!text) return '';
     const normalized = normalizePdfText(text);
-    return compactPdfText(
-      normalized
-        .replace(/\r\n/g, ' • ')
-        .replace(/\n/g, ' • ')
-        .replace(/\r/g, ' • ')
-    );
+    const normalizedLineBreaks = normalized
+      .replace(/\r\n/g, '\n')
+      .replace(/\r/g, '\n');
+
+    const lines = normalizedLineBreaks.split('\n').map(line => {
+      return line.replace(/\s+/g, ' ').trim();
+    });
+
+    const sanitized = lines.join('\n');
+    return sanitized.trim();
+  };
+
+  const splitPdfTextIntoLines = (docInstance: jsPDF, text: string, maxWidth: number): string[] => {
+    if (!text) return [];
+
+    const segments = text.split('\n');
+    const result: string[] = [];
+
+    segments.forEach(segment => {
+      if (segment === '') {
+        result.push('');
+        return;
+      }
+
+      const split = docInstance.splitTextToSize(segment, maxWidth);
+      if (Array.isArray(split)) {
+        result.push(...split);
+      } else if (typeof split === 'string') {
+        result.push(split);
+      }
+    });
+
+    return result;
   };
 
   const generatePDF = async (buildingName?: string) => {
@@ -757,12 +784,23 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
         const descriptionText = cell.description ?? '';
         const observationText = cell.observation ?? '';
         const descriptionCharsPerLine = Math.max(1, Math.floor(columnWidth / 2.4));
-        const descriptionLines = Math.max(1, Math.ceil(descriptionText.length / descriptionCharsPerLine));
+        const observationCharsPerLine = Math.max(1, Math.floor(columnWidth / 2.6));
+
+        const countLines = (value: string, charsPerLine: number) => {
+          if (!value) return 0;
+          return value.split('\n').reduce((total, segment) => {
+            if (segment.length === 0) {
+              return total + 1;
+            }
+            return total + Math.max(1, Math.ceil(segment.length / charsPerLine));
+          }, 0);
+        };
+
+        const descriptionLines = Math.max(1, countLines(descriptionText, descriptionCharsPerLine));
         let estimatedHeight = descriptionLines * 6 + 2;
 
-        if (observationText) {
-          const observationCharsPerLine = Math.max(1, Math.floor(columnWidth / 2.6));
-          const observationLines = Math.max(1, Math.ceil(observationText.length / observationCharsPerLine));
+        const observationLines = countLines(observationText, observationCharsPerLine);
+        if (observationLines > 0) {
           estimatedHeight += observationLines * 5 + 3;
         }
 
@@ -775,8 +813,14 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
           const textValue = normalizeCellValue(cell).normalize('NFC');
           if (!textValue) return;
           const approxCharsPerLine = Math.max(1, Math.floor((columnWidths[index] ?? columnWidths[columnWidths.length - 1]) / 2.4));
-          const lines = Math.max(1, Math.ceil(textValue.length / approxCharsPerLine));
-          maxLines = Math.max(maxLines, lines);
+          const segments = textValue.split('\n');
+          const totalLines = segments.reduce((count, segment) => {
+            if (segment.length === 0) {
+              return count + 1;
+            }
+            return count + Math.max(1, Math.ceil(segment.length / approxCharsPerLine));
+          }, 0);
+          maxLines = Math.max(maxLines, totalLines);
         });
         return maxLines * 6 + 2;
       };
@@ -1140,8 +1184,7 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
 
               const parameterName = formatTextWithLineBreaks(parameter.label || 'Parâmetro');
               const observationRaw = parameter.notes ?? parameter.observation;
-              const observationText = observationRaw ? formatTextWithSeparators(observationRaw) : '';
-              const observationContent = observationText ? formatTextWithLineBreaks(observationText) : '';
+              const observationContent = observationRaw ? formatTextWithLineBreaks(observationRaw) : '';
 
               const parameterCell: ParameterCellContent = {
                 type: 'parameterCell',
@@ -1259,7 +1302,7 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
                       const descriptionText = rawCell.description ?? '';
                       const observationText = rawCell.observation ?? '';
 
-                      const descriptionLines = doc.splitTextToSize(descriptionText, availableWidth);
+                      const descriptionLines = splitPdfTextIntoLines(doc, descriptionText, availableWidth);
                       rawCell._descriptionLines = descriptionLines;
 
                       data.cell.text = [''];
@@ -1272,7 +1315,7 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
                       let requiredInnerHeight = descriptionLines.length * baseLineHeight;
 
                       if (observationText) {
-                        const observationLines = doc.splitTextToSize(observationText, availableWidth);
+                        const observationLines = splitPdfTextIntoLines(doc, observationText, availableWidth);
                         rawCell._observationLines = observationLines;
 
                         const observationFontSize = 8;
