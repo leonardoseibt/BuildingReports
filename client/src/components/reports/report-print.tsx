@@ -169,10 +169,93 @@ const decodeHtmlEntities = (text: string): string => {
 const sanitizeComparisonCharacters = (text: string): string => {
   if (!text) return '';
   return text
-    // apenas conversão de <> para ≠
-    .replace(/<\s*>\s*/g, '≠')
-    .replace(/<>/g, '≠');
-  // Removido: todas as conversões de <= e >= para símbolos especiais
+    // Conversões de símbolos de comparação para caracteres especiais
+    .replace(/<=\s*/g, '≤')     // <= para ≤
+    .replace(/>=\s*/g, '≥')     // >= para ≥
+    .replace(/<\s*=\s*/g, '≤')  // < = para ≤ (com espaços)
+    .replace(/>\s*=\s*/g, '≥')  // > = para ≥ (com espaços)
+    .replace(/<\s*>\s*/g, '≠')  // <> para ≠
+    .replace(/<>/g, '≠');       // <> para ≠ (sem espaços)
+};
+
+// Função para preservar caracteres especiais Unicode no PDF
+const preserveUnicodeCharacters = (text: string): string => {
+  if (!text) return '';
+  
+  // Mapeia caracteres especiais para placeholders únicos
+  const unicodeMap: { [key: string]: string } = {
+    '≥': '___PRESERVE_GTE___',
+    '≤': '___PRESERVE_LTE___',
+    '±': '___PRESERVE_PM___',
+    '°': '___PRESERVE_DEG___',
+    'μ': '___PRESERVE_MU___',
+    '×': '___PRESERVE_TIMES___',
+    '÷': '___PRESERVE_DIV___',
+    '≠': '___PRESERVE_NEQ___'
+  };
+  
+  let preserved = text;
+  Object.entries(unicodeMap).forEach(([char, placeholder]) => {
+    preserved = preserved.replace(new RegExp(char, 'g'), placeholder);
+  });
+  
+  // Preservar caracteres matemáticos e especiais de HTML entities
+  return preserved
+    .replace(/&le;/g, '___PRESERVE_LTE___')      // HTML entity para ≤
+    .replace(/&ge;/g, '___PRESERVE_GTE___')      // HTML entity para ≥
+    .replace(/&ne;/g, '___PRESERVE_NEQ___')      // HTML entity para ≠
+    .replace(/&plusmn;/g, '___PRESERVE_PM___')   // HTML entity para ±
+    .replace(/&deg;/g, '___PRESERVE_DEG___')     // HTML entity para °
+    .replace(/&mu;/g, '___PRESERVE_MU___')       // HTML entity para μ
+    .replace(/&times;/g, '___PRESERVE_TIMES___') // HTML entity para ×
+    .replace(/&divide;/g, '___PRESERVE_DIV___'); // HTML entity para ÷
+};
+
+const restoreUnicodeCharacters = (text: string): string => {
+  if (!text) return '';
+  
+  // Restaura caracteres especiais preservados
+  const restoreMap: { [key: string]: string } = {
+    '___PRESERVE_GTE___': '≥',
+    '___PRESERVE_LTE___': '≤',
+    '___PRESERVE_PM___': '±',
+    '___PRESERVE_DEG___': '°',
+    '___PRESERVE_MU___': 'μ',
+    '___PRESERVE_TIMES___': '×',
+    '___PRESERVE_DIV___': '÷',
+    '___PRESERVE_NEQ___': '≠'
+  };
+  
+  let restored = text;
+  Object.entries(restoreMap).forEach(([placeholder, char]) => {
+    restored = restored.replace(new RegExp(placeholder, 'g'), char);
+  });
+  
+  return restored;
+};
+
+// Função para garantir que caracteres especiais sejam renderizados corretamente
+const ensureUnicodeSupport = (text: string, doc: jsPDF): string => {
+  if (!text) return '';
+  
+  // Lista de caracteres especiais comuns que devem ser preservados
+  const specialChars = ['≥', '≤', '≠', '±', '°', 'μ', '×', '÷'];
+  
+  // Verificar se o texto contém caracteres especiais
+  const hasSpecialChars = specialChars.some(char => text.includes(char));
+  
+  if (hasSpecialChars) {
+    // Garantir que a fonte está configurada corretamente
+    const currentFont = doc.getFont();
+    if (currentFont.fontName !== 'DejaVuSans') {
+      doc.setFont('DejaVuSans', 'normal');
+    }
+    
+    // Log para debug (pode ser removido em produção)
+    console.log('Texto com caracteres especiais:', text);
+  }
+  
+  return text;
 };
 
 export default function ReportPrint({ item, onClose }: ReportPrintProps) {
@@ -417,12 +500,30 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
   };
 
   const normalizePdfText = (text: string): string => {
-    // Ordem: decodifica -> corrige comparações -> corrige re-encodes -> limpeza final
-    const baseText = sanitizeComparisonCharacters(decodeMisencodedText(text));
-    return baseText
+    // Se o texto já contém caracteres especiais Unicode, preservá-los
+    const hasUnicodeChars = /[≥≤±°μ×÷≠]/.test(text);
+    
+    if (hasUnicodeChars) {
+      console.log('Texto já contém caracteres Unicode, preservando:', text);
+      // Apenas limpeza básica sem decodificação que pode alterar os caracteres
+      return text
+        .replace(/\u00a0/g, ' ')
+        .replace(/\t/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+    }
+    
+    // Para textos sem caracteres especiais, aplicar normalização completa
+    const withPreservedChars = preserveUnicodeCharacters(text);
+    const decoded = decodeMisencodedText(withPreservedChars);
+    const withComparisons = sanitizeComparisonCharacters(decoded);
+    const cleaned = withComparisons
       .replace(/\u00a0/g, ' ')
       .replace(/\t/g, ' ')
       .normalize('NFKC');
+    
+    // Restaurar caracteres preservados
+    return restoreUnicodeCharacters(cleaned);
   };
 
   const compactPdfText = (text: string): string => {
@@ -754,11 +855,30 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
       let yPosition = margin;
 
       // Verificar espaço para seções
-      const checkSectionBreak = (sectionType: 'requirement' | 'criterion' | 'analysis', estimatedHeight: number) => {
+      const checkSectionBreak = (sectionType: 'requirement' | 'criterion' | 'analysis', estimatedHeight: number, forcePageBreak = false) => {
+        // Para análises, garantir espaço para título + cabeçalho da tabela + pelo menos 1 linha
+        if (sectionType === 'analysis') {
+          const titleHeight = 7;
+          const tableHeaderHeight = 12; // Altura aproximada do cabeçalho da tabela
+          const minDataRowHeight = 15;   // Altura mínima para uma linha de dados
+          const spacing = 9;
+          const minRequiredHeight = titleHeight + tableHeaderHeight + minDataRowHeight + spacing;
+          
+          if (yPosition + minRequiredHeight > pageHeight - margin - 20) {
+            doc.addPage();
+            yPosition = margin + 20;
+            return true;
+          }
+          return false;
+        }
+        
+        // Para critérios e requisitos, usar lógica ajustada
         const adjustedHeight = sectionType === 'requirement' ? estimatedHeight + 10 :
                               sectionType === 'criterion' ? estimatedHeight + 8 : 
                               estimatedHeight + 5;
-        if (yPosition + adjustedHeight > pageHeight - margin - 20) {
+        
+        const safetyMargin = 30;
+        if (yPosition + adjustedHeight > pageHeight - margin - safetyMargin || forcePageBreak) {
           doc.addPage();
           yPosition = margin + 20;
           return true;
@@ -783,8 +903,10 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
       const estimateParameterCellHeight = (cell: ParameterCellContent, columnWidth: number) => {
         const descriptionText = cell.description ?? '';
         const observationText = cell.observation ?? '';
-        const descriptionCharsPerLine = Math.max(1, Math.floor(columnWidth / 2.4));
-        const observationCharsPerLine = Math.max(1, Math.floor(columnWidth / 2.6));
+        
+        // Ajustar o cálculo baseado na largura real da coluna e fonte utilizada
+        const descriptionCharsPerLine = Math.max(1, Math.floor((columnWidth - 16) / 2.2)); // Considerando padding
+        const observationCharsPerLine = Math.max(1, Math.floor((columnWidth - 16) / 2.4)); // Fonte menor
 
         const countLines = (value: string, charsPerLine: number) => {
           if (!value) return 0;
@@ -797,14 +919,14 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
         };
 
         const descriptionLines = Math.max(1, countLines(descriptionText, descriptionCharsPerLine));
-        let estimatedHeight = descriptionLines * 6 + 2;
+        let estimatedHeight = descriptionLines * 7 + 6; // Altura base + padding
 
         const observationLines = countLines(observationText, observationCharsPerLine);
         if (observationLines > 0) {
-          estimatedHeight += observationLines * 5 + 3;
+          estimatedHeight += 4 + observationLines * 6 + 4; // Espaçamento + linhas + padding
         }
 
-        return estimatedHeight;
+        return Math.max(estimatedHeight, 20); // Altura mínima
       };
 
       const estimateStandardRowHeight = (row: any[], columnWidths: number[]) => {
@@ -1090,23 +1212,28 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
 
       // Processar cada requisito
       for (const requirement of sortedData) {
+        // Verificar se há pelo menos espaço para título + início do primeiro critério
         const hasCriteria = requirement.criteria.length > 0;
-        const requirementEstimatedHeight = 10 + (hasCriteria ? 16 : 0);
+        const firstCriterionHasAnalyses = hasCriteria && requirement.criteria[0]?.analyses?.some(analysis => analysis.parameters?.length);
+        const requirementEstimatedHeight = 10 + (hasCriteria ? 8 : 0) + (firstCriterionHasAnalyses ? 20 : 0);
         checkSectionBreak('requirement', requirementEstimatedHeight);
 
         doc.setFontSize(14);
         doc.setFont('DejaVuSans', 'bold');
-        doc.text(`Requisito: ${normalizePdfText(requirement.label)}`, margin, yPosition);
+        const requirementText = `Requisito: ${normalizePdfText(requirement.label)}`;
+        doc.text(ensureUnicodeSupport(requirementText, doc), margin, yPosition);
         yPosition += 10;
 
         for (const criterion of requirement.criteria) {
+          // Verificar se há pelo menos espaço para título + início de uma análise
           const hasAnalyses = criterion.analyses.some(analysis => analysis.parameters?.length);
-          const criterionEstimatedHeight = 8 + (hasAnalyses ? 14 : 0);
-          checkSectionBreak('criterion', criterionEstimatedHeight);
+          const minimumCriterionHeight = 8 + (hasAnalyses ? 25 : 0); // título + espaço mínimo para começar uma análise
+          checkSectionBreak('criterion', minimumCriterionHeight);
 
           doc.setFontSize(12);
           doc.setFont('DejaVuSans', 'bold');
-          doc.text(`Critério: ${normalizePdfText(criterion.label)}`, margin + 5, yPosition);
+          const criterionText = `Critério: ${normalizePdfText(criterion.label)}`;
+          doc.text(ensureUnicodeSupport(criterionText, doc), margin + 5, yPosition);
           yPosition += 8;
 
           for (const analysis of criterion.analyses) {
@@ -1182,7 +1309,16 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
             analysis.parameters.forEach(parameter => {
               const row: any[] = [];
 
+              // Debug: log do valor original do parâmetro
+              console.log('Parâmetro original do banco:', {
+                id: parameter.id,
+                label: parameter.label,
+                hasSpecialChars: /[≥≤±°μ×÷≠]/.test(parameter.label || '')
+              });
+
               const parameterName = formatTextWithLineBreaks(parameter.label || 'Parâmetro');
+              console.log('Parâmetro após formatTextWithLineBreaks:', parameterName);
+              
               const observationRaw = parameter.notes ?? parameter.observation;
               const observationContent = observationRaw ? formatTextWithLineBreaks(observationRaw) : '';
 
@@ -1220,15 +1356,16 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
             const analysisSpacing = 9;
             const totalAnalysisHeight = analysisHeadingHeight + estimatedTableHeight + analysisSpacing;
 
-            if (yPosition + analysisHeadingHeight + 15 > pageHeight - margin) {
-              doc.addPage();
-              yPosition = margin + 20;
-            }
+            // Verificar quebra de página para análise (título + tabela + dados)
+            checkSectionBreak('analysis', 0);
 
-            doc.setFontSize(10);
-            doc.setFont('DejaVuSans', 'bold');
-            doc.text(`Análise: ${normalizePdfText(analysis.label)}`, margin + 10, yPosition);
-            yPosition += analysisHeadingHeight;
+            // Incluir título da análise como primeira linha da tabela para evitar órfão
+            const analysisTitle = `Análise: ${normalizePdfText(analysis.label)}`;
+            const titleRow = Array(tableHeaders.length).fill('');
+            titleRow[0] = ensureUnicodeSupport(analysisTitle, doc);
+            
+            // Inserir linha do título no início dos dados da tabela
+            tableData.unshift(titleRow);
 
             autoTable(doc, {
               head: [tableHeaders],
@@ -1238,6 +1375,8 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
               tableWidth: 'auto',
               pageBreak: 'auto',
               showHead: 'everyPage',
+              rowPageBreak: 'avoid', // Evita quebrar no meio de uma linha
+              pageBreakBehavior: 'always', // Força quebra de página quando necessário
               styles: {
                 fontSize: 9,
                 cellPadding: 3,
@@ -1248,7 +1387,8 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
                 cellWidth: 'wrap',
                 font: 'DejaVuSans',
                 fontStyle: 'normal',
-                lineHeight: 1.2
+                lineHeight: 1.2,
+                minCellHeight: 12 // Altura mínima para evitar células muito pequenas
               },
               headStyles: {
                 fillColor: [240, 240, 240],
@@ -1281,6 +1421,33 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
 
                 if (data.section === 'body') {
                   data.cell.styles.font = 'DejaVuSans';
+                  
+                  // Detectar se é a linha do título da análise (primeira linha, primeira coluna com "Análise:")
+                  if (data.row.index === 0 && data.column.index === 0 && 
+                      typeof data.cell.raw === 'string' && data.cell.raw.startsWith('Análise:')) {
+                    // Formatar como título da análise
+                    data.cell.styles.fontStyle = 'bold';
+                    data.cell.styles.fontSize = 10;
+                    data.cell.styles.fillColor = [240, 248, 255]; // Azul claro
+                    data.cell.styles.textColor = [30, 64, 175]; // Azul escuro
+                    data.cell.styles.halign = 'left';
+                    data.cell.colSpan = tableHeaders.length; // Ocupar toda a largura
+                    data.cell.rowSpan = 1;
+                    // Evitar quebra de página nesta linha crítica
+                    data.row.pageBreak = 'avoid';
+                    return;
+                  }
+                  
+                  // Ocultar células que foram mescladas pelo colSpan do título
+                  if (data.row.index === 0 && data.column.index > 0) {
+                    data.cell.text = '';
+                    return;
+                  }
+                  
+                  // Aplicar rowPageBreak: 'avoid' para linhas com conteúdo crítico
+                  if (data.column.index === 0 && isParameterCellContent(data.cell.raw)) {
+                    data.row.pageBreak = 'avoid';
+                  }
                   if (data.column.index === 0) {
                     data.cell.styles.halign = 'left';
                     data.cell.styles.valign = 'top';
@@ -1349,11 +1516,23 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
 
                 if (data.section === 'body' && data.column.index !== 0 && data.cell.raw && typeof data.cell.raw === 'string') {
                   if (data.cell.text && data.cell.text.length > 0) {
-                    data.cell.text = data.cell.text.map((text: string) =>
-                      formatTextWithLineBreaks(text)
-                    );
+                    data.cell.text = data.cell.text.map((text: string) => {
+                      const formatted = formatTextWithLineBreaks(text);
+                      return ensureUnicodeSupport(formatted, doc);
+                    });
                   }
                 }
+              },
+              willDrawPage: (data: any) => {
+                // Evitar que cabeçalho apareça sem pelo menos uma linha de dados
+                const remainingSpace = pageHeight - data.cursor.y - margin;
+                const minHeightNeeded = 25; // Cabeçalho + pelo menos uma linha
+                
+                if (remainingSpace < minHeightNeeded && data.pageNumber > 1) {
+                  // Se não há espaço suficiente, força quebra
+                  return true;
+                }
+                return false;
               },
               didDrawCell: (data: any) => {
                 if (data.section === 'body' && data.column.index === 0) {

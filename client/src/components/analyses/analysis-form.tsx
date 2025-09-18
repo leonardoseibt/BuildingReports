@@ -10,6 +10,7 @@ import FormHeader from '@/components/ui/form-header';
 import { Form, FormField, FormItem, FormControl, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { SmartInput, SmartTextarea } from '@/components/ui/smart-inputs';
 import { NotchedField } from '@/components/ui/notched-field';
 import type { Analysis, Criterion, Requirement } from '@shared/schema';
 import { useQuery } from '@tanstack/react-query';
@@ -161,7 +162,7 @@ export default function AnalysisForm({ onSuccess, onCancel, initialItem }: { onS
               <FormItem className="md:col-span-6">
                 <FormControl>
                   <NotchedField label="Descrição" requiredMark>
-                    <Textarea
+                    <SmartTextarea
                       {...field}
                       rows={2}
                       placeholder="Descrição da análise"

@@ -13,4 +13,12 @@ export const ensurePdfFonts = async (doc: jsPDF) => {
     fontsLoaded = true;
   }
   doc.setFont('DejaVuSans', 'normal');
+  
+  // Teste para garantir que caracteres especiais estão funcionando
+  try {
+    const testText = '≥≤±°μ×÷≠';
+    doc.text(testText, -1000, -1000); // Posição fora da página para teste
+  } catch (error) {
+    console.warn('Alguns caracteres especiais podem não ser suportados pela fonte:', error);
+  }
 };

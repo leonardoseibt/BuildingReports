@@ -226,10 +226,8 @@ export default function ReportsList() {
       </div>
 
       <Dialog open={open} onOpenChange={(v) => { if (v) setFormKey(k => k + 1); if (!v) setEditItem(null); setOpen(v); }}>
-        <DialogContent className="max-w-5xl h-[66vh] p-0 overflow-hidden">
-          <div className="h-[calc(66vh-1rem)] overflow-y-auto my-7 px-7">
-            <ReportForm key={formKey} initialItem={editItem} onSuccess={() => { queryClient.invalidateQueries({ queryKey: ['/api/reports'] }); if (editItem) { setEditItem(null); setOpen(false); } }} onCancel={() => setOpen(false)} />
-          </div>
+        <DialogContent className="max-w-6xl max-h-[90vh] p-7 overflow-hidden">
+          <ReportForm key={formKey} initialItem={editItem} onSuccess={() => { queryClient.invalidateQueries({ queryKey: ['/api/reports'] }); if (editItem) { setEditItem(null); setOpen(false); } }} onCancel={() => setOpen(false)} />
         </DialogContent>
       </Dialog>
 

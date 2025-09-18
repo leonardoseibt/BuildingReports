@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import FormHeader from '@/components/ui/form-header';
 import { Form, FormField, FormItem, FormControl, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { SmartInput } from '@/components/ui/smart-inputs';
 import { NotchedField } from '@/components/ui/notched-field';
 import type { Criterion } from '@shared/schema';
 
@@ -83,7 +84,7 @@ export default function CriterionForm({ onSuccess, onCancel, initialItem }: { on
       <FormItem className="md:col-span-3">
                 <FormControl>
                   <NotchedField label="Descrição" requiredMark>
-                    <Input {...field} placeholder="Descrição do critério" className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" />
+                    <SmartInput {...field} placeholder="Descrição do critério" className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" />
                   </NotchedField>
                 </FormControl>
                 <FormMessage />

@@ -464,7 +464,7 @@ export default function ReportForm({ initialItem, onSuccess, onCancel }: { initi
             </div>
           </div>
           
-          <div className="max-h-[41vh] overflow-y-auto">
+          <div className="max-h-[45vh] overflow-y-auto border-t">
             {/* Resumo dos Requisitos */}
             <div className="px-4 py-3 bg-blue-50/30 border-b border-blue-100">
               <div className="flex items-center justify-between text-sm">
