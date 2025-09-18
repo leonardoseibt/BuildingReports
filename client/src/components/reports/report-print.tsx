@@ -80,7 +80,6 @@ const WINDOWS_1252_EXTENDED_MAP: Record<string, number> = {
   '›': 0x9b,
   'œ': 0x9c,
   'ž': 0x9e,
-  'Ÿ': 0x9f
 };
 
 const COMMON_ENCODING_REPLACEMENTS: Record<string, string> = {
@@ -97,7 +96,10 @@ const COMMON_ENCODING_REPLACEMENTS: Record<string, string> = {
   'âˆƒ': '∃',
   'âˆ…': '∅',
   'âˆ‡': '∇',
-  'âˆˆ': '∈'
+  'âˆˆ': '∈',
+  // Correções de mojibake para caracteres especiais matemáticos
+  'â‰¤': '≤',
+  'â‰¥': '≥'
   // Removido: 'â‰¤': '≤' e 'â‰¥': '≥'
 };
 
@@ -128,8 +130,17 @@ const decodeHtmlEntities = (text: string): string => {
     '&amp;': '&',
     '&lt;': '<',
     '&gt;': '>',
-    '&ne;': '≠'
-    // Removido: '&le;': '≤', '&ge;': '≥', '&leq;': '≤', '&geq;': '≥'
+    '&ne;': '≠',
+    // Entidades para caracteres especiais matemáticos
+    '&le;': '≤',
+    '&leq;': '≤',
+    '&ge;': '≥',
+    '&geq;': '≥',
+    '&plusmn;': '±',
+    '&deg;': '°',
+    '&mu;': 'μ',
+    '&times;': '×',
+    '&divide;': '÷'
   };
 
   Object.entries(named).forEach(([k, v]) => {
@@ -176,62 +187,6 @@ const sanitizeComparisonCharacters = (text: string): string => {
     .replace(/>\s*=\s*/g, '≥')  // > = para ≥ (com espaços)
     .replace(/<\s*>\s*/g, '≠')  // <> para ≠
     .replace(/<>/g, '≠');       // <> para ≠ (sem espaços)
-};
-
-// Função para preservar caracteres especiais Unicode no PDF
-const preserveUnicodeCharacters = (text: string): string => {
-  if (!text) return '';
-  
-  // Mapeia caracteres especiais para placeholders únicos
-  const unicodeMap: { [key: string]: string } = {
-    '≥': '___PRESERVE_GTE___',
-    '≤': '___PRESERVE_LTE___',
-    '±': '___PRESERVE_PM___',
-    '°': '___PRESERVE_DEG___',
-    'μ': '___PRESERVE_MU___',
-    '×': '___PRESERVE_TIMES___',
-    '÷': '___PRESERVE_DIV___',
-    '≠': '___PRESERVE_NEQ___'
-  };
-  
-  let preserved = text;
-  Object.entries(unicodeMap).forEach(([char, placeholder]) => {
-    preserved = preserved.replace(new RegExp(char, 'g'), placeholder);
-  });
-  
-  // Preservar caracteres matemáticos e especiais de HTML entities
-  return preserved
-    .replace(/&le;/g, '___PRESERVE_LTE___')      // HTML entity para ≤
-    .replace(/&ge;/g, '___PRESERVE_GTE___')      // HTML entity para ≥
-    .replace(/&ne;/g, '___PRESERVE_NEQ___')      // HTML entity para ≠
-    .replace(/&plusmn;/g, '___PRESERVE_PM___')   // HTML entity para ±
-    .replace(/&deg;/g, '___PRESERVE_DEG___')     // HTML entity para °
-    .replace(/&mu;/g, '___PRESERVE_MU___')       // HTML entity para μ
-    .replace(/&times;/g, '___PRESERVE_TIMES___') // HTML entity para ×
-    .replace(/&divide;/g, '___PRESERVE_DIV___'); // HTML entity para ÷
-};
-
-const restoreUnicodeCharacters = (text: string): string => {
-  if (!text) return '';
-  
-  // Restaura caracteres especiais preservados
-  const restoreMap: { [key: string]: string } = {
-    '___PRESERVE_GTE___': '≥',
-    '___PRESERVE_LTE___': '≤',
-    '___PRESERVE_PM___': '±',
-    '___PRESERVE_DEG___': '°',
-    '___PRESERVE_MU___': 'μ',
-    '___PRESERVE_TIMES___': '×',
-    '___PRESERVE_DIV___': '÷',
-    '___PRESERVE_NEQ___': '≠'
-  };
-  
-  let restored = text;
-  Object.entries(restoreMap).forEach(([placeholder, char]) => {
-    restored = restored.replace(new RegExp(placeholder, 'g'), char);
-  });
-  
-  return restored;
 };
 
 // Função para garantir que caracteres especiais sejam renderizados corretamente
@@ -456,74 +411,28 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
     }
   }, [attributes]);
 
-  const decodeMisencodedText = (text: string): string => {
-    if (!text) return '';
-
-    // Primeiro, decodifica entidades HTML (novo passo — cobre &le;, &ge;, &lt;=, &#8804; etc.)
-    const withEntitiesDecoded = decodeHtmlEntities(text);
-
-    // Teste de "cara de texto mal-encodado"
-    const suspiciousPattern = /(Ã[\u0080-\u00FF]|Â[\u0080-\u00FF]|â[\u0080-\u00FF]|â[\u2000-\u20FF])/;
-    if (!suspiciousPattern.test(withEntitiesDecoded)) {
-      return applyCommonEncodingFixes(withEntitiesDecoded);
-    }
-
-    const byteValues: number[] = [];
-    let hasUnmappedChar = false;
-
-    for (const char of withEntitiesDecoded) {
-      const code = char.charCodeAt(0);
-      if (code <= 0xff) {
-        byteValues.push(code);
-        continue;
-      }
-      if (WINDOWS_1252_EXTENDED_MAP[char] !== undefined) {
-        byteValues.push(WINDOWS_1252_EXTENDED_MAP[char]);
-        continue;
-      }
-      hasUnmappedChar = true;
-      break;
-    }
-
-    if (hasUnmappedChar) {
-      return applyCommonEncodingFixes(withEntitiesDecoded);
-    }
-
-    try {
-      const decoder = new TextDecoder('utf-8', { fatal: false });
-      const decoded = decoder.decode(new Uint8Array(byteValues));
-      return applyCommonEncodingFixes(decoded);
-    } catch (error) {
-      console.warn('Não foi possível corrigir codificação do texto:', error);
-      return applyCommonEncodingFixes(withEntitiesDecoded);
-    }
-  };
-
   const normalizePdfText = (text: string): string => {
-    // Se o texto já contém caracteres especiais Unicode, preservá-los
-    const hasUnicodeChars = /[≥≤±°μ×÷≠]/.test(text);
+    if (!text) return '';
     
-    if (hasUnicodeChars) {
-      console.log('Texto já contém caracteres Unicode, preservando:', text);
-      // Apenas limpeza básica sem decodificação que pode alterar os caracteres
-      return text
-        .replace(/\u00a0/g, ' ')
-        .replace(/\t/g, ' ')
-        .replace(/\s+/g, ' ')
-        .trim();
-    }
+    // Pipeline simplificado e seguro conforme documentação:
+    // 1. decodeHtmlEntities (inclui &le;/&ge; etc.)
+    const withDecodedEntities = decodeHtmlEntities(text);
     
-    // Para textos sem caracteres especiais, aplicar normalização completa
-    const withPreservedChars = preserveUnicodeCharacters(text);
-    const decoded = decodeMisencodedText(withPreservedChars);
-    const withComparisons = sanitizeComparisonCharacters(decoded);
+    // 2. applyCommonEncodingFixes (mojibake, incluindo â‰¤/â‰¥ → ≤/≥)
+    const withFixedEncoding = applyCommonEncodingFixes(withDecodedEntities);
+    
+    // 3. sanitizeComparisonCharacters (<=, >=, <> → ≤, ≥, ≠)
+    const withComparisons = sanitizeComparisonCharacters(withFixedEncoding);
+    
+    // 4. limpeza de espaços + normalize('NFKC')
     const cleaned = withComparisons
       .replace(/\u00a0/g, ' ')
       .replace(/\t/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
       .normalize('NFKC');
     
-    // Restaurar caracteres preservados
-    return restoreUnicodeCharacters(cleaned);
+    return cleaned;
   };
 
   const compactPdfText = (text: string): string => {
@@ -1359,13 +1268,26 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
             // Verificar quebra de página para análise (título + tabela + dados)
             checkSectionBreak('analysis', 0);
 
-            // Incluir título da análise como primeira linha da tabela para evitar órfão
+            // Renderizar título da análise antes da tabela
             const analysisTitle = `Análise: ${normalizePdfText(analysis.label)}`;
-            const titleRow = Array(tableHeaders.length).fill('');
-            titleRow[0] = ensureUnicodeSupport(analysisTitle, doc);
+            const normalizedTitle = ensureUnicodeSupport(analysisTitle, doc);
             
-            // Inserir linha do título no início dos dados da tabela
-            tableData.unshift(titleRow);
+            // Configurar estilo do título
+            doc.setFont('DejaVuSans', 'bold');
+            doc.setFontSize(10);
+            doc.setTextColor(30, 64, 175); // Azul escuro
+            
+            // Adicionar fundo azul claro para o título
+            const titleHeight = 8;
+            const titleWidth = pageWidth - (margin * 2) - 12; // Largura da tabela com margens
+            doc.setFillColor(240, 248, 255); // Azul claro
+            doc.rect(margin + 6, yPosition, titleWidth, titleHeight, 'F');
+            
+            // Renderizar o texto do título
+            doc.text(normalizedTitle, margin + 9, yPosition + 5.5);
+            
+            // Atualizar posição Y para a tabela
+            yPosition += titleHeight + 2; // Pequeno espaçamento entre título e tabela
 
             autoTable(doc, {
               head: [tableHeaders],
@@ -1421,28 +1343,6 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
 
                 if (data.section === 'body') {
                   data.cell.styles.font = 'DejaVuSans';
-                  
-                  // Detectar se é a linha do título da análise (primeira linha, primeira coluna com "Análise:")
-                  if (data.row.index === 0 && data.column.index === 0 && 
-                      typeof data.cell.raw === 'string' && data.cell.raw.startsWith('Análise:')) {
-                    // Formatar como título da análise
-                    data.cell.styles.fontStyle = 'bold';
-                    data.cell.styles.fontSize = 10;
-                    data.cell.styles.fillColor = [240, 248, 255]; // Azul claro
-                    data.cell.styles.textColor = [30, 64, 175]; // Azul escuro
-                    data.cell.styles.halign = 'left';
-                    data.cell.colSpan = tableHeaders.length; // Ocupar toda a largura
-                    data.cell.rowSpan = 1;
-                    // Evitar quebra de página nesta linha crítica
-                    data.row.pageBreak = 'avoid';
-                    return;
-                  }
-                  
-                  // Ocultar células que foram mescladas pelo colSpan do título
-                  if (data.row.index === 0 && data.column.index > 0) {
-                    data.cell.text = '';
-                    return;
-                  }
                   
                   // Aplicar rowPageBreak: 'avoid' para linhas com conteúdo crítico
                   if (data.column.index === 0 && isParameterCellContent(data.cell.raw)) {
