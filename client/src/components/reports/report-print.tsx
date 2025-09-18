@@ -39,6 +39,20 @@ interface ReportPrintProps {
   onClose: () => void;
 }
 
+interface ParameterCellContent {
+  type: 'parameterCell';
+  description: string;
+  observation: string;
+  _descriptionLines?: string[];
+  _observationLines?: string[];
+  _baseLineHeight?: number;
+  _observationLineHeight?: number;
+}
+
+const isParameterCellContent = (value: unknown): value is ParameterCellContent => {
+  return !!value && typeof value === 'object' && (value as ParameterCellContent).type === 'parameterCell';
+};
+
 const WINDOWS_1252_EXTENDED_MAP: Record<string, number> = {
   '€': 0x80,
   '‚': 0x82,
@@ -725,36 +739,61 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
         return false;
       };
 
-      const estimateObservationHeight = (text: string, columnWidths: number[]) => {
-        if (!text) return 8;
-        const totalWidth = columnWidths.reduce((acc, width) => acc + width, 0);
-        const approxCharsPerLine = Math.max(1, Math.floor(totalWidth / 2.4));
-        const lines = Math.max(1, Math.ceil(text.length / approxCharsPerLine));
-        return lines * 6 + 4;
+      const normalizeCellValue = (cell: unknown): string => {
+        if (cell === null || cell === undefined) return '';
+        if (typeof cell === 'string') return cell;
+        if (typeof cell === 'number') return cell.toString();
+        if (isParameterCellContent(cell)) {
+          return cell.description ?? '';
+        }
+        if (typeof cell === 'object' && 'content' in (cell as Record<string, unknown>)) {
+          const rawContent = (cell as { content?: unknown }).content;
+          return typeof rawContent === 'string' ? rawContent : '';
+        }
+        return '';
       };
 
-      const estimateStandardRowHeight = (row: string[], columnWidths: number[]) => {
+      const estimateParameterCellHeight = (cell: ParameterCellContent, columnWidth: number) => {
+        const descriptionText = cell.description ?? '';
+        const observationText = cell.observation ?? '';
+        const descriptionCharsPerLine = Math.max(1, Math.floor(columnWidth / 2.4));
+        const descriptionLines = Math.max(1, Math.ceil(descriptionText.length / descriptionCharsPerLine));
+        let estimatedHeight = descriptionLines * 6 + 2;
+
+        if (observationText) {
+          const observationCharsPerLine = Math.max(1, Math.floor(columnWidth / 2.6));
+          const observationLines = Math.max(1, Math.ceil(observationText.length / observationCharsPerLine));
+          estimatedHeight += observationLines * 5 + 3;
+        }
+
+        return estimatedHeight;
+      };
+
+      const estimateStandardRowHeight = (row: any[], columnWidths: number[]) => {
         let maxLines = 1;
         row.forEach((cell, index) => {
-          const textValue = (cell ?? '').toString().normalize('NFC');
+          const textValue = normalizeCellValue(cell).normalize('NFC');
           if (!textValue) return;
-          const approxCharsPerLine = Math.max(1, Math.floor(columnWidths[index] / 2.4));
+          const approxCharsPerLine = Math.max(1, Math.floor((columnWidths[index] ?? columnWidths[columnWidths.length - 1]) / 2.4));
           const lines = Math.max(1, Math.ceil(textValue.length / approxCharsPerLine));
           maxLines = Math.max(maxLines, lines);
         });
         return maxLines * 6 + 2;
       };
 
+      const estimateRowHeight = (row: any[], columnWidths: number[]) => {
+        const baseHeight = estimateStandardRowHeight(row, columnWidths);
+        const firstCell = row?.[0];
+        if (isParameterCellContent(firstCell)) {
+          const parameterHeight = estimateParameterCellHeight(firstCell, columnWidths[0]);
+          return Math.max(baseHeight, parameterHeight);
+        }
+        return baseHeight;
+      };
+
       const estimateTableHeight = (rows: any[], columnWidths: number[]) => {
         const headerHeight = 10;
-        return rows.reduce((height, row) => {
-          if (Array.isArray(row) && row.length > 0 && typeof row[0] === 'object' && 'colSpan' in row[0]) {
-            const textValue = (row[0] as { content?: string }).content ?? '';
-            return height + estimateObservationHeight(textValue, columnWidths);
-          }
-          const normalizedRow = (row as string[]).map(cell => (cell ?? '').toString());
-          return height + estimateStandardRowHeight(normalizedRow, columnWidths);
-        }, headerHeight);
+        return rows.reduce((height, row) => height + estimateRowHeight(row, columnWidths), headerHeight);
       };
 
       // ==== Cabeçalho simples ==== //
@@ -1097,10 +1136,19 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
             };
 
             analysis.parameters.forEach(parameter => {
-              const row: string[] = [];
+              const row: any[] = [];
 
               const parameterName = formatTextWithLineBreaks(parameter.label || 'Parâmetro');
-              row.push(parameterName);
+              const observationRaw = parameter.notes ?? parameter.observation;
+              const observationText = observationRaw ? formatTextWithSeparators(observationRaw) : '';
+              const observationContent = observationText ? formatTextWithLineBreaks(observationText) : '';
+
+              const parameterCell: ParameterCellContent = {
+                type: 'parameterCell',
+                description: parameterName,
+                observation: observationContent
+              };
+              row.push(parameterCell);
 
               const rawUnit = parameter.unit ? String(parameter.unit) : '—';
               const unitText = compactPdfText(rawUnit) || '—';
@@ -1122,31 +1170,6 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
               });
 
               tableData.push(row);
-
-              const observationRaw = parameter.notes ?? parameter.observation;
-              const observationText = observationRaw ? formatTextWithSeparators(observationRaw) : '';
-              if (observationText && observationText.trim()) {
-                const cleanText = formatTextWithLineBreaks(observationText);
-                tableData.push([
-                  {
-                    content: cleanText,
-                    colSpan: tableHeaders.length,
-                    styles: {
-                      halign: 'left',
-                      valign: 'top',
-                      fontStyle: 'italic',
-                      fontSize: 8,
-                      textColor: [100, 100, 100],
-                      fillColor: [245, 245, 245],
-                      cellPadding: { top: 4, right: 8, bottom: 4, left: 12 },
-                      overflow: 'linebreak',
-                      cellWidth: 'auto',
-                      font: 'DejaVuSans',
-                      lineHeight: 1.2
-                    }
-                  }
-                ]);
-              }
             });
 
             const estimatedTableHeight = estimateTableHeight(tableData, columnWidths);
@@ -1213,23 +1236,6 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
                   data.cell.styles.fontSize = 10;
                 }
 
-                if (typeof data.cell.raw === 'object' && data.cell.raw?.colSpan === tableHeaders.length) {
-                  data.cell.styles.halign = 'left';
-                  data.cell.styles.valign = 'top';
-                  data.cell.styles.overflow = 'linebreak';
-                  data.cell.styles.cellWidth = 'auto';
-                  data.cell.styles.font = 'DejaVuSans';
-                  data.cell.styles.fontStyle = 'italic';
-                  data.cell.styles.fontSize = 8;
-                  data.cell.styles.lineHeight = 1.2;
-
-                  if (data.cell.raw.content && typeof data.cell.raw.content === 'string') {
-                    const processedText = formatTextWithLineBreaks(data.cell.raw.content);
-                    data.cell.text = [processedText];
-                  }
-                  return;
-                }
-
                 if (data.section === 'body') {
                   data.cell.styles.font = 'DejaVuSans';
                   if (data.column.index === 0) {
@@ -1237,6 +1243,55 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
                     data.cell.styles.valign = 'top';
                     data.cell.styles.fontSize = 8;
                     data.cell.styles.lineHeight = 1.2;
+
+                    const rawCell = data.cell.raw;
+                    if (isParameterCellContent(rawCell)) {
+                      const paddingLeft = data.cell.padding('left');
+                      const paddingRight = data.cell.padding('right');
+                      const availableWidth = data.cell.width - paddingLeft - paddingRight;
+
+                      const descriptionText = rawCell.description ?? '';
+                      const observationText = rawCell.observation ?? '';
+
+                      const descriptionLines = doc.splitTextToSize(descriptionText, availableWidth);
+                      rawCell._descriptionLines = descriptionLines;
+
+                      data.cell.text = descriptionLines.length > 0 ? [...descriptionLines] : [''];
+
+                      const baseFontSize = data.cell.styles.fontSize || 8;
+                      const baseLineHeightFactor = data.cell.styles.lineHeight || 1.2;
+                      const baseLineHeight = (baseFontSize * baseLineHeightFactor) / doc.internal.scaleFactor;
+                      rawCell._baseLineHeight = baseLineHeight;
+
+                      let requiredInnerHeight = descriptionLines.length * baseLineHeight;
+
+                      if (observationText) {
+                        const observationLines = doc.splitTextToSize(observationText, availableWidth);
+                        rawCell._observationLines = observationLines;
+
+                        const observationFontSize = 8;
+                        const observationLineHeightFactor = 1.15;
+                        const observationLineHeight = (observationFontSize * observationLineHeightFactor) / doc.internal.scaleFactor;
+                        rawCell._observationLineHeight = observationLineHeight;
+
+                        requiredInnerHeight += 0.6 + observationLines.length * observationLineHeight;
+                        data.cell.text.push('');
+                      } else {
+                        rawCell._observationLines = [];
+                        rawCell._observationLineHeight = 0;
+                      }
+
+                      const paddingTop = data.cell.padding('top');
+                      const paddingBottom = data.cell.padding('bottom');
+                      const requiredHeight = requiredInnerHeight + paddingTop + paddingBottom;
+
+                      if (!data.cell.styles.minCellHeight || data.cell.styles.minCellHeight < requiredHeight) {
+                        data.cell.styles.minCellHeight = requiredHeight;
+                      }
+                      data.row.height = Math.max(data.row.height, data.cell.styles.minCellHeight);
+                    } else if (data.cell.text && data.cell.text.length > 0) {
+                      data.cell.text = data.cell.text.map((text: string) => formatTextWithLineBreaks(text));
+                    }
                   } else if (data.column.index === 1) {
                     data.cell.styles.halign = 'center';
                     data.cell.styles.fontSize = 8;
@@ -1244,11 +1299,40 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
                   }
                 }
 
-                if (data.section === 'body' && data.cell.raw && typeof data.cell.raw === 'string') {
+                if (data.section === 'body' && data.column.index !== 0 && data.cell.raw && typeof data.cell.raw === 'string') {
                   if (data.cell.text && data.cell.text.length > 0) {
                     data.cell.text = data.cell.text.map((text: string) =>
                       formatTextWithLineBreaks(text)
                     );
+                  }
+                }
+              },
+              didDrawCell: (data: any) => {
+                if (data.section === 'body' && data.column.index === 0) {
+                  const rawCell = data.cell.raw;
+                  if (isParameterCellContent(rawCell) && rawCell._observationLines && rawCell._observationLines.length > 0) {
+                    const paddingLeft = data.cell.padding('left');
+                    const paddingTop = data.cell.padding('top');
+                    const startX = data.cell.x + paddingLeft;
+
+                    const baseLineHeight = rawCell._baseLineHeight ?? ((data.cell.styles.fontSize || 8) * (data.cell.styles.lineHeight || 1.2)) / doc.internal.scaleFactor;
+                    const observationLineHeight = rawCell._observationLineHeight ?? ((data.cell.styles.fontSize || 8) * 1.15) / doc.internal.scaleFactor;
+                    const descriptionLinesCount = rawCell._descriptionLines?.length ?? 0;
+
+                    let currentY = data.cell.y + paddingTop + descriptionLinesCount * baseLineHeight + 0.8;
+
+                    doc.setFont('DejaVuSans', 'italic');
+                    doc.setFontSize(8);
+                    doc.setTextColor(100, 100, 100);
+
+                    rawCell._observationLines.forEach((line: string) => {
+                      doc.text(line, startX, currentY, { baseline: 'top' } as any);
+                      currentY += observationLineHeight;
+                    });
+
+                    doc.setFont('DejaVuSans', 'normal');
+                    doc.setFontSize(data.cell.styles.fontSize || 8);
+                    doc.setTextColor(60, 60, 60);
                   }
                 }
               }
