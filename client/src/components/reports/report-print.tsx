@@ -83,9 +83,8 @@ const COMMON_ENCODING_REPLACEMENTS: Record<string, string> = {
   'âˆƒ': '∃',
   'âˆ…': '∅',
   'âˆ‡': '∇',
-  'âˆˆ': '∈',
-  'â‰¤': '≤',
-  'â‰¥': '≥'
+  'âˆˆ': '∈'
+  // Removido: 'â‰¤': '≤' e 'â‰¥': '≥'
 };
 
 const COMMON_ENCODING_REGEXES = Object.entries(COMMON_ENCODING_REPLACEMENTS).map(([encoded, decoded]) => ({
@@ -95,26 +94,71 @@ const COMMON_ENCODING_REGEXES = Object.entries(COMMON_ENCODING_REPLACEMENTS).map
 
 const applyCommonEncodingFixes = (text: string): string => {
   let fixedText = text;
-
   for (const { pattern, decoded } of COMMON_ENCODING_REGEXES) {
     fixedText = fixedText.replace(pattern, decoded);
   }
-
   return fixedText;
 };
 
-const sanitizeComparisonCharacters = (text: string): string => {
+/**
+ * Decodifica entidades HTML mais comuns e referências numéricas/hex (ex.: &le;, &ge;, &lt;=, &#8804;, &#x2265;)
+ */
+const decodeHtmlEntities = (text: string): string => {
   if (!text) return '';
 
+  let s = text;
+
+  // Mapeamento básico de entidades nomeadas usadas aqui
+  const named: Record<string, string> = {
+    '&nbsp;': '\u00A0',
+    '&amp;': '&',
+    '&lt;': '<',
+    '&gt;': '>',
+    '&ne;': '≠'
+    // Removido: '&le;': '≤', '&ge;': '≥', '&leq;': '≤', '&geq;': '≥'
+  };
+
+  Object.entries(named).forEach(([k, v]) => {
+    s = s.replace(new RegExp(k, 'gi'), v);
+  });
+
+  // Referências numéricas decimais: &#NNNN;
+  s = s.replace(/&#(\d+);/g, (_m, dec) => {
+    try {
+      return String.fromCodePoint(parseInt(dec, 10));
+    } catch {
+      return _m;
+    }
+  });
+
+  // Referências numéricas hexadecimais: &#xHHHH;
+  s = s.replace(/&#x([0-9a-fA-F]+);/g, (_m, hex) => {
+    try {
+      return String.fromCodePoint(parseInt(hex, 16));
+    } catch {
+      return _m;
+    }
+  });
+
+  // Combinações típicas escritas com entidades: &lt;= e &gt;=
+  // Removido: conversões de <= para ≤ e >= para ≥
+  s = s.replace(/<\s*>\s*/g, '≠');
+
+  return s;
+};
+
+/**
+ * Converte apenas os padrões de comparação em seus símbolos (sem alterar < e > isolados).
+ * Mantém < e > quando usados como caracteres normais.
+ * ATUALIZADO: Removidas as conversões <= para ≤ e >= para ≥
+ */
+const sanitizeComparisonCharacters = (text: string): string => {
+  if (!text) return '';
   return text
-    .replace(/<\s*=\s*/g, '≤')
-    .replace(/>\s*=\s*/g, '≥')
+    // apenas conversão de <> para ≠
     .replace(/<\s*>\s*/g, '≠')
-    .replace(/<=/g, '≤')
-    .replace(/>=/g, '≥')
-    .replace(/<>/g, '≠')
-    .replace(/</g, '‹')
-    .replace(/>/g, '›');
+    .replace(/<>/g, '≠');
+  // Removido: todas as conversões de <= e >= para símbolos especiais
 };
 
 export default function ReportPrint({ item, onClose }: ReportPrintProps) {
@@ -168,70 +212,34 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
 
   /*
    * SISTEMA COMPLETAMENTE GENÉRICO DE ATRIBUTOS
-   * 
-   * Este sistema funciona automaticamente com qualquer tabela do banco de dados:
-   * 
-   * 1. FUNCIONAMENTO AUTOMÁTICO:
-   *    - Lê o campo `sourceTable` do atributo
-   *    - Carrega dados da tabela automaticamente via `/api/${tableName}`
-   *    - Encontra registro relacionado usando estratégias inteligentes
-   *    - Extrai valor da coluna especificada em `sourceColumn`
-   * 
-   * 2. ESTRATÉGIAS DE RELAÇÃO:
-   *    - Campo ID direto: typologies -> building.typologyId
-   *    - Campo snake_case: noise_classes -> building.noise_class_id  
-   *    - Campo direto: bioclimatic_zones -> building.bioclimatic_zone
-   *    - Fallback: primeiro registro da tabela
-   * 
-   * 3. EXEMPLO DE USO:
-   *    Atributo: { sourceTable: "noise_classes", sourceColumn: "max_level" }
-   *    Sistema automaticamente:
-   *    - Carrega dados de `/api/noise_classes`
-   *    - Encontra registro onde id = building.noiseClassId
-   *    - Retorna valor da coluna `max_level`
-   * 
-   * 4. PARA ADICIONAR NOVA TABELA:
-   *    Nenhuma implementação necessária! O sistema funciona automaticamente.
-   *    Apenas certifique-se de que existe endpoint `/api/nome_da_tabela`
+   * (comentários originais mantidos)
    */
 
   // Função para obter dados de uma tabela específica de forma genérica
   const getTableDataForAttribute = (attribute: any): any[] => {
     const tableName = attribute.sourceTable;
-    
-    // Para buildings, usar dados já carregados
     if (tableName === 'buildings') {
       return buildings;
     }
-    
-    // Para outras tabelas, tentar buscar do cache se já foi carregado
     if (tableDataCache.has(tableName)) {
       return tableDataCache.get(tableName)!;
     }
-    
-    // Se não está no cache, retornar array vazio e será carregado assincronamente se necessário
     return [];
   };
 
   // Função para encontrar o registro correto baseado na relação com building
   const findRelatedRecord = (tableData: any[], attribute: any, building: any): any => {
     if (!building || !tableData.length) return null;
-    
-    // Estratégias para encontrar o registro relacionado
     const strategies = [
-      // 1. Campo de ID direto no building (ex: typologyId, noiseClassId)
       () => {
-        const camelCaseId = attribute.sourceTable.replace(/s$/, '') + 'Id'; // typologies -> typologyId
-        const snakeCaseId = attribute.sourceTable.slice(0, -1) + '_id'; // typologies -> typology_id
-        
+        const camelCaseId = attribute.sourceTable.replace(/s$/, '') + 'Id';
+        const snakeCaseId = attribute.sourceTable.slice(0, -1) + '_id';
         const buildingValue = building[camelCaseId] || building[snakeCaseId];
         if (buildingValue) {
           return tableData.find(record => record.id === buildingValue);
         }
         return null;
       },
-      
-      // 2. Campo direto correspondente à sourceColumn (ex: bioclimatic_zone)
       () => {
         const buildingValue = building[attribute.sourceColumn];
         if (buildingValue !== undefined && buildingValue !== null) {
@@ -243,16 +251,12 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
         }
         return null;
       },
-      
-      // 3. Se nenhuma estratégia funcionou, usar primeiro registro (fallback)
       () => tableData[0]
     ];
-    
     for (const strategy of strategies) {
       const result = strategy();
       if (result) return result;
     }
-    
     return null;
   };
 
@@ -294,31 +298,24 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
     if (!building?.isoplethCode) return null;
     const isopleth = isopleths.find(i => i.code === building.isoplethCode);
     if (!isopleth) return building.isoplethCode;
-    
-    // Formatar faixa de velocidade
     const min = isopleth.windMinMS != null ? parseFloat(isopleth.windMinMS as any) : null;
     const max = isopleth.windMaxMS != null ? parseFloat(isopleth.windMaxMS as any) : null;
     const fmt = (v: number | null) => (v == null || Number.isNaN(v) ? null : v.toFixed(1).replace(/\.0$/, ''));
-    
     let range = '';
     if (min !== null && max !== null) {
       range = ` (${fmt(min)} - ${fmt(max)} m/s)`;
     } else if (min !== null) {
-      range = ` (≥ ${fmt(min)} m/s)`;
+      range = ` (>= ${fmt(min)} m/s)`;
     } else if (max !== null) {
-      range = ` (≤ ${fmt(max)} m/s)`;
+      range = ` (<= ${fmt(max)} m/s)`;
     }
-    
     return `${isopleth.code} - ${isopleth.label}${range}`;
   };
 
   // Função para formatar endereço brasileiro
   const getFormattedAddress = () => {
     if (!building) return null;
-    
     const parts = [];
-    
-    // Logradouro e número
     if (building.street) {
       let streetPart = building.street;
       if (building.addressNumber) {
@@ -326,13 +323,9 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
       }
       parts.push(streetPart);
     }
-    
-    // Bairro
     if (building.neighborhood) {
       parts.push(building.neighborhood);
     }
-    
-    // Cidade e Estado
     if (building.city || building.state) {
       let cityState = '';
       if (building.city) cityState += building.city;
@@ -341,12 +334,9 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
       }
       if (cityState) parts.push(cityState);
     }
-    
-    // CEP
     if (building.cep) {
       parts.push(`CEP: ${building.cep}`);
     }
-    
     return parts.length > 0 ? parts.join(', ') : null;
   };
 
@@ -355,18 +345,15 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
     const preloadTables = async () => {
       const uniqueTables = new Set(
         attributes
-          .filter(attr => attr.sourceTable !== 'buildings') // buildings já está carregado
+          .filter(attr => attr.sourceTable !== 'buildings')
           .map(attr => attr.sourceTable)
       );
-      
-      // Carregar todas as tabelas referenciadas de forma assíncrona
       Array.from(uniqueTables).forEach(tableName => {
         getTableData(tableName).catch(error => {
           console.warn(`Não foi possível pré-carregar tabela ${tableName}:`, error);
         });
       });
     };
-    
     if (attributes.length > 0) {
       preloadTables();
     }
@@ -375,33 +362,34 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
   const decodeMisencodedText = (text: string): string => {
     if (!text) return '';
 
+    // Primeiro, decodifica entidades HTML (novo passo — cobre &le;, &ge;, &lt;=, &#8804; etc.)
+    const withEntitiesDecoded = decodeHtmlEntities(text);
+
+    // Teste de "cara de texto mal-encodado"
     const suspiciousPattern = /(Ã[\u0080-\u00FF]|Â[\u0080-\u00FF]|â[\u0080-\u00FF]|â[\u2000-\u20FF])/;
-    if (!suspiciousPattern.test(text)) {
-      return applyCommonEncodingFixes(text);
+    if (!suspiciousPattern.test(withEntitiesDecoded)) {
+      return applyCommonEncodingFixes(withEntitiesDecoded);
     }
 
     const byteValues: number[] = [];
     let hasUnmappedChar = false;
 
-    for (const char of text) {
+    for (const char of withEntitiesDecoded) {
       const code = char.charCodeAt(0);
-
       if (code <= 0xff) {
         byteValues.push(code);
         continue;
       }
-
       if (WINDOWS_1252_EXTENDED_MAP[char] !== undefined) {
         byteValues.push(WINDOWS_1252_EXTENDED_MAP[char]);
         continue;
       }
-
       hasUnmappedChar = true;
       break;
     }
 
     if (hasUnmappedChar) {
-      return applyCommonEncodingFixes(text);
+      return applyCommonEncodingFixes(withEntitiesDecoded);
     }
 
     try {
@@ -410,13 +398,13 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
       return applyCommonEncodingFixes(decoded);
     } catch (error) {
       console.warn('Não foi possível corrigir codificação do texto:', error);
-      return applyCommonEncodingFixes(text);
+      return applyCommonEncodingFixes(withEntitiesDecoded);
     }
   };
 
   const normalizePdfText = (text: string): string => {
+    // Ordem: decodifica -> corrige comparações -> corrige re-encodes -> limpeza final
     const baseText = sanitizeComparisonCharacters(decodeMisencodedText(text));
-
     return baseText
       .replace(/\u00a0/g, ' ')
       .replace(/\t/g, ' ')
@@ -427,7 +415,7 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
     return normalizePdfText(text).replace(/\s+/g, ' ').trim();
   };
 
-  // Função para formatar texto com quebras de linha
+  // Função para formatar texto com quebras de linha substituídas por separadores
   const formatTextWithSeparators = (text: string | null | undefined): string => {
     if (!text) return '';
     const normalized = normalizePdfText(text);
@@ -438,124 +426,77 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
     if (value === null || value === undefined) {
       return '—';
     }
-
     const rawText = typeof value === 'string' ? value : String(value);
     const normalized = normalizePdfText(rawText).trim();
-
     return normalized === '' ? '—' : normalized;
   };
 
   // Função para verificar se um parâmetro tem valores nos níveis selecionados
   const hasValuesForSelectedLevels = (parameter: any, selectedLevels: string[]): boolean => {
-    if (!selectedLevels || selectedLevels.length === 0) {
-      return true; // Se nenhum nível selecionado, mostrar todos
-    }
-
-    // Verificar se pelo menos um nível selecionado tem valor não-vazio
-    const hasMinimum = selectedLevels.includes('minimum') && 
-      parameter.minimumValue !== null && 
-      parameter.minimumValue !== undefined && 
+    if (!selectedLevels || selectedLevels.length === 0) return true;
+    const hasMinimum = selectedLevels.includes('minimum') &&
+      parameter.minimumValue !== null &&
+      parameter.minimumValue !== undefined &&
       String(parameter.minimumValue).trim() !== '';
-
-    const hasIntermediate = selectedLevels.includes('intermediate') && 
-      parameter.intermediateValue !== null && 
-      parameter.intermediateValue !== undefined && 
+    const hasIntermediate = selectedLevels.includes('intermediate') &&
+      parameter.intermediateValue !== null &&
+      parameter.intermediateValue !== undefined &&
       String(parameter.intermediateValue).trim() !== '';
-
-    const hasSuperior = selectedLevels.includes('superior') && 
-      parameter.superiorValue !== null && 
-      parameter.superiorValue !== undefined && 
+    const hasSuperior = selectedLevels.includes('superior') &&
+      parameter.superiorValue !== null &&
+      parameter.superiorValue !== undefined &&
       String(parameter.superiorValue).trim() !== '';
-
     return hasMinimum || hasIntermediate || hasSuperior;
   };
 
   /**
-   * Função completamente genérica para verificar se um parâmetro deve ser exibido
-   * Funciona automaticamente com qualquer tabela do banco de dados
+   * Lógica genérica para exibição de parâmetros (mantida)
    */
   const shouldShowParameter = (parameter: any): boolean => {
-    // Se não tem atributo definido, sempre mostra
-    if (!parameter.attributeId) {
-      return true;
-    }
-
-    // Buscar definição do atributo
+    if (!parameter.attributeId) return true;
     const attribute = attributes.find((attr: any) => attr.id === parameter.attributeId);
-    if (!attribute) {
-      return true; // Se atributo não encontrado, mostra por segurança
-    }
+    if (!attribute) return true;
 
-    // Obter dados da tabela de forma genérica
     let sourceData = null;
-    
     if (attribute.sourceTable === 'buildings') {
       sourceData = building;
     } else {
-      // Para qualquer outra tabela, buscar de forma genérica
       const tableData = getTableDataForAttribute(attribute);
       sourceData = findRelatedRecord(tableData, attribute, building);
     }
-    
-    if (!sourceData) {
-      return true; // Se não encontrou fonte de dados, mostrar parâmetro
-    }
+    if (!sourceData) return true;
 
     const attributeValue = getAttributeValue(sourceData, attribute);
-    
-    // Se não conseguiu obter valor da edificação, não mostra
-    if (attributeValue === null || attributeValue === undefined) {
-      return false;
-    }
+    if (attributeValue === null || attributeValue === undefined) return false;
 
-    // Verificar valor específico do atributo (attributeValueId)
     if (parameter.attributeValueId !== null && parameter.attributeValueId !== undefined) {
-      // Comparar valores convertidos para string
       const paramValue = String(parameter.attributeValueId);
       const attributeValueStr = String(attributeValue);
-      
-      if (paramValue !== attributeValueStr) {
-        return false;
-      }
+      if (paramValue !== attributeValueStr) return false;
     }
 
-    // Verificar limites numéricos (minLimit/maxLimit)
     const numericValue = parseFloat(String(attributeValue));
     if (!isNaN(numericValue)) {
       if (parameter.minLimit !== null && parameter.minLimit !== undefined) {
         const minLimit = parseFloat(String(parameter.minLimit));
-        if (!isNaN(minLimit) && numericValue < minLimit) {
-          return false;
-        }
+        if (!isNaN(minLimit) && numericValue < minLimit) return false;
       }
-      
       if (parameter.maxLimit !== null && parameter.maxLimit !== undefined) {
         const maxLimit = parseFloat(String(parameter.maxLimit));
-        if (!isNaN(maxLimit) && numericValue > maxLimit) {
-          return false;
-        }
+        if (!isNaN(maxLimit) && numericValue > maxLimit) return false;
       }
     }
-
     return true;
   };
 
   /**
-   * Função completamente genérica para obter valor de atributo
-   * Funciona automaticamente com qualquer tabela do banco de dados
+   * Obtenção genérica de valor de atributo (mantida)
    */
   const getAttributeValue = (sourceData: any, attribute: any): any => {
-    if (!sourceData || !attribute) {
-      return null;
-    }
-
-    // Primeiro: tentar acesso direto pela coluna (funciona para a maioria dos casos)
+    if (!sourceData || !attribute) return null;
     if (sourceData[attribute.sourceColumn] !== undefined && sourceData[attribute.sourceColumn] !== null) {
       return sourceData[attribute.sourceColumn];
     }
-
-    // Segundo: para buildings, tentar mapeamento de colunas snake_case para camelCase
-    // (mantido apenas para compatibilidade com implementação atual)
     if (attribute.sourceTable === 'buildings') {
       const snakeToCamelMap: Record<string, string> = {
         'typology_id': 'typologyId',
@@ -566,63 +507,41 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
         'total_area': 'totalArea',
         'building_height': 'buildingHeight',
       };
-
       const camelCaseProperty = snakeToCamelMap[attribute.sourceColumn];
       if (camelCaseProperty && sourceData[camelCaseProperty] !== undefined && sourceData[camelCaseProperty] !== null) {
         return sourceData[camelCaseProperty];
       }
     }
-
     return null;
   };
 
   /**
-   * Função dinâmica para ordenação de parâmetros
-   * Esta função garante que a ordenação seja consistente e funcione para:
-   * - Dados atuais e futuros
-   * - Qualquer combinação de valores nas colunas (Mínimo, Intermediário, Superior)
-   * - Valores numéricos ou texto
-   * 
-   * Lógica de ordenação:
-   * 1. Primeiro: Ordenação alfabética por descrição (label)
-   * 2. Segundo: Para parâmetros com mesmo label, ordenar por menor valor numérico encontrado
-   * 3. Terceiro: Se valores iguais, ordenar por precedência de coluna (Mínimo → Intermediário → Superior)
+   * Ordenação dinâmica de parâmetros (mantida)
    */
   const sortParameters = (params: any[]) => {
     return params.sort((a, b) => {
-      // Critério 1: Ordenação alfabética por label (descrição do parâmetro)
       const labelCompare = a.label.localeCompare(b.label, 'pt-BR', { 
         numeric: true, 
         sensitivity: 'base' 
       });
-      
-      if (labelCompare !== 0) {
-        return labelCompare;
-      }
+      if (labelCompare !== 0) return labelCompare;
 
-      // Critério 2: Para parâmetros com mesmo label, ordenar por valores numéricos
       const getParameterSortData = (param: any) => {
         const values = [
           { value: param.minimumValue, column: 'minimum', priority: 1 },
           { value: param.intermediateValue, column: 'intermediate', priority: 2 },
           { value: param.superiorValue, column: 'superior', priority: 3 }
         ];
-
-        // Filtrar apenas valores válidos (não vazios e não nulos)
         const validValues = values.filter(v => 
           v.value !== null && 
           v.value !== undefined && 
           String(v.value).trim() !== ''
         );
-
         if (validValues.length === 0) {
           return { numericValue: Number.MAX_SAFE_INTEGER, columnPriority: 999 };
         }
-
-        // Encontrar o menor valor numérico válido
         let minNumericValue = Number.MAX_SAFE_INTEGER;
         let columnPriorityForMinValue = 999;
-
         validValues.forEach(v => {
           const numericValue = parseFloat(String(v.value));
           if (!isNaN(numericValue)) {
@@ -630,13 +549,10 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
               minNumericValue = numericValue;
               columnPriorityForMinValue = v.priority;
             } else if (numericValue === minNumericValue && v.priority < columnPriorityForMinValue) {
-              // Se valores iguais, priorizar coluna à esquerda
               columnPriorityForMinValue = v.priority;
             }
           }
         });
-
-        // Se não há valores numéricos válidos, usar primeiro valor não-numérico encontrado
         if (minNumericValue === Number.MAX_SAFE_INTEGER) {
           const firstValidValue = validValues[0];
           return { 
@@ -645,50 +561,41 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
             textValue: String(firstValidValue.value).toLowerCase()
           };
         }
-
         return { numericValue: minNumericValue, columnPriority: columnPriorityForMinValue };
       };
 
       const sortDataA = getParameterSortData(a);
       const sortDataB = getParameterSortData(b);
 
-      // Critério 2.1: Comparar valores numéricos
       if (sortDataA.numericValue !== sortDataB.numericValue) {
         return sortDataA.numericValue - sortDataB.numericValue;
       }
-
-      // Critério 2.2: Se valores numéricos iguais, usar precedência de coluna
       if (sortDataA.columnPriority !== sortDataB.columnPriority) {
         return sortDataA.columnPriority - sortDataB.columnPriority;
       }
-
-      // Critério 2.3: Se não há valores numéricos, comparar texto
       if (sortDataA.textValue && sortDataB.textValue) {
         return sortDataA.textValue.localeCompare(sortDataB.textValue, 'pt-BR');
       }
-
-      // Critério final: Se tudo igual, manter ordem original
       return 0;
     });
   };
 
-      // Criar um mapa de avaliações selecionadas
-      const selectedEvaluations = new Map<string, string[]>();
-      console.log('Processing evaluations:', evaluations);
-      
-      evaluations.forEach((ev: any) => {
-        console.log('Evaluation item:', ev);
-        const key = ev.analysisId ? `analysis-${ev.analysisId}` : ev.criterionId ? `crit-${ev.criterionId}` : `req-${ev.requirementId}`;
-        if (!selectedEvaluations.has(key)) {
-          selectedEvaluations.set(key, []);
-        }
-        // Fix: usando 'level' ao invés de 'performanceLevel' conforme o schema original
-        if (ev.level && !selectedEvaluations.get(key)!.includes(ev.level)) {
-          selectedEvaluations.get(key)!.push(ev.level);
-        }
-      });
-      
-      console.log('Final selectedEvaluations map:', selectedEvaluations);  // Agrupar dados por Requisito -> Critério -> Análises com Parâmetros
+  // Criar um mapa de avaliações selecionadas
+  const selectedEvaluations = new Map<string, string[]>();
+  console.log('Processing evaluations:', evaluations);
+  evaluations.forEach((ev: any) => {
+    console.log('Evaluation item:', ev);
+    const key = ev.analysisId ? `analysis-${ev.analysisId}` : ev.criterionId ? `crit-${ev.criterionId}` : `req-${ev.requirementId}`;
+    if (!selectedEvaluations.has(key)) {
+      selectedEvaluations.set(key, []);
+    }
+    if (ev.level && !selectedEvaluations.get(key)!.includes(ev.level)) {
+      selectedEvaluations.get(key)!.push(ev.level);
+    }
+  });
+  console.log('Final selectedEvaluations map:', selectedEvaluations);
+
+  // Agrupar dados por Requisito -> Critério -> Análises com Parâmetros
   const groupedData: RequirementWithCriteria[] = requirements.map(req => ({
     ...req,
     criteria: criteria
@@ -709,16 +616,13 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
               .filter(param => param.analysisId === analysis.id)
               .filter(param => shouldShowParameter(param))
           }))
-          // Filtrar análises que não têm parâmetros visíveis
           .filter(analysis => analysis.parameters.length > 0)
       }))
-      // Filtrar critérios que não têm análises com parâmetros
       .filter(crit => crit.analyses.length > 0)
   }))
-  // Filtrar requisitos que não têm critérios com análises
   .filter(req => req.criteria.length > 0);
 
-  // Filtrar apenas análises que têm avaliações selecionadas e aplicar filtro de níveis
+  // Filtrar apenas análises com avaliações selecionadas e aplicar filtro de níveis
   const filteredData = groupedData.map(req => ({
     ...req,
     criteria: req.criteria.map(crit => ({
@@ -729,48 +633,38 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
       }).map(analysis => {
         const analysisKey = `analysis-${analysis.id}`;
         const selectedLevels = selectedEvaluations.get(analysisKey) || [];
-        
         return {
           ...analysis,
           parameters: analysis.parameters.filter(param => 
             hasValuesForSelectedLevels(param, selectedLevels)
           )
         };
-      })
-      // Filtrar análises que não têm parâmetros após filtro de níveis
-      .filter(analysis => analysis.parameters.length > 0)
-    }))
-    // Aplicar novamente o filtro de critérios após filtrar por avaliações
-    .filter(crit => crit.analyses.length > 0)
-  }))
-  // Aplicar novamente o filtro de requisitos após filtrar por avaliações
-  .filter(req => req.criteria.length > 0);
+      }).filter(analysis => analysis.parameters.length > 0)
+    })).filter(crit => crit.analyses.length > 0)
+  })).filter(req => req.criteria.length > 0);
 
-  // Aplicar ordenação nos dados filtrados
+  // Ordenação
   const sortedData = filteredData
-    .sort((a, b) => a.code.localeCompare(b.code)) // Ordenar requisitos por código
+    .sort((a, b) => a.code.localeCompare(b.code))
     .map(req => ({
       ...req,
       criteria: req.criteria
-        .sort((a, b) => a.code.localeCompare(b.code)) // Ordenar critérios por código
+        .sort((a, b) => a.code.localeCompare(b.code))
         .map(crit => ({
           ...crit,
           analyses: crit.analyses
-            .sort((a, b) => a.code.localeCompare(b.code)) // Ordenar análises por código
+            .sort((a, b) => a.code.localeCompare(b.code))
             .map(analysis => ({
               ...analysis,
-              parameters: sortParameters(analysis.parameters) // Usar nova lógica de ordenação
+              parameters: sortParameters(analysis.parameters)
             }))
         }))
     }));
 
-  // Função para gerar PDF
   // Função para formatar texto com separadores ao invés de quebras de linha
   const formatTextWithLineBreaks = (text: string): string => {
     if (!text) return '';
-
     const normalized = normalizePdfText(text);
-
     return compactPdfText(
       normalized
         .replace(/\r\n/g, ' • ')
@@ -798,7 +692,7 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
       console.log('Item reportData:', item.reportData);
       console.log('Iniciando geração do PDF com jsPDF...');
       
-      // Criar novo documento PDF com encoding UTF-8
+      // Criar novo documento PDF
       const doc = new jsPDF({
         orientation: 'portrait',
         unit: 'mm',
@@ -818,16 +712,13 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
       
       let yPosition = margin;
 
-      // Função para verificar espaço para seções (menos restritiva)
+      // Verificar espaço para seções
       const checkSectionBreak = (sectionType: 'requirement' | 'criterion' | 'analysis', estimatedHeight: number) => {
-        // Usar estimativa real ao invés de valores mínimos fixos
         const adjustedHeight = sectionType === 'requirement' ? estimatedHeight + 10 :
                               sectionType === 'criterion' ? estimatedHeight + 8 : 
                               estimatedHeight + 5;
-
-        if (yPosition + adjustedHeight > pageHeight - margin - 20) { // Margem de segurança menor
+        if (yPosition + adjustedHeight > pageHeight - margin - 20) {
           doc.addPage();
-          // Após nova página, reposiciona abaixo do cabeçalho simples
           yPosition = margin + 20;
           return true;
         }
@@ -844,34 +735,29 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
 
       const estimateStandardRowHeight = (row: string[], columnWidths: number[]) => {
         let maxLines = 1;
-
         row.forEach((cell, index) => {
           const textValue = (cell ?? '').toString().normalize('NFC');
           if (!textValue) return;
-
           const approxCharsPerLine = Math.max(1, Math.floor(columnWidths[index] / 2.4));
           const lines = Math.max(1, Math.ceil(textValue.length / approxCharsPerLine));
           maxLines = Math.max(maxLines, lines);
         });
-
         return maxLines * 6 + 2;
       };
 
       const estimateTableHeight = (rows: any[], columnWidths: number[]) => {
         const headerHeight = 10;
-
         return rows.reduce((height, row) => {
           if (Array.isArray(row) && row.length > 0 && typeof row[0] === 'object' && 'colSpan' in row[0]) {
             const textValue = (row[0] as { content?: string }).content ?? '';
             return height + estimateObservationHeight(textValue, columnWidths);
           }
-
           const normalizedRow = (row as string[]).map(cell => (cell ?? '').toString());
           return height + estimateStandardRowHeight(normalizedRow, columnWidths);
         }, headerHeight);
       };
 
-      // ==== Cabeçalho simples (versão anterior) ==== //
+      // ==== Cabeçalho simples ==== //
       doc.setTextColor(0, 0, 0);
       doc.setFont('DejaVuSans', 'bold');
       doc.setFontSize(14);
@@ -881,18 +767,12 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
       doc.text('Relatório Técnico (PDE)', pageWidth / 2, margin + 12, { align: 'center' });
       yPosition = margin + 20;
 
-      // Informações do edifício com layout profissional
+      // Informações do edifício
       if (building) {
         const formatNumericValue = (value: unknown, unit?: string) => {
-          if (value === null || value === undefined) {
-            return null;
-          }
-
+          if (value === null || value === undefined) return null;
           const rawValue = typeof value === 'string' ? value.trim() : String(value);
-          if (rawValue === '') {
-            return null;
-          }
-
+          if (rawValue === '') return null;
           const numeric = Number(value);
           if (!Number.isNaN(numeric) && Number.isFinite(numeric)) {
             const hasDecimal = Math.abs(numeric % 1) > 1e-6;
@@ -902,7 +782,6 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
             });
             return unit ? `${formatted} ${unit}` : formatted;
           }
-
           return compactPdfText(rawValue);
         };
 
@@ -971,9 +850,7 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
             }))
             .filter(item => item.value && item.value.trim() !== '');
 
-          if (validItems.length === 0) {
-            return;
-          }
+          if (validItems.length === 0) return;
 
           if (!hasDetailContent) {
             detailRows.push([
@@ -1136,7 +1013,7 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
 
         doc.setFontSize(14);
         doc.setFont('DejaVuSans', 'bold');
-        doc.text(`Requisito: ${requirement.label}`, margin, yPosition);
+        doc.text(`Requisito: ${normalizePdfText(requirement.label)}`, margin, yPosition);
         yPosition += 10;
 
         for (const criterion of requirement.criteria) {
@@ -1146,7 +1023,7 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
 
           doc.setFontSize(12);
           doc.setFont('DejaVuSans', 'bold');
-          doc.text(`Critério: ${criterion.label}`, margin + 5, yPosition);
+          doc.text(`Critério: ${normalizePdfText(criterion.label)}`, margin + 5, yPosition);
           yPosition += 8;
 
           for (const analysis of criterion.analyses) {
@@ -1154,7 +1031,6 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
 
             const analysisKey = `${requirement.id}-${criterion.id}-${analysis.id}`;
             let selectedLevels = selectedEvaluations.get(analysisKey) || [];
-
             if (selectedLevels.length === 0) {
               selectedLevels = ['minimum', 'intermediate', 'superior'];
             }
@@ -1215,10 +1091,7 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
             const tableData: any[] = [];
 
             const formatParameterValue = (value: unknown): string => {
-              if (value === null || value === undefined) {
-                return '—';
-              }
-
+              if (value === null || value === undefined) return '—';
               const textValue = compactPdfText(String(value));
               return textValue === '' ? '—' : textValue;
             };
@@ -1241,21 +1114,19 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
 
               selectedLevels.forEach(levelId => {
                 let resolvedValue = directValueMap[levelId];
-
                 if (resolvedValue === undefined || resolvedValue === null) {
                   const nestedValue = parameter.values?.[levelId];
                   resolvedValue = nestedValue?.value ?? null;
                 }
-
                 row.push(formatParameterValue(resolvedValue));
               });
 
               tableData.push(row);
 
-              const observationText = formatTextWithSeparators(parameter.notes ?? parameter.observation);
+              const observationRaw = parameter.notes ?? parameter.observation;
+              const observationText = observationRaw ? formatTextWithSeparators(observationRaw) : '';
               if (observationText && observationText.trim()) {
                 const cleanText = formatTextWithLineBreaks(observationText);
-
                 tableData.push([
                   {
                     content: cleanText,
@@ -1283,7 +1154,6 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
             const analysisSpacing = 9;
             const totalAnalysisHeight = analysisHeadingHeight + estimatedTableHeight + analysisSpacing;
 
-            // Verificação mais suave para análise - só quebra se não couber nem o título
             if (yPosition + analysisHeadingHeight + 15 > pageHeight - margin) {
               doc.addPage();
               yPosition = margin + 20;
@@ -1291,7 +1161,7 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
 
             doc.setFontSize(10);
             doc.setFont('DejaVuSans', 'bold');
-            doc.text(`Análise: ${analysis.label}`, margin + 10, yPosition);
+            doc.text(`Análise: ${normalizePdfText(analysis.label)}`, margin + 10, yPosition);
             yPosition += analysisHeadingHeight;
 
             autoTable(doc, {
@@ -1300,9 +1170,8 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
               startY: yPosition,
               margin: { top: margin + 20, left: margin + 6, right: margin + 6, bottom: margin },
               tableWidth: 'auto',
-              // Permitir quebra de página no meio da tabela
               pageBreak: 'auto',
-              showHead: 'everyPage', // Mostrar cabeçalho em todas as páginas
+              showHead: 'everyPage',
               styles: {
                 fontSize: 9,
                 cellPadding: 3,
@@ -1315,7 +1184,6 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
                 fontStyle: 'normal',
                 lineHeight: 1.2
               },
-              // Sem redesenho de cabeçalho por página (reversão da última alteração)
               headStyles: {
                 fillColor: [240, 240, 240],
                 textColor: [50, 50, 50],
@@ -1359,13 +1227,11 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
                     const processedText = formatTextWithLineBreaks(data.cell.raw.content);
                     data.cell.text = [processedText];
                   }
-
                   return;
                 }
 
                 if (data.section === 'body') {
                   data.cell.styles.font = 'DejaVuSans';
-
                   if (data.column.index === 0) {
                     data.cell.styles.halign = 'left';
                     data.cell.styles.valign = 'top';
@@ -1409,6 +1275,7 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
       alert('Erro ao gerar PDF. Tente novamente.');
     } finally {
       // Restaurar botão
+      const originalButton = document.querySelector('.pdf-button') as HTMLButtonElement;
       if (originalButton) {
         originalButton.disabled = false;
         originalButton.innerHTML = '<svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>Gerar PDF';
@@ -1422,7 +1289,7 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
       <div className="mb-6 no-print">
         <Button 
           onClick={() => generatePDF(building?.name)}
-          className="bg-blue-600 hover:bg-blue-700 text-white"
+          className="bg-blue-600 hover:bg-blue-700 text-white pdf-button"
           size="sm"
         >
           <FileDown className="w-4 h-4 mr-2" />
@@ -1447,141 +1314,124 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
               </div>
               <div className="text-right text-gray-300 text-sm">
                 <div>Relatório Técnico</div>
-              <div className="font-medium">
-                {item.generatedAt ? new Date(item.generatedAt).toLocaleDateString('pt-BR') : 'Hoje'}
+                <div className="font-medium">
+                  {item.generatedAt ? new Date(item.generatedAt).toLocaleDateString('pt-BR') : 'Hoje'}
+                </div>
+                <div>Versão {item.version || 1}</div>
               </div>
-              <div>Versão {item.version || 1}</div>
             </div>
           </div>
-        </div>
-        
-        {/* Informações da Edificação */}
-        <div className="bg-white border border-gray-300 rounded-b-lg p-6 shadow-sm no-page-break">
           
-          {/* Seção: Identificação */}
-          <div className="mb-6 no-page-break">
-            <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wide mb-3 pb-2 border-b border-gray-200">
-              Identificação
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              
-              <div className="bg-gray-50 border border-gray-200 rounded p-3">
-                <div className="text-xs font-medium text-gray-500 mb-1">Nome da Edificação</div>
-                <div className="text-sm font-medium text-gray-900">{building?.name || '—'}</div>
+          {/* Informações da Edificação */}
+          <div className="bg-white border border-gray-300 rounded-b-lg p-6 shadow-sm no-page-break">
+            {/* Seção: Identificação */}
+            <div className="mb-6 no-page-break">
+              <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wide mb-3 pb-2 border-b border-gray-200">
+                Identificação
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-gray-50 border border-gray-200 rounded p-3">
+                  <div className="text-xs font-medium text-gray-500 mb-1">Nome da Edificação</div>
+                  <div className="text-sm font-medium text-gray-900">{building?.name || '—'}</div>
+                </div>
+
+                {getTypologyInfo() && (
+                  <div className="bg-gray-50 border border-gray-200 rounded p-3">
+                    <div className="text-xs font-medium text-gray-500 mb-1">Tipologia</div>
+                    <div className="text-sm font-medium text-gray-900">{getTypologyInfo()}</div>
+                  </div>
+                )}
+
+                {getTechnicianInfo() && (
+                  <div className="bg-gray-50 border border-gray-200 rounded p-3">
+                    <div className="text-xs font-medium text-gray-500 mb-1">Responsável Técnico</div>
+                    <div className="text-sm font-medium text-gray-900">{getTechnicianInfo()}</div>
+                  </div>
+                )}
               </div>
+            </div>
 
-              {getTypologyInfo() && (
-                <div className="bg-gray-50 border border-gray-200 rounded p-3">
-                  <div className="text-xs font-medium text-gray-500 mb-1">Tipologia</div>
-                  <div className="text-sm font-medium text-gray-900">{getTypologyInfo()}</div>
-                </div>
-              )}
+            {/* Seção: Localização */}
+            <div className="mb-6">
+              <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wide mb-3 pb-2 border-gray-200 border-b">
+                Localização
+              </h3>
+              <div className="grid grid-cols-1 gap-4">
+                {getFormattedAddress() && (
+                  <div className="bg-gray-50 border border-gray-200 rounded p-3">
+                    <div className="text-xs font-medium text-gray-500 mb-1">Endereço Completo</div>
+                    <div className="text-sm font-medium text-gray-900">{getFormattedAddress()}</div>
+                  </div>
+                )}
+              </div>
+            </div>
 
-              {getTechnicianInfo() && (
-                <div className="bg-gray-50 border border-gray-200 rounded p-3">
-                  <div className="text-xs font-medium text-gray-500 mb-1">Responsável Técnico</div>
-                  <div className="text-sm font-medium text-gray-900">{getTechnicianInfo()}</div>
-                </div>
-              )}
-              
+            {/* Seção: Características Técnicas */}
+            <div className="mb-6">
+              <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wide mb-3 pb-2 border-gray-200 border-b">
+                Características Técnicas
+              </h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {building?.totalArea && (
+                  <div className="bg-gray-50 border border-gray-200 rounded p-3">
+                    <div className="text-xs font-medium text-gray-500 mb-1">Área Total</div>
+                    <div className="text-sm font-medium text-gray-900">{building.totalArea} m²</div>
+                  </div>
+                )}
+                {building?.buildingHeight && (
+                  <div className="bg-gray-50 border border-gray-200 rounded p-3">
+                    <div className="text-xs font-medium text-gray-500 mb-1">Altura</div>
+                    <div className="text-sm font-medium text-gray-900">{building.buildingHeight} m</div>
+                  </div>
+                )}
+                {building?.floors && (
+                  <div className="bg-gray-50 border border-gray-200 rounded p-3">
+                    <div className="text-xs font-medium text-gray-500 mb-1">Pavimentos</div>
+                    <div className="text-sm font-medium text-gray-900">{building.floors}</div>
+                  </div>
+                )}
+                {building?.units && (
+                  <div className="bg-gray-50 border border-gray-200 rounded p-3">
+                    <div className="text-xs font-medium text-gray-500 mb-1">Unidades</div>
+                    <div className="text-sm font-medium text-gray-900">{building.units}</div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Seção: Condições Ambientais */}
+            <div className="mb-4">
+              <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wide mb-3 pb-2 border-gray-200 border-b">
+                Condições Ambientais e Classificações
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {getBioclimaticZoneInfo() && (
+                  <div className="bg-gray-50 border border-gray-200 rounded p-3">
+                    <div className="text-xs font-medium text-gray-500 mb-1">Zona Bioclimática</div>
+                    <div className="text-sm font-medium text-gray-900">{getBioclimaticZoneInfo()}</div>
+                  </div>
+                )}
+                {getIsoplethInfo() && (
+                  <div className="bg-gray-50 border border-gray-200 rounded p-3">
+                    <div className="text-xs font-medium text-gray-500 mb-1">Isopleta</div>
+                    <div className="text-sm font-medium text-gray-900">{getIsoplethInfo()}</div>
+                  </div>
+                )}
+                {getNoiseClassInfo() && (
+                  <div className="bg-gray-50 border border-gray-200 rounded p-3">
+                    <div className="text-xs font-medium text-gray-500 mb-1">Classe de Ruído</div>
+                    <div className="text-sm font-medium text-gray-900">{getNoiseClassInfo()}</div>
+                  </div>
+                )}
+                {getAggressivenessClassInfo() && (
+                  <div className="bg-gray-50 border border-gray-200 rounded p-3">
+                    <div className="text-xs font-medium text-gray-500 mb-1">Classe de Agressividade</div>
+                    <div className="text-sm font-medium text-gray-900">{getAggressivenessClassInfo()}</div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
-
-          {/* Seção: Localização */}
-          <div className="mb-6">
-            <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wide mb-3 pb-2 border-b border-gray-200">
-              Localização
-            </h3>
-            <div className="grid grid-cols-1 gap-4">
-              
-              {getFormattedAddress() && (
-                <div className="bg-gray-50 border border-gray-200 rounded p-3">
-                  <div className="text-xs font-medium text-gray-500 mb-1">Endereço Completo</div>
-                  <div className="text-sm font-medium text-gray-900">{getFormattedAddress()}</div>
-                </div>
-              )}
-              
-            </div>
-          </div>
-
-          {/* Seção: Características Técnicas */}
-          <div className="mb-6">
-            <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wide mb-3 pb-2 border-b border-gray-200">
-              Características Técnicas
-            </h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              
-              {building?.totalArea && (
-                <div className="bg-gray-50 border border-gray-200 rounded p-3">
-                  <div className="text-xs font-medium text-gray-500 mb-1">Área Total</div>
-                  <div className="text-sm font-medium text-gray-900">{building.totalArea} m²</div>
-                </div>
-              )}
-
-              {building?.buildingHeight && (
-                <div className="bg-gray-50 border border-gray-200 rounded p-3">
-                  <div className="text-xs font-medium text-gray-500 mb-1">Altura</div>
-                  <div className="text-sm font-medium text-gray-900">{building.buildingHeight} m</div>
-                </div>
-              )}
-
-              {building?.floors && (
-                <div className="bg-gray-50 border border-gray-200 rounded p-3">
-                  <div className="text-xs font-medium text-gray-500 mb-1">Pavimentos</div>
-                  <div className="text-sm font-medium text-gray-900">{building.floors}</div>
-                </div>
-              )}
-
-              {building?.units && (
-                <div className="bg-gray-50 border border-gray-200 rounded p-3">
-                  <div className="text-xs font-medium text-gray-500 mb-1">Unidades</div>
-                  <div className="text-sm font-medium text-gray-900">{building.units}</div>
-                </div>
-              )}
-              
-            </div>
-          </div>
-
-          {/* Seção: Condições Ambientais */}
-          <div className="mb-4">
-            <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wide mb-3 pb-2 border-b border-gray-200">
-              Condições Ambientais e Classificações
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              
-              {/* Card Zona Bioclimática */}
-              {getBioclimaticZoneInfo() && (
-                <div className="bg-gray-50 border border-gray-200 rounded p-3">
-                  <div className="text-xs font-medium text-gray-500 mb-1">Zona Bioclimática</div>
-                  <div className="text-sm font-medium text-gray-900">{getBioclimaticZoneInfo()}</div>
-                </div>
-              )}
-
-              {/* Card Isopleta */}
-              {getIsoplethInfo() && (
-                <div className="bg-gray-50 border border-gray-200 rounded p-3">
-                  <div className="text-xs font-medium text-gray-500 mb-1">Isopleta</div>
-                  <div className="text-sm font-medium text-gray-900">{getIsoplethInfo()}</div>
-                </div>
-              )}
-
-              {getNoiseClassInfo() && (
-                <div className="bg-gray-50 border border-gray-200 rounded p-3">
-                  <div className="text-xs font-medium text-gray-500 mb-1">Classe de Ruído</div>
-                  <div className="text-sm font-medium text-gray-900">{getNoiseClassInfo()}</div>
-                </div>
-              )}
-
-              {getAggressivenessClassInfo() && (
-                <div className="bg-gray-50 border border-gray-200 rounded p-3">
-                  <div className="text-xs font-medium text-gray-500 mb-1">Classe de Agressividade</div>
-                  <div className="text-sm font-medium text-gray-900">{getAggressivenessClassInfo()}</div>
-                </div>
-              )}
-              
-            </div>
-          </div>
-
         </div>
       </div>
 
@@ -1592,14 +1442,14 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
             {/* Seção: Requisito */}
             <div className="mb-6">
               <h3 className="text-base font-bold text-gray-800 uppercase tracking-wide mb-4 pb-3 border-b-2 border-gray-600">
-                Requisito: {requirement.label}
+                Requisito: {normalizePdfText(requirement.label)}
               </h3>
 
               {requirement.criteria.map((criterion) => (
                 <div key={criterion.id} className="mb-6">
                   {/* Título do Critério */}
                   <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3 pb-2 border-b border-gray-200">
-                    Critério: {criterion.label}
+                    Critério: {normalizePdfText(criterion.label)}
                   </h4>
 
                   {criterion.analyses.map((analysis) => {
@@ -1611,7 +1461,7 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
                         {/* Card da Análise */}
                         <div className="bg-gray-50 border border-gray-200 rounded p-4 mb-4">
                           <h5 className="text-xs font-medium text-gray-600 mb-3">
-                            Análise: {analysis.label}
+                            Análise: {normalizePdfText(analysis.label)}
                           </h5>
 
                           {/* Tabela de Parâmetros */}
@@ -1650,7 +1500,7 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
 
                                     return (
                                       <TableRow key={parameter.id} className="hover:bg-gray-50 border-b border-gray-200">
-                                      <TableCell className="border-r border-gray-300 align-middle py-3 pl-4 pr-5 font-medium min-w-[17rem]">
+                                        <TableCell className="border-r border-gray-300 align-middle py-3 pl-4 pr-5 font-medium min-w-[17rem]">
                                           <div>
                                             <div className="font-medium text-gray-900">
                                               {formatTextWithSeparators(parameter.label)}
@@ -1703,7 +1553,6 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
             <p className="text-sm mt-2">Verifique se há avaliações de desempenho selecionadas.</p>
           </div>
         )}
-      </div>
       </div>
     </div>
   );

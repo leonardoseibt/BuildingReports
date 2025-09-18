@@ -170,10 +170,10 @@ export default function ParameterForm({ onSuccess, onCancel, initialItem }: { on
     }
   }
 
-  // Converte operadores digitados para símbolos matemáticos ("<=" -> "≤", ">=" -> "≥")
+  // Função removida: não converte mais operadores para símbolos especiais
   function normalizeIneq(value: any) {
     if (typeof value !== 'string') return value;
-    return value.replace(/<=/g, '≤').replace(/>=/g, '≥');
+    return value; // Sem substituições
   }
 
   return (

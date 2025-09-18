@@ -504,8 +504,8 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
                               const fmin = fmt(min);
                               const fmax = fmt(max);
                               if (fmin && fmax) return ` (${fmin}–${fmax} m/s)`;
-                              if (fmin) return ` (≥ ${fmin} m/s)`;
-                              if (fmax) return ` (≤ ${fmax} m/s)`;
+                              if (fmin) return ` (>= ${fmin} m/s)`;
+                              if (fmax) return ` (<= ${fmax} m/s)`;
                               return '';
                             })();
                             return { value: i.code, label: `${i.code} - ${i.label}${range}` };

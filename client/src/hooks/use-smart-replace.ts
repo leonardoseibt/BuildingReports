@@ -1,11 +1,9 @@
 import { useCallback } from 'react';
 
-// Substitui '<=' por '≤' e '>=' por '≥' em tempo real
+// Hook removido: não substitui mais <= e >= por símbolos especiais
 export function useSmartReplace() {
-  // Retorna um handler para usar em onChange de qualquer input/textarea
+  // Retorna um handler que não faz mais substituições
   return useCallback((value: string) => {
-    return value
-      .replace(/<=/g, '≤')
-      .replace(/>=/g, '≥');
+    return value; // Sem substituições
   }, []);
 }
