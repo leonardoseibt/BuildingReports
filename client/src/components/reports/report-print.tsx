@@ -1272,16 +1272,18 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
             const analysisTitle = `Análise: ${normalizePdfText(analysis.label)}`;
             const normalizedTitle = ensureUnicodeSupport(analysisTitle, doc);
             
+            // Calcular a largura total da tabela baseada nas colunas
+            const totalTableWidth = columnWidths.reduce((sum, width) => sum + width, 0);
+            
             // Configurar estilo do título
             doc.setFont('DejaVuSans', 'bold');
             doc.setFontSize(10);
             doc.setTextColor(30, 64, 175); // Azul escuro
             
-            // Adicionar fundo azul claro para o título
+            // Adicionar fundo azul claro para o título com largura da tabela
             const titleHeight = 8;
-            const titleWidth = pageWidth - (margin * 2) - 12; // Largura da tabela com margens
             doc.setFillColor(240, 248, 255); // Azul claro
-            doc.rect(margin + 6, yPosition, titleWidth, titleHeight, 'F');
+            doc.rect(margin + 6, yPosition, totalTableWidth, titleHeight, 'F');
             
             // Renderizar o texto do título
             doc.text(normalizedTitle, margin + 9, yPosition + 5.5);
@@ -1472,7 +1474,8 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
                         rawCell._observationLineHeight ?? (8 * 1.15) / doc.internal.scaleFactor;
 
                       observationLines.forEach((line: string) => {
-                        doc.text(line, startX, currentY, { baseline: 'top' } as any);
+                        const normalizedLine = ensureUnicodeSupport(line, doc);
+                        doc.text(normalizedLine, startX, currentY, { baseline: 'top' } as any);
                         currentY += observationLineHeight;
                       });
 
