@@ -1248,7 +1248,13 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
                     if (isParameterCellContent(rawCell)) {
                       const paddingLeft = data.cell.padding('left');
                       const paddingRight = data.cell.padding('right');
-                      const availableWidth = data.cell.width - paddingLeft - paddingRight;
+                      const parameterColumnWidth = columnWidths[0] ?? data.cell.width;
+                      const availableWidth = Math.max(
+                        12,
+                        parameterColumnWidth - paddingLeft - paddingRight
+                      );
+
+                      data.cell.styles.cellWidth = parameterColumnWidth;
 
                       const descriptionText = rawCell.description ?? '';
                       const observationText = rawCell.observation ?? '';
@@ -1256,7 +1262,7 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
                       const descriptionLines = doc.splitTextToSize(descriptionText, availableWidth);
                       rawCell._descriptionLines = descriptionLines;
 
-                      data.cell.text = descriptionLines.length > 0 ? [...descriptionLines] : [''];
+                      data.cell.text = [''];
 
                       const baseFontSize = data.cell.styles.fontSize || 8;
                       const baseLineHeightFactor = data.cell.styles.lineHeight || 1.2;
@@ -1275,7 +1281,6 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
                         rawCell._observationLineHeight = observationLineHeight;
 
                         requiredInnerHeight += 0.6 + observationLines.length * observationLineHeight;
-                        data.cell.text.push('');
                       } else {
                         rawCell._observationLines = [];
                         rawCell._observationLineHeight = 0;
@@ -1310,29 +1315,49 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
               didDrawCell: (data: any) => {
                 if (data.section === 'body' && data.column.index === 0) {
                   const rawCell = data.cell.raw;
-                  if (isParameterCellContent(rawCell) && rawCell._observationLines && rawCell._observationLines.length > 0) {
+                  if (isParameterCellContent(rawCell)) {
                     const paddingLeft = data.cell.padding('left');
                     const paddingTop = data.cell.padding('top');
                     const startX = data.cell.x + paddingLeft;
 
-                    const baseLineHeight = rawCell._baseLineHeight ?? ((data.cell.styles.fontSize || 8) * (data.cell.styles.lineHeight || 1.2)) / doc.internal.scaleFactor;
-                    const observationLineHeight = rawCell._observationLineHeight ?? ((data.cell.styles.fontSize || 8) * 1.15) / doc.internal.scaleFactor;
-                    const descriptionLinesCount = rawCell._descriptionLines?.length ?? 0;
+                    const baseFontSize = data.cell.styles.fontSize || 8;
+                    const baseLineHeight =
+                      rawCell._baseLineHeight ??
+                      (baseFontSize * (data.cell.styles.lineHeight || 1.2)) / doc.internal.scaleFactor;
 
-                    let currentY = data.cell.y + paddingTop + descriptionLinesCount * baseLineHeight + 0.8;
+                    let currentY = data.cell.y + paddingTop;
 
-                    doc.setFont('DejaVuSans', 'italic');
-                    doc.setFontSize(8);
-                    doc.setTextColor(100, 100, 100);
+                    const descriptionLines = rawCell._descriptionLines ?? [];
+                    if (descriptionLines.length > 0) {
+                      doc.setFont('DejaVuSans', 'normal');
+                      doc.setFontSize(baseFontSize);
+                      doc.setTextColor(60, 60, 60);
 
-                    rawCell._observationLines.forEach((line: string) => {
-                      doc.text(line, startX, currentY, { baseline: 'top' } as any);
-                      currentY += observationLineHeight;
-                    });
+                      descriptionLines.forEach((line: string) => {
+                        doc.text(line, startX, currentY, { baseline: 'top' } as any);
+                        currentY += baseLineHeight;
+                      });
+                    }
 
-                    doc.setFont('DejaVuSans', 'normal');
-                    doc.setFontSize(data.cell.styles.fontSize || 8);
-                    doc.setTextColor(60, 60, 60);
+                    const observationLines = rawCell._observationLines ?? [];
+                    if (observationLines.length > 0) {
+                      currentY += 0.6;
+                      doc.setFont('DejaVuSans', 'italic');
+                      doc.setFontSize(8);
+                      doc.setTextColor(100, 100, 100);
+
+                      const observationLineHeight =
+                        rawCell._observationLineHeight ?? (8 * 1.15) / doc.internal.scaleFactor;
+
+                      observationLines.forEach((line: string) => {
+                        doc.text(line, startX, currentY, { baseline: 'top' } as any);
+                        currentY += observationLineHeight;
+                      });
+
+                      doc.setFont('DejaVuSans', 'normal');
+                      doc.setFontSize(baseFontSize);
+                      doc.setTextColor(60, 60, 60);
+                    }
                   }
                 }
               }
