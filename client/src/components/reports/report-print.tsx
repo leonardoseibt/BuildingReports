@@ -16,6 +16,10 @@ declare module 'jspdf' {
   }
 }
 
+// === NOVO: separadores padronizados ===
+const UI_LINE_SEPARATOR = ' • ';              // usado na UI
+const PDF_LINE_SEPARATOR = '\u00A0•\u00A0';   // NBSP • NBSP — usado no PDF (não quebra)
+
 interface ReportItem {
   id: number;
   buildingId: number;
@@ -439,11 +443,11 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
     return normalizePdfText(text).replace(/\s+/g, ' ').trim();
   };
 
-  // Função para formatar texto com quebras de linha substituídas por separadores
+  // Função para formatar texto com quebras de linha substituídas por separadores (USO NA TELA)
   const formatTextWithSeparators = (text: string | null | undefined): string => {
     if (!text) return '';
     const normalized = normalizePdfText(text);
-    return compactPdfText(normalized.replace(/\r?\n/g, ' • '));
+    return compactPdfText(normalized.replace(/\r?\n/g, UI_LINE_SEPARATOR));
   };
 
   const normalizeDisplayValue = (value: unknown): string => {
@@ -685,7 +689,7 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
         }))
     }));
 
-  // Função para formatar texto com separadores ao invés de quebras de linha
+  // Função para formatar texto com separadores ao invés de quebras de linha (USO NO PDF QUANDO NÃO FOR COLUNA 0)
   const formatTextWithLineBreaks = (text: string): string => {
     if (!text) return '';
     const normalized = normalizePdfText(text);
@@ -697,31 +701,23 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
       return line.replace(/\s+/g, ' ').trim();
     }).filter(line => line.length > 0); // Remove linhas vazias
 
-    // Usa " • " como separador ao invés de quebras de linha (mesmo que na visualização)
-    const sanitized = lines.join(' • ');
+    // Usa o mesmo separador da UI
+    const sanitized = lines.join(UI_LINE_SEPARATOR);
     return sanitized.trim();
   };
 
   const splitPdfTextIntoLines = (docInstance: jsPDF, text: string, maxWidth: number): string[] => {
     if (!text) return [];
 
-    const segments = text.split('\n');
+    // Mantemos o texto como um único segmento (sem depender de \n)
+    const segment = text;
     const result: string[] = [];
-
-    segments.forEach(segment => {
-      if (segment === '') {
-        result.push('');
-        return;
-      }
-
-      const split = docInstance.splitTextToSize(segment, maxWidth);
-      if (Array.isArray(split)) {
-        result.push(...split);
-      } else if (typeof split === 'string') {
-        result.push(split);
-      }
-    });
-
+    const split = docInstance.splitTextToSize(segment, maxWidth);
+    if (Array.isArray(split)) {
+      result.push(...split);
+    } else if (typeof split === 'string') {
+      result.push(split);
+    }
     return result;
   };
 
@@ -1124,7 +1120,7 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
       for (const requirement of sortedData) {
         // Verificar se há pelo menos espaço para título + início do primeiro critério
         const hasCriteria = requirement.criteria.length > 0;
-        const firstCriterionHasAnalyses = hasCriteria && requirement.criteria[0]?.analyses?.some(analysis => analysis.parameters?.length);
+        const firstCriterionHasAnalyses = hasCriteria && requirement.criteria[0]?.analyses?.some((analysis: any) => (analysis as any).parameters?.length);
         const requirementEstimatedHeight = 10 + (hasCriteria ? 8 : 0) + (firstCriterionHasAnalyses ? 20 : 0);
         checkSectionBreak('requirement', requirementEstimatedHeight);
 
@@ -1136,7 +1132,7 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
 
         for (const criterion of requirement.criteria) {
           // Verificar se há pelo menos espaço para título + início de uma análise
-          const hasAnalyses = criterion.analyses.some(analysis => analysis.parameters?.length);
+          const hasAnalyses = criterion.analyses.some(analysis => (analysis as any).parameters?.length);
           const minimumCriterionHeight = 8 + (hasAnalyses ? 25 : 0); // título + espaço mínimo para começar uma análise
           checkSectionBreak('criterion', minimumCriterionHeight);
 
@@ -1146,7 +1142,7 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
           doc.text(ensureUnicodeSupport(criterionText, doc), margin + 5, yPosition);
           yPosition += 8;
 
-          for (const analysis of criterion.analyses) {
+          for (const analysis of criterion.analyses as any[]) {
             if (!analysis.parameters?.length) continue;
 
             const analysisKey = `${requirement.id}-${criterion.id}-${analysis.id}`;
@@ -1216,7 +1212,7 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
               return textValue === '' ? '—' : textValue;
             };
 
-            analysis.parameters.forEach(parameter => {
+            analysis.parameters.forEach((parameter: any) => {
               const row: any[] = [];
 
               const parameterName = formatTextWithLineBreaks(parameter.label || 'Parâmetro');
@@ -1241,7 +1237,7 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
                 superior: parameter.superiorValue
               };
 
-              selectedLevels.forEach(levelId => {
+              selectedLevels.forEach((levelId: string) => {
                 let resolvedValue = directValueMap[levelId];
                 if (resolvedValue === undefined || resolvedValue === null) {
                   const nestedValue = parameter.values?.[levelId];
@@ -1349,7 +1345,7 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
                     data.cell.styles.fontSize = 8;
                     data.cell.styles.lineHeight = 1.2;
 
-                    const rawCell = data.cell.raw;
+                    const rawCell = data.cell.raw as ParameterCellContent | string;
                     if (isParameterCellContent(rawCell)) {
                       const paddingLeft = data.cell.padding('left');
                       const paddingRight = data.cell.padding('right');
@@ -1361,8 +1357,9 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
 
                       data.cell.styles.cellWidth = parameterColumnWidth;
 
-                      const descriptionText = rawCell.description ?? '';
-                      const observationText = rawCell.observation ?? '';
+                      // === AJUSTE: garantir que o separador apareça no PDF (NBSP)
+                      const descriptionText = (rawCell.description ?? '').replaceAll(UI_LINE_SEPARATOR, PDF_LINE_SEPARATOR);
+                      const observationText = (rawCell.observation ?? '').replaceAll(UI_LINE_SEPARATOR, PDF_LINE_SEPARATOR);
 
                       const descriptionLines = splitPdfTextIntoLines(doc, descriptionText, availableWidth);
                       rawCell._descriptionLines = descriptionLines;
@@ -1431,7 +1428,7 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
               },
               didDrawCell: (data: any) => {
                 if (data.section === 'body' && data.column.index === 0) {
-                  const rawCell = data.cell.raw;
+                  const rawCell = data.cell.raw as ParameterCellContent | string;
                   if (isParameterCellContent(rawCell)) {
                     const paddingLeft = data.cell.padding('left');
                     const paddingTop = data.cell.padding('top');
@@ -1451,25 +1448,21 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
                       doc.setTextColor(60, 60, 60);
 
                       descriptionLines.forEach((line: string) => {
-                        if (line === '') {
-                          // Linha vazia - adicionar espaçamento de linha vazia
-                          currentY += baseLineHeight * 0.5; // Metade da altura para linhas vazias
-                        } else {
-                          doc.text(line, startX, currentY, { baseline: 'top' } as any);
-                          currentY += baseLineHeight;
-                        }
+                        const ln = ensureUnicodeSupport(line, doc);
+                        doc.text(ln, startX, currentY, { baseline: 'top' } as any);
+                        currentY += baseLineHeight;
                       });
                     }
 
                     const observationLines = rawCell._observationLines ?? [];
                     if (observationLines.length > 0) {
                       currentY += 0.6;
-                      doc.setFont('DejaVuSans', 'normal'); // Mudado de 'italic' para 'normal'
-                      doc.setFontSize(7); // Reduzido de 8 para 7
-                      doc.setTextColor(120, 120, 120); // Mudado para cinza mais claro
+                      doc.setFont('DejaVuSans', 'normal'); // sem itálico
+                      doc.setFontSize(7); // 7 pt
+                      doc.setTextColor(120, 120, 120);
 
                       const observationLineHeight =
-                        rawCell._observationLineHeight ?? (7 * 1.15) / doc.internal.scaleFactor; // Ajustado para fontSize 7
+                        rawCell._observationLineHeight ?? (7 * 1.15) / doc.internal.scaleFactor;
 
                       observationLines.forEach((line: string) => {
                         const normalizedLine = ensureUnicodeSupport(line, doc);
