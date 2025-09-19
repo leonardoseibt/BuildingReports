@@ -1126,8 +1126,10 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
 
         doc.setFontSize(14);
         doc.setFont('DejaVuSans', 'bold');
+        doc.setTextColor(30, 64, 175); // Azul escuro
         const requirementText = `Requisito: ${normalizePdfText(requirement.label)}`;
         doc.text(ensureUnicodeSupport(requirementText, doc), margin, yPosition);
+        doc.setTextColor(0, 0, 0); // Restaurar cor preta para outros elementos
         yPosition += 10;
 
         for (const criterion of requirement.criteria) {
@@ -1138,8 +1140,10 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
 
           doc.setFontSize(12);
           doc.setFont('DejaVuSans', 'bold');
+          doc.setTextColor(30, 64, 175); // Azul escuro
           const criterionText = `Critério: ${normalizePdfText(criterion.label)}`;
           doc.text(ensureUnicodeSupport(criterionText, doc), margin + 5, yPosition);
+          doc.setTextColor(0, 0, 0); // Restaurar cor preta para outros elementos
           yPosition += 8;
 
           for (const analysis of criterion.analyses as any[]) {
