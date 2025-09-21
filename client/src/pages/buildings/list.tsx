@@ -391,7 +391,7 @@ export default function BuildingList() {
         </main>
       </div>
   <Dialog open={open} onOpenChange={(v) => { if (v) setFormKey(k => k + 1); if (!v) setEditBuilding(null); setOpen(v); }}>
-        <DialogContent className="max-w-4xl max-h-[90vh] p-0 overflow-hidden">
+        <DialogContent className="max-w-6xl max-h-[90vh] p-0 overflow-hidden">
           <div className="max-h-[calc(90vh-1rem)] overflow-y-auto my-7 px-7">
   <BuildingForm key={formKey} building={editBuilding} onSuccess={() => { queryClient.invalidateQueries({ queryKey: ["/api/buildings"] }); invalidateDashboard(queryClient); if (editBuilding) { setEditBuilding(null); setOpen(false); } }} onCancel={() => setOpen(false)} />
           </div>

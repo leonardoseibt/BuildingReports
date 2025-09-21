@@ -43,6 +43,7 @@ const buildingFormSchema = z.object({
     .transform((val) => parseFloat(val))
     .refine((val) => val > 0, "Área deve ser maior que zero"),
   buildingHeight: z.string().optional().transform((v) => v && v.trim() !== '' ? parseFloat(v) : undefined),
+  basementDepth: z.string().optional().transform((v) => v && v.trim() !== '' ? parseFloat(v) : undefined),
   floors: z.string()
     .min(1, "Número de pavimentos é obrigatório")
     .transform((val) => parseInt(val, 10))
@@ -110,7 +111,8 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
       bioclimaticZone: undefined as any,
   isoplethCode: undefined as any,
       totalArea: 0 as any,
-      buildingHeight: undefined as any,
+      buildingHeight: 0 as any,
+      basementDepth: 0 as any,
       floors: 0 as any,
       units: 1 as any,
       noiseClassId: undefined as any,
@@ -127,7 +129,7 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
         cep: '', street: '', addressNumber: '', neighborhood: '', city: '', state: undefined,
         bioclimaticZone: undefined as any,
   isoplethCode: undefined as any,
-        totalArea: 0 as any, buildingHeight: undefined as any, floors: 0 as any, units: 1 as any,
+        totalArea: 0 as any, buildingHeight: 0 as any, basementDepth: 0 as any, floors: 0 as any, units: 1 as any,
         noiseClassId: undefined as any, aggressivenessClassId: undefined as any,
       });
       return;
@@ -145,7 +147,8 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
       bioclimaticZone: (building.bioclimaticZone as any) || undefined,
   isoplethCode: (building as any).isoplethCode || undefined,
       totalArea: String(building.totalArea) as any,
-      buildingHeight: (building as any).buildingHeight != null ? String((building as any).buildingHeight) as any : undefined,
+      buildingHeight: (building as any).buildingHeight != null ? String((building as any).buildingHeight) as any : "0",
+      basementDepth: (building as any).basementDepth != null ? String((building as any).basementDepth) as any : "0",
       floors: String(building.floors) as any,
       units: String(building.units ?? 1) as any,
       noiseClassId: (building as any).noiseClassId ?? undefined,
@@ -275,7 +278,7 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
   }, [watchName]);
 
   return (
-    <div className="max-w-4xl mx-auto" data-testid="building-form-container">
+    <div className="max-w-6xl mx-auto" data-testid="building-form-container">
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6" autoComplete="off">
           {/* HEADER */}
@@ -632,7 +635,7 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
 
           {/* Características Físicas */}
           <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
               <FormField
                 control={form.control}
                 name="totalArea"
@@ -662,6 +665,28 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
                   <FormItem>
                     <FormControl>
                       <NotchedField label="Altura da Edificação (m)">
+                        <Input 
+                          type="number" 
+                          step="0.01" 
+                          min="0" 
+                          placeholder="0.00" 
+                          {...field}
+                          className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                        />
+                      </NotchedField>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="basementDepth"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormControl>
+                      <NotchedField label="Profundidade de Subsolo (m)">
                         <Input 
                           type="number" 
                           step="0.01" 

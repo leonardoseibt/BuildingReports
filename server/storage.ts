@@ -76,6 +76,7 @@ export interface ReportWithBuilding {
   buildingLocation: string | null;
   buildingArea: string | null;
   buildingHeight: string | null;
+  buildingBasementDepth: string | null;
   buildingFloors: number | null;
 }
 
@@ -391,6 +392,7 @@ export class DatabaseStorage implements IStorage {
       isoplethCode: (building as any).isoplethCode,
       totalArea: building.totalArea,
       buildingHeight: (building as any).buildingHeight,
+      basementDepth: (building as any).basementDepth,
       floors: building.floors,
       units: building.units,
     };
@@ -424,6 +426,7 @@ export class DatabaseStorage implements IStorage {
         isoplethCode: buildings.isoplethCode,
         totalArea: buildings.totalArea,
   buildingHeight: buildings.buildingHeight,
+  basementDepth: buildings.basementDepth,
         floors: buildings.floors,
         units: buildings.units,
         createdAt: buildings.createdAt,
@@ -467,6 +470,7 @@ export class DatabaseStorage implements IStorage {
         isoplethCode: buildings.isoplethCode,
         totalArea: buildings.totalArea,
   buildingHeight: buildings.buildingHeight,
+  basementDepth: buildings.basementDepth,
         floors: buildings.floors,
         units: buildings.units,
         createdAt: buildings.createdAt,
@@ -502,6 +506,7 @@ export class DatabaseStorage implements IStorage {
     if (rest.isoplethCode !== undefined) updates.isoplethCode = rest.isoplethCode;
     if (rest.totalArea != null) updates.totalArea = rest.totalArea;
   if (rest.buildingHeight !== undefined) updates.buildingHeight = rest.buildingHeight as any;
+  if (rest.basementDepth !== undefined) updates.basementDepth = rest.basementDepth as any;
     if (rest.floors != null) updates.floors = rest.floors;
     if (rest.units != null) updates.units = rest.units;
     if (rest.typologyId != null) {
@@ -609,6 +614,7 @@ export class DatabaseStorage implements IStorage {
         buildingLocation: sql<string>`${buildings.city} || ', ' || ${buildings.state}`,
         buildingArea: buildings.totalArea,
         buildingHeight: buildings.buildingHeight,
+        buildingBasementDepth: buildings.basementDepth,
         buildingFloors: buildings.floors,
       })
       .from(reports)
@@ -696,6 +702,7 @@ export class DatabaseStorage implements IStorage {
         isoplethCode: buildings.isoplethCode,
         totalArea: buildings.totalArea,
         buildingHeight: buildings.buildingHeight,
+        basementDepth: buildings.basementDepth,
         floors: buildings.floors,
         units: buildings.units,
         createdAt: buildings.createdAt,

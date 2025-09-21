@@ -166,7 +166,7 @@ export default function AnalysisForm({ onSuccess, onCancel, initialItem }: { onS
                       {...field}
                       rows={2}
                       placeholder="Descrição da análise"
-                      className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 resize-none min-h-0"
+                      className="w-full bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 resize-none min-h-0 p-0 m-0"
                     />
                   </NotchedField>
                 </FormControl>

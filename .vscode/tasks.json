@@ -108,6 +108,21 @@
 				"$tsc"
 			],
 			"group": "build"
+		},
+		{
+			"label": "db:migrate:basement-depth",
+			"type": "shell",
+			"command": "npx",
+			"args": [
+				"tsx",
+				"scripts/run-sql.ts",
+				"scripts/sql/20250921_add_basement_depth_to_buildings.sql"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$tsc"
+			],
+			"group": "build"
 		}
 	]
 }

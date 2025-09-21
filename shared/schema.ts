@@ -155,7 +155,8 @@ export const buildings = pgTable("buildings", {
   bioclimaticZone: varchar("bioclimatic_zone", { length: 16 }).notNull(),
   isoplethCode: varchar("isopleth_code", { length: 16 }),
   totalArea: decimal("total_area", { precision: 10, scale: 2 }).notNull(),
-  buildingHeight: decimal("building_height", { precision: 10, scale: 2 }),
+  buildingHeight: decimal("building_height", { precision: 10, scale: 2 }).default("0.00"),
+  basementDepth: decimal("basement_depth", { precision: 10, scale: 2 }).default("0.00"),
   floors: integer("floors").notNull(),
   units: integer("units").default(1),
   noiseClassId: integer("noise_class_id").references(() => noiseClasses.id),
@@ -464,6 +465,7 @@ export const insertBuildingSchema = createInsertSchema(buildings)
   .extend({
     totalArea: decimalInput,
   buildingHeight: decimalInput.optional(),
+  basementDepth: decimalInput.optional(),
     floors: intInput,
     units: intInput.optional(),
   neighborhood: z.string().optional().nullable().transform(v => v ? v : undefined),
