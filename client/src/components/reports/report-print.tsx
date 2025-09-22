@@ -31,6 +31,7 @@ interface ReportItem {
   buildingLocation?: string;
   buildingArea?: string;
   buildingHeight?: string;
+  buildingBasementDepth?: string;
   buildingFloors?: number;
 }
 
@@ -56,6 +57,19 @@ interface ParameterCellContent {
 const isParameterCellContent = (value: unknown): value is ParameterCellContent => {
   return !!value && typeof value === 'object' && (value as ParameterCellContent).type === 'parameterCell';
 };
+
+// Configuração dinâmica para campos técnicos da edificação
+// Para adicionar novos campos técnicos da edificação:
+// 1. Adicione o campo aqui com key (nome do campo no camelCase), label (nome de exibição) e unit (unidade de medida)
+// 2. Certifique-se de que o campo existe no schema da tabela buildings
+// 3. O sistema automaticamente incluirá o campo no PDF e na visualização em tela
+const technicalFields = [
+  { key: 'totalArea', label: 'Área Total', unit: 'm²' },
+  { key: 'buildingHeight', label: 'Altura', unit: 'm' },
+  { key: 'basementDepth', label: 'Profundidade de Subsolo', unit: 'm' },
+  { key: 'floors', label: 'Pavimentos', unit: '' },
+  { key: 'units', label: 'Unidades', unit: '' }
+];
 
 const WINDOWS_1252_EXTENDED_MAP: Record<string, number> = {
   '€': 0x80,
@@ -204,14 +218,15 @@ const ensureUnicodeSupport = (text: string, doc: jsPDF): string => {
   const hasSpecialChars = specialChars.some(char => text.includes(char));
   
   if (hasSpecialChars) {
-    // Garantir que a fonte está configurada corretamente
-    const currentFont = doc.getFont();
-    if (currentFont.fontName !== 'DejaVuSans') {
+    // Sempre garantir que a fonte DejaVuSans está configurada para caracteres especiais
+    try {
       doc.setFont('DejaVuSans', 'normal');
+      console.log('Configurando fonte DejaVuSans para texto com caracteres especiais:', text);
+    } catch (error) {
+      console.warn('Erro ao configurar fonte DejaVuSans:', error);
+      // Fallback para fonte padrão se houver erro
+      doc.setFont('helvetica', 'normal');
     }
-    
-    // Log para debug (pode ser removido em produção)
-    console.log('Texto com caracteres especiais:', text);
   }
   
   return text;
@@ -478,7 +493,13 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
   };
 
   /**
-   * Lógica genérica para exibição de parâmetros (mantida)
+   * Valida se um parâmetro se aplica à edificação baseado nos limites definidos.
+   * 
+   * Regras de validação para parâmetros numéricos:
+   * - O valor deve ser MAIOR que min_limit (não maior ou igual)
+   * - O valor deve ser MENOR OU IGUAL a max_limit
+   * - Se max_limit não informado, é considerado infinito (sem limite superior)
+   * - Se min_limit não informado, não há validação de limite inferior
    */
   const shouldShowParameter = (parameter: any): boolean => {
     if (!parameter.attributeId) return true;
@@ -505,14 +526,16 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
 
     const numericValue = parseFloat(String(attributeValue));
     if (!isNaN(numericValue)) {
+      // Validação conforme regras: valor deve ser > min_limit e <= max_limit
       if (parameter.minLimit !== null && parameter.minLimit !== undefined) {
         const minLimit = parseFloat(String(parameter.minLimit));
-        if (!isNaN(minLimit) && numericValue < minLimit) return false;
+        if (!isNaN(minLimit) && numericValue <= minLimit) return false;
       }
       if (parameter.maxLimit !== null && parameter.maxLimit !== undefined) {
         const maxLimit = parseFloat(String(parameter.maxLimit));
         if (!isNaN(maxLimit) && numericValue > maxLimit) return false;
       }
+      // Se maxLimit não informado, é considerado infinito (sem validação de limite superior)
     }
     return true;
   };
@@ -526,14 +549,21 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
       return sourceData[attribute.sourceColumn];
     }
     if (attribute.sourceTable === 'buildings') {
+      // Mapeamento dinâmico baseado nos campos técnicos
+      const technicalFieldsMap = technicalFields.reduce((map, field) => {
+        // Converte camelCase para snake_case
+        const snakeCase = field.key.replace(/([A-Z])/g, '_$1').toLowerCase();
+        map[snakeCase] = field.key;
+        return map;
+      }, {} as Record<string, string>);
+      
       const snakeToCamelMap: Record<string, string> = {
         'typology_id': 'typologyId',
         'noise_class_id': 'noiseClassId',
         'aggressiveness_class_id': 'aggressivenessClassId',
         'bioclimatic_zone': 'bioclimaticZone',
         'isopleth_code': 'isoplethCode',
-        'total_area': 'totalArea',
-        'building_height': 'buildingHeight',
+        ...technicalFieldsMap
       };
       const camelCaseProperty = snakeToCamelMap[attribute.sourceColumn];
       if (camelCaseProperty && sourceData[camelCaseProperty] !== undefined && sourceData[camelCaseProperty] !== null) {
@@ -749,7 +779,9 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
         compress: false
       });
 
+      console.log('Documento PDF criado, carregando fontes...');
       await ensurePdfFonts(doc);
+      console.log('Fontes carregadas, configurando fonte padrão...');
       doc.setFont('DejaVuSans', 'normal');
       doc.setCharSpace(0);
 
@@ -896,6 +928,16 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
           return compactPdfText(rawValue);
         };
 
+        // Função para obter campos técnicos dinamicamente
+        const getTechnicalFieldsItems = () => {
+          return technicalFields
+            .map(field => ({
+              label: field.label,
+              value: formatNumericValue((building as any)[field.key], field.unit || undefined)
+            }))
+            .filter(item => item.value !== null);
+        };
+
         const buildingInfoSections: { title: string; items: { label: string; value: string | null }[] }[] = [
           {
             title: 'Identificação',
@@ -913,12 +955,7 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
           },
           {
             title: 'Características Técnicas',
-            items: [
-              { label: 'Área Total', value: formatNumericValue(building.totalArea, 'm²') },
-              { label: 'Altura', value: formatNumericValue(building.buildingHeight, 'm') },
-              { label: 'Pavimentos', value: formatNumericValue(building.floors) },
-              { label: 'Unidades', value: formatNumericValue(building.units) }
-            ]
+            items: getTechnicalFieldsItems()
           },
           {
             title: 'Condições Ambientais e Classificações',
@@ -1095,6 +1132,9 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
             },
             rowPageBreak: 'avoid',
             didParseCell: (data: any) => {
+              // Garantir fonte DejaVuSans para todas as células
+              data.cell.styles.font = 'DejaVuSans';
+              
               if (data.cell.raw && typeof data.cell.raw === 'object' && 'colSpan' in data.cell.raw && data.cell.raw.colSpan === 4) {
                 const isTitleRow = data.row.index === 0;
                 data.cell.styles.halign = 'left';
@@ -1106,6 +1146,12 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
                 data.cell.styles.cellPadding = isTitleRow
                   ? { top: 6, right: 8, bottom: 6, left: 10 }
                   : { top: 5, right: 8, bottom: 4, left: 10 };
+              }
+            },
+            willDrawCell: (data: any) => {
+              // Re-aplicar fonte antes de desenhar cada célula para garantir caracteres especiais
+              if (data.cell.text && data.cell.text.some((text: string) => /[≥≤≠±°μ×÷]/.test(text))) {
+                doc.setFont('DejaVuSans', data.cell.styles.fontStyle || 'normal');
               }
             }
           });
@@ -1328,6 +1374,9 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
               },
               columnStyles,
               didParseCell: (data: any) => {
+                // Garantir fonte DejaVuSans para todas as células
+                data.cell.styles.font = 'DejaVuSans';
+                
                 if (data.section === 'head') {
                   data.cell.styles.halign = 'center';
                   data.cell.styles.valign = 'middle';
@@ -1480,6 +1529,12 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
                     }
                   }
                 }
+              },
+              willDrawCell: (data: any) => {
+                // Re-aplicar fonte antes de desenhar cada célula para garantir caracteres especiais
+                if (data.cell.text && data.cell.text.some((text: string) => /[≥≤≠±°μ×÷]/.test(text))) {
+                  doc.setFont('DejaVuSans', data.cell.styles.fontStyle || 'normal');
+                }
               }
             });
 
@@ -1601,30 +1656,23 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
                 Características Técnicas
               </h3>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {building?.totalArea && (
-                  <div className="bg-gray-50 border border-gray-200 rounded p-3">
-                    <div className="text-xs font-medium text-gray-500 mb-1">Área Total</div>
-                    <div className="text-sm font-medium text-gray-900">{building.totalArea} m²</div>
-                  </div>
-                )}
-                {building?.buildingHeight && (
-                  <div className="bg-gray-50 border border-gray-200 rounded p-3">
-                    <div className="text-xs font-medium text-gray-500 mb-1">Altura</div>
-                    <div className="text-sm font-medium text-gray-900">{building.buildingHeight} m</div>
-                  </div>
-                )}
-                {building?.floors && (
-                  <div className="bg-gray-50 border border-gray-200 rounded p-3">
-                    <div className="text-xs font-medium text-gray-500 mb-1">Pavimentos</div>
-                    <div className="text-sm font-medium text-gray-900">{building.floors}</div>
-                  </div>
-                )}
-                {building?.units && (
-                  <div className="bg-gray-50 border border-gray-200 rounded p-3">
-                    <div className="text-xs font-medium text-gray-500 mb-1">Unidades</div>
-                    <div className="text-sm font-medium text-gray-900">{building.units}</div>
-                  </div>
-                )}
+                {technicalFields.map(field => {
+                  const value = (building as any)?.[field.key];
+                  if (!value) return null;
+                  
+                  const displayValue = typeof value === 'number' 
+                    ? value.toLocaleString('pt-BR') 
+                    : value;
+                  
+                  return (
+                    <div key={field.key} className="bg-gray-50 border border-gray-200 rounded p-3">
+                      <div className="text-xs font-medium text-gray-500 mb-1">{field.label}</div>
+                      <div className="text-sm font-medium text-gray-900">
+                        {displayValue}{field.unit ? ` ${field.unit}` : ''}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
