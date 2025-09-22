@@ -908,7 +908,7 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
       doc.setFontSize(10);
       doc.setFont('DejaVuSans', 'normal');
       doc.text('Relatório Técnico (PDE)', pageWidth / 2, margin + 12, { align: 'center' });
-      yPosition = margin + 20;
+      yPosition = margin + 16;  // Reduzido de 20 para 16
 
       // Informações do edifício
       if (building) {
@@ -972,22 +972,22 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
         let hasDetailContent = false;
 
         const labelBaseStyles = {
-          fillColor: [248, 250, 252],
-          textColor: [79, 70, 229],
+          fillColor: [243, 244, 246],  // Cinza mais suave
+          textColor: [55, 65, 81],      // Cinza escuro mais legível
           fontStyle: 'bold' as const,
           fontSize: 9,
           halign: 'left' as const,
-          cellPadding: { top: 4, right: 4, bottom: 4, left: 8 },
-          lineHeight: 1.2
+          cellPadding: { top: 5, right: 6, bottom: 5, left: 8 },  // Reduzido padding vertical
+          lineHeight: 1.3
         };
 
         const valueBaseStyles = {
-          textColor: [31, 41, 55],
+          textColor: [31, 41, 55],      // Texto escuro para boa legibilidade
           fontStyle: 'normal' as const,
           fontSize: 9,
           halign: 'left' as const,
-          cellPadding: { top: 4, right: 8, bottom: 4, left: 6 },
-          lineHeight: 1.2
+          cellPadding: { top: 5, right: 8, bottom: 5, left: 8 },  // Reduzido padding vertical
+          lineHeight: 1.3
         };
 
         buildingInfoSections.forEach(section => {
@@ -1033,45 +1033,32 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
             }
           ]);
 
-          for (let index = 0; index < validItems.length; index += 2) {
-            const leftItem = validItems[index];
-            const rightItem = validItems[index + 1];
-
+          // Layout profissional: cada item em uma linha separada
+          validItems.forEach(item => {
             detailRows.push([
               {
-                content: leftItem.label,
-                styles: { ...labelBaseStyles }
+                content: item.label,
+                styles: { 
+                  ...labelBaseStyles,
+                  cellWidth: '40%'  // 40% para o label
+                }
               },
               {
-                content: leftItem.value ?? '—',
-                styles: { ...valueBaseStyles }
-              },
-              rightItem
-                ? {
-                    content: rightItem.label,
-                    styles: { ...labelBaseStyles }
-                  }
-                : {
-                    content: '',
-                    styles: { ...labelBaseStyles, fillColor: [255, 255, 255], textColor: [148, 163, 184] }
-                  },
-              rightItem
-                ? {
-                    content: rightItem.value ?? '—',
-                    styles: { ...valueBaseStyles }
-                  }
-                : {
-                    content: '',
-                    styles: { ...valueBaseStyles }
-                  }
+                content: item.value ?? '—',
+                colSpan: 3,  // Usar 3 colunas para o valor (60% restante)
+                styles: { 
+                  ...valueBaseStyles,
+                  cellWidth: '60%'
+                }
+              }
             ]);
-          }
+          });
         });
 
         if (hasDetailContent) {
           const detailTableWidth = pageWidth - margin * 2;
-          const labelColumnWidth = 34;
-          const valueColumnWidth = detailTableWidth / 2 - labelColumnWidth;
+          const labelColumnWidth = detailTableWidth * 0.4;  // 40% para labels
+          const remainingWidth = detailTableWidth * 0.6;     // 60% restante dividido por 3 colunas
 
           autoTable(doc, {
             startY: yPosition,
@@ -1082,12 +1069,12 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
               font: 'DejaVuSans',
               fontSize: 9,
               textColor: [31, 41, 55],
-              lineColor: [226, 232, 240],
-              lineWidth: 0.1,
-              cellPadding: { top: 4, right: 6, bottom: 4, left: 6 },
+              lineColor: [209, 213, 219],   // Linhas mais suaves
+              lineWidth: 0.2,                // Linhas um pouco mais visíveis
+              cellPadding: { top: 5, right: 6, bottom: 5, left: 6 },  // Reduzido padding
               overflow: 'linebreak',
               cellWidth: 'wrap',
-              minCellHeight: 8
+              minCellHeight: 8              // Reduzido de 10 para 8
             },
             theme: 'grid',
             columnStyles: {
@@ -1102,7 +1089,7 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
                 lineHeight: labelBaseStyles.lineHeight
               },
               1: {
-                cellWidth: valueColumnWidth,
+                cellWidth: remainingWidth / 3,
                 textColor: valueBaseStyles.textColor,
                 fontStyle: valueBaseStyles.fontStyle,
                 fontSize: valueBaseStyles.fontSize,
@@ -1111,7 +1098,7 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
                 lineHeight: valueBaseStyles.lineHeight
               },
               2: {
-                cellWidth: labelColumnWidth,
+                cellWidth: remainingWidth / 3,
                 fillColor: labelBaseStyles.fillColor,
                 textColor: labelBaseStyles.textColor,
                 fontStyle: labelBaseStyles.fontStyle,
@@ -1121,7 +1108,7 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
                 lineHeight: labelBaseStyles.lineHeight
               },
               3: {
-                cellWidth: valueColumnWidth,
+                cellWidth: remainingWidth / 3,
                 textColor: valueBaseStyles.textColor,
                 fontStyle: valueBaseStyles.fontStyle,
                 fontSize: valueBaseStyles.fontSize,
@@ -1158,7 +1145,7 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
 
           const headerTableInfo = (doc as any).lastAutoTable;
           const finalY = headerTableInfo?.finalY ?? yPosition;
-          yPosition = finalY + 12;
+          yPosition = finalY + 8;  // Reduzido de 12 para 8
         }
       }
 
@@ -1190,7 +1177,7 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
           const criterionText = `Critério: ${normalizePdfText(criterion.label)}`;
           doc.text(ensureUnicodeSupport(criterionText, doc), margin + 5, yPosition);
           doc.setTextColor(0, 0, 0); // Restaurar cor preta para outros elementos
-          yPosition += 8;
+          yPosition += 6;  // Reduzido de 8 para 6
 
           for (const analysis of criterion.analyses as any[]) {
             if (!analysis.parameters?.length) continue;
@@ -1301,7 +1288,7 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
 
             const estimatedTableHeight = estimateTableHeight(tableData, columnWidths);
             const analysisHeadingHeight = 7;
-            const analysisSpacing = 9;
+            const analysisSpacing = 6;  // Reduzido de 9 para 6
             const totalAnalysisHeight = analysisHeadingHeight + estimatedTableHeight + analysisSpacing;
 
             // Verificar quebra de página para análise (título + tabela + dados)
@@ -1328,7 +1315,7 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
             doc.text(normalizedTitle, margin + 9, yPosition + 5.5);
             
             // Atualizar posição Y para a tabela
-            yPosition += titleHeight + 2; // Pequeno espaçamento entre título e tabela
+            yPosition += titleHeight + 1; // Reduzido espaçamento entre título e tabela
 
             autoTable(doc, {
               head: [tableHeaders],
@@ -1543,10 +1530,10 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
             yPosition = finalY + analysisSpacing;
           }
 
-          yPosition += 5;
+          yPosition += 3;  // Reduzido de 5 para 3
         }
 
-        yPosition += 10;
+        yPosition += 6;  // Reduzido de 10 para 6
       }
 
       // Salvar o PDF
@@ -1655,7 +1642,8 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
               <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wide mb-3 pb-2 border-gray-200 border-b">
                 Características Técnicas
               </h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {/* Layout em grid uniforme seguindo padrão dos outros elementos */}
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                 {technicalFields.map(field => {
                   const value = (building as any)?.[field.key];
                   if (!value) return null;
