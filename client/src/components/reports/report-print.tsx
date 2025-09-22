@@ -789,7 +789,9 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
       const pageWidth = doc.internal.pageSize.getWidth();
       const pageHeight = doc.internal.pageSize.getHeight();
       const margin = 15;
-      
+      const tableMarginX = margin + 6;
+      const availableTableWidth = pageWidth - tableMarginX * 2;
+
       let yPosition = margin;
 
       // Verificar espaço para seções
@@ -1182,7 +1184,7 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
           for (const analysis of criterion.analyses as any[]) {
             if (!analysis.parameters?.length) continue;
 
-            const analysisKey = `${requirement.id}-${criterion.id}-${analysis.id}`;
+            const analysisKey = `analysis-${analysis.id}`;
             let selectedLevels = selectedEvaluations.get(analysisKey) || [];
             if (selectedLevels.length === 0) {
               selectedLevels = ['minimum', 'intermediate', 'superior'];
@@ -1199,10 +1201,33 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
               tableHeaders.push(levelLabels[levelId] || levelId);
             });
 
-            const parameterColumnWidth = 100; // Aumentado de 88 para 100 (+12mm)
             const unitColumnWidth = 18;
             const levelColumnWidth = 18;
             const narrowLevelIds = new Set(['minimum', 'intermediate', 'superior']);
+
+            const levelColumnWidths = selectedLevels.map(levelId =>
+              narrowLevelIds.has(levelId) ? levelColumnWidth : levelColumnWidth + 6
+            );
+
+            const fixedColumnsWidth = unitColumnWidth + levelColumnWidths.reduce((sum, width) => sum + width, 0);
+            const minimumParameterColumnWidth = 88;
+            const totalMinimumTableWidth = minimumParameterColumnWidth + fixedColumnsWidth;
+
+            let parameterColumnWidth = minimumParameterColumnWidth;
+            if (availableTableWidth > totalMinimumTableWidth) {
+              parameterColumnWidth += availableTableWidth - totalMinimumTableWidth;
+            } else if (availableTableWidth < totalMinimumTableWidth) {
+              parameterColumnWidth = Math.max(availableTableWidth - fixedColumnsWidth, 50);
+            }
+
+            const totalConfiguredWidth = parameterColumnWidth + fixedColumnsWidth;
+            if (totalConfiguredWidth > availableTableWidth) {
+              parameterColumnWidth -= totalConfiguredWidth - availableTableWidth;
+            }
+
+            if (parameterColumnWidth < 0) {
+              parameterColumnWidth = 0;
+            }
 
             const columnWidths = [parameterColumnWidth, unitColumnWidth];
             const columnStyles: Record<number, any> = {
@@ -1227,8 +1252,7 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
               }
             };
 
-            selectedLevels.forEach((levelId, index) => {
-              const width = narrowLevelIds.has(levelId) ? levelColumnWidth : levelColumnWidth + 6;
+            levelColumnWidths.forEach((width, index) => {
               columnWidths.push(width);
               columnStyles[index + 2] = {
                 cellWidth: width,
@@ -1299,7 +1323,10 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
             const normalizedTitle = ensureUnicodeSupport(analysisTitle, doc);
             
             // Calcular a largura total da tabela baseada nas colunas
-            const totalTableWidth = columnWidths.reduce((sum, width) => sum + width, 0);
+            const totalTableWidth = Math.min(
+              columnWidths.reduce((sum, width) => sum + width, 0),
+              availableTableWidth
+            );
             
             // Configurar estilo do título
             doc.setFont('DejaVuSans', 'bold');
@@ -1309,7 +1336,7 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
             // Adicionar fundo azul claro para o título com largura da tabela
             const titleHeight = 8;
             doc.setFillColor(240, 248, 255); // Azul claro
-            doc.rect(margin + 6, yPosition, totalTableWidth, titleHeight, 'F');
+            doc.rect(tableMarginX, yPosition, totalTableWidth, titleHeight, 'F');
             
             // Renderizar o texto do título
             doc.text(normalizedTitle, margin + 9, yPosition + 5.5);
@@ -1321,7 +1348,7 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
               head: [tableHeaders],
               body: tableData,
               startY: yPosition,
-              margin: { top: margin + 20, left: margin + 6, right: margin + 6, bottom: margin },
+              margin: { top: margin + 20, left: tableMarginX, right: tableMarginX, bottom: margin },
               tableWidth: 'auto',
               pageBreak: 'auto',
               showHead: 'everyPage',
