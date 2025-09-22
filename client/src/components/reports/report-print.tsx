@@ -779,6 +779,56 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
         compress: false
       });
 
+      type TextMeasureEntry = {
+        value: string;
+        fontSize?: number;
+        fontStyle?: 'normal' | 'bold';
+      };
+
+      const measureTextWidth = (
+        value: string,
+        fontSize = 8,
+        fontStyle: 'normal' | 'bold' = 'normal'
+      ) => {
+        if (!value) return 0;
+        const sanitized = compactPdfText(value);
+        if (!sanitized) return 0;
+
+        const internal = (doc as any).internal;
+        const currentFont = internal?.getFont ? internal.getFont() : { fontName: 'DejaVuSans', fontStyle: 'normal' };
+        const currentFontName = currentFont?.fontName || 'DejaVuSans';
+        const currentFontStyle = currentFont?.fontStyle || 'normal';
+        const currentFontSize = doc.getFontSize();
+
+        doc.setFont('DejaVuSans', fontStyle);
+        doc.setFontSize(fontSize);
+        const width = doc.getTextWidth(sanitized);
+
+        doc.setFont(currentFontName, currentFontStyle);
+        doc.setFontSize(currentFontSize);
+
+        return width;
+      };
+
+      const computeColumnWidth = (
+        entries: TextMeasureEntry[],
+        {
+          min = 14,
+          max = 32,
+          padding = 6
+        }: { min?: number; max?: number; padding?: number } = {}
+      ) => {
+        let maxWidth = 0;
+        for (const entry of entries) {
+          const width = measureTextWidth(entry.value, entry.fontSize ?? 8, entry.fontStyle ?? 'normal');
+          if (width > maxWidth) {
+            maxWidth = width;
+          }
+        }
+        const widthWithPadding = maxWidth + padding;
+        return Math.max(min, Math.min(widthWithPadding, max));
+      };
+
       console.log('Documento PDF criado, carregando fontes...');
       await ensurePdfFonts(doc);
       console.log('Fontes carregadas, configurando fonte padrão...');
@@ -1201,69 +1251,14 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
               tableHeaders.push(levelLabels[levelId] || levelId);
             });
 
-            const unitColumnWidth = 18;
-            const levelColumnWidth = 18;
             const narrowLevelIds = new Set(['minimum', 'intermediate', 'superior']);
 
-            const levelColumnWidths = selectedLevels.map(levelId =>
-              narrowLevelIds.has(levelId) ? levelColumnWidth : levelColumnWidth + 6
-            );
-
-            const fixedColumnsWidth = unitColumnWidth + levelColumnWidths.reduce((sum, width) => sum + width, 0);
-            const minimumParameterColumnWidth = 88;
-            const totalMinimumTableWidth = minimumParameterColumnWidth + fixedColumnsWidth;
-
-            let parameterColumnWidth = minimumParameterColumnWidth;
-            if (availableTableWidth > totalMinimumTableWidth) {
-              parameterColumnWidth += availableTableWidth - totalMinimumTableWidth;
-            } else if (availableTableWidth < totalMinimumTableWidth) {
-              parameterColumnWidth = Math.max(availableTableWidth - fixedColumnsWidth, 50);
-            }
-
-            const totalConfiguredWidth = parameterColumnWidth + fixedColumnsWidth;
-            if (totalConfiguredWidth > availableTableWidth) {
-              parameterColumnWidth -= totalConfiguredWidth - availableTableWidth;
-            }
-
-            if (parameterColumnWidth < 0) {
-              parameterColumnWidth = 0;
-            }
-
-            const columnWidths = [parameterColumnWidth, unitColumnWidth];
-            const columnStyles: Record<number, any> = {
-              0: {
-                cellWidth: parameterColumnWidth,
-                halign: 'left',
-                valign: 'top',
-                overflow: 'linebreak',
-                font: 'DejaVuSans',
-                fontStyle: 'normal',
-                fontSize: 8,
-                lineHeight: 1.2
-              },
-              1: {
-                cellWidth: unitColumnWidth,
-                halign: 'center',
-                valign: 'middle',
-                font: 'DejaVuSans',
-                fontStyle: 'normal',
-                fontSize: 8,
-                lineHeight: 1.15
-              }
-            };
-
-            levelColumnWidths.forEach((width, index) => {
-              columnWidths.push(width);
-              columnStyles[index + 2] = {
-                cellWidth: width,
-                halign: 'center',
-                valign: 'middle',
-                font: 'DejaVuSans',
-                fontStyle: 'normal',
-                fontSize: 8,
-                lineHeight: 1.15
-              };
-            });
+            const unitColumnEntries: TextMeasureEntry[] = [
+              { value: 'UN', fontSize: 10, fontStyle: 'bold' }
+            ];
+            const levelColumnEntries: TextMeasureEntry[][] = selectedLevels.map(levelId => [
+              { value: levelLabels[levelId] || levelId, fontSize: 10, fontStyle: 'bold' }
+            ]);
 
             const tableData: any[] = [];
 
@@ -1291,6 +1286,7 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
               const rawUnit = parameter.unit ? String(parameter.unit) : '—';
               const unitText = compactPdfText(rawUnit) || '—';
               row.push(unitText);
+              unitColumnEntries.push({ value: unitText });
 
               const directValueMap: Record<string, unknown> = {
                 minimum: parameter.minimumValue,
@@ -1298,16 +1294,90 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
                 superior: parameter.superiorValue
               };
 
-              selectedLevels.forEach((levelId: string) => {
+              selectedLevels.forEach((levelId: string, index) => {
                 let resolvedValue = directValueMap[levelId];
                 if (resolvedValue === undefined || resolvedValue === null) {
                   const nestedValue = parameter.values?.[levelId];
                   resolvedValue = nestedValue?.value ?? null;
                 }
-                row.push(formatParameterValue(resolvedValue));
+                const formattedValue = formatParameterValue(resolvedValue);
+                row.push(formattedValue);
+                levelColumnEntries[index]?.push({ value: formattedValue });
               });
 
               tableData.push(row);
+            });
+
+            const unitColumnWidth = computeColumnWidth(unitColumnEntries, { min: 12, max: 26, padding: 5 });
+            const levelColumnWidths = selectedLevels.map((levelId, index) => {
+              const isNarrow = narrowLevelIds.has(levelId);
+              return computeColumnWidth(levelColumnEntries[index] ?? [], {
+                min: isNarrow ? 14 : 18,
+                max: isNarrow ? 26 : 34,
+                padding: 5
+              });
+            });
+
+            const minimumParameterColumnWidth = 88;
+            const fixedColumnsWidth = unitColumnWidth + levelColumnWidths.reduce((sum, width) => sum + width, 0);
+            const totalMinimumTableWidth = minimumParameterColumnWidth + fixedColumnsWidth;
+
+            let parameterColumnWidth = minimumParameterColumnWidth;
+            if (availableTableWidth > totalMinimumTableWidth) {
+              parameterColumnWidth += availableTableWidth - totalMinimumTableWidth;
+            } else if (availableTableWidth < totalMinimumTableWidth) {
+              parameterColumnWidth = Math.max(availableTableWidth - fixedColumnsWidth, 50);
+            }
+
+            const totalConfiguredWidth = parameterColumnWidth + fixedColumnsWidth;
+            if (totalConfiguredWidth > availableTableWidth) {
+              parameterColumnWidth -= totalConfiguredWidth - availableTableWidth;
+            }
+
+            parameterColumnWidth = Math.max(parameterColumnWidth, 50);
+
+            const columnWidths = [parameterColumnWidth, unitColumnWidth, ...levelColumnWidths];
+
+            const columnStyles: Record<number, any> = {
+              0: {
+                cellWidth: parameterColumnWidth,
+                halign: 'left',
+                valign: 'top',
+                overflow: 'linebreak',
+                font: 'DejaVuSans',
+                fontStyle: 'normal',
+                fontSize: 8,
+                lineHeight: 1.2,
+                minCellWidth: parameterColumnWidth,
+                maxCellWidth: parameterColumnWidth
+              },
+              1: {
+                cellWidth: unitColumnWidth,
+                halign: 'center',
+                valign: 'top',
+                font: 'DejaVuSans',
+                fontStyle: 'normal',
+                fontSize: 8,
+                lineHeight: 1.15,
+                cellPadding: { top: 2, right: 3, bottom: 2, left: 3 },
+                minCellWidth: unitColumnWidth,
+                maxCellWidth: unitColumnWidth
+              }
+            };
+
+            levelColumnWidths.forEach((width, index) => {
+              columnStyles[index + 2] = {
+                cellWidth: width,
+                halign: 'center',
+                valign: 'top',
+                font: 'DejaVuSans',
+                fontStyle: 'normal',
+                fontSize: 8,
+                lineHeight: 1.15,
+                cellPadding: { top: 2, right: 3, bottom: 2, left: 3 },
+                minCellWidth: width,
+                maxCellWidth: width
+              };
             });
 
             const estimatedTableHeight = estimateTableHeight(tableData, columnWidths);
@@ -1349,14 +1419,14 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
               body: tableData,
               startY: yPosition,
               margin: { top: margin + 20, left: tableMarginX, right: tableMarginX, bottom: margin },
-              tableWidth: 'auto',
+              tableWidth: totalTableWidth,
               pageBreak: 'auto',
               showHead: 'everyPage',
               rowPageBreak: 'avoid', // Evita quebrar no meio de uma linha
               pageBreakBehavior: 'always', // Força quebra de página quando necessário
               styles: {
                 fontSize: 9,
-                cellPadding: 3,
+                cellPadding: { top: 2, right: 3, bottom: 2, left: 3 },
                 overflow: 'linebreak',
                 lineColor: [200, 200, 200],
                 lineWidth: 0.1,
@@ -1468,8 +1538,16 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
                     }
                   } else if (data.column.index === 1) {
                     data.cell.styles.halign = 'center';
+                    data.cell.styles.valign = 'top';
                     data.cell.styles.fontSize = 8;
                     data.cell.styles.lineHeight = 1.15;
+                    data.cell.styles.cellPadding = { top: 2, right: 3, bottom: 2, left: 3 };
+                  } else {
+                    data.cell.styles.halign = 'center';
+                    data.cell.styles.valign = 'top';
+                    data.cell.styles.fontSize = 8;
+                    data.cell.styles.lineHeight = 1.15;
+                    data.cell.styles.cellPadding = { top: 2, right: 3, bottom: 2, left: 3 };
                   }
                 }
 
