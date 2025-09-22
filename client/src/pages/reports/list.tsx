@@ -102,6 +102,59 @@ export default function ReportsList() {
     setPrintOpen(true);
   }
 
+  async function openPuppeteer(item: ReportItem) {
+    const url = `/api/reports/${item.id}/puppeteer`;
+    try {
+      const response = await fetch(url, { credentials: 'include' });
+      if (!response.ok) {
+        let message = 'Falha ao gerar PDF com Puppeteer.';
+        try {
+          const data = await response.json();
+          if (data?.message) message = data.message;
+        } catch (parseError) {
+          console.warn('Nao foi possivel interpretar a resposta de erro do Puppeteer.', parseError);
+        }
+        showError(toast, message);
+        return;
+      }
+
+      const blob = await response.blob();
+      if (!blob || blob.size === 0) {
+        showError(toast, 'PDF retornou vazio.');
+        return;
+      }
+
+      const disposition = response.headers.get('content-disposition') || '';
+      let filename = 'relatorio.pdf';
+      for (const part of disposition.split(';')) {
+        const trimmed = part.trim();
+        if (trimmed.toLowerCase().startsWith('filename*=')) {
+          const raw = trimmed.split('=')[1] || '';
+          const cleaned = raw.replace(/^UTF-8''/i, '');
+          try {
+            filename = decodeURIComponent(cleaned);
+          } catch {
+            filename = cleaned;
+          }
+        } else if (trimmed.toLowerCase().startsWith('filename=')) {
+          filename = trimmed.substring(9).replace(/^"|"$/g, '');
+        }
+      }
+
+      const blobUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = filename || 'relatorio.pdf';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+    } catch (error) {
+      console.error('Erro ao gerar PDF com Puppeteer:', error);
+      showError(toast, 'Falha ao gerar PDF com Puppeteer.');
+    }
+  }
+
   function confirmDelete() {
     if (!selectedItem) return;
     deleteMutation.mutate(selectedItem.id);
@@ -196,6 +249,9 @@ export default function ReportsList() {
                         <div className="flex items-center justify-end gap-1.5">
                           <Button variant="ghost" size="icon" onClick={() => { setEditItem(r); setFormKey(k => k + 1); setOpen(true); }}>
                             <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => openPuppeteer(r)} title="Download Puppeteer">
+                            <FileText className="h-4 w-4" />
                           </Button>
                           <Button variant="ghost" size="icon" onClick={() => openPrint(r)}>
                             <Printer className="h-4 w-4" />

@@ -4,6 +4,7 @@ import { storage } from "./storage";
 import { setupAuth, isAuthenticated, refreshSession, requireModuleAccess } from "./auth";
 import { insertBuildingSchema, updateBuildingSchema, insertStructuralSystemSchema, insertReportSchema, insertTechnicianSchema, updateTechnicianSchema, insertUserSchema, updateUserSchema, insertTypologySchema, insertNoiseClassSchema, insertAggressivenessClassSchema, insertBioclimaticZoneSchema, insertBioclimaticZoneCoverageSchema, insertStateSchema, insertCitySchema, insertConstructiveSystemSchema, insertRequirementSchema, insertCriterionSchema, insertAnalysisSchema, insertIsoplethSchema } from "@shared/schema";
 import { insertParameterSchema, attributeDefinitions } from '@shared/schema';
+import { generateReportPdf } from './puppeteer/report-generator';
 import { db } from './db';
 import { eq } from 'drizzle-orm';
 import bcrypt from "bcryptjs";
@@ -572,6 +573,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error fetching report definitions:', error);
       res.status(500).json({ message: 'Failed to fetch report definitions' });
+    }
+  });
+
+  app.get('/api/reports/:id/puppeteer', isAuthenticated, async (req: any, res) => {
+    try {
+      const id = Number(req.params.id);
+      if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID invalido' });
+      const userId = Number(req.user.claims.sub);
+      const { filename, pdf } = await generateReportPdf(id, userId);
+      const safeName = encodeURIComponent(filename);
+      res.status(200);
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"; filename*=UTF-8''${safeName}`);
+      res.setHeader('Content-Length', String(pdf.length));
+      res.send(pdf);
+    } catch (error) {
+      console.error('Error generating puppeteer report:', error);
+      const status = (error as any)?.statusCode ?? 500;
+      const message = status === 403 ? 'Access denied' : status === 404 ? 'Report not found' : 'Failed to generate report';
+      res.status(status).json({ message });
     }
   });
 
@@ -1194,3 +1215,4 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
   return httpServer;
 }
+
