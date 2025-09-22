@@ -338,7 +338,7 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
   const getTypologyInfo = () => {
     if (!building?.typologyId) return null;
     const typology = typologies.find(t => t.id === building.typologyId);
-    return typology ? `${typology.code} - ${typology.label}` : null;
+    return typology ? typology.label : null;  // Removido o código, apenas o label
   };
 
   const getNoiseClassInfo = () => {
@@ -904,11 +904,11 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
       doc.setTextColor(0, 0, 0);
       doc.setFont('DejaVuSans', 'bold');
       doc.setFontSize(14);
-      doc.text('Perfil de Desempenho da Edificação', pageWidth / 2, margin + 6, { align: 'center' });
+      doc.text('Perfil de Desempenho da Edificação', pageWidth / 2, margin + 5, { align: 'center' });
       doc.setFontSize(10);
       doc.setFont('DejaVuSans', 'normal');
-      doc.text('Relatório Técnico (PDE)', pageWidth / 2, margin + 12, { align: 'center' });
-      yPosition = margin + 16;  // Reduzido de 20 para 16
+      doc.text('Relatório Técnico (PDE)', pageWidth / 2, margin + 10, { align: 'center' });
+      yPosition = margin + 12;  // Reduzido de 14 para 12
 
       // Informações do edifício
       if (building) {
@@ -977,8 +977,8 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
           fontStyle: 'bold' as const,
           fontSize: 9,
           halign: 'left' as const,
-          cellPadding: { top: 5, right: 6, bottom: 5, left: 8 },  // Reduzido padding vertical
-          lineHeight: 1.3
+          cellPadding: { top: 4, right: 6, bottom: 4, left: 8 },  // Reduzido mais o padding vertical
+          lineHeight: 1.2  // Reduzido line-height
         };
 
         const valueBaseStyles = {
@@ -986,8 +986,8 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
           fontStyle: 'normal' as const,
           fontSize: 9,
           halign: 'left' as const,
-          cellPadding: { top: 5, right: 8, bottom: 5, left: 8 },  // Reduzido padding vertical
-          lineHeight: 1.3
+          cellPadding: { top: 4, right: 8, bottom: 4, left: 8 },  // Reduzido mais o padding vertical
+          lineHeight: 1.2  // Reduzido line-height
         };
 
         buildingInfoSections.forEach(section => {
@@ -1023,12 +1023,12 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
               content: section.title,
               colSpan: 4,
               styles: {
-                fillColor: [243, 244, 246],
-                textColor: [55, 65, 81],
+                fillColor: [30, 64, 175],    // Mesma cor azul das análises
+                textColor: [255, 255, 255],  // Texto branco para contraste
                 fontSize: 10,
                 fontStyle: 'bold',
                 halign: 'left',
-                cellPadding: { top: 5, right: 8, bottom: 4, left: 10 }
+                cellPadding: { top: 4, right: 6, bottom: 4, left: 8 }  // Reduzido para consistência
               }
             }
           ]);
@@ -1071,10 +1071,10 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
               textColor: [31, 41, 55],
               lineColor: [209, 213, 219],   // Linhas mais suaves
               lineWidth: 0.2,                // Linhas um pouco mais visíveis
-              cellPadding: { top: 5, right: 6, bottom: 5, left: 6 },  // Reduzido padding
+              cellPadding: { top: 4, right: 6, bottom: 4, left: 6 },  // Reduzido ainda mais o padding
               overflow: 'linebreak',
               cellWidth: 'wrap',
-              minCellHeight: 8              // Reduzido de 10 para 8
+              minCellHeight: 7              // Reduzido de 8 para 7
             },
             theme: 'grid',
             columnStyles: {
@@ -1145,7 +1145,7 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
 
           const headerTableInfo = (doc as any).lastAutoTable;
           const finalY = headerTableInfo?.finalY ?? yPosition;
-          yPosition = finalY + 8;  // Reduzido de 12 para 8
+          yPosition = finalY + 6;  // Reduzido de 8 para 6
         }
       }
 
@@ -1177,7 +1177,7 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
           const criterionText = `Critério: ${normalizePdfText(criterion.label)}`;
           doc.text(ensureUnicodeSupport(criterionText, doc), margin + 5, yPosition);
           doc.setTextColor(0, 0, 0); // Restaurar cor preta para outros elementos
-          yPosition += 6;  // Reduzido de 8 para 6
+          yPosition += 4;  // Reduzido de 6 para 4
 
           for (const analysis of criterion.analyses as any[]) {
             if (!analysis.parameters?.length) continue;
@@ -1199,7 +1199,7 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
               tableHeaders.push(levelLabels[levelId] || levelId);
             });
 
-            const parameterColumnWidth = 104;
+            const parameterColumnWidth = 100; // Aumentado de 88 para 100 (+12mm)
             const unitColumnWidth = 18;
             const levelColumnWidth = 18;
             const narrowLevelIds = new Set(['minimum', 'intermediate', 'superior']);
@@ -1288,7 +1288,7 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
 
             const estimatedTableHeight = estimateTableHeight(tableData, columnWidths);
             const analysisHeadingHeight = 7;
-            const analysisSpacing = 6;  // Reduzido de 9 para 6
+            const analysisSpacing = 4;  // Reduzido de 6 para 4
             const totalAnalysisHeight = analysisHeadingHeight + estimatedTableHeight + analysisSpacing;
 
             // Verificar quebra de página para análise (título + tabela + dados)
@@ -1530,10 +1530,10 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
             yPosition = finalY + analysisSpacing;
           }
 
-          yPosition += 3;  // Reduzido de 5 para 3
+          yPosition += 2;  // Reduzido de 3 para 2
         }
 
-        yPosition += 6;  // Reduzido de 10 para 6
+        yPosition += 4;  // Reduzido de 6 para 4
       }
 
       // Salvar o PDF
