@@ -235,6 +235,192 @@ interface ReportRenderContext {
   isopleths: Isopleth[];
 }
 
+interface BuildingInfoRow {
+  label: string;
+  value: string;
+  unit?: string | null;
+}
+
+interface BuildingInfoSection {
+  title: string;
+  rows: BuildingInfoRow[];
+}
+
+function formatNumericDisplay(value: number): string {
+  const hasDecimal = Math.abs(value % 1) > 1e-6;
+  return value.toLocaleString('pt-BR', {
+    minimumFractionDigits: hasDecimal ? 2 : 0,
+    maximumFractionDigits: hasDecimal ? 2 : 0
+  });
+}
+
+function formatBuildingFieldValue(value: unknown): string | null {
+  if (value === null || value === undefined) return null;
+
+  if (typeof value === 'number') {
+    return formatNumericDisplay(value);
+  }
+
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed) return null;
+
+    const direct = Number(trimmed);
+    if (!Number.isNaN(direct) && Number.isFinite(direct)) {
+      return formatNumericDisplay(direct);
+    }
+
+    if (trimmed.includes(',') && !trimmed.includes('.')) {
+      const parsed = Number(trimmed.replace(',', '.'));
+      if (!Number.isNaN(parsed) && Number.isFinite(parsed)) {
+        return formatNumericDisplay(parsed);
+      }
+    }
+
+    if (
+      trimmed.includes(',') &&
+      trimmed.includes('.') &&
+      trimmed.lastIndexOf(',') > trimmed.lastIndexOf('.')
+    ) {
+      const normalized = trimmed.replace(/\./g, '').replace(',', '.');
+      const parsed = Number(normalized);
+      if (!Number.isNaN(parsed) && Number.isFinite(parsed)) {
+        return formatNumericDisplay(parsed);
+      }
+    }
+
+    return trimmed;
+  }
+
+  if (typeof value === 'boolean') {
+    return value ? 'Sim' : 'Nao';
+  }
+
+  return String(value);
+}
+
+function buildBuildingInfoSections(
+  building: Building,
+  report: Report,
+  helpers: {
+    typologies: Typology[];
+    technicians: Technician[];
+    noiseClasses: NoiseClass[];
+    aggressivenessClasses: AggressivenessClass[];
+    bioclimaticZones: BioclimaticZone[];
+    isopleths: Isopleth[];
+  }
+): BuildingInfoSection[] {
+  const sections: BuildingInfoSection[] = [];
+
+  const identificationRows: BuildingInfoRow[] = [];
+  const buildingName = normalizeText(building?.name);
+  const fallbackId = report.buildingId ?? building.id;
+  const displayName = buildingName || (fallbackId ? `Edificacao ID ${fallbackId}` : 'Edificacao');
+  identificationRows.push({
+    label: 'Nome da Edificacao',
+    value: displayName
+  });
+
+  const typologyInfo = getTypologyInfo(building, helpers.typologies);
+  if (typologyInfo) {
+    identificationRows.push({
+      label: 'Tipologia',
+      value: typologyInfo
+    });
+  }
+
+  const technicianInfo = getTechnicianInfo(building, helpers.technicians);
+  if (technicianInfo) {
+    identificationRows.push({
+      label: 'Responsavel Tecnico',
+      value: technicianInfo
+    });
+  }
+
+  if (identificationRows.length > 0) {
+    sections.push({
+      title: 'Identificacao',
+      rows: identificationRows
+    });
+  }
+
+  const formattedAddress = getFormattedAddress(building);
+  if (formattedAddress) {
+    sections.push({
+      title: 'Localizacao',
+      rows: [
+        {
+          label: 'Endereco Completo',
+          value: formattedAddress
+        }
+      ]
+    });
+  }
+
+  const technicalRows = technicalFields
+    .map((field) => {
+      const rawValue = (building as any)[field.key];
+      const formattedValue = formatBuildingFieldValue(rawValue);
+      if (!formattedValue) return null;
+      return {
+        label: field.label,
+        value: formattedValue,
+        unit: field.unit || null
+      } as BuildingInfoRow;
+    })
+    .filter(Boolean) as BuildingInfoRow[];
+
+  if (technicalRows.length > 0) {
+    sections.push({
+      title: 'Caracteristicas Tecnicas',
+      rows: technicalRows
+    });
+  }
+
+  const environmentalRows: BuildingInfoRow[] = [];
+
+  const bioclimaticInfo = getBioclimaticZoneInfo(building, helpers.bioclimaticZones);
+  if (bioclimaticInfo) {
+    environmentalRows.push({
+      label: 'Zona Bioclimatica',
+      value: bioclimaticInfo
+    });
+  }
+
+  const isoplethInfo = getIsoplethInfo(building, helpers.isopleths);
+  if (isoplethInfo) {
+    environmentalRows.push({
+      label: 'Isopleta',
+      value: isoplethInfo
+    });
+  }
+
+  const noiseClassInfo = getNoiseClassInfo(building, helpers.noiseClasses);
+  if (noiseClassInfo) {
+    environmentalRows.push({
+      label: 'Classe de Ruido',
+      value: noiseClassInfo
+    });
+  }
+
+  const aggressivenessInfo = getAggressivenessClassInfo(building, helpers.aggressivenessClasses);
+  if (aggressivenessInfo) {
+    environmentalRows.push({
+      label: 'Classe de Agressividade',
+      value: aggressivenessInfo
+    });
+  }
+
+  if (environmentalRows.length > 0) {
+    sections.push({
+      title: 'Condicoes Ambientais e Classificacoes',
+      rows: environmentalRows
+    });
+  }
+
+  return sections;
+}
 function getTypologyInfo(building: Building, typologies: Typology[]): string | null {
   if (!building.typologyId) return null;
   const item = typologies.find((t) => t.id === building.typologyId);
@@ -302,21 +488,6 @@ function getFormattedAddress(building: Building | undefined): string | null {
   return parts.length ? parts.join(', ') : null;
 }
 
-function formatTechnicalValue(value: any, unit?: string): string | null {
-  const text = normalizeText(value);
-  if (text === '') return null;
-  const numeric = Number(text);
-  if (!Number.isNaN(numeric)) {
-    const hasDecimal = Math.abs(numeric % 1) > 1e-6;
-    const formatted = numeric.toLocaleString('pt-BR', {
-      minimumFractionDigits: hasDecimal ? 2 : 0,
-      maximumFractionDigits: hasDecimal ? 2 : 0
-    });
-    return unit ? `${formatted} ${unit}` : formatted;
-  }
-  return text;
-}
-
 function buildFilename(building: Building, report: Report): string {
   const name = building.name ? building.name.replace(/[^a-zA-Z0-9-_]+/g, '_') : 'Relatorio';
   const date = (report.generatedAt ? new Date(report.generatedAt) : new Date())
@@ -327,21 +498,14 @@ function buildFilename(building: Building, report: Report): string {
 
 function ReportHtml({ context }: { context: ReportRenderContext }) {
   const { building, sections, typologies, noiseClasses, aggressivenessClasses, technicians, bioclimaticZones, isopleths } = context;
-  const headerLines = [
-    { label: 'Nome da Edificacao', value: building.name },
-    { label: 'Tipologia', value: getTypologyInfo(building, typologies) },
-    { label: 'Responsavel Tecnico', value: getTechnicianInfo(building, technicians) }
-  ].filter((item) => item.value);
-  const location = getFormattedAddress(building);
-  const technicalCards = technicalFields
-    .map((field) => ({ label: field.label, value: formatTechnicalValue((building as any)[field.key], field.unit) }))
-    .filter((item) => item.value);
-  const conditionItems = [
-    { label: 'Zona Bioclimatica', value: getBioclimaticZoneInfo(building, bioclimaticZones) },
-    { label: 'Isopleta', value: getIsoplethInfo(building, isopleths) },
-    { label: 'Classe de Ruido', value: getNoiseClassInfo(building, noiseClasses) },
-    { label: 'Classe de Agressividade', value: getAggressivenessClassInfo(building, aggressivenessClasses) }
-  ].filter((item) => item.value);
+  const buildingInfoSections = buildBuildingInfoSections(building, context.report, {
+    typologies,
+    technicians,
+    noiseClasses,
+    aggressivenessClasses,
+    bioclimaticZones,
+    isopleths
+  });
   return (
     <html lang="pt-BR">
       <head>
@@ -360,6 +524,14 @@ function ReportHtml({ context }: { context: ReportRenderContext }) {
           .info-card { background: #f9fafb; border: 1px solid #e5e7eb; padding: 12px; border-radius: 8px; }
           .info-label { font-size: 12px; font-weight: 600; color: #6b7280; margin-bottom: 4px; text-transform: uppercase; }
           .info-value { font-size: 14px; font-weight: 600; color: #111827; }
+          .building-info-section { margin-bottom: 20px; page-break-inside: avoid; break-inside: avoid; }
+          .building-info-title { font-size: 13px; font-weight: 700; color: #4b5563; margin-bottom: 8px; text-transform: uppercase; border-bottom: 1px solid #d1d5db; padding-bottom: 6px; }
+          .building-info-table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
+          .building-info-table thead tr { background: #f3f4f6; }
+          .building-info-table th { font-size: 11px; text-transform: uppercase; }
+          .building-info-label { text-align: left !important; width: 45%; }
+          .building-info-unit { text-align: center !important; width: 15%; white-space: nowrap; }
+          .building-info-value { text-align: left !important; width: 40%; }
           .section { margin-bottom: 32px; }
           .section-title { font-size: 18px; font-weight: 700; color: #1f2937; border-bottom: 2px solid #4b5563; padding-bottom: 8px; margin-bottom: 16px; text-transform: uppercase; page-break-after: avoid; break-after: avoid; }
           .criterion-header th { font-size: 15px; font-weight: 600; color: #374151; border-bottom: 1px solid #d1d5db; padding: 6px 10px; text-transform: uppercase; text-align: left; page-break-after: avoid; break-after: avoid; background: #ffffff; }
@@ -396,59 +568,42 @@ function ReportHtml({ context }: { context: ReportRenderContext }) {
         </div>
 
         <div className="card">
-          {headerLines.length > 0 && (
-            <div className="section" style={{ marginBottom: '20px' }}>
-              <h3 style={{ fontSize: '13px', fontWeight: 700, color: '#4b5563', marginBottom: '10px', textTransform: 'uppercase' }}>Identificacao</h3>
-              <div className="grid grid-cols-3">
-                {headerLines.map((item) => (
-                  <div key={item.label} className="info-card">
-                    <div className="info-label">{item.label}</div>
-                    <div className="info-value">{item.value}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {location && (
-            <div className="section" style={{ marginBottom: '20px' }}>
-              <h3 style={{ fontSize: '13px', fontWeight: 700, color: '#4b5563', marginBottom: '10px', textTransform: 'uppercase' }}>Localizacao</h3>
-              <div className="info-card">
-                <div className="info-label">Endereco Completo</div>
-                <div className="info-value">{location}</div>
-              </div>
-            </div>
-          )}
-
-          {technicalCards.length > 0 && (
-            <div className="section" style={{ marginBottom: '20px' }}>
-              <h3 style={{ fontSize: '13px', fontWeight: 700, color: '#4b5563', marginBottom: '10px', textTransform: 'uppercase' }}>Caracteristicas Tecnicas</h3>
-              <div className="grid grid-cols-3">
-                {technicalCards.map((item) => (
-                  <div key={item.label} className="info-card">
-                    <div className="info-label">{item.label}</div>
-                    <div className="info-value">{item.value}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {conditionItems.length > 0 && (
+          {buildingInfoSections.length > 0 && (
             <div className="section" style={{ marginBottom: '0' }}>
-              <h3 style={{ fontSize: '13px', fontWeight: 700, color: '#4b5563', marginBottom: '10px', textTransform: 'uppercase' }}>Condicoes Ambientais e Classificacoes</h3>
-              <div className="grid grid-cols-4">
-                {conditionItems.map((item) => (
-                  <div key={item.label} className="info-card">
-                    <div className="info-label">{item.label}</div>
-                    <div className="info-value">{item.value}</div>
+              {buildingInfoSections.map((section: BuildingInfoSection) => {
+                const showUnitColumn = section.rows.some((row: BuildingInfoRow) => {
+                  const unitText = row.unit ? row.unit.trim() : '';
+                  return unitText !== '';
+                });
+                return (
+                  <div key={section.title} className="building-info-section">
+                    <h3 className="building-info-title">{section.title}</h3>
+                    <table className="building-info-table">
+                      <thead>
+                        <tr>
+                          <th className="building-info-label">Descricao</th>
+                          {showUnitColumn && <th className="building-info-unit">UN</th>}
+                          <th className="building-info-value">Valor</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {section.rows.map((row: BuildingInfoRow, index: number) => (
+                          <tr key={`${section.title}-${row.label}-${index}`}>
+                            <td className="building-info-label">{formatWithSeparators(row.label)}</td>
+                            {showUnitColumn && (
+                              <td className="building-info-unit">{row.unit ? formatWithSeparators(row.unit) : '—'}</td>
+                            )}
+                            <td className="building-info-value">{formatWithSeparators(row.value)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
-                ))}
-              </div>
+                );
+              })}
             </div>
           )}
         </div>
-
         {sections.map((requirement) => (
           <div key={requirement.id} className="section">
             <h2 className="section-title">Requisito: {normalizeText(requirement.label)}</h2>
@@ -611,7 +766,7 @@ async function loadReportContext(reportId: number, userId: number): Promise<Repo
 
   const technicians = Array.isArray((techniciansWrapper as any)?.items)
     ? (techniciansWrapper as any).items as Technician[]
-    : techniciansWrapper as Technician[];
+    : (techniciansWrapper as { items: Technician[] }).items;
 
   const attributeMap = new Map<number, AttributeDefinition>();
   for (const attribute of attributeDefinitions) {
@@ -713,7 +868,7 @@ export async function generateReportPdf(reportId: number, userId: number): Promi
   const context = await loadReportContext(reportId, userId);
   const html = '<!DOCTYPE html>' + renderToStaticMarkup(<ReportHtml context={context} />);
   const browser = await puppeteer.launch({
-    headless: 'new',
+    headless: true,
     args: ['--no-sandbox', '--disable-setuid-sandbox']
   });
   let page: any = null;
