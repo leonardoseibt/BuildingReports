@@ -1322,11 +1322,22 @@ export async function generateReportPdf(reportId: number, userId: number): Promi
 
     await page.emulateMediaType('screen');
 
+    const footerTemplate = `
+      <div style="font-size:10px;width:100%;text-align:right;color:#6b7280;padding-right:14mm;">
+        P\u00E1gina <span class="pageNumber"></span> de <span class="totalPages"></span>
+      </div>`;
+
     const pdfBuffer = await page.pdf({
 
       format: 'A4',
 
-      margin: { top: '18mm', right: '14mm', bottom: '18mm', left: '14mm' },
+      margin: { top: '18mm', right: '14mm', bottom: '22mm', left: '14mm' },
+
+      displayHeaderFooter: true,
+
+      headerTemplate: '<div></div>',
+
+      footerTemplate,
 
       printBackground: true
 
