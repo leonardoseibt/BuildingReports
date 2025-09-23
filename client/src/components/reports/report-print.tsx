@@ -802,7 +802,7 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
       if (
         trimmed.includes(",") &&
         trimmed.includes(".") &&
-        trimmed.rfind(",") > trimmed.rfind(".")
+        trimmed.lastIndexOf(",") > trimmed.lastIndexOf(".")
       ) {
         const normalized = trimmed.replace(/\./g, "").replace(",", ".");
         const parsed = Number(normalized);
@@ -825,7 +825,7 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
     const sections: BuildingInfoSection[] = [];
 
     const identificationRows: BuildingInfoRow[] = [];
-    const buildingDisplayName = building?.name?.trim() || `Edificação ID ${item.buildingId}`;
+    const buildingDisplayName = building?.name?.trim() || `Edificação ID ${item.buildingId}` ;
     identificationRows.push({
       label: "Nome da Edificação",
       value: buildingDisplayName
@@ -1148,106 +1148,105 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
       yPosition = margin + 12;  // Reduzido de 14 para 12
 
       
+// Informações do edifício
+const buildingSections = buildBuildingInfoSections();
+if (buildingSections.length > 0) {
+  const sanitizeBuildingText = (value: string | null | undefined) => {
+    if (!value) return '—';
+    const compacted = compactPdfText(value);
+    if (!compacted) return '—';
+    return ensureUnicodeSupport(compacted, doc);
+  };
 
-      // Informações do edifício
-      const buildingSections = buildBuildingInfoSections();
-      if (buildingSections.length > 0) {
-        const sanitizeBuildingText = (value: string | null | undefined) => {
-          if (!value) return '—';
-          const compacted = compactPdfText(value);
-          if (!compacted) return '—';
-          return ensureUnicodeSupport(compacted, doc);
-        };
+  doc.setFont('DejaVuSans', 'bold');
+  doc.setFontSize(12);
+  doc.text(ensureUnicodeSupport('Informações da Edificação', doc), margin, yPosition);
+  yPosition += 6;
 
-        doc.setFont('DejaVuSans', 'bold');
-        doc.setFontSize(12);
-        doc.text(ensureUnicodeSupport('Informações da Edificação', doc), margin, yPosition);
-        yPosition += 6;
+  buildingSections.forEach((section) => {
+    const showUnitColumn = section.rows.some((row) => !!row.unit);
+    const tableColumns = showUnitColumn ? ['Descrição', 'UN', 'Valor'] : ['Descrição', 'Valor'];
 
-        buildingSections.forEach((section) => {
-          const showUnitColumn = section.rows.some((row) => !!row.unit);
-          const tableColumns = showUnitColumn ? ['Descrição', 'UN', 'Valor'] : ['Descrição', 'Valor'];
+    const bodyRows = section.rows.map((row) => {
+      const label = sanitizeBuildingText(row.label);
+      const value = sanitizeBuildingText(row.value);
 
-          const bodyRows = section.rows.map((row) => {
-            const label = sanitizeBuildingText(row.label);
-            const value = sanitizeBuildingText(row.value);
-
-            if (showUnitColumn) {
-              const unit = sanitizeBuildingText(row.unit ?? null);
-              return [
-                { content: label, styles: { halign: 'left' as const } },
-                { content: unit, styles: { halign: 'center' as const } },
-                { content: value, styles: { halign: 'left' as const } }
-              ];
-            }
-
-            return [
-              { content: label, styles: { halign: 'left' as const } },
-              { content: value, styles: { halign: 'left' as const } }
-            ];
-          });
-
-          const estimatedHeight = 12 + bodyRows.length * 7 + 8;
-          if (yPosition + estimatedHeight > pageHeight - margin - 20) {
-            doc.addPage();
-            yPosition = margin;
-          }
-
-          doc.setFont('DejaVuSans', 'bold');
-          doc.setFontSize(10);
-          doc.text(ensureUnicodeSupport(section.title, doc), margin, yPosition);
-          yPosition += 4;
-
-          autoTable(doc, {
-            startY: yPosition,
-            margin: { left: margin, right: margin },
-            head: [tableColumns.map((column) => ensureUnicodeSupport(column, doc))],
-            body: bodyRows,
-            theme: 'grid',
-            styles: {
-              font: 'DejaVuSans',
-              fontSize: 9,
-              textColor: [31, 41, 55],
-              lineColor: [209, 213, 219],
-              lineWidth: 0.2,
-              halign: 'left',
-              cellPadding: { top: 4, right: 6, bottom: 4, left: 6 }
-            },
-            headStyles: {
-              fillColor: [229, 231, 235],
-              textColor: [30, 41, 59],
-              fontStyle: 'bold',
-              halign: 'left'
-            },
-            columnStyles: showUnitColumn
-              ? {
-                  0: { cellWidth: (pageWidth - margin * 2) * 0.45, halign: 'left' },
-                  1: { cellWidth: (pageWidth - margin * 2) * 0.15, halign: 'center' },
-                  2: { cellWidth: (pageWidth - margin * 2) * 0.40, halign: 'left' }
-                }
-              : {
-                  0: { cellWidth: (pageWidth - margin * 2) * 0.45, halign: 'left' },
-                  1: { cellWidth: (pageWidth - margin * 2) * 0.55, halign: 'left' }
-                },
-            didParseCell: (data: any) => {
-              data.cell.styles.font = 'DejaVuSans';
-            },
-            willDrawCell: (data: any) => {
-              if (data.cell.text && data.cell.text.some((text: string) => /[==?≠≤≥]/.test(text))) {
-                doc.setFont('DejaVuSans', data.cell.styles.fontStyle || 'normal');
-              }
-            }
-          });
-
-          const tableInfo = (doc as any).lastAutoTable;
-          yPosition = (tableInfo?.finalY ?? yPosition) + 6;
-        });
-
-        doc.addPage();
-        yPosition = margin;
-        doc.setFont('DejaVuSans', 'normal');
-        doc.setFontSize(9);
+      if (showUnitColumn) {
+        const unit = sanitizeBuildingText(row.unit ?? null);
+        return [
+          { content: label, styles: { halign: 'left' as const } },
+          { content: unit, styles: { halign: 'center' as const } },
+          { content: value, styles: { halign: 'left' as const } }
+        ];
       }
+
+      return [
+        { content: label, styles: { halign: 'left' as const } },
+        { content: value, styles: { halign: 'left' as const } }
+      ];
+    });
+
+    const estimatedHeight = 12 + bodyRows.length * 7 + 8;
+    if (yPosition + estimatedHeight > pageHeight - margin - 20) {
+      doc.addPage();
+      yPosition = margin;
+    }
+
+    doc.setFont('DejaVuSans', 'bold');
+    doc.setFontSize(10);
+    doc.text(ensureUnicodeSupport(section.title, doc), margin, yPosition);
+    yPosition += 4;
+
+    autoTable(doc, {
+      startY: yPosition,
+      margin: { left: margin, right: margin },
+      head: [tableColumns.map((column) => ensureUnicodeSupport(column, doc))],
+      body: bodyRows,
+      theme: 'grid',
+      styles: {
+        font: 'DejaVuSans',
+        fontSize: 9,
+        textColor: [31, 41, 55],
+        lineColor: [209, 213, 219],
+        lineWidth: 0.2,
+        halign: 'left',
+        cellPadding: { top: 4, right: 6, bottom: 4, left: 6 }
+      },
+      headStyles: {
+        fillColor: [229, 231, 235],
+        textColor: [30, 41, 59],
+        fontStyle: 'bold',
+        halign: 'left'
+      },
+      columnStyles: showUnitColumn
+        ? {
+            0: { cellWidth: (pageWidth - margin * 2) * 0.45, halign: 'left' },
+            1: { cellWidth: (pageWidth - margin * 2) * 0.15, halign: 'center' },
+            2: { cellWidth: (pageWidth - margin * 2) * 0.40, halign: 'left' }
+          }
+        : {
+            0: { cellWidth: (pageWidth - margin * 2) * 0.45, halign: 'left' },
+            1: { cellWidth: (pageWidth - margin * 2) * 0.55, halign: 'left' }
+          },
+      didParseCell: (data: any) => {
+        data.cell.styles.font = 'DejaVuSans';
+      },
+      willDrawCell: (data: any) => {
+        if (data.cell.text && data.cell.text.some((text: string) => /[==?≠≤≥]/.test(text))) {
+          doc.setFont('DejaVuSans', data.cell.styles.fontStyle || 'normal');
+        }
+      }
+    });
+
+    const tableInfo = (doc as any).lastAutoTable;
+    yPosition = (tableInfo?.finalY ?? yPosition) + 6;
+  });
+
+  doc.addPage();
+  yPosition = margin;
+  doc.setFont('DejaVuSans', 'normal');
+  doc.setFontSize(9);
+}
 
       // Processar cada requisito
       for (const requirement of sortedData) {
@@ -1689,17 +1688,6 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
         yPosition += 4;  // Reduzido de 6 para 4
       }
 
-      const totalPages = doc.getNumberOfPages();
-      doc.setFont('DejaVuSans', 'normal');
-      doc.setFontSize(8);
-      for (let pageIndex = 1; pageIndex <= totalPages; pageIndex += 1) {
-        doc.setPage(pageIndex);
-        const currentWidth = doc.internal.pageSize.getWidth();
-        const currentHeight = doc.internal.pageSize.getHeight();
-        const footerText = ensureUnicodeSupport(`Página ${pageIndex} de ${totalPages}`, doc);
-        doc.text(footerText, currentWidth - margin, currentHeight - 10, { align: 'right' });
-      }
-
       // Salvar o PDF
       const filename = `PDE_${buildingName || 'Relatorio'}_${new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')}.pdf`;
       doc.save(filename);
@@ -1818,6 +1806,8 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
               );
             })}
           </div>
+        </div>
+
         {sortedData.map((requirement, reqIndex) => (
           <div key={requirement.id} className={`mb-8 ${reqIndex === 0 ? '' : 'page-break-before'}`}>
             {/* Seção: Requisito */}
