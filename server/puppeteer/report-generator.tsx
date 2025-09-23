@@ -19,7 +19,7 @@ import type {
 } from '@shared/schema';
 
 const technicalFields = [
-  { key: 'totalArea', label: 'Area Total', unit: 'm2' },
+  { key: 'totalArea', label: 'Área Total', unit: 'm2' },
   { key: 'buildingHeight', label: 'Altura', unit: 'm' },
   { key: 'basementDepth', label: 'Profundidade de Subsolo', unit: 'm' },
   { key: 'floors', label: 'Pavimentos', unit: '' },
@@ -357,14 +357,14 @@ function buildBuildingInfoSections(
   const technicianInfo = getTechnicianInfo(building, helpers.technicians);
   if (technicianInfo) {
     identificationRows.push({
-      label: 'Responsavel Tecnico',
+      label: 'Responsável Técnico',
       value: technicianInfo
     });
   }
 
   if (identificationRows.length > 0) {
     sections.push({
-      title: 'Identificacao',
+      title: 'Identificação',
       rows: identificationRows
     });
   }
@@ -372,10 +372,10 @@ function buildBuildingInfoSections(
   const formattedAddress = getFormattedAddress(building);
   if (formattedAddress) {
     sections.push({
-      title: 'Localizacao',
+      title: 'Localização',
       rows: [
         {
-          label: 'Endereco Completo',
+          label: 'Endereço Completo',
           value: formattedAddress
         }
       ]
@@ -398,7 +398,7 @@ function buildBuildingInfoSections(
 
   if (technicalRows.length > 0) {
     sections.push({
-      title: 'Caracteristicas Tecnicas',
+      title: 'Características Técnicas',
       rows: technicalRows
     });
   }
@@ -701,11 +701,11 @@ function ReportHtml({ context }: { context: ReportRenderContext }) {
 
           .building-info-table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
 
-          .building-info-label { text-align: left !important; width: 30%; }
+          .building-info-label { text-align: left !important; width: 33.33%; background: #e0ecff; color: #1f3a8a; font-weight: 600; padding: 6px 10px; }
 
-          .building-info-value { text-align: left !important; width: 52%; }
+          .building-info-value { text-align: left !important; width: 66.67%; font-weight: bold; padding: 6px 10px; }
 
-          .building-info-value.full { width: 70%; }
+          .building-info-value.full { width: 66.67%; }
 
           .building-info-unit { text-align: center !important; width: 18%; white-space: nowrap; }
 
@@ -743,7 +743,14 @@ function ReportHtml({ context }: { context: ReportRenderContext }) {
 
           .param-observation { font-size: 11px; color: #4b5563; margin-top: 6px; background: #f9fafb; padding: 6px; border-left: 2px solid #9ca3af; }
 
-          .footer { font-size: 11px; color: #6b7280; margin-top: 32px; text-align: center; }
+          @page {
+            margin: 20mm;
+            @bottom-right {
+              content: "Página " counter(page);
+              font-size: 10px;
+              color: #6b7280;
+            }
+          }
 
         `}</style>
 
@@ -753,7 +760,7 @@ function ReportHtml({ context }: { context: ReportRenderContext }) {
 
         <div className="header">
 
-          <h1>Perfil de Desempenho da Edificacao - PDE</h1>
+          <h1>Perfil de Desempenho da Edificação - PDE</h1>
         </div>
 
         <div className="card">
@@ -763,15 +770,6 @@ function ReportHtml({ context }: { context: ReportRenderContext }) {
             <div className="section" style={{ marginBottom: '0' }}>
 
               {buildingInfoSections.map((section: BuildingInfoSection) => {
-
-                const showUnitColumn = section.rows.some((row: BuildingInfoRow) => {
-
-                  const unitText = row.unit ? row.unit.trim() : '';
-
-                  return unitText !== '';
-
-                });
-
                 return (
 
                   <div key={section.title} className="building-info-section">
@@ -782,23 +780,19 @@ function ReportHtml({ context }: { context: ReportRenderContext }) {
 
                       <tbody>
 
-                        {section.rows.map((row: BuildingInfoRow, index: number) => (
-
-                          <tr key={`${section.title}-${row.label}-${index}`}>
-
-                            <td className="building-info-label">{formatWithSeparators(row.label)}</td>
-
-                            <td className={showUnitColumn ? 'building-info-value' : 'building-info-value full'}>{formatWithSeparators(row.value)}</td>
-
-                            {showUnitColumn && (
-
-                              <td className="building-info-unit">{row.unit ? formatWithSeparators(row.unit) : '-'}</td>
-
-                            )}
-
-                          </tr>
-
-                        ))}
+                        {section.rows.map((row: BuildingInfoRow, index: number) => {
+                          // Concatenar valor com unidade quando existir
+                          const displayValue = row.unit && row.unit.trim() !== '' 
+                            ? `${formatWithSeparators(row.value)} ${formatWithSeparators(row.unit)}`
+                            : formatWithSeparators(row.value);
+                          
+                          return (
+                            <tr key={`${section.title}-${row.label}-${index}`}>
+                              <td className="building-info-label">{formatWithSeparators(row.label)}</td>
+                              <td className="building-info-value full">{displayValue}</td>
+                            </tr>
+                          );
+                        })}
 
                       </tbody>
 
@@ -815,6 +809,8 @@ function ReportHtml({ context }: { context: ReportRenderContext }) {
           )}
 
         </div>
+
+        <div style={{ pageBreakBefore: 'always' }}></div>
 
         {sections.map((requirement) => (
 
@@ -905,16 +901,7 @@ function ReportHtml({ context }: { context: ReportRenderContext }) {
 
         ))}
 
-
-
-        <div className="footer">
-
-          Relatorio gerado automaticamente via modulo Puppeteer.
-
-        </div>
-
       </body>
-
     </html>
 
   );
