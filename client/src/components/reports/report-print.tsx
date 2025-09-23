@@ -44,6 +44,17 @@ interface ReportPrintProps {
   onClose: () => void;
 }
 
+interface BuildingInfoRow {
+  label: string;
+  value: string;
+  unit?: string | null;
+}
+
+interface BuildingInfoSection {
+  title: string;
+  rows: BuildingInfoRow[];
+}
+
 interface ParameterCellContent {
   type: 'parameterCell';
   description: string;
@@ -751,6 +762,180 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
     return result;
   };
 
+
+
+  const formatNumericDisplay = (value: number): string => {
+    const hasDecimal = Math.abs(value % 1) > 1e-6;
+    return value.toLocaleString('pt-BR', {
+      minimumFractionDigits: hasDecimal ? 2 : 0,
+      maximumFractionDigits: hasDecimal ? 2 : 0
+    });
+  };
+
+  const formatBuildingFieldValue = (value: unknown): string | null => {
+    if (value === null || value === undefined) {
+      return null;
+    }
+
+    if (typeof value === "number") {
+      return formatNumericDisplay(value);
+    }
+
+    if (typeof value === "string") {
+      const trimmed = value.trim();
+      if (!trimmed) {
+        return null;
+      }
+
+      const direct = Number(trimmed);
+      if (!Number.isNaN(direct) && Number.isFinite(direct)) {
+        return formatNumericDisplay(direct);
+      }
+
+      if (trimmed.includes(",") && !trimmed.includes(".")) {
+        const parsed = Number(trimmed.replace(",", "."));
+        if (!Number.isNaN(parsed) && Number.isFinite(parsed)) {
+          return formatNumericDisplay(parsed);
+        }
+      }
+
+      if (
+        trimmed.includes(",") &&
+        trimmed.includes(".") &&
+        trimmed.rfind(",") > trimmed.rfind(".")
+      ) {
+        const normalized = trimmed.replace(/\./g, "").replace(",", ".");
+        const parsed = Number(normalized);
+        if (!Number.isNaN(parsed) && Number.isFinite(parsed)) {
+          return formatNumericDisplay(parsed);
+        }
+      }
+
+      return trimmed;
+    }
+
+    if (typeof value === "boolean") {
+      return value ? "Sim" : "Não";
+    }
+
+    return String(value);
+  };
+
+  const buildBuildingInfoSections = (): BuildingInfoSection[] => {
+    const sections: BuildingInfoSection[] = [];
+
+    const identificationRows: BuildingInfoRow[] = [];
+    const buildingDisplayName = building?.name?.trim() || `Edificação ID ${item.buildingId}`;
+    identificationRows.push({
+      label: "Nome da Edificação",
+      value: buildingDisplayName
+    });
+
+    const typologyInfo = getTypologyInfo();
+    if (typologyInfo) {
+      identificationRows.push({
+        label: "Tipologia",
+        value: typologyInfo
+      });
+    }
+
+    const technicianInfo = getTechnicianInfo();
+    if (technicianInfo) {
+      identificationRows.push({
+        label: "Responsável Técnico",
+        value: technicianInfo
+      });
+    }
+
+    if (identificationRows.length > 0) {
+      sections.push({
+        title: "Identificação",
+        rows: identificationRows
+      });
+    }
+
+    const formattedAddress = getFormattedAddress();
+    if (formattedAddress) {
+      sections.push({
+        title: "Localização",
+        rows: [
+          {
+            label: "Endereço Completo",
+            value: formattedAddress
+          }
+        ]
+      });
+    }
+
+    if (building) {
+      const technicalRows = technicalFields
+        .map((field) => {
+          const rawValue = (building as any)[field.key];
+          const formattedValue = formatBuildingFieldValue(rawValue);
+          if (!formattedValue) return null;
+          return {
+            label: field.label,
+            value: formattedValue,
+            unit: field.unit || null
+          } as BuildingInfoRow;
+        })
+        .filter(Boolean) as BuildingInfoRow[];
+
+      if (technicalRows.length > 0) {
+        sections.push({
+          title: "Características Técnicas",
+          rows: technicalRows
+        });
+      }
+    }
+
+    const environmentalRows: BuildingInfoRow[] = [];
+
+    const bioclimaticInfo = getBioclimaticZoneInfo();
+    if (bioclimaticInfo) {
+      environmentalRows.push({
+        label: "Zona Bioclimática",
+        value: bioclimaticInfo
+      });
+    }
+
+    const isoplethInfo = getIsoplethInfo();
+    if (isoplethInfo) {
+      environmentalRows.push({
+        label: "Isopleta",
+        value: isoplethInfo
+      });
+    }
+
+    const noiseClassInfo = getNoiseClassInfo();
+    if (noiseClassInfo) {
+      environmentalRows.push({
+        label: "Classe de Ruído",
+        value: noiseClassInfo
+      });
+    }
+
+    const aggressivenessInfo = getAggressivenessClassInfo();
+    if (aggressivenessInfo) {
+      environmentalRows.push({
+        label: "Classe de Agressividade",
+        value: aggressivenessInfo
+      });
+    }
+
+    if (environmentalRows.length > 0) {
+      sections.push({
+        title: "Condições Ambientais e Classificações",
+        rows: environmentalRows
+      });
+    }
+
+    return sections;
+  };
+
+  const buildingInfoSectionsForDisplay = buildBuildingInfoSections();
+
+
   const generatePDF = async (buildingName?: string) => {
     if (!sortedData || !building) {
       alert('Dados do relatório não carregados.');
@@ -962,243 +1147,106 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
       doc.text('Relatório Técnico (PDE)', pageWidth / 2, margin + 10, { align: 'center' });
       yPosition = margin + 12;  // Reduzido de 14 para 12
 
+      
+
       // Informações do edifício
-      if (building) {
-        const formatNumericValue = (value: unknown, unit?: string) => {
-          if (value === null || value === undefined) return null;
-          const rawValue = typeof value === 'string' ? value.trim() : String(value);
-          if (rawValue === '') return null;
-          const numeric = Number(value);
-          if (!Number.isNaN(numeric) && Number.isFinite(numeric)) {
-            const hasDecimal = Math.abs(numeric % 1) > 1e-6;
-            const formatted = numeric.toLocaleString('pt-BR', {
-              minimumFractionDigits: hasDecimal ? 2 : 0,
-              maximumFractionDigits: hasDecimal ? 2 : 0
-            });
-            return unit ? `${formatted} ${unit}` : formatted;
-          }
-          return compactPdfText(rawValue);
+      const buildingSections = buildBuildingInfoSections();
+      if (buildingSections.length > 0) {
+        const sanitizeBuildingText = (value: string | null | undefined) => {
+          if (!value) return '—';
+          const compacted = compactPdfText(value);
+          if (!compacted) return '—';
+          return ensureUnicodeSupport(compacted, doc);
         };
 
-        // Função para obter campos técnicos dinamicamente
-        const getTechnicalFieldsItems = () => {
-          return technicalFields
-            .map(field => ({
-              label: field.label,
-              value: formatNumericValue((building as any)[field.key], field.unit || undefined)
-            }))
-            .filter(item => item.value !== null);
-        };
+        doc.setFont('DejaVuSans', 'bold');
+        doc.setFontSize(12);
+        doc.text(ensureUnicodeSupport('Informações da Edificação', doc), margin, yPosition);
+        yPosition += 6;
 
-        const buildingInfoSections: { title: string; items: { label: string; value: string | null }[] }[] = [
-          {
-            title: 'Identificação',
-            items: [
-              { label: 'Nome da Edificação', value: building.name || '—' },
-              { label: 'Tipologia', value: getTypologyInfo() || null },
-              { label: 'Responsável Técnico', value: getTechnicianInfo() || null }
-            ]
-          },
-          {
-            title: 'Localização',
-            items: [
-              { label: 'Endereço Completo', value: getFormattedAddress() || null }
-            ]
-          },
-          {
-            title: 'Características Técnicas',
-            items: getTechnicalFieldsItems()
-          },
-          {
-            title: 'Condições Ambientais e Classificações',
-            items: [
-              { label: 'Zona Bioclimática', value: getBioclimaticZoneInfo() || null },
-              { label: 'Isopleta', value: getIsoplethInfo() || null },
-              { label: 'Classe de Ruído', value: getNoiseClassInfo() || null },
-              { label: 'Classe de Agressividade', value: getAggressivenessClassInfo() || null }
-            ]
-          }
-        ];
+        buildingSections.forEach((section) => {
+          const showUnitColumn = section.rows.some((row) => !!row.unit);
+          const tableColumns = showUnitColumn ? ['Descrição', 'UN', 'Valor'] : ['Descrição', 'Valor'];
 
-        const detailRows: any[] = [];
-        let hasDetailContent = false;
+          const bodyRows = section.rows.map((row) => {
+            const label = sanitizeBuildingText(row.label);
+            const value = sanitizeBuildingText(row.value);
 
-        const labelBaseStyles = {
-          fillColor: [243, 244, 246],  // Cinza mais suave
-          textColor: [55, 65, 81],      // Cinza escuro mais legível
-          fontStyle: 'bold' as const,
-          fontSize: 9,
-          halign: 'left' as const,
-          cellPadding: { top: 4, right: 6, bottom: 4, left: 8 },  // Reduzido mais o padding vertical
-          lineHeight: 1.2  // Reduzido line-height
-        };
-
-        const valueBaseStyles = {
-          textColor: [31, 41, 55],      // Texto escuro para boa legibilidade
-          fontStyle: 'normal' as const,
-          fontSize: 9,
-          halign: 'left' as const,
-          cellPadding: { top: 4, right: 8, bottom: 4, left: 8 },  // Reduzido mais o padding vertical
-          lineHeight: 1.2  // Reduzido line-height
-        };
-
-        buildingInfoSections.forEach(section => {
-          const validItems = section.items
-            .map(item => ({
-              label: compactPdfText(item.label),
-              value: item.value ? compactPdfText(item.value) : null
-            }))
-            .filter(item => item.value && item.value.trim() !== '');
-
-          if (validItems.length === 0) return;
-
-          if (!hasDetailContent) {
-            detailRows.push([
-              {
-                content: 'Informações da Edificação',
-                colSpan: 4,
-                styles: {
-                  fillColor: [30, 64, 175],
-                  textColor: [255, 255, 255],
-                  fontSize: 11,
-                  fontStyle: 'bold',
-                  halign: 'left',
-                  cellPadding: { top: 6, right: 8, bottom: 6, left: 10 }
-                }
-              }
-            ]);
-            hasDetailContent = true;
-          }
-
-          detailRows.push([
-            {
-              content: section.title,
-              colSpan: 4,
-              styles: {
-                fillColor: [30, 64, 175],    // Mesma cor azul das análises
-                textColor: [255, 255, 255],  // Texto branco para contraste
-                fontSize: 10,
-                fontStyle: 'bold',
-                halign: 'left',
-                cellPadding: { top: 4, right: 6, bottom: 4, left: 8 }  // Reduzido para consistência
-              }
+            if (showUnitColumn) {
+              const unit = sanitizeBuildingText(row.unit ?? null);
+              return [
+                { content: label, styles: { halign: 'left' as const } },
+                { content: unit, styles: { halign: 'center' as const } },
+                { content: value, styles: { halign: 'left' as const } }
+              ];
             }
-          ]);
 
-          // Layout profissional: cada item em uma linha separada
-          validItems.forEach(item => {
-            detailRows.push([
-              {
-                content: item.label,
-                styles: { 
-                  ...labelBaseStyles,
-                  cellWidth: '40%'  // 40% para o label
-                }
-              },
-              {
-                content: item.value ?? '—',
-                colSpan: 3,  // Usar 3 colunas para o valor (60% restante)
-                styles: { 
-                  ...valueBaseStyles,
-                  cellWidth: '60%'
-                }
-              }
-            ]);
+            return [
+              { content: label, styles: { halign: 'left' as const } },
+              { content: value, styles: { halign: 'left' as const } }
+            ];
           });
-        });
 
-        if (hasDetailContent) {
-          const detailTableWidth = pageWidth - margin * 2;
-          const labelColumnWidth = detailTableWidth * 0.4;  // 40% para labels
-          const remainingWidth = detailTableWidth * 0.6;     // 60% restante dividido por 3 colunas
+          const estimatedHeight = 12 + bodyRows.length * 7 + 8;
+          if (yPosition + estimatedHeight > pageHeight - margin - 20) {
+            doc.addPage();
+            yPosition = margin;
+          }
+
+          doc.setFont('DejaVuSans', 'bold');
+          doc.setFontSize(10);
+          doc.text(ensureUnicodeSupport(section.title, doc), margin, yPosition);
+          yPosition += 4;
 
           autoTable(doc, {
             startY: yPosition,
             margin: { left: margin, right: margin },
-            body: detailRows,
-            tableWidth: detailTableWidth,
+            head: [tableColumns.map((column) => ensureUnicodeSupport(column, doc))],
+            body: bodyRows,
+            theme: 'grid',
             styles: {
               font: 'DejaVuSans',
               fontSize: 9,
               textColor: [31, 41, 55],
-              lineColor: [209, 213, 219],   // Linhas mais suaves
-              lineWidth: 0.2,                // Linhas um pouco mais visíveis
-              cellPadding: { top: 4, right: 6, bottom: 4, left: 6 },  // Reduzido ainda mais o padding
-              overflow: 'linebreak',
-              cellWidth: 'wrap',
-              minCellHeight: 7              // Reduzido de 8 para 7
+              lineColor: [209, 213, 219],
+              lineWidth: 0.2,
+              halign: 'left',
+              cellPadding: { top: 4, right: 6, bottom: 4, left: 6 }
             },
-            theme: 'grid',
-            columnStyles: {
-              0: {
-                cellWidth: labelColumnWidth,
-                fillColor: labelBaseStyles.fillColor,
-                textColor: labelBaseStyles.textColor,
-                fontStyle: labelBaseStyles.fontStyle,
-                fontSize: labelBaseStyles.fontSize,
-                halign: labelBaseStyles.halign,
-                cellPadding: { ...labelBaseStyles.cellPadding },
-                lineHeight: labelBaseStyles.lineHeight
-              },
-              1: {
-                cellWidth: remainingWidth / 3,
-                textColor: valueBaseStyles.textColor,
-                fontStyle: valueBaseStyles.fontStyle,
-                fontSize: valueBaseStyles.fontSize,
-                halign: valueBaseStyles.halign,
-                cellPadding: { ...valueBaseStyles.cellPadding },
-                lineHeight: valueBaseStyles.lineHeight
-              },
-              2: {
-                cellWidth: remainingWidth / 3,
-                fillColor: labelBaseStyles.fillColor,
-                textColor: labelBaseStyles.textColor,
-                fontStyle: labelBaseStyles.fontStyle,
-                fontSize: labelBaseStyles.fontSize,
-                halign: labelBaseStyles.halign,
-                cellPadding: { ...labelBaseStyles.cellPadding },
-                lineHeight: labelBaseStyles.lineHeight
-              },
-              3: {
-                cellWidth: remainingWidth / 3,
-                textColor: valueBaseStyles.textColor,
-                fontStyle: valueBaseStyles.fontStyle,
-                fontSize: valueBaseStyles.fontSize,
-                halign: valueBaseStyles.halign,
-                cellPadding: { ...valueBaseStyles.cellPadding },
-                lineHeight: valueBaseStyles.lineHeight
-              }
+            headStyles: {
+              fillColor: [229, 231, 235],
+              textColor: [30, 41, 59],
+              fontStyle: 'bold',
+              halign: 'left'
             },
-            rowPageBreak: 'avoid',
+            columnStyles: showUnitColumn
+              ? {
+                  0: { cellWidth: (pageWidth - margin * 2) * 0.45, halign: 'left' },
+                  1: { cellWidth: (pageWidth - margin * 2) * 0.15, halign: 'center' },
+                  2: { cellWidth: (pageWidth - margin * 2) * 0.40, halign: 'left' }
+                }
+              : {
+                  0: { cellWidth: (pageWidth - margin * 2) * 0.45, halign: 'left' },
+                  1: { cellWidth: (pageWidth - margin * 2) * 0.55, halign: 'left' }
+                },
             didParseCell: (data: any) => {
-              // Garantir fonte DejaVuSans para todas as células
               data.cell.styles.font = 'DejaVuSans';
-              
-              if (data.cell.raw && typeof data.cell.raw === 'object' && 'colSpan' in data.cell.raw && data.cell.raw.colSpan === 4) {
-                const isTitleRow = data.row.index === 0;
-                data.cell.styles.halign = 'left';
-                data.cell.styles.font = 'DejaVuSans';
-                data.cell.styles.fontStyle = 'bold';
-                data.cell.styles.fontSize = isTitleRow ? 11 : 10;
-                data.cell.styles.textColor = isTitleRow ? [255, 255, 255] : [55, 65, 81];
-                data.cell.styles.fillColor = isTitleRow ? [30, 64, 175] : [243, 244, 246];
-                data.cell.styles.cellPadding = isTitleRow
-                  ? { top: 6, right: 8, bottom: 6, left: 10 }
-                  : { top: 5, right: 8, bottom: 4, left: 10 };
-              }
             },
             willDrawCell: (data: any) => {
-              // Re-aplicar fonte antes de desenhar cada célula para garantir caracteres especiais
-              if (data.cell.text && data.cell.text.some((text: string) => /[≥≤≠±°μ×÷]/.test(text))) {
+              if (data.cell.text && data.cell.text.some((text: string) => /[==?≠≤≥]/.test(text))) {
                 doc.setFont('DejaVuSans', data.cell.styles.fontStyle || 'normal');
               }
             }
           });
 
-          const headerTableInfo = (doc as any).lastAutoTable;
-          const finalY = headerTableInfo?.finalY ?? yPosition;
-          yPosition = finalY + 6;  // Reduzido de 8 para 6
-        }
+          const tableInfo = (doc as any).lastAutoTable;
+          yPosition = (tableInfo?.finalY ?? yPosition) + 6;
+        });
+
+        doc.addPage();
+        yPosition = margin;
+        doc.setFont('DejaVuSans', 'normal');
+        doc.setFontSize(9);
       }
 
       // Processar cada requisito
@@ -1641,6 +1689,17 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
         yPosition += 4;  // Reduzido de 6 para 4
       }
 
+      const totalPages = doc.getNumberOfPages();
+      doc.setFont('DejaVuSans', 'normal');
+      doc.setFontSize(8);
+      for (let pageIndex = 1; pageIndex <= totalPages; pageIndex += 1) {
+        doc.setPage(pageIndex);
+        const currentWidth = doc.internal.pageSize.getWidth();
+        const currentHeight = doc.internal.pageSize.getHeight();
+        const footerText = ensureUnicodeSupport(`Página ${pageIndex} de ${totalPages}`, doc);
+        doc.text(footerText, currentWidth - margin, currentHeight - 10, { align: 'right' });
+      }
+
       // Salvar o PDF
       const filename = `PDE_${buildingName || 'Relatorio'}_${new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')}.pdf`;
       doc.save(filename);
@@ -1698,115 +1757,67 @@ export default function ReportPrint({ item, onClose }: ReportPrintProps) {
             </div>
           </div>
           
+
+
           {/* Informações da Edificação */}
-          <div className="bg-white border border-gray-300 rounded-b-lg p-6 shadow-sm no-page-break">
-            {/* Seção: Identificação */}
-            <div className="mb-6 no-page-break">
-              <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wide mb-3 pb-2 border-b border-gray-200">
-                Identificação
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="bg-gray-50 border border-gray-200 rounded p-3">
-                  <div className="text-xs font-medium text-gray-500 mb-1">Nome da Edificação</div>
-                  <div className="text-sm font-medium text-gray-900">{building?.name || '—'}</div>
+          <div className="bg-white border border-gray-300 rounded-b-lg p-6 shadow-sm page-break-after">
+            {buildingInfoSectionsForDisplay.map((section) => {
+              const showUnitColumn = section.rows.some((row) => !!row.unit);
+              const labelHeadClasses = showUnitColumn
+                ? 'border-r border-gray-300 font-semibold text-gray-800 text-left align-middle py-3 pl-4 pr-5 min-w-[16rem]'
+                : 'font-semibold text-gray-800 text-left align-middle py-3 pl-4 pr-5 min-w-[16rem]';
+              const labelCellClasses = showUnitColumn
+                ? 'border-r border-gray-300 align-middle py-3 pl-4 pr-5 font-medium text-gray-900'
+                : 'align-middle py-3 pl-4 pr-5 font-medium text-gray-900';
+
+              return (
+                <div key={section.title} className="mb-6 last:mb-0">
+                  <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wide mb-3 pb-2 border-b border-gray-200">
+                    {section.title}
+                  </h3>
+                  <div className="bg-white rounded border border-gray-300 overflow-hidden">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-gray-100 border-b border-gray-300">
+                          <TableHead className={labelHeadClasses}>
+                            Descrição
+                          </TableHead>
+                          {showUnitColumn && (
+                            <TableHead className="border-r border-gray-300 font-semibold text-gray-800 text-center align-middle py-3 px-3 w-24">
+                              UN
+                            </TableHead>
+                          )}
+                          <TableHead className="font-semibold text-gray-800 text-left align-middle py-3 pl-4 pr-5">
+                            Valor
+                          </TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {section.rows.map((row) => (
+                          <TableRow
+                            key={`${section.title}-${row.label}`}
+                            className="hover:bg-gray-50 border-b border-gray-200 last:border-b-0"
+                          >
+                            <TableCell className={labelCellClasses}>
+                              {formatTextWithSeparators(row.label)}
+                            </TableCell>
+                            {showUnitColumn && (
+                              <TableCell className="border-r border-gray-300 align-middle py-3 px-3 text-center text-gray-800">
+                                {row.unit ? formatTextWithSeparators(row.unit) : '—'}
+                              </TableCell>
+                            )}
+                            <TableCell className="align-middle py-3 pl-4 pr-5 text-gray-900">
+                              {formatTextWithSeparators(row.value)}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
                 </div>
-
-                {getTypologyInfo() && (
-                  <div className="bg-gray-50 border border-gray-200 rounded p-3">
-                    <div className="text-xs font-medium text-gray-500 mb-1">Tipologia</div>
-                    <div className="text-sm font-medium text-gray-900">{getTypologyInfo()}</div>
-                  </div>
-                )}
-
-                {getTechnicianInfo() && (
-                  <div className="bg-gray-50 border border-gray-200 rounded p-3">
-                    <div className="text-xs font-medium text-gray-500 mb-1">Responsável Técnico</div>
-                    <div className="text-sm font-medium text-gray-900">{getTechnicianInfo()}</div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Seção: Localização */}
-            <div className="mb-6">
-              <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wide mb-3 pb-2 border-gray-200 border-b">
-                Localização
-              </h3>
-              <div className="grid grid-cols-1 gap-4">
-                {getFormattedAddress() && (
-                  <div className="bg-gray-50 border border-gray-200 rounded p-3">
-                    <div className="text-xs font-medium text-gray-500 mb-1">Endereço Completo</div>
-                    <div className="text-sm font-medium text-gray-900">{getFormattedAddress()}</div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Seção: Características Técnicas */}
-            <div className="mb-6">
-              <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wide mb-3 pb-2 border-gray-200 border-b">
-                Características Técnicas
-              </h3>
-              {/* Layout em grid uniforme seguindo padrão dos outros elementos */}
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                {technicalFields.map(field => {
-                  const value = (building as any)?.[field.key];
-                  if (!value) return null;
-                  
-                  const displayValue = typeof value === 'number' 
-                    ? value.toLocaleString('pt-BR') 
-                    : value;
-                  
-                  return (
-                    <div key={field.key} className="bg-gray-50 border border-gray-200 rounded p-3">
-                      <div className="text-xs font-medium text-gray-500 mb-1">{field.label}</div>
-                      <div className="text-sm font-medium text-gray-900">
-                        {displayValue}{field.unit ? ` ${field.unit}` : ''}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Seção: Condições Ambientais */}
-            <div className="mb-4">
-              <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wide mb-3 pb-2 border-gray-200 border-b">
-                Condições Ambientais e Classificações
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {getBioclimaticZoneInfo() && (
-                  <div className="bg-gray-50 border border-gray-200 rounded p-3">
-                    <div className="text-xs font-medium text-gray-500 mb-1">Zona Bioclimática</div>
-                    <div className="text-sm font-medium text-gray-900">{getBioclimaticZoneInfo()}</div>
-                  </div>
-                )}
-                {getIsoplethInfo() && (
-                  <div className="bg-gray-50 border border-gray-200 rounded p-3">
-                    <div className="text-xs font-medium text-gray-500 mb-1">Isopleta</div>
-                    <div className="text-sm font-medium text-gray-900">{getIsoplethInfo()}</div>
-                  </div>
-                )}
-                {getNoiseClassInfo() && (
-                  <div className="bg-gray-50 border border-gray-200 rounded p-3">
-                    <div className="text-xs font-medium text-gray-500 mb-1">Classe de Ruído</div>
-                    <div className="text-sm font-medium text-gray-900">{getNoiseClassInfo()}</div>
-                  </div>
-                )}
-                {getAggressivenessClassInfo() && (
-                  <div className="bg-gray-50 border border-gray-200 rounded p-3">
-                    <div className="text-xs font-medium text-gray-500 mb-1">Classe de Agressividade</div>
-                    <div className="text-sm font-medium text-gray-900">{getAggressivenessClassInfo()}</div>
-                  </div>
-                )}
-              </div>
-            </div>
+              );
+            })}
           </div>
-        </div>
-      </div>
-
-      {/* Conteúdo do Relatório */}
-      <div className="print-content">
         {sortedData.map((requirement, reqIndex) => (
           <div key={requirement.id} className={`mb-8 ${reqIndex === 0 ? '' : 'page-break-before'}`}>
             {/* Seção: Requisito */}

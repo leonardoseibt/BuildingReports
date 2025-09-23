@@ -1,7 +1,31 @@
 /* Estilos para ocultar elementos na impressão/PDF */
+@page {
+  margin: 15mm;
+  @bottom-right {
+    content: "Página " counter(page) " de " counter(pages);
+    font-size: 10pt;
+    color: #4b5563;
+  }
+}
+
 @media print {
-  .no-print { 
-    display: none !important; 
+  .no-print {
+    display: none !important;
+  }
+
+  .page-break-before {
+    break-before: page;
+    page-break-before: always;
+  }
+
+  .page-break-after {
+    break-after: page;
+    page-break-after: always;
+  }
+
+  .no-page-break {
+    break-inside: avoid;
+    page-break-inside: avoid;
   }
 }
 
