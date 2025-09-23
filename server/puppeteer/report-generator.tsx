@@ -201,8 +201,13 @@ function sortParameters(params: Parameter[]): Parameter[] {
 }
 
 function normalizeDisplayValue(value: unknown): string {
+  if (value === null || value === undefined) return '\u2014';
+  if (typeof value === 'boolean') return value ? 'Sim' : '\u2014';
   const text = normalizeText(value);
-  return text === '' ? '\u2014' : text;
+  if (!text) return '\u2014';
+  const lowered = text.toLowerCase();
+  if (lowered === 'false' || lowered === 'null' || lowered === 'undefined') return '\u2014';
+  return text;
 }
 
 type AnalysisRender = Analysis & {
@@ -356,17 +361,19 @@ function ReportHtml({ context }: { context: ReportRenderContext }) {
           .info-label { font-size: 12px; font-weight: 600; color: #6b7280; margin-bottom: 4px; text-transform: uppercase; }
           .info-value { font-size: 14px; font-weight: 600; color: #111827; }
           .section { margin-bottom: 32px; }
-          .section-title { font-size: 18px; font-weight: 700; color: #1f2937; border-bottom: 2px solid #4b5563; padding-bottom: 8px; margin-bottom: 16px; text-transform: uppercase; page-break-after: avoid; }
-          .criterion-title { font-size: 15px; font-weight: 600; color: #374151; border-bottom: 1px solid #d1d5db; padding-bottom: 6px; margin: 24px 0 12px; text-transform: uppercase; page-break-after: avoid; }
-          .analysis-title { background: #e0ecff; color: #1f3a8a; padding: 6px 10px; font-weight: 600; border-radius: 6px 6px 0 0; margin-bottom: 0; page-break-after: avoid; }
-          .analysis-block { margin-bottom: 28px; page-break-inside: avoid; break-inside: avoid; }
-          table { width: 100%; border-collapse: collapse; margin-bottom: 24px; page-break-after: auto; }
-          thead { display: table-header-group; }
+          .section-title { font-size: 18px; font-weight: 700; color: #1f2937; border-bottom: 2px solid #4b5563; padding-bottom: 8px; margin-bottom: 16px; text-transform: uppercase; page-break-after: avoid; break-after: avoid; }
+          .criterion-header th { font-size: 15px; font-weight: 600; color: #374151; border-bottom: 1px solid #d1d5db; padding: 6px 10px; text-transform: uppercase; text-align: left; page-break-after: avoid; break-after: avoid; background: #ffffff; }
+          .analysis-header th { background: #e0ecff; color: #1f3a8a; padding: 6px 10px; font-weight: 600; border-radius: 6px 6px 0 0; text-align: left; page-break-after: avoid; break-after: avoid; }
+          .analysis-block { margin-bottom: 24px; page-break-inside: auto; break-inside: auto; }
+          table { width: 100%; border-collapse: collapse; margin-bottom: 24px; page-break-before: auto; page-break-after: auto; page-break-inside: auto; break-inside: auto; table-layout: auto; }
+          thead { display: table-header-group !important; page-break-after: avoid; break-after: avoid; page-break-inside: avoid; break-inside: avoid; }
           thead tr { background: #f3f4f6; }
           tbody { page-break-inside: auto; break-inside: auto; }
           tbody tr { page-break-inside: avoid; break-inside: avoid; }
           th, td { border: 1px solid #d1d5db; padding: 8px; font-size: 12px; }
           th { text-align: center; font-weight: 600; color: #1f2937; }
+          th.value-col, td.value-col { white-space: nowrap; text-align: center; vertical-align: middle; }
+          .param-col { width: auto; }
           td { vertical-align: top; }
           .param-label { font-weight: 600; color: #111827; }
           .param-observation { font-size: 11px; color: #4b5563; margin-top: 6px; background: #f9fafb; padding: 6px; border-left: 2px solid #9ca3af; }
@@ -446,53 +453,56 @@ function ReportHtml({ context }: { context: ReportRenderContext }) {
           <div key={requirement.id} className="section">
             <h2 className="section-title">Requisito: {normalizeText(requirement.label)}</h2>
             {requirement.criteria.map((criterion) => (
-              <Fragment key={criterion.id}>
-                <h3 className="criterion-title">Criterio: {normalizeText(criterion.label)}</h3>
-                {criterion.analyses.map((analysis) => {
-                  const columns = ['Parametro', 'UN', ...analysis.selectedLevels.map((level) => levelLabels[level] || level)];
-                  return (
-                    <div key={analysis.id} className="analysis-block">
-                      <div className="analysis-title">Analise: {normalizeText(analysis.label)}</div>
-                      <table>
-                        <thead>
-                          <tr>
-                            {columns.map((column) => (
-                              <th key={column}>{column}</th>
-                            ))}
+                        <div key={criterion.id} className="criterion-section">
+            {criterion.analyses.map((analysis) => {
+              const columns = ['Parâmetro', 'UN', ...analysis.selectedLevels.map((level) => levelLabels[level] || level)];
+              const criterionTitle = `Critério: ${normalizeText(criterion.label)}`;
+              return (
+                <div key={analysis.id} className="analysis-block">
+                  <table>
+                    <thead>
+                      <tr className="criterion-header">
+                        <th colSpan={columns.length}>{criterionTitle}</th>
+                      </tr>
+                      <tr className="analysis-header">
+                        <th colSpan={columns.length}>Análise: {normalizeText(analysis.label)}</th>
+                      </tr>
+                      <tr>
+                        {columns.map((column, index) => (
+                          <th key={`${analysis.id}-${column}-${index}`} className={index === 0 ? 'param-col' : 'value-col'}>{column}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {analysis.parameters.map((parameter) => {
+                        const observation = parameter.notes ?? (parameter as any).observation;
+                        return (
+                          <tr key={parameter.id}>
+                            <td className="param-col">
+                              <div className="param-label">{formatWithSeparators(parameter.label)}</div>
+                              {observation && (<div className="param-observation">{formatWithSeparators(observation)}</div>)}
+                            </td>
+                            <td className="value-col">{normalizeDisplayValue(parameter.unit)}</td>
+                            {analysis.selectedLevels.map((level) => {
+                              const directValue = (level === 'minimum' && parameter.minimumValue)
+                                || (level === 'intermediate' && parameter.intermediateValue)
+                                || (level === 'superior' && parameter.superiorValue);
+                              const nested = (parameter as any).values?.[level];
+                              const fallback = nested?.value;
+                              const value = directValue ?? fallback;
+                              return (
+                                <td key={level} className="value-col">{normalizeDisplayValue(value)}</td>
+                              );
+                            })}
                           </tr>
-                        </thead>
-                        <tbody>
-                          {analysis.parameters.map((parameter) => {
-                            const observation = parameter.notes ?? (parameter as any).observation;
-                            return (
-                              <tr key={parameter.id}>
-                                <td>
-                                  <div className="param-label">{formatWithSeparators(parameter.label)}</div>
-                                  {observation && (
-                                    <div className="param-observation">Observacao: {formatWithSeparators(observation)}</div>
-                                  )}
-                                </td>
-                                <td style={{ textAlign: 'center' }}>{normalizeDisplayValue(parameter.unit)}</td>
-                                {analysis.selectedLevels.map((level) => {
-                                  const directValue = (level === 'minimum' && parameter.minimumValue)
-                                    || (level === 'intermediate' && parameter.intermediateValue)
-                                    || (level === 'superior' && parameter.superiorValue);
-                                  const nested: any = (parameter as any).values?.[level];
-                                  const fallback = nested?.value;
-                                  const value = directValue ?? fallback;
-                                  return (
-                                    <td key={level} style={{ textAlign: 'center' }}>{normalizeDisplayValue(value)}</td>
-                                  );
-                                })}
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-                  );
-                })}
-              </Fragment>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              );
+            })}
+          </div>
             ))}
           </div>
         ))}
