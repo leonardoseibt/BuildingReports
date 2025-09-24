@@ -671,7 +671,12 @@ function ReportHtml({ context }: { context: ReportRenderContext }) {
 
           * { box-sizing: border-box; }
 
-          body { font-family: 'Helvetica', Arial, sans-serif; margin: 24px; color: #1f2937; }
+          body {
+            font-family: 'Helvetica', Arial, sans-serif;
+            margin: 0;
+            padding: 24px 0 24px 4mm;
+            color: #1f2937;
+          }
 
           h1, h2, h3, h4, h5 { margin: 0; }
 
@@ -1331,7 +1336,7 @@ export async function generateReportPdf(reportId: number, userId: number): Promi
 
       format: 'A4',
 
-      margin: { top: '18mm', right: '14mm', bottom: '22mm', left: '14mm' },
+      margin: { top: '18mm', right: '12mm', bottom: '18mm', left: '14mm' },
 
       displayHeaderFooter: true,
 
