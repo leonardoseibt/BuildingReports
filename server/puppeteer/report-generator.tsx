@@ -785,10 +785,10 @@ function ReportHtml({ context }: { context: ReportRenderContext }) {
 
                         {section.rows.map((row: BuildingInfoRow, index: number) => {
                           // Concatenar valor com unidade quando existir
-                          const displayValue = row.unit && row.unit.trim() !== '' 
+                          const displayValue = row.unit && row.unit.trim() !== ''
                             ? `${formatWithSeparators(row.value)} ${formatWithSeparators(row.unit)}`
                             : formatWithSeparators(row.value);
-                          
+
                           return (
                             <tr key={`${section.title}-${row.label}-${index}`}>
                               <td className="building-info-label">{formatWithSeparators(row.label)}</td>
@@ -1050,279 +1050,146 @@ async function loadReportContext(reportId: number, userId: number): Promise<Repo
 
 
   const [
-
     requirements,
-
     criteria,
-
     analysesRaw,
-
     parametersRaw,
-
     attributeDefinitions,
-
     typologies,
-
     noiseClasses,
-
     aggressivenessClasses,
-
     techniciansWrapper,
-
     bioclimaticZones,
-
     isopleths
-
   ] = await Promise.all([
-
     storage.listRequirements(),
-
     storage.listCriteria(),
-
     storage.listAnalyses(),
-
     storage.listParameters(),
-
     storage.listAttributeDefinitions({}),
-
     storage.listTypologies(),
-
     storage.listNoiseClasses(),
-
     storage.listAggressivenessClasses(),
-
     storage.listTechnicians(building.userId, undefined, undefined),
-
     storage.listBioclimaticZones(),
-
     storage.listIsopleths()
-
   ]);
 
-
-
   const technicians = Array.isArray((techniciansWrapper as any)?.items)
-
     ? (techniciansWrapper as any).items as Technician[]
-
     : (techniciansWrapper as { items: Technician[] }).items;
-
-
 
   const attributeMap = new Map<number, AttributeDefinition>();
 
   for (const attribute of attributeDefinitions) {
-
     attributeMap.set(attribute.id, attribute);
-
   }
-
-
 
   const tableDataByName = new Map<string, any[]>();
-
   tableDataByName.set('buildings', [building]);
-
   const extraTables = Array.from(new Set(attributeDefinitions
-
     .map((attribute) => attribute.sourceTable)
-
     .filter((name) => name && name !== 'buildings')));
-
   for (const table of extraTables) {
-
     const data = await loadTableData(table, building, building.userId);
-
     tableDataByName.set(table, data);
-
   }
 
-
-
   const groupedData = requirements
-
     .map((requirement) => {
-
       const criteriaForRequirement = criteria
-
         .filter((criterion) =>
-
           analysesRaw.some((analysis) => analysis.requirementId === requirement.id && analysis.criterionId === criterion.id)
-
         )
-
         .map((criterion) => {
-
           const analysesForCriterion = analysesRaw
-
             .filter((analysis) => analysis.requirementId === requirement.id && analysis.criterionId === criterion.id)
-
             .map((analysis) => {
-
               const params = parametersRaw
-
                 .filter((parameter) => parameter.analysisId === analysis.id && parameter.isActive !== false)
-
                 .filter((parameter) => shouldShowParameter(parameter, attributeMap, building, tableDataByName));
-
               const sortedParams = sortParameters(params);
-
               if (sortedParams.length === 0) return null;
-
               return { ...analysis, parameters: sortedParams };
-
             })
-
             .filter((analysis) => Boolean(analysis)) as (Analysis & { parameters: Parameter[] })[];
-
           if (analysesForCriterion.length === 0) return null;
-
           return { ...criterion, analyses: analysesForCriterion };
-
         })
-
         .filter((criterion) => Boolean(criterion)) as (Criterion & { analyses: (Analysis & { parameters: Parameter[] })[] })[];
-
-
 
       if (criteriaForRequirement.length === 0) return null;
 
       return { ...requirement, criteria: criteriaForRequirement };
-
     })
-
     .filter((requirement) => Boolean(requirement)) as (Requirement & { criteria: (Criterion & { analyses: (Analysis & { parameters: Parameter[] })[] })[] })[];
 
-
-
   const sections = groupedData
-
     .map((requirement) => {
-
       const mappedCriteria = requirement.criteria
-
         .map((criterion) => {
-
           const analysesWithLevels = criterion.analyses
-
             .map((analysis) => {
-
               let selectedLevels = selectedEvaluations.get(`analysis-${analysis.id}`)?.slice() ?? levelOrder.slice();
-
               const filteredParameters = analysis.parameters.filter((parameter) =>
-
                 hasValuesForSelectedLevels(parameter, selectedLevels)
-
               );
-
               if (filteredParameters.length === 0) return null;
-
               return {
-
                 ...analysis,
-
                 selectedLevels,
-
                 parameters: filteredParameters
-
               } as AnalysisRender;
-
             })
-
             .filter((analysis) => Boolean(analysis)) as AnalysisRender[];
-
           if (analysesWithLevels.length === 0) return null;
-
           return { ...criterion, analyses: analysesWithLevels };
-
         })
-
         .filter((criterion) => Boolean(criterion)) as CriterionRender[];
-
       if (mappedCriteria.length === 0) return null;
-
       return { ...requirement, criteria: mappedCriteria };
-
     })
-
     .filter((requirement) => Boolean(requirement)) as RequirementRender[];
 
-
-
   const sortedSections = sections
-
     .sort((a, b) => a.code.localeCompare(b.code, 'pt-BR', { numeric: true, sensitivity: 'base' }))
-
     .map((requirement) => ({
-
       ...requirement,
-
       criteria: requirement.criteria
-
         .sort((a, b) => a.code.localeCompare(b.code, 'pt-BR', { numeric: true, sensitivity: 'base' }))
-
         .map((criterion) => ({
-
           ...criterion,
-
           analyses: criterion.analyses
-
             .sort((a, b) => a.code.localeCompare(b.code, 'pt-BR', { numeric: true, sensitivity: 'base' }))
-
         }))
-
     }));
 
-
-
   return {
-
     report,
-
     building,
-
     sections: sortedSections,
-
     typologies,
-
     noiseClasses,
-
     aggressivenessClasses,
-
     technicians,
-
     bioclimaticZones,
-
     isopleths
-
   };
-
 }
 
-
-
 export async function generateReportPdf(reportId: number, userId: number): Promise<{ filename: string; pdf: Buffer }> {
-
   const context = await loadReportContext(reportId, userId);
-
   const html = '<!DOCTYPE html>' + renderToStaticMarkup(<ReportHtml context={context} />);
-
   const browser = await puppeteer.launch({
-
     headless: true,
-
     args: ['--no-sandbox', '--disable-setuid-sandbox']
-
   });
 
   let page: any = null;
 
   try {
-
     page = await browser.newPage();
-
     await page.setContent(html, { waitUntil: 'networkidle0' });
-
     await page.emulateMediaType('screen');
 
     const footerTemplate = `
@@ -1331,47 +1198,26 @@ export async function generateReportPdf(reportId: number, userId: number): Promi
       </div>`;
 
     const pdfBuffer = await page.pdf({
-
       format: 'A4',
-
       margin: { top: '18mm', right: '8mm', bottom: '15mm', left: '10mm' },
-
       displayHeaderFooter: true,
-
       headerTemplate: '<div></div>',
-
       footerTemplate,
-
       printBackground: true
-
     });
 
     const filename = buildFilename(context.building, context.report);
-
     const buffer = Buffer.isBuffer(pdfBuffer) ? pdfBuffer : Buffer.from(pdfBuffer);
 
     return { filename, pdf: buffer };
-
   } finally {
-
     if (page) {
-
       try {
-
         await page.close();
-
       } catch (closeError) {
-
         console.warn('Failed to close Puppeteer page:', closeError);
-
       }
-
     }
-
     await browser.close();
-
   }
-
 }
-
-
