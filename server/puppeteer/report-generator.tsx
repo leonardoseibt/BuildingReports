@@ -1336,7 +1336,7 @@ export async function generateReportPdf(reportId: number, userId: number): Promi
 
       format: 'A4',
 
-      margin: { top: '18mm', right: '12mm', bottom: '18mm', left: '14mm' },
+      margin: { top: '18mm', right: '8mm', bottom: '15mm', left: '10mm' },
 
       displayHeaderFooter: true,
 
