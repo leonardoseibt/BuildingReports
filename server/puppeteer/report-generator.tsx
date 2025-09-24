@@ -682,8 +682,6 @@ function ReportHtml({ context }: { context: ReportRenderContext }) {
 
           .header { margin-bottom: 24px; }
 
-
-
           .header h1 { font-size: 24px; font-weight: 700; color: #111827; }
 
           .card { background: #fff; border: 1px solid #d1d5db; padding: 20px; border-radius: 12px; margin-bottom: 24px; }
@@ -706,11 +704,11 @@ function ReportHtml({ context }: { context: ReportRenderContext }) {
 
           .building-info-table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
 
-          .building-info-label { text-align: left !important; width: 33.33%; background: #e0ecff; color: #1f3a8a; font-weight: 600; padding: 6px 10px; }
+          .building-info-label { text-align: left !important; width: 28%; background: #e0ecff; color: #1f3a8a; font-weight: 600; padding: 6px 10px; }
 
-          .building-info-value { text-align: left !important; width: 66.67%; font-weight: bold; padding: 6px 10px; }
+          .building-info-value { text-align: left !important; width: 72%; font-weight: bold; padding: 6px 10px; }
 
-          .building-info-value.full { width: 66.67%; }
+          .building-info-value.full { width: 72%; }
 
           .building-info-unit { text-align: center !important; width: 18%; white-space: nowrap; }
 
@@ -1328,7 +1326,7 @@ export async function generateReportPdf(reportId: number, userId: number): Promi
     await page.emulateMediaType('screen');
 
     const footerTemplate = `
-      <div style="font-size:10px;width:100%;text-align:right;color:#6b7280;padding-right:14mm;">
+      <div style="font-size:10px;width:100%;text-align:right;color:#6b7280;padding-right:20mm;">
         P\u00E1gina <span class="pageNumber"></span> de <span class="totalPages"></span>
       </div>`;
 
@@ -1375,4 +1373,5 @@ export async function generateReportPdf(reportId: number, userId: number): Promi
   }
 
 }
+
 
