@@ -585,7 +585,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const safeName = encodeURIComponent(filename);
       res.status(200);
       res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Disposition', `attachment; filename="${filename}"; filename*=UTF-8''${safeName}`);
+      const inline = req.query?.inline === '1' || req.query?.inline === 'true';
+      const dispositionType = inline ? 'inline' : 'attachment';
+      res.setHeader('Content-Disposition', `${dispositionType}; filename="${filename}"; filename*=UTF-8''${safeName}`);
       res.setHeader('Content-Length', String(pdf.length));
       res.send(pdf);
     } catch (error) {

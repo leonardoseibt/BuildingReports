@@ -10,9 +10,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { PaginationSimple as Pagination } from '@/components/ui/pagination';
-import { Plus, Pencil, Trash2, FileText, MapPin, Search, Printer } from 'lucide-react';
+import { Plus, Pencil, Trash2, MapPin, Search, Printer, FileText } from 'lucide-react';
 import ReportForm from '@/components/reports/report-form';
-import ReportPrint from '@/components/reports/report-print';
 import type { Report } from '@shared/schema';
 import { apiRequest } from '@/lib/queryClient';
 import { showError, showSuccess } from '@/lib/toast-messages';
@@ -37,9 +36,7 @@ export default function ReportsList() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<ReportItem | null>(null);
   const [search, setSearch] = useState("");
-  const [printItem, setPrintItem] = useState<ReportItem | null>(null);
-  const [printOpen, setPrintOpen] = useState(false);
-  
+
   // Variáveis de paginação
   const pageSize = 15;
   const [page, setPage] = useState(1);
@@ -60,7 +57,7 @@ export default function ReportsList() {
       const buildingHeight = normText(item.buildingHeight || "");
       const floors = normText(item.buildingFloors || "");
       const date = normText(item.generatedAt ? new Date(item.generatedAt as any).toLocaleDateString('pt-BR') : "");
-      
+
       return (
         buildingName.includes(q) ||
         buildingLocation.includes(q) ||
@@ -97,61 +94,18 @@ export default function ReportsList() {
     setConfirmOpen(true);
   }
 
-  function openPrint(item: ReportItem) {
-    setPrintItem(item);
-    setPrintOpen(true);
-  }
-
-  async function openPuppeteer(item: ReportItem) {
-    const url = `/api/reports/${item.id}/puppeteer`;
-    try {
-      const response = await fetch(url, { credentials: 'include' });
-      if (!response.ok) {
-        let message = 'Falha ao gerar PDF com Puppeteer.';
-        try {
-          const data = await response.json();
-          if (data?.message) message = data.message;
-        } catch (parseError) {
-          console.warn('Nao foi possivel interpretar a resposta de erro do Puppeteer.', parseError);
-        }
-        showError(toast, message);
-        return;
+  function openReportPdf(item: ReportItem) {
+    const pdfUrl = `/api/reports/${item.id}/puppeteer?inline=1`;
+    const popup = window.open('', '_blank');
+    if (popup) {
+      try {
+        popup.opener = null;
+      } catch {
+        /* noop */
       }
-
-      const blob = await response.blob();
-      if (!blob || blob.size === 0) {
-        showError(toast, 'PDF retornou vazio.');
-        return;
-      }
-
-      const disposition = response.headers.get('content-disposition') || '';
-      let filename = 'relatorio.pdf';
-      for (const part of disposition.split(';')) {
-        const trimmed = part.trim();
-        if (trimmed.toLowerCase().startsWith('filename*=')) {
-          const raw = trimmed.split('=')[1] || '';
-          const cleaned = raw.replace(/^UTF-8''/i, '');
-          try {
-            filename = decodeURIComponent(cleaned);
-          } catch {
-            filename = cleaned;
-          }
-        } else if (trimmed.toLowerCase().startsWith('filename=')) {
-          filename = trimmed.substring(9).replace(/^"|"$/g, '');
-        }
-      }
-
-      const blobUrl = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = blobUrl;
-      link.download = filename || 'relatorio.pdf';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
-    } catch (error) {
-      console.error('Erro ao gerar PDF com Puppeteer:', error);
-      showError(toast, 'Falha ao gerar PDF com Puppeteer.');
+      popup.location.href = pdfUrl;
+    } else {
+      window.location.href = pdfUrl;
     }
   }
 
@@ -250,10 +204,7 @@ export default function ReportsList() {
                           <Button variant="ghost" size="icon" onClick={() => { setEditItem(r); setFormKey(k => k + 1); setOpen(true); }}>
                             <Pencil className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="icon" onClick={() => openPuppeteer(r)} title="Download Puppeteer">
-                            <FileText className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="icon" onClick={() => openPrint(r)}>
+                          <Button variant="ghost" size="icon" onClick={() => openReportPdf(r)} title="Gerar PDF">
                             <Printer className="h-4 w-4" />
                           </Button>
                           <Button variant="ghost" size="icon" className="text-rose-600 hover:bg-rose-50 hover:text-rose-700" onClick={() => askDelete(r)}>
@@ -287,13 +238,6 @@ export default function ReportsList() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={printOpen} onOpenChange={(v) => { setPrintOpen(v); if (!v) setPrintItem(null); }}>
-        <DialogContent className="max-w-7xl max-h-[90vh] p-0 overflow-hidden">
-          <div className="h-[85vh] overflow-y-auto">
-            {printItem && <ReportPrint item={printItem} onClose={() => setPrintOpen(false)} />}
-          </div>
-        </DialogContent>
-      </Dialog>
 
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent>
