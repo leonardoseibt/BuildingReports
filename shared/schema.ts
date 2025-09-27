@@ -549,6 +549,8 @@ export const insertParameterSchema = createInsertSchema(parameters)
   maxLimit: decimalInput.optional().nullable(),
     unit: z.string().max(32).optional().nullable(),
     notes: z.string().optional().nullable(),
+    attributeId: z.coerce.number().int().optional().nullable(),
+    attributeValueId: z.coerce.number().int().optional().nullable(),
   });
 
 export const insertBioclimaticZoneSchema = createInsertSchema(bioclimaticZones);

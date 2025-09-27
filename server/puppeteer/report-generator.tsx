@@ -722,6 +722,8 @@ function ReportHtml({ context }: { context: ReportRenderContext }) {
 
           .analysis-block { margin-bottom: 24px; page-break-inside: auto; break-inside: auto; }
 
+          .criterion-spacing { height: 14px; }
+
           table { width: 100%; border-collapse: collapse; margin-bottom: 24px; page-break-before: auto; page-break-after: auto; page-break-inside: auto; break-inside: auto; table-layout: auto; }
 
           thead { display: table-header-group !important; page-break-after: avoid; break-after: avoid; page-break-inside: avoid; break-inside: avoid; }
@@ -821,18 +823,31 @@ function ReportHtml({ context }: { context: ReportRenderContext }) {
 
             <h2 className="section-title">Requisito: {normalizeText(requirement.label)}</h2>
 
-            {requirement.criteria.map((criterion) => (
+            {requirement.criteria.map((criterion, criterionIndex) => {
 
-              <div key={criterion.id} className="criterion-section">
+              const criterionHasParameters = criterion.analyses.some((analysis) => analysis.parameters.length > 0);
+              const hasPreviousCriteriaWithParameters = criterionIndex > 0
+                ? requirement.criteria
+                    .slice(0, criterionIndex)
+                    .some((previousCriterion) =>
+                      previousCriterion.analyses.some((previousAnalysis) => previousAnalysis.parameters.length > 0)
+                    )
+                : false;
+              const shouldAddSpacingBeforeCriterion = criterionHasParameters && hasPreviousCriteriaWithParameters;
 
-                {criterion.analyses.map((analysis) => {
+              return (
+                <div key={criterion.id} className="criterion-section">
 
-                  const columns = ['Parâmetro', 'UN', ...analysis.selectedLevels.map((level) => levelLabels[level] || level)];
+                  {criterion.analyses.map((analysis, analysisIndex) => {
 
-                  const criterionTitle = `Critério: ${normalizeText(criterion.label)}`;
-                  return (
-                    <div key={analysis.id} className="analysis-block">
-                      <table>
+                    const columns = ['Parâmetro', 'UN', ...analysis.selectedLevels.map((level) => levelLabels[level] || level)];
+
+                    const criterionTitle = `Critério: ${normalizeText(criterion.label)}`;
+                    const showSpacingBeforeTable = shouldAddSpacingBeforeCriterion && analysisIndex === 0;
+                    return (
+                      <div key={analysis.id} className="analysis-block">
+                        {showSpacingBeforeTable && <div className="criterion-spacing" aria-hidden="true" />}
+                        <table>
                         <thead>
                           <tr className="criterion-header">
                             <th colSpan={columns.length}>{criterionTitle}</th>
@@ -890,15 +905,17 @@ function ReportHtml({ context }: { context: ReportRenderContext }) {
 
                       </table>
 
-                    </div>
+                      </div>
 
-                  );
+                    );
 
-                })}
+                  })}
 
-              </div>
+                </div>
 
-            ))}
+              );
+
+            })}
 
           </div>
 
