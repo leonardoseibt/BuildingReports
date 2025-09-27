@@ -6,6 +6,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { showSuccess, showError } from '@/lib/toast-messages';
 import { useAuthRedirect } from '@/hooks/useAuthRedirect';
+import { usePageSize } from '@/hooks/useSettings';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -33,9 +34,13 @@ export default function ParametersList() {
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
   const [requirementFilter, setRequirementFilter] = useState<number | 'all'>('all');
   const [criterionFilter, setCriterionFilter] = useState<number | 'all'>('all');
-  const pageSize = 15; const [page, setPage] = useState(1);
+  const pageSize = usePageSize(isAuthenticated); const [page, setPage] = useState(1);
 
   useAuthRedirect();
+
+  useEffect(() => {
+    setPage(1);
+  }, [pageSize]);
 
   const { data: requirements = [] } = useQuery<Requirement[]>({ queryKey: ['/api/requirements'], enabled: isAuthenticated });
   const { data: criteria = [] } = useQuery<Criterion[]>({ queryKey: ['/api/criteria'], enabled: isAuthenticated });
@@ -146,7 +151,12 @@ export default function ParametersList() {
     });
     return arr;
   }, [filtered, sortBy, sortDir, analysisLabelById]);
-  const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize)); const pageSafe = Math.min(page, totalPages); const pagedItems = useMemo(()=> sorted.slice((pageSafe-1)*pageSize, pageSafe*pageSize),[sorted,pageSafe]);
+  const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize));
+  const pageSafe = Math.min(page, totalPages);
+  const pagedItems = useMemo(
+    () => sorted.slice((pageSafe - 1) * pageSize, pageSafe * pageSize),
+    [sorted, pageSafe, pageSize],
+  );
   const toggleSort = (col: typeof sortBy)=>{ if(col===null)return; if(sortBy!==col){ setSortBy(col); setSortDir('asc'); } else { setSortDir(d=>d==='asc'?'desc':'asc'); } setPage(1); };
 
   async function deleteRequest(id:number){ await apiRequest('DELETE', `/api/parameters/${id}`); return true; }

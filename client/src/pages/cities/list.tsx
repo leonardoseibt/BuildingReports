@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { showSuccess, showError } from "@/lib/toast-messages";
 import { useAuthRedirect } from "@/hooks/useAuthRedirect";
+import { usePageSize } from "@/hooks/useSettings";
 import { apiRequest } from '@/lib/queryClient';
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import FormHeader from "@/components/ui/form-header";
@@ -44,7 +45,7 @@ export default function CitiesList() {
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<"state" | "name" | "region" | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
-  const pageSize = 15;
+  const pageSize = usePageSize(isAuthenticated);
   const [page, setPage] = useState(1);
 
   const [stateId, setStateId] = useState<number | "">("");
@@ -76,6 +77,10 @@ export default function CitiesList() {
 
   // Centraliza redirecionamento / toast de sessão expirada
   useAuthRedirect();
+
+  useEffect(() => {
+    setPage(1);
+  }, [pageSize]);
 
   const { data: states = [] } = useQuery<StateRow[]>({ queryKey: ["/api/states"], enabled: isAuthenticated });
   const { data: cities = [], isFetching, isLoading: isLoadingItems } = useQuery<CityRow[]>({ queryKey: ["/api/cities"], enabled: isAuthenticated });
@@ -115,7 +120,10 @@ export default function CitiesList() {
 
   const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize));
   const pageSafe = Math.min(page, totalPages);
-  const pagedItems = useMemo(() => sorted.slice((pageSafe - 1) * pageSize, pageSafe * pageSize), [sorted, pageSafe]);
+  const pagedItems = useMemo(
+    () => sorted.slice((pageSafe - 1) * pageSize, pageSafe * pageSize),
+    [sorted, pageSafe, pageSize],
+  );
 
   const toggleSort = (col: typeof sortBy) => {
     if (col === null) return;

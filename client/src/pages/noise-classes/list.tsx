@@ -1,10 +1,11 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { comparePt } from '@/lib/utils';
 import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthRedirect } from '@/hooks/useAuthRedirect';
+import { usePageSize } from "@/hooks/useSettings";
 import { useToast } from "@/hooks/use-toast";
 import { showSuccess, showError } from "@/lib/toast-messages";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -32,7 +33,7 @@ export default function NoiseClassesList() {
   // Inicializa já ordenado por código (asc) para refletir ordenação padrão desejada
   const [sortBy, setSortBy] = useState<"code" | "label" | "isActive" | "createdAt" | null>('code');
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
-  const pageSize = 15;
+  const pageSize = usePageSize(isAuthenticated);
   const [page, setPage] = useState(1);
 
   const formatDate = (date: string | Date | null | undefined) => {
@@ -43,6 +44,10 @@ export default function NoiseClassesList() {
   };
 
   useAuthRedirect();
+
+  useEffect(() => {
+    setPage(1);
+  }, [pageSize]);
 
   const { data: items = [], isFetching, isLoading: isLoadingItems } = useQuery<NoiseClass[]>({ queryKey: ["/api/noise-classes"], enabled: isAuthenticated });
   const normText = (v: any) => String(v ?? "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]+/g, "");
@@ -77,7 +82,10 @@ export default function NoiseClassesList() {
   }, [filtered, sortBy, sortDir]);
   const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize));
   const pageSafe = Math.min(page, totalPages);
-  const pagedItems = useMemo(() => sorted.slice((pageSafe - 1) * pageSize, pageSafe * pageSize), [sorted, pageSafe]);
+  const pagedItems = useMemo(
+    () => sorted.slice((pageSafe - 1) * pageSize, pageSafe * pageSize),
+    [sorted, pageSafe, pageSize],
+  );
   const toggleSort = (col: typeof sortBy) => {
     if (col === null) return;
     if (sortBy !== col) {

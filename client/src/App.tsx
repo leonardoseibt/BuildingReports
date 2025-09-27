@@ -27,7 +27,7 @@ import BioclimaticZonesList from "@/pages/bioclimatic-zones";
 import IsoplethsList from "@/pages/isopleths/list";
 import StatesList from "@/pages/states/list.tsx";
 import CitiesList from "@/pages/cities/list.tsx";
-import SettingsPlaceholder from "@/pages/settings";
+import SettingsPage from "@/pages/settings";
 
 type PrivateRouteProps = RouteProps & { module?: string };
 
@@ -84,7 +84,7 @@ function Router() {
       <PrivateRoute path="/states" component={StatesList} module="states" />
       <PrivateRoute path="/cities" component={CitiesList} module="cities" />
       <PrivateRoute path="/users" component={UsersList} module="users" />
-  <PrivateRoute path="/settings" component={SettingsPlaceholder} module="settings" />
+  <PrivateRoute path="/settings" component={SettingsPage} module="settings" />
       <Route component={NotFound} />
     </Switch>
   );

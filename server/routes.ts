@@ -37,6 +37,10 @@ export function getPaginationParams(query: any) {
   return { limit, offset: computedOffset, page: currentPage };
 }
 
+const updateSettingsSchema = z.object({
+  pageSize: z.coerce.number().int().min(5).max(100),
+});
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
   await setupAuth(app);
@@ -57,6 +61,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Refresh endpoint (rolling renewal) – guarded by auth, returns current/new expiry
   app.post('/api/auth/refresh', isAuthenticated, refreshSession);
+
+  app.get('/api/settings', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId: number = Number(req.user.claims.sub);
+      const settings = await storage.getUserSettings(userId);
+      res.json({ pageSize: settings.pageSize });
+    } catch (error) {
+      console.error('Error fetching settings:', error);
+      res.status(500).json({ message: 'Falha ao carregar configurações' });
+    }
+  });
+
+  app.put('/api/settings', isAuthenticated, express.json(), async (req: any, res) => {
+    try {
+      const userId: number = Number(req.user.claims.sub);
+      const data = updateSettingsSchema.parse(req.body);
+      const settings = await storage.updateUserSettings(userId, data);
+      res.json({ pageSize: settings.pageSize });
+    } catch (error) {
+      console.error('Error updating settings:', error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: 'Dados inválidos', errors: error.errors });
+      }
+      res.status(500).json({ message: 'Falha ao atualizar configurações' });
+    }
+  });
 
   // Dashboard routes
   app.get('/api/dashboard/stats', isAuthenticated, async (req: any, res) => {

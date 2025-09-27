@@ -1,8 +1,9 @@
-import { useState, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Sidebar from '@/components/layout/sidebar';
 import Header from '@/components/layout/header';
 import { useAuth } from '@/hooks/useAuth';
 import { useAuthRedirect } from '@/hooks/useAuthRedirect';
+import { usePageSize } from '@/hooks/useSettings';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -38,8 +39,12 @@ export default function ReportsList() {
   const [search, setSearch] = useState("");
 
   // Variáveis de paginação
-  const pageSize = 15;
+  const pageSize = usePageSize(isAuthenticated);
   const [page, setPage] = useState(1);
+
+  useEffect(() => {
+    setPage(1);
+  }, [pageSize]);
 
   const { data: allItems = [] } = useQuery<ReportItem[]>({ queryKey: ['/api/reports'], enabled: isAuthenticated });
 
@@ -70,12 +75,19 @@ export default function ReportsList() {
   }, [allItems, search]);
 
   // Paginação
-  const pagedItems = useMemo(() => {
-    const startIndex = (page - 1) * pageSize;
-    return filteredItems.slice(startIndex, startIndex + pageSize);
-  }, [filteredItems, page, pageSize]);
+  const totalPages = Math.max(1, Math.ceil(filteredItems.length / pageSize));
+  const pageSafe = Math.min(page, totalPages);
 
-  const totalPages = Math.ceil(filteredItems.length / pageSize);
+  useEffect(() => {
+    if (page !== pageSafe) {
+      setPage(pageSafe);
+    }
+  }, [page, pageSafe]);
+
+  const pagedItems = useMemo(() => {
+    const startIndex = (pageSafe - 1) * pageSize;
+    return filteredItems.slice(startIndex, startIndex + pageSize);
+  }, [filteredItems, pageSafe, pageSize]);
 
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
@@ -221,10 +233,10 @@ export default function ReportsList() {
                   Mostrando <span className="font-semibold">{pagedItems.length}</span> de {" "}
                   <span className="font-semibold">{filteredItems.length}</span> relatórios
                 </p>
-                <Pagination 
-                  totalPages={totalPages} 
-                  page={page} 
-                  onPageChange={setPage} 
+                <Pagination
+                  totalPages={totalPages}
+                  page={pageSafe}
+                  onPageChange={setPage}
                 />
               </div>
             </div>

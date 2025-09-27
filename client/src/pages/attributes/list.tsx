@@ -7,6 +7,7 @@ import Sidebar from '@/components/layout/sidebar';
 import Header from '@/components/layout/header';
 import { useAuth } from '@/hooks/useAuth';
 import { useAuthRedirect } from '@/hooks/useAuthRedirect';
+import { usePageSize } from '@/hooks/useSettings';
 import { useToast } from '@/hooks/use-toast';
 import { showSuccess, showError } from '@/lib/toast-messages';
 import { Plus, Database, Search, ArrowUp, ArrowDown, Pencil, Trash2 } from 'lucide-react';
@@ -45,8 +46,12 @@ export default function AttributesList() {
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState<'friendlyName' | 'dataKind' | 'source' | 'valueSource' | 'isActive' | null>(null);
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
-  const pageSize = 15;
+  const pageSize = usePageSize(isAuthenticated);
   const [page, setPage] = useState(1);
+
+  useEffect(() => {
+    setPage(1);
+  }, [pageSize]);
 
   const { data: attributes = [], isLoading, error, isFetching } = useQuery<AttributeDefinitionFormData[]>({
     queryKey: ['/api/attributes'],
@@ -269,7 +274,10 @@ export default function AttributesList() {
   }, [withSource, sortBy, sortDir]);
   const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize));
   const pageSafe = Math.min(page, totalPages);
-  const paged = useMemo(()=> sorted.slice((pageSafe-1)*pageSize, pageSafe*pageSize), [sorted, pageSafe]);
+  const paged = useMemo(
+    () => sorted.slice((pageSafe - 1) * pageSize, pageSafe * pageSize),
+    [sorted, pageSafe, pageSize],
+  );
 
   function toggleSort(col: typeof sortBy) {
     if (!col) return;

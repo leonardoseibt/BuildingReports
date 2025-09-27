@@ -1,10 +1,11 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { comparePt } from '@/lib/utils';
 import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuthRedirect } from '@/hooks/useAuthRedirect';
+import { usePageSize } from "@/hooks/useSettings";
 import { useToast } from "@/hooks/use-toast";
 import { showSuccess, showError } from "@/lib/toast-messages";
 import TechnicianForm from "@/components/technicians/technician-form";
@@ -69,10 +70,14 @@ export default function TechniciansList() {
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<"fullName" | "creaCau" | "email" | "phone" | "createdAt" | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
-  const pageSize = 15;
+  const pageSize = usePageSize(isAuthenticated);
   const [page, setPage] = useState(1);
 
   useAuthRedirect();
+
+  useEffect(() => {
+    setPage(1);
+  }, [pageSize]);
 
   const { data: technicians = [], isFetching, isLoading: isLoadingTechs } = useQuery<Technician[]>({ queryKey: ["/api/technicians"], enabled: isAuthenticated });
 
@@ -133,7 +138,10 @@ export default function TechniciansList() {
 
   const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize));
   const pageSafe = Math.min(page, totalPages);
-  const pagedTechnicians = useMemo(() => sorted.slice((pageSafe - 1) * pageSize, pageSafe * pageSize), [sorted, pageSafe]);
+  const pagedTechnicians = useMemo(
+    () => sorted.slice((pageSafe - 1) * pageSize, pageSafe * pageSize),
+    [sorted, pageSafe, pageSize],
+  );
 
   const toggleSort = (col: typeof sortBy) => {
     if (col === null) return;

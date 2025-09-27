@@ -1,9 +1,10 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Sidebar from '@/components/layout/sidebar';
 import Header from '@/components/layout/header';
 import { useAuth } from '@/hooks/useAuth';
 import { useAuthRedirect } from '@/hooks/useAuthRedirect';
+import { usePageSize } from '@/hooks/useSettings';
 import { useToast } from '@/hooks/use-toast';
 import { showSuccess, showError } from '@/lib/toast-messages';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
@@ -33,10 +34,14 @@ export default function IsoplethsList() {
   // Default ordering by código
   const [sortBy, setSortBy] = useState<'code' | 'label' | 'isActive' | 'windMinMS' | 'windMaxMS' | null>('code');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
-  const pageSize = 15;
+  const pageSize = usePageSize(isAuthenticated);
   const [page, setPage] = useState(1);
 
   useAuthRedirect();
+
+  useEffect(() => {
+    setPage(1);
+  }, [pageSize]);
 
   const { data: items = [], isFetching, isLoading: isLoadingItems } = useQuery<Isopleth[]>({ queryKey: ['/api/isopleths'], enabled: isAuthenticated });
   // Map de isoplethId -> cidades (lazy load conjunto único)
@@ -113,7 +118,10 @@ export default function IsoplethsList() {
   const anyOverlap = overlapMap.size > 0;
   const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize));
   const pageSafe = Math.min(page, totalPages);
-  const paged = useMemo(() => sorted.slice((pageSafe - 1) * pageSize, pageSafe * pageSize), [sorted, pageSafe]);
+  const paged = useMemo(
+    () => sorted.slice((pageSafe - 1) * pageSize, pageSafe * pageSize),
+    [sorted, pageSafe, pageSize],
+  );
   const toggleSort = (col: typeof sortBy) => {
     if (col === null) return;
     if (sortBy !== col) { setSortBy(col); setSortDir('asc'); } else { setSortDir((d) => d === 'asc' ? 'desc' : 'asc'); }

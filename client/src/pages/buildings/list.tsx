@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { showSuccess, showError } from "@/lib/toast-messages";
 import { useAuthRedirect } from "@/hooks/useAuthRedirect";
+import { usePageSize } from "@/hooks/useSettings";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import BuildingForm from "@/components/buildings/building-form";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -49,10 +50,14 @@ export default function BuildingList() {
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<"name" | "location" | "totalArea" | "height" | "floors" | "technician" | "createdAt" | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
-  const pageSize = 15;
+  const pageSize = usePageSize(isAuthenticated);
   const [page, setPage] = useState(1);
 
   useAuthRedirect();
+
+  useEffect(() => {
+    setPage(1);
+  }, [pageSize]);
   const [location, setLocation] = useLocation();
 
   const { data: buildings = [], isLoading, isFetching, error } = useQuery<Building[]>({
@@ -143,7 +148,10 @@ export default function BuildingList() {
 
   const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize));
   const pageSafe = Math.min(page, totalPages);
-  const pagedBuildings = useMemo(() => sorted.slice((pageSafe - 1) * pageSize, pageSafe * pageSize), [sorted, pageSafe]);
+  const pagedBuildings = useMemo(
+    () => sorted.slice((pageSafe - 1) * pageSize, pageSafe * pageSize),
+    [sorted, pageSafe, pageSize],
+  );
 
   const toggleSort = (col: typeof sortBy) => {
     if (col === null) return;

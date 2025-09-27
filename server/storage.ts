@@ -60,6 +60,8 @@ import {
   attributeDefinitions,
   type AttributeDefinition,
   type InsertAttributeDefinition,
+  userSettings,
+  type UserSetting,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, sql, count } from "drizzle-orm";
@@ -96,6 +98,8 @@ export interface IStorage {
   listUsers(limit?: number, offset?: number): Promise<{ items: PublicUser[]; total: number }>;
   deleteUser(id: number): Promise<boolean>;
   updateUser(id: number, data: Partial<UpsertUser>): Promise<User>;
+  getUserSettings(userId: number): Promise<UserSetting>;
+  updateUserSettings(userId: number, data: { pageSize: number }): Promise<UserSetting>;
   
   // Building operations
   createBuilding(building: InsertBuilding): Promise<Building>;
@@ -348,6 +352,52 @@ export class DatabaseStorage implements IStorage {
       .update(users)
       .set({ ...data, updatedAt: new Date() })
       .where(eq(users.id, id))
+      .returning();
+    return row;
+  }
+
+  async getUserSettings(userId: number): Promise<UserSetting> {
+    if (!Number.isFinite(userId)) {
+      throw new Error('Invalid user id');
+    }
+    const [existing] = await db
+      .select()
+      .from(userSettings)
+      .where(eq(userSettings.userId, userId))
+      .limit(1);
+    if (existing) return existing;
+
+    const [created] = await db
+      .insert(userSettings)
+      .values({ userId })
+      .onConflictDoNothing()
+      .returning();
+    if (created) return created;
+
+    const [fallback] = await db
+      .select()
+      .from(userSettings)
+      .where(eq(userSettings.userId, userId))
+      .limit(1);
+    if (fallback) return fallback;
+    throw new Error('Failed to initialize user settings');
+  }
+
+  async updateUserSettings(userId: number, data: { pageSize: number }): Promise<UserSetting> {
+    if (!Number.isFinite(userId)) {
+      throw new Error('Invalid user id');
+    }
+    const now = new Date();
+    const [row] = await db
+      .insert(userSettings)
+      .values({ userId, pageSize: data.pageSize, updatedAt: now })
+      .onConflictDoUpdate({
+        target: userSettings.userId,
+        set: {
+          pageSize: data.pageSize,
+          updatedAt: now,
+        },
+      })
       .returning();
     return row;
   }

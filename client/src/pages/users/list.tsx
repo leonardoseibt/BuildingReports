@@ -55,6 +55,7 @@ function formatDateBR(value?: string | Date | null) {
 }
 import { apiRequest } from "@/lib/queryClient";
 import { parseApiError } from "@/lib/api-error";
+import { usePageSize } from "@/hooks/useSettings";
 
 export default function UsersList() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -73,10 +74,14 @@ export default function UsersList() {
   const [loadError, setLoadError] = useState<string | null>(null);
 
   // paginação — 10 itens por página
-  const pageSize = 15;
+  const pageSize = usePageSize(isAuthenticated);
   const [page, setPage] = useState(1);
 
   useAuthRedirect();
+
+  useEffect(() => {
+    setPage(1);
+  }, [pageSize]);
 
   const usersQuery = useQuery<User[]>({
     queryKey: ["/api/users"],
@@ -186,7 +191,10 @@ export default function UsersList() {
   // Pagination over sorted list
   const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize));
   const pageSafe = Math.min(page, totalPages);
-  const pagedUsers = useMemo(() => sorted.slice((pageSafe - 1) * pageSize, pageSafe * pageSize), [sorted, pageSafe]);
+  const pagedUsers = useMemo(
+    () => sorted.slice((pageSafe - 1) * pageSize, pageSafe * pageSize),
+    [sorted, pageSafe, pageSize],
+  );
 
   const toggleSort = (col: typeof sortBy) => {
     if (col === null) return;
