@@ -722,7 +722,7 @@ function ReportHtml({ context }: { context: ReportRenderContext }) {
 
           .analysis-block { margin-bottom: 24px; page-break-inside: auto; break-inside: auto; }
 
-          .criterion-spacing { height: 14px; }
+          .analysis-block.gap-before { margin-top: 16px; }
 
           table { width: 100%; border-collapse: collapse; margin-bottom: 24px; page-break-before: auto; page-break-after: auto; page-break-inside: auto; break-inside: auto; table-layout: auto; }
 
@@ -844,9 +844,9 @@ function ReportHtml({ context }: { context: ReportRenderContext }) {
 
                     const criterionTitle = `Critério: ${normalizeText(criterion.label)}`;
                     const showSpacingBeforeTable = shouldAddSpacingBeforeCriterion && analysisIndex === 0;
+                    const blockClassName = `analysis-block${showSpacingBeforeTable ? ' gap-before' : ''}`;
                     return (
-                      <div key={analysis.id} className="analysis-block">
-                        {showSpacingBeforeTable && <div className="criterion-spacing" aria-hidden="true" />}
+                      <div key={analysis.id} className={blockClassName}>
                         <table>
                         <thead>
                           <tr className="criterion-header">
