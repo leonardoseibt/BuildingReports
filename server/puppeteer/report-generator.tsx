@@ -1,4 +1,4 @@
-import React, { Fragment } from 'react';
+import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import puppeteer from 'puppeteer';
 import { storage } from '../storage';
@@ -166,8 +166,6 @@ function shouldShowParameter(
   }
   return true;
 }
-
-
 
 function sortParameters(params: Parameter[]): Parameter[] {
   return [...params].sort((a, b) => {
@@ -408,393 +406,255 @@ function buildBuildingInfoSections(
   const bioclimaticInfo = getBioclimaticZoneInfo(building, helpers.bioclimaticZones);
 
   if (bioclimaticInfo) {
-
     environmentalRows.push({
-
       label: 'Zona Bioclimatica',
-
       value: bioclimaticInfo
-
     });
-
   }
-
-
 
   const isoplethInfo = getIsoplethInfo(building, helpers.isopleths);
 
   if (isoplethInfo) {
-
     environmentalRows.push({
-
       label: 'Isopleta',
-
       value: isoplethInfo
-
     });
-
   }
-
-
 
   const noiseClassInfo = getNoiseClassInfo(building, helpers.noiseClasses);
 
   if (noiseClassInfo) {
-
     environmentalRows.push({
-
       label: 'Classe de Ruido',
-
       value: noiseClassInfo
-
     });
-
   }
-
-
 
   const aggressivenessInfo = getAggressivenessClassInfo(building, helpers.aggressivenessClasses);
 
   if (aggressivenessInfo) {
-
     environmentalRows.push({
-
       label: 'Classe de Agressividade',
-
       value: aggressivenessInfo
-
     });
-
   }
-
-
 
   if (environmentalRows.length > 0) {
-
     sections.push({
-
       title: 'Condicoes Ambientais e Classificacoes',
-
       rows: environmentalRows
-
     });
-
   }
 
-
-
   return sections;
-
 }
 
 function getTypologyInfo(building: Building, typologies: Typology[]): string | null {
-
   if (!building.typologyId) return null;
-
   const item = typologies.find((t) => t.id === building.typologyId);
-
   return item ? item.label : null;
-
 }
-
-
 
 function getNoiseClassInfo(building: Building, noiseClasses: NoiseClass[]): string | null {
-
   if (!building.noiseClassId) return null;
-
   const item = noiseClasses.find((n) => n.id === building.noiseClassId);
-
   return item ? `${item.code} - ${item.label}` : null;
-
 }
-
-
 
 function getAggressivenessClassInfo(building: Building, aggressiveness: AggressivenessClass[]): string | null {
-
   if (!building.aggressivenessClassId) return null;
-
   const item = aggressiveness.find((a) => a.id === building.aggressivenessClassId);
-
   return item ? `${item.code} - ${item.label}` : null;
-
 }
-
-
 
 function getTechnicianInfo(building: Building, technicians: Technician[]): string | null {
-
   if (!building.technicianId) return null;
-
   const item = technicians.find((t) => t.id === building.technicianId);
-
   return item ? `${item.fullName} (${item.creaCau ?? 'CREA/CAU'})` : `ID ${building.technicianId}`;
-
 }
-
-
 
 function getBioclimaticZoneInfo(building: Building, zones: BioclimaticZone[]): string | null {
-
   if (!building.bioclimaticZone) return null;
-
   const item = zones.find((z) => z.code === building.bioclimaticZone);
-
   return item ? `${item.code} - ${item.label}` : building.bioclimaticZone;
-
 }
 
-
-
 function getIsoplethInfo(building: Building, isopleths: Isopleth[]): string | null {
-
   if (!building.isoplethCode) return null;
-
   const item = isopleths.find((i) => i.code === building.isoplethCode);
-
   if (!item) return building.isoplethCode;
 
   const formatNumber = (raw: any) => {
-
     const num = Number(raw);
-
     if (Number.isNaN(num)) return null;
-
     return num.toFixed(1).replace(/\.0$/, '');
-
   };
 
   const min = formatNumber(item.windMinMS);
-
   const max = formatNumber(item.windMaxMS);
-
   let range = '';
 
   if (min !== null && max !== null) {
-
     range = ` (${min} - ${max} m/s)`;
-
   } else if (min !== null) {
-
     range = ` (>= ${min} m/s)`;
-
   } else if (max !== null) {
-
     range = ` (<= ${max} m/s)`;
-
   }
 
   return `${item.code} - ${item.label}${range}`;
-
 }
 
-
-
 function getFormattedAddress(building: Building | undefined): string | null {
-
   if (!building) return null;
-
   const parts: string[] = [];
 
   if (building.street) {
-
     let street = building.street;
-
     if (building.addressNumber) street += `, ${building.addressNumber}`;
-
     parts.push(street);
-
   }
 
   if (building.neighborhood) parts.push(building.neighborhood);
 
   const cityState = [building.city, building.state].filter(Boolean).join(' - ');
-
   if (cityState) parts.push(cityState);
 
   if (building.cep) parts.push(`CEP: ${building.cep}`);
 
   return parts.length ? parts.join(', ') : null;
-
 }
-
-
 
 function buildFilename(building: Building, report: Report): string {
-
   const name = building.name ? building.name.replace(/[^a-zA-Z0-9-_]+/g, '_') : 'Relatorio';
-
   const date = (report.generatedAt ? new Date(report.generatedAt) : new Date())
-
     .toLocaleDateString('pt-BR')
-
     .replace(/\//g, '-');
-
   return `PDE_${name}_${date}.pdf`;
-
 }
 
-
-
 function ReportHtml({ context }: { context: ReportRenderContext }) {
-
   const { building, sections, typologies, noiseClasses, aggressivenessClasses, technicians, bioclimaticZones, isopleths } = context;
 
   const buildingInfoSections = buildBuildingInfoSections(building, context.report, {
-
     typologies,
-
     technicians,
-
     noiseClasses,
-
     aggressivenessClasses,
-
     bioclimaticZones,
-
     isopleths
-
   });
 
   return (
-
     <html lang="pt-BR">
-
       <head>
-
         <meta charSet="utf-8" />
-
         <title>Relatorio PDE</title>
-
         <style>{`
-
           * { box-sizing: border-box; }
-
           body {
             font-family: 'Helvetica', Arial, sans-serif;
             margin: 0;
             padding: 24px 0 24px 4mm;
             color: #1f2937;
           }
-
           h1, h2, h3, h4, h5 { margin: 0; }
 
           .header { margin-bottom: 24px; }
-
           .header h1 { font-size: 24px; font-weight: 700; color: #111827; }
 
           .card { background: #fff; border: 1px solid #d1d5db; padding: 20px; border-radius: 12px; margin-bottom: 24px; }
 
           .grid { display: grid; gap: 12px; }
-
           .grid-cols-3 { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
-
           .grid-cols-4 { grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
 
           .info-card { background: #f9fafb; border: 1px solid #e5e7eb; padding: 12px; border-radius: 8px; }
-
           .info-label { font-size: 12px; font-weight: 600; color: #6b7280; margin-bottom: 4px; text-transform: uppercase; }
-
           .info-value { font-size: 14px; font-weight: 600; color: #111827; }
 
           .building-info-section { margin-bottom: 20px; page-break-inside: avoid; break-inside: avoid; }
-
           .building-info-title { font-size: 13px; font-weight: 700; color: #4b5563; margin-bottom: 8px; text-transform: uppercase; border-bottom: 1px solid #d1d5db; padding-bottom: 6px; }
 
           .building-info-table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
-
           .building-info-label { text-align: left !important; width: 28%; background: #e0ecff; color: #1f3a8a; font-weight: 600; padding: 6px 10px; }
-
           .building-info-value { text-align: left !important; width: 72%; font-weight: bold; padding: 6px 10px; }
-
           .building-info-value.full { width: 72%; }
-
           .building-info-unit { text-align: center !important; width: 18%; white-space: nowrap; }
 
           .section { margin-bottom: 32px; }
 
           .section-title { font-size: 18px; font-weight: 700; color: #1f2937; border-bottom: 2px solid #4b5563; padding-bottom: 8px; margin-bottom: 16px; text-transform: uppercase; page-break-after: avoid; break-after: avoid; }
 
-          .criterion-header th { font-size: 15px; font-weight: 600; color: #374151; border-bottom: 1px solid #d1d5db; padding: 6px 10px; text-transform: uppercase; text-align: left; page-break-after: avoid; break-after: avoid; background: #ffffff; }
+          /* Espaço padronizado entre critérios (não força quebra de página) */
+          .criterion-gap { height: 12px; }
 
-          .analysis-header th { background: #e0ecff; color: #1f3a8a; padding: 6px 10px; font-weight: 600; border-radius: 6px 6px 0 0; text-align: left; page-break-after: avoid; break-after: avoid; }
+          .criterion-section { margin-bottom: 32px; page-break-inside: avoid; break-inside: avoid; }
+          .criterion-section--spaced { margin-top: 0; } /* espaçamento agora via .criterion-gap */
 
-          .analysis-body { page-break-inside: auto; break-inside: auto; }
+          .criterion-header { page-break-after: avoid; break-after: avoid; }
+          .criterion-header th { font-size: 15px; font-weight: 600; color: #374151; border-bottom: 1px solid #d1d5db; padding: 6px 10px; text-transform: uppercase; text-align: left; background: #ffffff; }
 
-          .criterion-section { margin-top: 0; }
+          .analysis-header { page-break-after: avoid; break-after: avoid; }
+          .analysis-header--spaced th { padding-top: 16px; }
 
-          .criterion-section--spaced { margin-top: 24px; }
+          .analysis-header th { background: #e0ecff; color: #1f3a8a; padding: 6px 10px; font-weight: 600; border-radius: 6px 6px 0 0; text-align: left; }
 
-          .analysis-gap-row td { border: none; padding: 0; height: 16px; background: transparent; }
+          .analysis-columns { page-break-after: avoid; break-after: avoid; }
 
-          table { width: 100%; border-collapse: collapse; margin-bottom: 24px; page-break-before: auto; page-break-after: auto; page-break-inside: auto; break-inside: auto; table-layout: auto; }
+          .criterion-table { width: 100%; border-collapse: collapse; margin-bottom: 24px; page-break-inside: auto; break-inside: auto; table-layout: auto; }
+          .criterion-table + .criterion-table { margin-top: 24px; }
 
+          /* Cabeçalhos se repetem a cada quebra de página */
           thead { display: table-header-group !important; page-break-after: avoid; break-after: avoid; page-break-inside: avoid; break-inside: avoid; }
-
           thead tr { background: #f3f4f6; }
 
-          tbody { page-break-inside: auto; break-inside: auto; }
+          .analysis-header-group { display: table-header-group !important; page-break-after: avoid !important; break-after: avoid; page-break-inside: avoid !important; break-inside: avoid; }
 
+          .analysis-data-body { display: table-row-group !important; page-break-before: avoid !important; break-before: avoid; page-break-inside: auto; break-inside: auto; }
+
+          tbody { page-break-inside: auto; break-inside: auto; }
           tbody tr { page-break-inside: avoid; break-inside: avoid; }
 
           th, td { border: 1px solid #d1d5db; padding: 8px; font-size: 12px; }
-
           th { text-align: center; font-weight: 600; color: #1f2937; }
-
           th.value-col, td.value-col { white-space: nowrap; text-align: center; vertical-align: middle; }
 
           .param-col { width: auto; }
-
           td { vertical-align: top; }
 
           .param-label { font-weight: 600; color: #111827; }
-
           .param-observation { font-size: 11px; color: #4b5563; margin-top: 6px; background: #f9fafb; padding: 6px; border-left: 2px solid #9ca3af; }
 
           @page {
             margin: 20mm;
             @bottom-right {
-              content: "Página " counter(page);
+              content: "Página " counter(page) " de " counter(pages);
               font-size: 10px;
               color: #6b7280;
             }
           }
-
         `}</style>
-
       </head>
 
       <body>
-
         <div className="header">
-
           <h1>Perfil de Desempenho da Edificação - PDE</h1>
         </div>
 
         <div className="card">
-
           {buildingInfoSections.length > 0 && (
-
             <div className="section" style={{ marginBottom: '0' }}>
-
               {buildingInfoSections.map((section: BuildingInfoSection) => {
                 return (
-
                   <div key={section.title} className="building-info-section">
-
                     <h3 className="building-info-title">{section.title}</h3>
-
                     <table className="building-info-table">
-
                       <tbody>
-
                         {section.rows.map((row: BuildingInfoRow, index: number) => {
-                          // Concatenar valor com unidade quando existir
                           const displayValue = row.unit && row.unit.trim() !== ''
                             ? `${formatWithSeparators(row.value)} ${formatWithSeparators(row.unit)}`
                             : formatWithSeparators(row.value);
-
                           return (
                             <tr key={`${section.title}-${row.label}-${index}`}>
                               <td className="building-info-label">{formatWithSeparators(row.label)}</td>
@@ -802,268 +662,176 @@ function ReportHtml({ context }: { context: ReportRenderContext }) {
                             </tr>
                           );
                         })}
-
                       </tbody>
-
                     </table>
-
                   </div>
-
                 );
-
               })}
-
             </div>
-
           )}
-
         </div>
 
+        {/* Página nova apenas para iniciar os requisitos */}
         <div style={{ pageBreakBefore: 'always' }}></div>
 
         {sections.map((requirement) => (
-
           <div key={requirement.id} className="section">
-
             <h2 className="section-title">Requisito: {normalizeText(requirement.label)}</h2>
 
             {requirement.criteria.map((criterion, criterionIndex) => {
-
               const criterionHasParameters = criterion.analyses.some((analysis) => analysis.parameters.length > 0);
-              const hasPreviousCriteriaWithParameters = criterionIndex > 0
-                ? requirement.criteria
-                    .slice(0, criterionIndex)
-                    .some((previousCriterion) =>
-                      previousCriterion.analyses.some((previousAnalysis) => previousAnalysis.parameters.length > 0)
-                    )
-                : false;
-              const shouldAddSpacingBeforeCriterion = criterionHasParameters && hasPreviousCriteriaWithParameters;
-              const criterionClassName = `criterion-section${shouldAddSpacingBeforeCriterion ? ' criterion-section--spaced' : ''}`;
 
-              const analysisColumnCounts = criterion.analyses.map((analysis) => 2 + analysis.selectedLevels.length);
-              const maxColumns = Math.max(...analysisColumnCounts);
+              // Exibe gap padronizado entre critérios (apenas se houver parâmetros e não for o primeiro critério com parâmetros)
+              const previousCriteriaWithParams = requirement.criteria
+                .slice(0, criterionIndex)
+                .some((c) => c.analyses.some((a) => a.parameters.length > 0));
+              const showGapBefore = criterionHasParameters && previousCriteriaWithParams;
+
+              const criterionClassName = `criterion-section`;
+
               const criterionTitle = `Critério: ${normalizeText(criterion.label)}`;
 
               return (
-                <div key={criterion.id} className={criterionClassName}>
-                  <table>
-                    <thead>
-                      <tr className="criterion-header">
-                        <th colSpan={maxColumns}>{criterionTitle}</th>
-                      </tr>
-                    </thead>
+                <React.Fragment key={criterion.id}>
+                  {showGapBefore && <div className="criterion-gap" />}
+
+                  <div className={criterionClassName}>
                     {criterion.analyses.map((analysis, analysisIndex) => {
                       const columns = ['Parâmetro', 'UN', ...analysis.selectedLevels.map((level) => levelLabels[level] || level)];
+                      const headerClass = `analysis-header${analysisIndex > 0 ? ' analysis-header--spaced' : ''}`;
+
                       return (
-                        <tbody key={analysis.id} className="analysis-body">
-                          {analysisIndex > 0 && (
-                            <tr className="analysis-gap-row">
-                              <td colSpan={columns.length}></td>
+                        <table key={analysis.id} className="criterion-table">
+                          <thead className="analysis-header-group">
+                            {/* IMPORTANTE: o título do critério está SEMPRE no thead de cada tabela,
+                               garantindo repetição a cada quebra de página, mesmo entre análises. */}
+                            <tr className="criterion-header">
+                              <th colSpan={columns.length}>{criterionTitle}</th>
                             </tr>
-                          )}
-                          <tr className="analysis-header">
-                            <th colSpan={columns.length}>Análise: {normalizeText(analysis.label)}</th>
-                          </tr>
-                          <tr>
-                            {columns.map((column, index) => (
-                              <th key={`${analysis.id}-${column}-${index}`} className={index === 0 ? 'param-col' : 'value-col'}>{column}</th>
-                            ))}
-                          </tr>
-                          {analysis.parameters.map((parameter) => {
-                            const observation = parameter.notes ?? (parameter as any).observation;
-                            return (
-                              <tr key={parameter.id}>
-                                <td className="param-col">
-                                  <div className="param-label">{formatWithSeparators(parameter.label)}</div>
-                                  {observation && (<div className="param-observation">{formatWithSeparators(observation)}</div>)}
-                                </td>
 
-                                <td className="value-col">{normalizeDisplayValue(parameter.unit)}</td>
+                            <tr className={headerClass}>
+                              <th colSpan={columns.length}>Análise: {normalizeText(analysis.label)}</th>
+                            </tr>
 
-                                {analysis.selectedLevels.map((level) => {
+                            <tr className="analysis-columns">
+                              {columns.map((column, index) => (
+                                <th key={`${analysis.id}-${column}-${index}`} className={index === 0 ? 'param-col' : 'value-col'}>
+                                  {column}
+                                </th>
+                              ))}
+                            </tr>
+                          </thead>
 
-                                  const directValue = (level === 'minimum' && parameter.minimumValue)
+                          <tbody className="analysis-data-body">
+                            {analysis.parameters.map((parameter) => {
+                              const observation = parameter.notes ?? (parameter as any).observation;
+                              return (
+                                <tr key={parameter.id}>
+                                  <td className="param-col">
+                                    <div className="param-label">{formatWithSeparators(parameter.label)}</div>
+                                    {observation && (<div className="param-observation">{formatWithSeparators(observation)}</div>)}
+                                  </td>
 
-                                    || (level === 'intermediate' && parameter.intermediateValue)
+                                  <td className="value-col">{normalizeDisplayValue(parameter.unit)}</td>
 
-                                    || (level === 'superior' && parameter.superiorValue);
+                                  {analysis.selectedLevels.map((level) => {
+                                    const directValue = (level === 'minimum' && parameter.minimumValue)
+                                      || (level === 'intermediate' && parameter.intermediateValue)
+                                      || (level === 'superior' && parameter.superiorValue);
+                                    const nested = (parameter as any).values?.[level];
+                                    const fallback = nested?.value;
+                                    const value = directValue ?? fallback;
 
-                                  const nested = (parameter as any).values?.[level];
-
-                                  const fallback = nested?.value;
-
-                                  const value = directValue ?? fallback;
-
-                                  return (
-
-                                    <td key={level} className="value-col">{normalizeDisplayValue(value)}</td>
-
-                                  );
-
-                                })}
-
-                              </tr>
-
-                            );
-
-                          })}
-                        </tbody>
+                                    return (
+                                      <td key={level} className="value-col">{normalizeDisplayValue(value)}</td>
+                                    );
+                                  })}
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
                       );
                     })}
-                  </table>
-                </div>
+                  </div>
+                </React.Fragment>
               );
-
             })}
-
           </div>
-
         ))}
-
       </body>
     </html>
-
   );
-
 }
-
-
 
 async function loadTableData(
-
   table: string,
-
   building: Building,
-
   userId: number
-
 ): Promise<any[]> {
-
   switch (table) {
-
     case 'typologies':
-
       return storage.listTypologies();
-
     case 'noise-classes':
-
     case 'noise_classes':
-
       return storage.listNoiseClasses();
-
     case 'aggressiveness-classes':
-
     case 'aggressiveness_classes':
-
       return storage.listAggressivenessClasses();
-
     case 'technicians': {
-
       const { items } = await storage.listTechnicians(userId, undefined, undefined);
-
       return items;
-
     }
-
     case 'bioclimatic-zones':
-
     case 'bioclimatic_zones':
-
       return storage.listBioclimaticZones();
-
     case 'isopleths':
-
       return storage.listIsopleths();
-
     case 'buildings':
-
       return [building];
-
     default:
-
       return [];
-
   }
-
 }
 
-
-
 async function loadReportContext(reportId: number, userId: number): Promise<ReportRenderContext> {
-
   const report = await storage.getReport(reportId);
-
   if (!report || report.isActive === false) {
-
     throw Object.assign(new Error('Report not found'), { statusCode: 404 });
-
   }
 
   const building = await storage.getBuilding(report.buildingId);
-
   if (!building || building.userId !== userId) {
-
     throw Object.assign(new Error('Access denied'), { statusCode: 403 });
-
   }
-
-
 
   const reportData = typeof report.reportData === 'string'
-
     ? (() => {
-
-      try {
-
-        return JSON.parse(report.reportData);
-
-      } catch {
-
-        return {};
-
-      }
-
-    })()
-
+        try {
+          return JSON.parse(report.reportData);
+        } catch {
+          return {};
+        }
+      })()
     : (report.reportData || {});
-
   const evaluations = Array.isArray((reportData as any).evaluations) ? (reportData as any).evaluations : [];
 
-
-
   const selectedEvaluations = new Map<string, string[]>();
-
   for (const evaluation of evaluations) {
-
     const level = evaluation?.level;
-
     if (!level) continue;
-
     const key = evaluation?.analysisId
-
       ? `analysis-${evaluation.analysisId}`
-
       : evaluation?.criterionId
-
         ? `crit-${evaluation.criterionId}`
-
         : evaluation?.requirementId
-
           ? `req-${evaluation.requirementId}`
-
           : undefined;
-
     if (!key) continue;
-
     if (!selectedEvaluations.has(key)) selectedEvaluations.set(key, []);
-
     const list = selectedEvaluations.get(key)!;
-
     if (!list.includes(level)) list.push(level);
-
   }
-
-
 
   const [
     requirements,
@@ -1096,7 +864,6 @@ async function loadReportContext(reportId: number, userId: number): Promise<Repo
     : (techniciansWrapper as { items: Technician[] }).items;
 
   const attributeMap = new Map<number, AttributeDefinition>();
-
   for (const attribute of attributeDefinitions) {
     attributeMap.set(attribute.id, attribute);
   }
