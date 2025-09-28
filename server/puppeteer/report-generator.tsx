@@ -720,13 +720,13 @@ function ReportHtml({ context }: { context: ReportRenderContext }) {
 
           .analysis-header th { background: #e0ecff; color: #1f3a8a; padding: 6px 10px; font-weight: 600; border-radius: 6px 6px 0 0; text-align: left; page-break-after: avoid; break-after: avoid; }
 
-          .analysis-block { margin: 0; page-break-inside: auto; break-inside: auto; }
-
-          .analysis-block + .analysis-block { margin-top: 24px; }
+          .analysis-body { page-break-inside: auto; break-inside: auto; }
 
           .criterion-section { margin-top: 0; }
 
           .criterion-section--spaced { margin-top: 24px; }
+
+          .analysis-gap-row td { border: none; padding: 0; height: 16px; background: transparent; }
 
           table { width: 100%; border-collapse: collapse; margin-bottom: 24px; page-break-before: auto; page-break-after: auto; page-break-inside: auto; break-inside: auto; table-layout: auto; }
 
@@ -840,21 +840,27 @@ function ReportHtml({ context }: { context: ReportRenderContext }) {
               const shouldAddSpacingBeforeCriterion = criterionHasParameters && hasPreviousCriteriaWithParameters;
               const criterionClassName = `criterion-section${shouldAddSpacingBeforeCriterion ? ' criterion-section--spaced' : ''}`;
 
+              const analysisColumnCounts = criterion.analyses.map((analysis) => 2 + analysis.selectedLevels.length);
+              const maxColumns = Math.max(...analysisColumnCounts);
+              const criterionTitle = `Critério: ${normalizeText(criterion.label)}`;
+
               return (
                 <div key={criterion.id} className={criterionClassName}>
-
-                  {criterion.analyses.map((analysis) => {
-
-                    const columns = ['Parâmetro', 'UN', ...analysis.selectedLevels.map((level) => levelLabels[level] || level)];
-
-                    const criterionTitle = `Critério: ${normalizeText(criterion.label)}`;
-                    return (
-                      <div key={analysis.id} className="analysis-block">
-                        <table>
-                        <thead>
-                          <tr className="criterion-header">
-                            <th colSpan={columns.length}>{criterionTitle}</th>
-                          </tr>
+                  <table>
+                    <thead>
+                      <tr className="criterion-header">
+                        <th colSpan={maxColumns}>{criterionTitle}</th>
+                      </tr>
+                    </thead>
+                    {criterion.analyses.map((analysis, analysisIndex) => {
+                      const columns = ['Parâmetro', 'UN', ...analysis.selectedLevels.map((level) => levelLabels[level] || level)];
+                      return (
+                        <tbody key={analysis.id} className="analysis-body">
+                          {analysisIndex > 0 && (
+                            <tr className="analysis-gap-row">
+                              <td colSpan={columns.length}></td>
+                            </tr>
+                          )}
                           <tr className="analysis-header">
                             <th colSpan={columns.length}>Análise: {normalizeText(analysis.label)}</th>
                           </tr>
@@ -863,8 +869,6 @@ function ReportHtml({ context }: { context: ReportRenderContext }) {
                               <th key={`${analysis.id}-${column}-${index}`} className={index === 0 ? 'param-col' : 'value-col'}>{column}</th>
                             ))}
                           </tr>
-                        </thead>
-                        <tbody>
                           {analysis.parameters.map((parameter) => {
                             const observation = parameter.notes ?? (parameter as any).observation;
                             return (
@@ -903,19 +907,11 @@ function ReportHtml({ context }: { context: ReportRenderContext }) {
                             );
 
                           })}
-
                         </tbody>
-
-                      </table>
-
-                      </div>
-
-                    );
-
-                  })}
-
+                      );
+                    })}
+                  </table>
                 </div>
-
               );
 
             })}
