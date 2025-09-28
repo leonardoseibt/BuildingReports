@@ -720,9 +720,13 @@ function ReportHtml({ context }: { context: ReportRenderContext }) {
 
           .analysis-header th { background: #e0ecff; color: #1f3a8a; padding: 6px 10px; font-weight: 600; border-radius: 6px 6px 0 0; text-align: left; page-break-after: avoid; break-after: avoid; }
 
-          .analysis-block { margin-bottom: 24px; page-break-inside: auto; break-inside: auto; }
+          .analysis-block { margin: 0; page-break-inside: auto; break-inside: auto; }
 
-          .analysis-block.gap-before { padding-top: 16px; }
+          .analysis-block + .analysis-block { margin-top: 24px; }
+
+          .criterion-section { margin-top: 0; }
+
+          .criterion-section--spaced { margin-top: 24px; }
 
           table { width: 100%; border-collapse: collapse; margin-bottom: 24px; page-break-before: auto; page-break-after: auto; page-break-inside: auto; break-inside: auto; table-layout: auto; }
 
@@ -834,19 +838,18 @@ function ReportHtml({ context }: { context: ReportRenderContext }) {
                     )
                 : false;
               const shouldAddSpacingBeforeCriterion = criterionHasParameters && hasPreviousCriteriaWithParameters;
+              const criterionClassName = `criterion-section${shouldAddSpacingBeforeCriterion ? ' criterion-section--spaced' : ''}`;
 
               return (
-                <div key={criterion.id} className="criterion-section">
+                <div key={criterion.id} className={criterionClassName}>
 
-                  {criterion.analyses.map((analysis, analysisIndex) => {
+                  {criterion.analyses.map((analysis) => {
 
                     const columns = ['Parâmetro', 'UN', ...analysis.selectedLevels.map((level) => levelLabels[level] || level)];
 
                     const criterionTitle = `Critério: ${normalizeText(criterion.label)}`;
-                    const showSpacingBeforeTable = shouldAddSpacingBeforeCriterion && analysisIndex === 0;
-                    const blockClassName = `analysis-block${showSpacingBeforeTable ? ' gap-before' : ''}`;
                     return (
-                      <div key={analysis.id} className={blockClassName}>
+                      <div key={analysis.id} className="analysis-block">
                         <table>
                         <thead>
                           <tr className="criterion-header">
