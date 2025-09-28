@@ -587,18 +587,24 @@ function ReportHtml({ context }: { context: ReportRenderContext }) {
           .section-title { font-size: 18px; font-weight: 700; color: #1f2937; border-bottom: 2px solid #4b5563; padding-bottom: 8px; margin-bottom: 16px; text-transform: uppercase; page-break-after: avoid; break-after: avoid; }
 
           /* Espaço padronizado entre critérios (não força quebra de página) */
-          .criterion-gap { height: 12px; }
-
           .criterion-section { margin-bottom: 32px; page-break-inside: avoid; break-inside: avoid; }
-          .criterion-section--spaced { margin-top: 0; } /* espaçamento agora via .criterion-gap */
+          .criterion-section--spaced { margin-top: 24px; }
 
           .criterion-header { page-break-after: avoid; break-after: avoid; }
           .criterion-header th { font-size: 15px; font-weight: 600; color: #374151; border-bottom: 1px solid #d1d5db; padding: 6px 10px; text-transform: uppercase; text-align: left; background: #ffffff; }
 
           .analysis-header { page-break-after: avoid; break-after: avoid; }
-          .analysis-header--spaced th { padding-top: 16px; }
 
           .analysis-header th { background: #e0ecff; color: #1f3a8a; padding: 6px 10px; font-weight: 600; border-radius: 6px 6px 0 0; text-align: left; }
+
+          .analysis-criterion-tag {
+            display: inline-block;
+            margin-left: 8px;
+            font-size: 11px;
+            font-weight: 600;
+            color: #4b5563;
+            text-transform: uppercase;
+          }
 
           .analysis-columns { page-break-after: avoid; break-after: avoid; }
 
@@ -681,36 +687,37 @@ function ReportHtml({ context }: { context: ReportRenderContext }) {
             {requirement.criteria.map((criterion, criterionIndex) => {
               const criterionHasParameters = criterion.analyses.some((analysis) => analysis.parameters.length > 0);
 
-              // Exibe gap padronizado entre critérios (apenas se houver parâmetros e não for o primeiro critério com parâmetros)
               const previousCriteriaWithParams = requirement.criteria
                 .slice(0, criterionIndex)
                 .some((c) => c.analyses.some((a) => a.parameters.length > 0));
-              const showGapBefore = criterionHasParameters && previousCriteriaWithParams;
-
-              const criterionClassName = `criterion-section`;
+              const criterionClassName = `criterion-section${criterionHasParameters && previousCriteriaWithParams ? ' criterion-section--spaced' : ''}`;
 
               const criterionTitle = `Critério: ${normalizeText(criterion.label)}`;
 
               return (
                 <React.Fragment key={criterion.id}>
-                  {showGapBefore && <div className="criterion-gap" />}
-
                   <div className={criterionClassName}>
                     {criterion.analyses.map((analysis, analysisIndex) => {
                       const columns = ['Parâmetro', 'UN', ...analysis.selectedLevels.map((level) => levelLabels[level] || level)];
-                      const headerClass = `analysis-header${analysisIndex > 0 ? ' analysis-header--spaced' : ''}`;
+                      const headerClass = 'analysis-header';
+                      const isFirstAnalysis = analysisIndex === 0;
 
                       return (
                         <table key={analysis.id} className="criterion-table">
                           <thead className="analysis-header-group">
-                            {/* IMPORTANTE: o título do critério está SEMPRE no thead de cada tabela,
-                               garantindo repetição a cada quebra de página, mesmo entre análises. */}
-                            <tr className="criterion-header">
-                              <th colSpan={columns.length}>{criterionTitle}</th>
-                            </tr>
+                            {isFirstAnalysis && (
+                              <tr className="criterion-header">
+                                <th colSpan={columns.length}>{criterionTitle}</th>
+                              </tr>
+                            )}
 
                             <tr className={headerClass}>
-                              <th colSpan={columns.length}>Análise: {normalizeText(analysis.label)}</th>
+                              <th colSpan={columns.length}>
+                                Análise: {normalizeText(analysis.label)}
+                                {!isFirstAnalysis && (
+                                  <span className="analysis-criterion-tag">{criterionTitle}</span>
+                                )}
+                              </th>
                             </tr>
 
                             <tr className="analysis-columns">
