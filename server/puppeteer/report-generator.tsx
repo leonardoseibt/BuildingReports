@@ -722,7 +722,7 @@ function ReportHtml({ context }: { context: ReportRenderContext }) {
 
           .analysis-block { margin-bottom: 24px; page-break-inside: auto; break-inside: auto; }
 
-          .analysis-block.gap-before { margin-top: 16px; }
+          .analysis-block.gap-before { padding-top: 16px; }
 
           table { width: 100%; border-collapse: collapse; margin-bottom: 24px; page-break-before: auto; page-break-after: auto; page-break-inside: auto; break-inside: auto; table-layout: auto; }
 
