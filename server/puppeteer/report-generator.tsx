@@ -586,7 +586,6 @@ function ReportHtml({ context }: { context: ReportRenderContext }) {
 
           .section-title { font-size: 18px; font-weight: 700; color: #1f2937; border-bottom: 2px solid #4b5563; padding-bottom: 8px; margin-bottom: 16px; text-transform: uppercase; page-break-after: avoid; break-after: avoid; }
 
-          /* Espaço padronizado entre critérios (não força quebra de página) */
           .criterion-section { margin-bottom: 32px; page-break-inside: avoid; break-inside: avoid; }
           .criterion-section--spaced { margin-top: 24px; }
 
@@ -605,7 +604,6 @@ function ReportHtml({ context }: { context: ReportRenderContext }) {
           .criterion-table { width: 100%; border-collapse: collapse; margin-bottom: 24px; page-break-inside: auto; break-inside: auto; table-layout: auto; }
           .criterion-table + .criterion-table { margin-top: 24px; }
 
-          /* Cabeçalhos se repetem a cada quebra de página */
           thead { display: table-header-group !important; page-break-after: avoid; break-after: avoid; page-break-inside: avoid; break-inside: avoid; }
           thead tr { background: #f3f4f6; }
 
@@ -703,8 +701,9 @@ function ReportHtml({ context }: { context: ReportRenderContext }) {
                         <table
                           key={analysis.id}
                           className="criterion-table"
-                          data-criterion-id={criterion.id}
-                          data-analysis-id={analysis.id}
+                          data-criterion-id={String(criterion.id)}
+                          data-analysis-id={String(analysis.id)}
+                          data-conjunto="3"
                         >
                           <thead className="analysis-header-group">
                             <tr className="criterion-header">
@@ -975,170 +974,389 @@ export async function generateReportPdf(reportId: number, userId: number): Promi
   try {
     page = await browser.newPage();
 
-    await page.evaluateOnNewDocument(() => {
-      const globalObj = globalThis as unknown as { __name?: (target: Function, value: string) => any };
-      if (!globalObj.__name) {
-        globalObj.__name = (target: Function, value: string) => {
-          Object.defineProperty(target, 'name', { value, configurable: true });
-          return target;
-        };
-      }
-    });
-
+    // Carrega HTML e aplica mídia de tela
     await page.setContent(html, { waitUntil: 'networkidle0' });
     await page.emulateMediaType('screen');
 
-    await page.evaluate(() => {
-      function __name(target: Function, value: string) {
-        Object.defineProperty(target, 'name', { value, configurable: true });
-        return target;
+    // 1) Polyfill super-defensivo para __name (caso algum bundle da página o use)
+await page.addScriptTag({
+  content: `
+    (function(){
+      try {
+        var g = (typeof globalThis!=='undefined'?globalThis:(typeof window!=='undefined'?window:(typeof self!=='undefined'?self:this)));
+        if (typeof g.__name !== 'function') {
+          g.__name = function(target, value){
+            try { Object.defineProperty(target, 'name', { value: value, configurable: true }); } catch(_) {}
+            return target;
+          };
+        }
+        if (typeof __name === 'undefined') {
+          // cria um binding global não-lexical no escopo global da página
+          try { eval('var __name = (function(){ return (typeof globalThis!=="undefined"?globalThis:window).__name; })();'); } catch(_) {}
+        }
+      } catch(_) {}
+    })();
+  `
+});
+
+// 2) Injeção do paginador (substitui o antigo page.evaluate(() => { ... }))
+await page.addScriptTag({
+  content: `
+    (function(){
+      var MM_TO_PX = 96 / 25.4;
+      var TOP_MARGIN_MM = 18;
+      var BOTTOM_MARGIN_MM = 15;
+      var PAGE_HEIGHT_PX = (297 - TOP_MARGIN_MM - BOTTOM_MARGIN_MM) * MM_TO_PX;
+      var topMarginPx = TOP_MARGIN_MM * MM_TO_PX;
+      var paddingTop = parseFloat(getComputedStyle(document.body).paddingTop || '0') || 0;
+      var layoutOffset = topMarginPx + paddingTop;
+
+      function toTop(el){ var r = el.getBoundingClientRect(); return Math.max(0, r.top + scrollY - layoutOffset); }
+      function pageOf(el){ return Math.floor(toTop(el) / PAGE_HEIGHT_PX); }
+      function heightOf(el){ return el.getBoundingClientRect().height; }
+      function breakBefore(el){
+        el.style.pageBreakBefore = 'always';
+        el.style.setProperty('break-before', 'page');
+      }
+      function rowOverflows(row){
+        var h = row.getBoundingClientRect().height;
+        if (h >= PAGE_HEIGHT_PX - 4) return false; // linha gigante: não dividir
+        var top = toTop(row), bottom = top + h, pageBottom = (pageOf(row)+1)*PAGE_HEIGHT_PX;
+        return bottom > pageBottom - 0.5;
       }
 
-      const globalObj = globalThis as unknown as { __name?: typeof __name };
-      if (!globalObj.__name) {
-        globalObj.__name = __name;
+      // --- Conjunto 3: thead + 1ª linha de parâmetro ---
+      function conjunto3MinHeight(table){
+        var thead = table.tHead, tbody = table.tBodies[0];
+        if (!thead || !tbody || !tbody.rows[0]) return 0;
+        return heightOf(thead) + heightOf(tbody.rows[0]);
       }
+      function conjunto3Fits(table){
+        var need = conjunto3MinHeight(table);
+        if (!need) return true;
+        var top = toTop(table), pageBottom = (Math.floor(top / PAGE_HEIGHT_PX)+1)*PAGE_HEIGHT_PX;
+        return top + need <= pageBottom - 0.5;
+      }
+      // --- Conjunto 2: (critério +) análise + cabeçalhos + 1ª linha ---
+      function conjunto2Fits(firstAnalysisTable){ return !firstAnalysisTable || conjunto3Fits(firstAnalysisTable); }
+      // --- Conjunto 1: título do requisito + primeiro conjunto 3 subsequente ---
+      function conjunto1Fits(reqTitle, firstTable){
+        if (!reqTitle || !firstTable) return true;
+        var needed = heightOf(reqTitle) + conjunto3MinHeight(firstTable);
+        var top = toTop(reqTitle), pageBottom = (Math.floor(top / PAGE_HEIGHT_PX)+1)*PAGE_HEIGHT_PX;
+        return top + needed <= pageBottom - 0.5;
+      }
+
+      function ensureTableStartsWithContent(){
+        var tables = Array.from(document.querySelectorAll('table.criterion-table'));
+        for (var i=0;i<tables.length;i++){
+          var table = tables[i], tbody = table.tBodies[0];
+          if (!tbody || !tbody.rows[0]) continue;
+          if (rowOverflows(tbody.rows[0]) || !conjunto3Fits(table)) breakBefore(table);
+        }
+      }
+
+      function splitTables(){
+        var safety = 0;
+        while (safety++ < 60){
+          var split = false;
+          var tables = Array.from(document.querySelectorAll('table.criterion-table'));
+          for (var t=0;t<tables.length;t++){
+            var table = tables[t], tbody = table.tBodies[0];
+            if (!tbody) continue;
+
+            if (!conjunto3Fits(table)) breakBefore(table);
+
+            var rows = Array.from(tbody.rows);
+            for (var i=0;i<rows.length;i++){
+              var row = rows[i];
+              if (!rowOverflows(row)) continue;
+
+              var newTable = table.cloneNode(false);
+              newTable.className = table.className;
+              if (table.dataset.criterionId) newTable.dataset.criterionId = table.dataset.criterionId;
+              if (table.dataset.analysisId) newTable.dataset.analysisId = table.dataset.analysisId;
+              breakBefore(newTable);
+              if (table.tHead) newTable.appendChild(table.tHead.cloneNode(true));
+
+              var newBody = document.createElement('tbody');
+              newTable.appendChild(newBody);
+              Array.from(tbody.rows).slice(i).forEach(function(r){ newBody.appendChild(r); });
+              table.parentNode && table.parentNode.insertBefore(newTable, table.nextSibling);
+              split = true; break;
+            }
+            if (split) break;
+          }
+          if (!split) break;
+        }
+      }
+
+      function ensureConjunto2ForCriteria(){
+        var critSections = Array.from(document.querySelectorAll('[data-requirement-id] .criterion-section'));
+        for (var i=0;i<critSections.length;i++){
+          var firstTable = critSections[i].querySelector('table.criterion-table');
+          if (firstTable && !conjunto2Fits(firstTable)) breakBefore(firstTable);
+        }
+      }
+
+      function keepRequirementTitleWithContent(){
+        var reqs = Array.from(document.querySelectorAll('[data-requirement-id]'));
+        for (var i=0;i<reqs.length;i++){
+          var sec = reqs[i];
+          var title = sec.querySelector('[data-role="requirement-title"]');
+          var firstTable = sec.querySelector('table.criterion-table');
+          if (!title || !firstTable) continue;
+          var headRow = (firstTable.tHead && firstTable.tHead.rows[firstTable.tHead.rows.length-1]) || firstTable.tHead;
+          if (!conjunto1Fits(title, firstTable) || (headRow && pageOf(headRow) > pageOf(title))) {
+            breakBefore(title);
+          }
+        }
+      }
+
+      function ensureHeaderWithFirstRow(){
+        var tables = Array.from(document.querySelectorAll('table.criterion-table'));
+        for (var i=0;i<tables.length;i++){
+          var table = tables[i], thead = table.tHead, tbody = table.tBodies[0];
+          if (!thead || !tbody || !tbody.rows[0]) continue;
+          var lastHeadRow = thead.rows[thead.rows.length - 1] || thead;
+          var firstRow = tbody.rows[0];
+          if (pageOf(lastHeadRow) !== pageOf(firstRow)) breakBefore(table);
+        }
+      }
+
+      function hideDuplicateCriterionHeaders(){
+        var tables = Array.from(document.querySelectorAll('table.criterion-table'));
+        var seen = new Map(); // critId -> Set(pages)
+        for (var i=0;i<tables.length;i++){
+          var table = tables[i];
+          var critId = table.dataset.criterionId || '';
+          var headerRow = table.querySelector('tr.criterion-header');
+          if (!critId || !headerRow) continue;
+          var thead = table.tHead;
+          var ref = (thead && thead.rows[0]) ? thead.rows[0] : headerRow;
+          var p = pageOf(ref);
+          if (!seen.has(critId)) seen.set(critId, new Set());
+          var pages = seen.get(critId);
+          if (pages.has(p)) {
+            headerRow.classList.add('criterion-header--hidden');
+          } else {
+            headerRow.classList.remove('criterion-header--hidden');
+            pages.add(p);
+          }
+        }
+      }
+
+      // ORDEM DE PASSES:
+      ensureConjunto2ForCriteria();
+      ensureTableStartsWithContent();
+      splitTables();
+
+      keepRequirementTitleWithContent();
+      ensureHeaderWithFirstRow();
+
+      ensureTableStartsWithContent();
+      splitTables();
+
+      ensureHeaderWithFirstRow();
+      hideDuplicateCriterionHeaders();
+    })();
+  `
+});
+
+    // ---------- Algoritmo de paginação (conjuntos 1/2/3) + passes extras ----------
+    await page.evaluate(() => {
       const MM_TO_PX = 96 / 25.4;
       const TOP_MARGIN_MM = 18;
       const BOTTOM_MARGIN_MM = 15;
-      const PAGE_HEIGHT_MM = 297 - TOP_MARGIN_MM - BOTTOM_MARGIN_MM;
-      const PAGE_HEIGHT_PX = PAGE_HEIGHT_MM * MM_TO_PX;
+      const PAGE_HEIGHT_PX = (297 - TOP_MARGIN_MM - BOTTOM_MARGIN_MM) * MM_TO_PX;
       const topMarginPx = TOP_MARGIN_MM * MM_TO_PX;
-      const bodyStyle = window.getComputedStyle(document.body);
-      const paddingTop = parseFloat(bodyStyle.paddingTop || '0') || 0;
+      const paddingTop = parseFloat(getComputedStyle(document.body).paddingTop || '0') || 0;
       const layoutOffset = topMarginPx + paddingTop;
 
-      function toRelativeTop(element: Element) {
-        const rect = element.getBoundingClientRect();
-        return rect.top + window.scrollY - layoutOffset;
-      }
+      const toTop = (el: Element) => Math.max(0, el.getBoundingClientRect().top + scrollY - layoutOffset);
+      const pageOf = (el: Element) => Math.floor(toTop(el) / PAGE_HEIGHT_PX);
+      const breakBefore = (el: HTMLElement) => {
+        el.style.pageBreakBefore = 'always';
+        el.style.setProperty('break-before', 'page');
+      };
+      const heightOf = (el: Element) => el.getBoundingClientRect().height;
 
-      function getPageIndex(element: Element) {
-        let top = toRelativeTop(element);
-        if (top < 0) top = 0;
-        return Math.floor(top / PAGE_HEIGHT_PX);
-      }
-
-      function applyPageBreakBefore(element: HTMLElement) {
-        element.style.pageBreakBefore = 'always';
-        element.style.setProperty('break-before', 'page');
-      }
-
-      function rowOverflows(row: HTMLTableRowElement) {
-        const rect = row.getBoundingClientRect();
-        const rowHeight = rect.height;
-        if (rowHeight >= PAGE_HEIGHT_PX - 4) {
-          return false;
-        }
-        let top = rect.top + window.scrollY - layoutOffset;
-        if (top < 0) top = 0;
-        const bottom = top + rowHeight;
-        const pageIndex = Math.floor(top / PAGE_HEIGHT_PX);
-        const pageBottom = (pageIndex + 1) * PAGE_HEIGHT_PX;
+      const rowOverflows = (row: HTMLTableRowElement) => {
+        const h = row.getBoundingClientRect().height;
+        if (h >= PAGE_HEIGHT_PX - 4) return false; // linha gigante: não dividir
+        const top = toTop(row);
+        const bottom = top + h;
+        const pageBottom = (pageOf(row) + 1) * PAGE_HEIGHT_PX;
         return bottom > pageBottom - 0.5;
-      }
+      };
+
+      // --- Conjunto 3: thead + 1ª linha de parâmetro ---
+      const conjunto3MinHeight = (table: HTMLTableElement) => {
+        const thead = table.tHead;
+        const tbody = table.tBodies[0];
+        if (!thead || !tbody || !tbody.rows[0]) return 0;
+        return heightOf(thead) + heightOf(tbody.rows[0]);
+      };
+      const conjunto3Fits = (table: HTMLTableElement) => {
+        const need = conjunto3MinHeight(table);
+        if (!need) return true;
+        const top = toTop(table);
+        const pageBottom = (Math.floor(top / PAGE_HEIGHT_PX) + 1) * PAGE_HEIGHT_PX;
+        return top + need <= pageBottom - 0.5;
+      };
+
+      // --- Conjunto 2: (critério +) análise + cabeçalhos + 1ª linha ---
+      const conjunto2Fits = (firstAnalysisTable: HTMLTableElement | null) => {
+        if (!firstAnalysisTable) return true;
+        return conjunto3Fits(firstAnalysisTable);
+      };
+
+      // --- Conjunto 1: título do requisito + primeiro conjunto 3 subsequente ---
+      const conjunto1Fits = (reqTitle: HTMLElement | null, firstTable: HTMLTableElement | null) => {
+        if (!reqTitle || !firstTable) return true;
+        const needed = heightOf(reqTitle) + conjunto3MinHeight(firstTable);
+        const top = toTop(reqTitle);
+        const pageBottom = (Math.floor(top / PAGE_HEIGHT_PX) + 1) * PAGE_HEIGHT_PX;
+        return top + needed <= pageBottom - 0.5;
+      };
 
       function ensureTableStartsWithContent() {
         const tables = Array.from(document.querySelectorAll('table.criterion-table')) as HTMLTableElement[];
         for (const table of tables) {
           const tbody = table.tBodies[0];
           if (!tbody) continue;
-          const firstRow = tbody.rows[0];
-          if (!firstRow) continue;
-          if (rowOverflows(firstRow)) {
-            applyPageBreakBefore(table);
+          if (!tbody.rows[0]) continue;
+          if (rowOverflows(tbody.rows[0]) || !conjunto3Fits(table)) {
+            breakBefore(table);
           }
         }
       }
 
       function splitTables() {
         let safety = 0;
-        while (safety < 40) {
-          safety += 1;
-          let splitOccurred = false;
+        while (safety++ < 60) {
+          let split = false;
           const tables = Array.from(document.querySelectorAll('table.criterion-table')) as HTMLTableElement[];
           for (const table of tables) {
             const tbody = table.tBodies[0];
             if (!tbody) continue;
+
+            // se Conjunto 3 não cabe no começo desta tabela, mova-a para próxima página
+            if (!conjunto3Fits(table)) breakBefore(table);
+
             const rows = Array.from(tbody.rows) as HTMLTableRowElement[];
-            for (let index = 0; index < rows.length; index += 1) {
-              const row = rows[index];
-              if (!rowOverflows(row)) {
-                continue;
-              }
+            for (let i = 0; i < rows.length; i++) {
+              const row = rows[i];
+              if (!rowOverflows(row)) continue;
 
-              const rowHeight = row.getBoundingClientRect().height;
-              if (rowHeight >= PAGE_HEIGHT_PX - 4) {
-                continue;
-              }
-
+              // cria nova tabela para as linhas remanescentes
               const newTable = table.cloneNode(false) as HTMLTableElement;
               newTable.className = table.className;
               if (table.dataset.criterionId) newTable.dataset.criterionId = table.dataset.criterionId;
               if (table.dataset.analysisId) newTable.dataset.analysisId = table.dataset.analysisId;
-              applyPageBreakBefore(newTable);
-
-              if (table.tHead) {
-                newTable.appendChild(table.tHead.cloneNode(true));
-              }
+              breakBefore(newTable);
+              if (table.tHead) newTable.appendChild(table.tHead.cloneNode(true));
 
               const newBody = document.createElement('tbody');
               newTable.appendChild(newBody);
 
-              const rowsToMove = Array.from(tbody.rows).slice(index);
-              rowsToMove.forEach((moveRow) => {
-                newBody.appendChild(moveRow);
-              });
-
+              Array.from(tbody.rows).slice(i).forEach(r => newBody.appendChild(r));
               table.parentNode?.insertBefore(newTable, table.nextSibling);
-              splitOccurred = true;
+              split = true;
               break;
             }
-            if (splitOccurred) break;
+            if (split) break;
           }
-          if (!splitOccurred) break;
+          if (!split) break;
         }
       }
 
+      // Conjunto 2 no início de cada critério
+      function ensureConjunto2ForCriteria() {
+        const critSections = Array.from(document.querySelectorAll('[data-requirement-id] .criterion-section')) as HTMLElement[];
+        for (const crit of critSections) {
+          const firstTable = crit.querySelector('table.criterion-table') as HTMLTableElement | null;
+          if (firstTable && !conjunto2Fits(firstTable)) breakBefore(firstTable);
+        }
+      }
+
+      // Conjunto 1 reforçado: título do requisito “colado” no primeiro bloco
       function keepRequirementTitleWithContent() {
-        const sections = Array.from(document.querySelectorAll('[data-requirement-id]')) as HTMLElement[];
-        for (const section of sections) {
-          const title = section.querySelector('[data-role="requirement-title"]') as HTMLElement | null;
-          if (!title) continue;
-          const firstTable = section.querySelector('table.criterion-table') as HTMLElement | null;
-          if (!firstTable) continue;
-          if (getPageIndex(firstTable) > getPageIndex(title)) {
-            applyPageBreakBefore(title);
+        const reqs = Array.from(document.querySelectorAll('[data-requirement-id]')) as HTMLElement[];
+        for (const sec of reqs) {
+          const title = sec.querySelector('[data-role="requirement-title"]') as HTMLElement | null;
+          const firstTable = sec.querySelector('table.criterion-table') as HTMLTableElement | null;
+          if (!title || !firstTable) continue;
+
+          // usa a última linha do THEAD (colunas) como referência do bloco
+          const headRow = firstTable.tHead?.rows[firstTable.tHead.rows.length - 1] || firstTable.tHead;
+          if (!conjunto1Fits(title, firstTable) || (headRow && pageOf(headRow) > pageOf(title))) {
+            breakBefore(title);
           }
         }
       }
 
+      // Passo extra: garante THEAD + 1ª linha na mesma página (evita cabeçalho "órfão")
+      function ensureHeaderWithFirstRow() {
+        const tables = Array.from(document.querySelectorAll('table.criterion-table')) as HTMLTableElement[];
+        for (const table of tables) {
+          const thead = table.tHead;
+          const tbody = table.tBodies[0];
+          if (!thead || !tbody || !tbody.rows[0]) continue;
+          const lastHeadRow = thead.rows[thead.rows.length - 1] || thead;
+          const firstRow = tbody.rows[0];
+          if (pageOf(lastHeadRow) !== pageOf(firstRow)) {
+            breakBefore(table);
+          }
+        }
+      }
+
+      // Esconde cabeçalho de critério duplicado na MESMA página
       function hideDuplicateCriterionHeaders() {
         const tables = Array.from(document.querySelectorAll('table.criterion-table')) as HTMLTableElement[];
-        const lastPageByCriterion = new Map<string, number>();
+        const seen = new Map<string, Set<number>>(); // critId -> páginas
         for (const table of tables) {
-          const criterionId = table.dataset.criterionId;
+          const critId = table.dataset.criterionId || '';
           const headerRow = table.querySelector('tr.criterion-header') as HTMLTableRowElement | null;
-          if (!criterionId || !headerRow) continue;
-          headerRow.classList.remove('criterion-header--hidden');
-          const pageIndex = getPageIndex(table);
-          const lastPage = lastPageByCriterion.get(criterionId);
-          if (lastPage !== undefined && lastPage === pageIndex) {
+          if (!critId || !headerRow) continue;
+
+          // calcula pela 1ª linha do THEAD, não pelo <table>
+          const thead = table.tHead;
+          const ref = thead?.rows[0] || headerRow;
+          const p = pageOf(ref);
+
+          if (!seen.has(critId)) seen.set(critId, new Set());
+          const pages = seen.get(critId)!;
+
+          if (pages.has(p)) {
             headerRow.classList.add('criterion-header--hidden');
           } else {
             headerRow.classList.remove('criterion-header--hidden');
-            lastPageByCriterion.set(criterionId, pageIndex);
+            pages.add(p);
           }
         }
       }
 
+      // ORDEM DE PASSES (estabiliza layout):
+      // 1) Conjunto 2 + Conjunto 3 iniciais
+      ensureConjunto2ForCriteria();
       ensureTableStartsWithContent();
       splitTables();
-      ensureTableStartsWithContent();
-      splitTables();
+
+      // 2) Conjunto 1 reforçado
       keepRequirementTitleWithContent();
+
+      // 3) Garante THEAD + 1ª linha juntos
+      ensureHeaderWithFirstRow();
+
+      // 4) Após movimentações, revalidar início das tabelas e possíveis divisões
       ensureTableStartsWithContent();
       splitTables();
+
+      // 5) Garante novamente THEAD + 1ª linha (caso 4 tenha deslocado)
+      ensureHeaderWithFirstRow();
+
+      // 6) Limpeza visual: ocultar cabeçalhos duplicados de critério na mesma página
       hideDuplicateCriterionHeaders();
     });
 
@@ -1162,11 +1380,7 @@ export async function generateReportPdf(reportId: number, userId: number): Promi
     return { filename, pdf: buffer };
   } finally {
     if (page) {
-      try {
-        await page.close();
-      } catch (closeError) {
-        console.warn('Failed to close Puppeteer page:', closeError);
-      }
+      try { await page.close(); } catch { /* ignore */ }
     }
     await browser.close();
   }
