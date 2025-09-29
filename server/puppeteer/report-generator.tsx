@@ -594,13 +594,6 @@ function ReportHtml({ context }: { context: ReportRenderContext }) {
           .criterion-header th { font-size: 15px; font-weight: 600; color: #374151; border-bottom: 1px solid #d1d5db; padding: 6px 10px; text-transform: uppercase; text-align: left; background: #ffffff; }
 
           .criterion-header--hidden { display: none !important; }
-          .criterion-header--placeholder {
-            visibility: hidden;
-            border: none;
-            padding: 0;
-            height: 0;
-            margin: 0;
-          }
 
           .analysis-header { page-break-after: avoid; break-after: avoid; }
           .analysis-header--spaced th { padding-top: 16px; }
@@ -682,8 +675,12 @@ function ReportHtml({ context }: { context: ReportRenderContext }) {
         <div style={{ pageBreakBefore: 'always' }}></div>
 
         {sections.map((requirement) => (
-          <div key={requirement.id} className="section">
-            <h2 className="section-title">Requisito: {normalizeText(requirement.label)}</h2>
+          <div
+            key={requirement.id}
+            className="section"
+            data-requirement-id={String(requirement.id)}
+          >
+            <h2 className="section-title" data-role="requirement-title">Requisito: {normalizeText(requirement.label)}</h2>
 
             {requirement.criteria.map((criterion, criterionIndex) => {
               const criterionHasParameters = criterion.analyses.some((analysis) => analysis.parameters.length > 0);
@@ -985,55 +982,144 @@ export async function generateReportPdf(reportId: number, userId: number): Promi
       const TOP_MARGIN_MM = 18;
       const BOTTOM_MARGIN_MM = 15;
       const PAGE_HEIGHT_MM = 297 - TOP_MARGIN_MM - BOTTOM_MARGIN_MM;
-      const pageContentHeightPx = PAGE_HEIGHT_MM * MM_TO_PX;
+      const PAGE_HEIGHT_PX = PAGE_HEIGHT_MM * MM_TO_PX;
       const topMarginPx = TOP_MARGIN_MM * MM_TO_PX;
-      const bodyComputed = window.getComputedStyle(document.body);
-      const bodyPaddingTop = parseFloat(bodyComputed.paddingTop || '0') || 0;
-      const layoutOffset = topMarginPx + bodyPaddingTop;
+      const bodyStyle = window.getComputedStyle(document.body);
+      const paddingTop = parseFloat(bodyStyle.paddingTop || '0') || 0;
+      const layoutOffset = topMarginPx + paddingTop;
 
-      const tables = Array.from(document.querySelectorAll('table.criterion-table')) as HTMLTableElement[];
-      const firstPageByCriterionAnalysis = new Map<string, number>();
+      const toRelativeTop = (element: Element) => {
+        const rect = element.getBoundingClientRect();
+        return rect.top + window.scrollY - layoutOffset;
+      };
 
-      for (const table of tables) {
-        const criterionId = table.dataset.criterionId;
-        const analysisId = table.dataset.analysisId;
-        if (!criterionId) continue;
-        const headerRow = table.querySelector<HTMLTableRowElement>('tr.criterion-header');
-        if (!headerRow) continue;
+      const getPageIndex = (element: Element) => {
+        let top = toRelativeTop(element);
+        if (top < 0) top = 0;
+        return Math.floor(top / PAGE_HEIGHT_PX);
+      };
 
-        headerRow.classList.remove('criterion-header--hidden', 'criterion-header--placeholder');
+      const applyPageBreakBefore = (element: HTMLElement) => {
+        element.style.pageBreakBefore = 'always';
+        element.style.setProperty('break-before', 'page');
+      };
 
-        const rect = table.getBoundingClientRect();
-        const absoluteTop = rect.top + window.scrollY;
-        const relativeTop = absoluteTop - layoutOffset;
-        const pageIndex = relativeTop <= 0
-          ? 0
-          : Math.floor(relativeTop / pageContentHeightPx + 1e-3);
+      const rowOverflows = (row: HTMLTableRowElement) => {
+        const rect = row.getBoundingClientRect();
+        const rowHeight = rect.height;
+        if (rowHeight >= PAGE_HEIGHT_PX - 4) {
+          return false;
+        }
+        let top = rect.top + window.scrollY - layoutOffset;
+        if (top < 0) top = 0;
+        const bottom = top + rowHeight;
+        const pageIndex = Math.floor(top / PAGE_HEIGHT_PX);
+        const pageBottom = (pageIndex + 1) * PAGE_HEIGHT_PX;
+        return bottom > pageBottom - 0.5;
+      };
 
-        const previousSibling = table.previousElementSibling as HTMLElement | null;
-        const previousIsSameCriterion = previousSibling?.matches?.(`table.criterion-table[data-criterion-id="${criterionId}"]`);
-
-        const key = `${criterionId}::${analysisId ?? ''}`;
-        const firstPage = firstPageByCriterionAnalysis.get(key);
-
-        if (firstPage === undefined) {
-          firstPageByCriterionAnalysis.set(key, pageIndex);
-          if (previousIsSameCriterion) {
-            headerRow.classList.add('criterion-header--hidden');
-          } else {
-            headerRow.classList.remove('criterion-header--hidden', 'criterion-header--placeholder');
-          }
-        } else {
-          const isSamePageAsFirst = firstPage === pageIndex;
-
-          if (isSamePageAsFirst && previousIsSameCriterion) {
-            headerRow.classList.add('criterion-header--hidden', 'criterion-header--placeholder');
-          } else {
-            headerRow.classList.remove('criterion-header--hidden');
-            headerRow.classList.toggle('criterion-header--placeholder', !previousIsSameCriterion);
+      const ensureTableStartsWithContent = () => {
+        const tables = Array.from(document.querySelectorAll('table.criterion-table')) as HTMLTableElement[];
+        for (const table of tables) {
+          const tbody = table.tBodies[0];
+          if (!tbody) continue;
+          const firstRow = tbody.rows[0];
+          if (!firstRow) continue;
+          if (rowOverflows(firstRow)) {
+            applyPageBreakBefore(table);
           }
         }
-      }
+      };
+
+      const splitTables = () => {
+        let safety = 0;
+        while (safety < 40) {
+          safety += 1;
+          let splitOccurred = false;
+          const tables = Array.from(document.querySelectorAll('table.criterion-table')) as HTMLTableElement[];
+          for (const table of tables) {
+            const tbody = table.tBodies[0];
+            if (!tbody) continue;
+            const rows = Array.from(tbody.rows) as HTMLTableRowElement[];
+            for (let index = 0; index < rows.length; index += 1) {
+              const row = rows[index];
+              if (!rowOverflows(row)) {
+                continue;
+              }
+
+              const rowHeight = row.getBoundingClientRect().height;
+              if (rowHeight >= PAGE_HEIGHT_PX - 4) {
+                continue;
+              }
+
+              const newTable = table.cloneNode(false) as HTMLTableElement;
+              newTable.className = table.className;
+              if (table.dataset.criterionId) newTable.dataset.criterionId = table.dataset.criterionId;
+              if (table.dataset.analysisId) newTable.dataset.analysisId = table.dataset.analysisId;
+              applyPageBreakBefore(newTable);
+
+              if (table.tHead) {
+                newTable.appendChild(table.tHead.cloneNode(true));
+              }
+
+              const newBody = document.createElement('tbody');
+              newTable.appendChild(newBody);
+
+              const rowsToMove = Array.from(tbody.rows).slice(index);
+              rowsToMove.forEach((moveRow) => {
+                newBody.appendChild(moveRow);
+              });
+
+              table.parentNode?.insertBefore(newTable, table.nextSibling);
+              splitOccurred = true;
+              break;
+            }
+            if (splitOccurred) break;
+          }
+          if (!splitOccurred) break;
+        }
+      };
+
+      const keepRequirementTitleWithContent = () => {
+        const sections = Array.from(document.querySelectorAll('[data-requirement-id]')) as HTMLElement[];
+        for (const section of sections) {
+          const title = section.querySelector('[data-role="requirement-title"]') as HTMLElement | null;
+          if (!title) continue;
+          const firstTable = section.querySelector('table.criterion-table') as HTMLElement | null;
+          if (!firstTable) continue;
+          if (getPageIndex(firstTable) > getPageIndex(title)) {
+            applyPageBreakBefore(title);
+          }
+        }
+      };
+
+      const hideDuplicateCriterionHeaders = () => {
+        const tables = Array.from(document.querySelectorAll('table.criterion-table')) as HTMLTableElement[];
+        const lastPageByCriterion = new Map<string, number>();
+        for (const table of tables) {
+          const criterionId = table.dataset.criterionId;
+          const headerRow = table.querySelector('tr.criterion-header') as HTMLTableRowElement | null;
+          if (!criterionId || !headerRow) continue;
+          headerRow.classList.remove('criterion-header--hidden');
+          const pageIndex = getPageIndex(table);
+          const lastPage = lastPageByCriterion.get(criterionId);
+          if (lastPage !== undefined && lastPage === pageIndex) {
+            headerRow.classList.add('criterion-header--hidden');
+          } else {
+            headerRow.classList.remove('criterion-header--hidden');
+            lastPageByCriterion.set(criterionId, pageIndex);
+          }
+        }
+      };
+
+      ensureTableStartsWithContent();
+      splitTables();
+      ensureTableStartsWithContent();
+      splitTables();
+      keepRequirementTitleWithContent();
+      ensureTableStartsWithContent();
+      splitTables();
+      hideDuplicateCriterionHeaders();
     });
 
     const footerTemplate = `
