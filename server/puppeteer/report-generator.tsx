@@ -593,18 +593,19 @@ function ReportHtml({ context }: { context: ReportRenderContext }) {
           .criterion-header { page-break-after: avoid; break-after: avoid; }
           .criterion-header th { font-size: 15px; font-weight: 600; color: #374151; border-bottom: 1px solid #d1d5db; padding: 6px 10px; text-transform: uppercase; text-align: left; background: #ffffff; }
 
+          .criterion-header--hidden { display: none !important; }
+          .criterion-header--placeholder {
+            visibility: hidden;
+            border: none;
+            padding: 0;
+            height: 0;
+            margin: 0;
+          }
+
           .analysis-header { page-break-after: avoid; break-after: avoid; }
+          .analysis-header--spaced th { padding-top: 16px; }
 
           .analysis-header th { background: #e0ecff; color: #1f3a8a; padding: 6px 10px; font-weight: 600; border-radius: 6px 6px 0 0; text-align: left; }
-
-          .analysis-criterion-tag {
-            display: inline-block;
-            margin-left: 8px;
-            font-size: 11px;
-            font-weight: 600;
-            color: #4b5563;
-            text-transform: uppercase;
-          }
 
           .analysis-columns { page-break-after: avoid; break-after: avoid; }
 
@@ -699,25 +700,22 @@ function ReportHtml({ context }: { context: ReportRenderContext }) {
                   <div className={criterionClassName}>
                     {criterion.analyses.map((analysis, analysisIndex) => {
                       const columns = ['Parâmetro', 'UN', ...analysis.selectedLevels.map((level) => levelLabels[level] || level)];
-                      const headerClass = 'analysis-header';
-                      const isFirstAnalysis = analysisIndex === 0;
+                      const headerClass = `analysis-header${analysisIndex > 0 ? ' analysis-header--spaced' : ''}`;
 
                       return (
-                        <table key={analysis.id} className="criterion-table">
+                        <table
+                          key={analysis.id}
+                          className="criterion-table"
+                          data-criterion-id={criterion.id}
+                          data-analysis-id={analysis.id}
+                        >
                           <thead className="analysis-header-group">
-                            {isFirstAnalysis && (
-                              <tr className="criterion-header">
-                                <th colSpan={columns.length}>{criterionTitle}</th>
-                              </tr>
-                            )}
+                            <tr className="criterion-header">
+                              <th colSpan={columns.length}>{criterionTitle}</th>
+                            </tr>
 
                             <tr className={headerClass}>
-                              <th colSpan={columns.length}>
-                                Análise: {normalizeText(analysis.label)}
-                                {!isFirstAnalysis && (
-                                  <span className="analysis-criterion-tag">{criterionTitle}</span>
-                                )}
-                              </th>
+                              <th colSpan={columns.length}>Análise: {normalizeText(analysis.label)}</th>
                             </tr>
 
                             <tr className="analysis-columns">
@@ -981,6 +979,62 @@ export async function generateReportPdf(reportId: number, userId: number): Promi
     page = await browser.newPage();
     await page.setContent(html, { waitUntil: 'networkidle0' });
     await page.emulateMediaType('screen');
+
+    await page.evaluate(() => {
+      const MM_TO_PX = 96 / 25.4;
+      const TOP_MARGIN_MM = 18;
+      const BOTTOM_MARGIN_MM = 15;
+      const PAGE_HEIGHT_MM = 297 - TOP_MARGIN_MM - BOTTOM_MARGIN_MM;
+      const pageContentHeightPx = PAGE_HEIGHT_MM * MM_TO_PX;
+      const topMarginPx = TOP_MARGIN_MM * MM_TO_PX;
+      const bodyComputed = window.getComputedStyle(document.body);
+      const bodyPaddingTop = parseFloat(bodyComputed.paddingTop || '0') || 0;
+      const layoutOffset = topMarginPx + bodyPaddingTop;
+
+      const tables = Array.from(document.querySelectorAll('table.criterion-table')) as HTMLTableElement[];
+      const firstPageByCriterionAnalysis = new Map<string, number>();
+
+      for (const table of tables) {
+        const criterionId = table.dataset.criterionId;
+        const analysisId = table.dataset.analysisId;
+        if (!criterionId) continue;
+        const headerRow = table.querySelector<HTMLTableRowElement>('tr.criterion-header');
+        if (!headerRow) continue;
+
+        headerRow.classList.remove('criterion-header--hidden', 'criterion-header--placeholder');
+
+        const rect = table.getBoundingClientRect();
+        const absoluteTop = rect.top + window.scrollY;
+        const relativeTop = absoluteTop - layoutOffset;
+        const pageIndex = relativeTop <= 0
+          ? 0
+          : Math.floor(relativeTop / pageContentHeightPx + 1e-3);
+
+        const previousSibling = table.previousElementSibling as HTMLElement | null;
+        const previousIsSameCriterion = previousSibling?.matches?.(`table.criterion-table[data-criterion-id="${criterionId}"]`);
+
+        const key = `${criterionId}::${analysisId ?? ''}`;
+        const firstPage = firstPageByCriterionAnalysis.get(key);
+
+        if (firstPage === undefined) {
+          firstPageByCriterionAnalysis.set(key, pageIndex);
+          if (previousIsSameCriterion) {
+            headerRow.classList.add('criterion-header--hidden');
+          } else {
+            headerRow.classList.remove('criterion-header--hidden', 'criterion-header--placeholder');
+          }
+        } else {
+          const isSamePageAsFirst = firstPage === pageIndex;
+
+          if (isSamePageAsFirst && previousIsSameCriterion) {
+            headerRow.classList.add('criterion-header--hidden', 'criterion-header--placeholder');
+          } else {
+            headerRow.classList.remove('criterion-header--hidden');
+            headerRow.classList.toggle('criterion-header--placeholder', !previousIsSameCriterion);
+          }
+        }
+      }
+    });
 
     const footerTemplate = `
       <div style="font-size:10px;width:100%;text-align:right;color:#6b7280;padding-right:20mm;">
