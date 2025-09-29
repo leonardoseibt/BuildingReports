@@ -974,10 +974,30 @@ export async function generateReportPdf(reportId: number, userId: number): Promi
 
   try {
     page = await browser.newPage();
+
+    await page.evaluateOnNewDocument(() => {
+      const globalObj = globalThis as unknown as { __name?: (target: Function, value: string) => any };
+      if (!globalObj.__name) {
+        globalObj.__name = (target: Function, value: string) => {
+          Object.defineProperty(target, 'name', { value, configurable: true });
+          return target;
+        };
+      }
+    });
+
     await page.setContent(html, { waitUntil: 'networkidle0' });
     await page.emulateMediaType('screen');
 
     await page.evaluate(() => {
+      function __name(target: Function, value: string) {
+        Object.defineProperty(target, 'name', { value, configurable: true });
+        return target;
+      }
+
+      const globalObj = globalThis as unknown as { __name?: typeof __name };
+      if (!globalObj.__name) {
+        globalObj.__name = __name;
+      }
       const MM_TO_PX = 96 / 25.4;
       const TOP_MARGIN_MM = 18;
       const BOTTOM_MARGIN_MM = 15;
@@ -988,23 +1008,23 @@ export async function generateReportPdf(reportId: number, userId: number): Promi
       const paddingTop = parseFloat(bodyStyle.paddingTop || '0') || 0;
       const layoutOffset = topMarginPx + paddingTop;
 
-      const toRelativeTop = (element: Element) => {
+      function toRelativeTop(element: Element) {
         const rect = element.getBoundingClientRect();
         return rect.top + window.scrollY - layoutOffset;
-      };
+      }
 
-      const getPageIndex = (element: Element) => {
+      function getPageIndex(element: Element) {
         let top = toRelativeTop(element);
         if (top < 0) top = 0;
         return Math.floor(top / PAGE_HEIGHT_PX);
-      };
+      }
 
-      const applyPageBreakBefore = (element: HTMLElement) => {
+      function applyPageBreakBefore(element: HTMLElement) {
         element.style.pageBreakBefore = 'always';
         element.style.setProperty('break-before', 'page');
-      };
+      }
 
-      const rowOverflows = (row: HTMLTableRowElement) => {
+      function rowOverflows(row: HTMLTableRowElement) {
         const rect = row.getBoundingClientRect();
         const rowHeight = rect.height;
         if (rowHeight >= PAGE_HEIGHT_PX - 4) {
@@ -1016,9 +1036,9 @@ export async function generateReportPdf(reportId: number, userId: number): Promi
         const pageIndex = Math.floor(top / PAGE_HEIGHT_PX);
         const pageBottom = (pageIndex + 1) * PAGE_HEIGHT_PX;
         return bottom > pageBottom - 0.5;
-      };
+      }
 
-      const ensureTableStartsWithContent = () => {
+      function ensureTableStartsWithContent() {
         const tables = Array.from(document.querySelectorAll('table.criterion-table')) as HTMLTableElement[];
         for (const table of tables) {
           const tbody = table.tBodies[0];
@@ -1029,9 +1049,9 @@ export async function generateReportPdf(reportId: number, userId: number): Promi
             applyPageBreakBefore(table);
           }
         }
-      };
+      }
 
-      const splitTables = () => {
+      function splitTables() {
         let safety = 0;
         while (safety < 40) {
           safety += 1;
@@ -1078,9 +1098,9 @@ export async function generateReportPdf(reportId: number, userId: number): Promi
           }
           if (!splitOccurred) break;
         }
-      };
+      }
 
-      const keepRequirementTitleWithContent = () => {
+      function keepRequirementTitleWithContent() {
         const sections = Array.from(document.querySelectorAll('[data-requirement-id]')) as HTMLElement[];
         for (const section of sections) {
           const title = section.querySelector('[data-role="requirement-title"]') as HTMLElement | null;
@@ -1091,9 +1111,9 @@ export async function generateReportPdf(reportId: number, userId: number): Promi
             applyPageBreakBefore(title);
           }
         }
-      };
+      }
 
-      const hideDuplicateCriterionHeaders = () => {
+      function hideDuplicateCriterionHeaders() {
         const tables = Array.from(document.querySelectorAll('table.criterion-table')) as HTMLTableElement[];
         const lastPageByCriterion = new Map<string, number>();
         for (const table of tables) {
@@ -1110,7 +1130,7 @@ export async function generateReportPdf(reportId: number, userId: number): Promi
             lastPageByCriterion.set(criterionId, pageIndex);
           }
         }
-      };
+      }
 
       ensureTableStartsWithContent();
       splitTables();
