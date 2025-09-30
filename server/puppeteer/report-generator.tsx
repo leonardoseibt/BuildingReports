@@ -985,17 +985,22 @@ export async function generateReportPdf(reportId: number, userId: number): Promi
           const MM_TO_PX = 96 / 25.4;
           const CONFIG = { topMarginMm: 18, bottomMarginMm: 15, safetyGap: 10 };
           const PAGE_HEIGHT_PX = (297 - CONFIG.topMarginMm - CONFIG.bottomMarginMm) * MM_TO_PX;
+          const MAX_PAGE_CONTENT_HEIGHT = PAGE_HEIGHT_PX - CONFIG.safetyGap;
           const topMarginPx = CONFIG.topMarginMm * MM_TO_PX;
           const bodyStyle = window.getComputedStyle(document.body);
           const paddingTop = parseFloat(bodyStyle.paddingTop || '0') || 0;
           const layoutOffset = topMarginPx + paddingTop;
 
           const getElementTop = (element) => {
-            const rect = element.getBoundingClientRect();
+            const rect = element?.getBoundingClientRect?.();
+            if (!rect) return 0;
             return Math.max(0, rect.top + window.scrollY - layoutOffset);
           };
 
-          const getElementHeight = (element) => element.getBoundingClientRect().height;
+          const getElementHeight = (element) => {
+            const rect = element?.getBoundingClientRect?.();
+            return rect ? rect.height : 0;
+          };
 
           const applyPageBreak = (element) => {
             if (!element) return;
@@ -1010,27 +1015,35 @@ export async function generateReportPdf(reportId: number, userId: number): Promi
             return pageBottom - elementTop;
           };
 
+          const sumHeights = (elements) => elements.reduce((total, el) => total + getElementHeight(el), 0);
+
+          const filterValidElements = (elements) => elements.filter((element) => element && element instanceof HTMLElement);
+
           const fitsInCurrentPage = (elements) => {
-            const validElements = elements.filter(Boolean);
+            const validElements = filterValidElements(elements);
             if (validElements.length === 0) return true;
 
+            const totalHeight = sumHeights(validElements);
+            if (totalHeight > MAX_PAGE_CONTENT_HEIGHT) return true;
+
             const availableSpace = getAvailableSpace(validElements[0]);
-            const totalHeight = validElements.reduce((sum, element) => sum + getElementHeight(element), 0);
             return totalHeight <= availableSpace - CONFIG.safetyGap;
           };
 
           const ensureGroupFits = (elements, breakTarget) => {
-            if (!fitsInCurrentPage(elements)) {
-              applyPageBreak(breakTarget || elements[0]);
+            const validElements = filterValidElements(elements);
+            if (validElements.length === 0) return;
+
+            const totalHeight = sumHeights(validElements);
+            if (totalHeight > MAX_PAGE_CONTENT_HEIGHT) return;
+
+            const availableSpace = getAvailableSpace(validElements[0]);
+            if (totalHeight > availableSpace - CONFIG.safetyGap) {
+              applyPageBreak(breakTarget || validElements[0]);
             }
           };
 
-          const getFirstParameterRow = (table) => table?.tBodies?.[0]?.rows?.[0] ?? null;
-
-          const hasParameters = (table) => {
-            const firstRow = getFirstParameterRow(table);
-            return Boolean(firstRow);
-          };
+          const hasParameters = (table) => Boolean(table?.tBodies?.[0]?.rows?.length);
 
           const getConjunto3Elements = (table) => {
             if (!table) return [];
@@ -1040,7 +1053,7 @@ export async function generateReportPdf(reportId: number, userId: number): Promi
               elements.push(...Array.from(table.tHead.rows));
             }
 
-            const firstRow = getFirstParameterRow(table);
+            const firstRow = table.tBodies?.[0]?.rows?.[0];
             if (firstRow) {
               elements.push(firstRow);
             }
@@ -1051,7 +1064,7 @@ export async function generateReportPdf(reportId: number, userId: number): Promi
           const getConjunto2Elements = (table) => getConjunto3Elements(table);
 
           const getConjunto1Elements = (requirementElement, table) => {
-            if (!table) return [];
+            if (!requirementElement || !table) return [];
             const elements = [];
             const requirementTitle = requirementElement.querySelector('[data-role="requirement-title"]');
             if (requirementTitle) {
@@ -1061,17 +1074,74 @@ export async function generateReportPdf(reportId: number, userId: number): Promi
             return elements;
           };
 
+          const copyDataset = (source, target) => {
+            if (!source?.dataset || !target?.dataset) return;
+            for (const key of Object.keys(source.dataset)) {
+              target.dataset[key] = source.dataset[key];
+            }
+          };
+
+          const splitTable = (analysisTable) => {
+            const createdTables = [];
+            const tbody = analysisTable?.tBodies?.[0];
+            if (!tbody) return createdTables;
+
+            const parameterRows = Array.from(tbody.rows);
+
+            for (let rowIndex = 0; rowIndex < parameterRows.length; rowIndex++) {
+              const parameterRow = parameterRows[rowIndex];
+              if (!parameterRow) continue;
+
+              if (!fitsInCurrentPage([parameterRow])) {
+                if (rowIndex === 0) {
+                  applyPageBreak(analysisTable);
+                  rowIndex = -1;
+                  continue;
+                }
+
+                const newTable = analysisTable.cloneNode(false);
+                newTable.className = analysisTable.className;
+                copyDataset(analysisTable, newTable);
+                applyPageBreak(newTable);
+
+                const originalThead = analysisTable.tHead;
+                if (originalThead) {
+                  newTable.appendChild(originalThead.cloneNode(true));
+                }
+
+                const newTbody = document.createElement('tbody');
+                newTable.appendChild(newTbody);
+
+                for (let moveIndex = rowIndex; moveIndex < parameterRows.length; moveIndex++) {
+                  const rowToMove = parameterRows[moveIndex];
+                  if (rowToMove) {
+                    newTbody.appendChild(rowToMove);
+                  }
+                }
+
+                const parent = analysisTable.parentNode;
+                if (parent) {
+                  parent.insertBefore(newTable, analysisTable.nextSibling);
+                }
+
+                createdTables.push(newTable);
+                break;
+              }
+            }
+
+            return createdTables;
+          };
+
           const implementPseudoAlgorithm = () => {
             const requirements = Array.from(document.querySelectorAll('[data-requirement-id]'));
 
             for (const requirement of requirements) {
-              const requirementTitle = requirement.querySelector('[data-role="requirement-title"]');
               const requirementTables = Array.from(requirement.querySelectorAll('table.criterion-table')).filter(hasParameters);
-
               const firstRequirementTable = requirementTables[0];
-              const conjunto1 = getConjunto1Elements(requirement, firstRequirementTable);
 
+              const conjunto1 = getConjunto1Elements(requirement, firstRequirementTable);
               if (conjunto1.length > 0) {
+                const requirementTitle = requirement.querySelector('[data-role="requirement-title"]');
                 ensureGroupFits(conjunto1, requirementTitle || firstRequirementTable);
               }
 
@@ -1079,71 +1149,25 @@ export async function generateReportPdf(reportId: number, userId: number): Promi
 
               for (const criterionSection of criterionSections) {
                 const analysisTables = Array.from(criterionSection.querySelectorAll('table.criterion-table')).filter(hasParameters);
-
                 if (analysisTables.length === 0) continue;
 
                 const firstAnalysisTable = analysisTables[0];
                 const conjunto2 = getConjunto2Elements(firstAnalysisTable);
-
                 if (conjunto2.length > 0) {
                   ensureGroupFits(conjunto2, firstAnalysisTable);
                 }
 
                 for (let analysisIndex = 0; analysisIndex < analysisTables.length; analysisIndex++) {
                   const analysisTable = analysisTables[analysisIndex];
-                  const conjunto3 = getConjunto3Elements(analysisTable);
 
+                  const conjunto3 = getConjunto3Elements(analysisTable);
                   if (conjunto3.length > 0) {
                     ensureGroupFits(conjunto3, analysisTable);
                   }
 
-                  const tbody = analysisTable.tBodies?.[0];
-                  if (!tbody) continue;
-
-                  const parameterRows = Array.from(tbody.rows);
-
-                  for (let paramIndex = 0; paramIndex < parameterRows.length; paramIndex++) {
-                    const parameterRow = parameterRows[paramIndex];
-
-                    if (fitsInCurrentPage([parameterRow])) continue;
-
-                    if (paramIndex === 0) {
-                      applyPageBreak(analysisTable);
-                      paramIndex -= 1;
-                      continue;
-                    }
-
-                    const newTable = analysisTable.cloneNode(false);
-                    newTable.className = analysisTable.className;
-
-                    for (const key in analysisTable.dataset) {
-                      if (Object.prototype.hasOwnProperty.call(analysisTable.dataset, key)) {
-                        newTable.dataset[key] = analysisTable.dataset[key];
-                      }
-                    }
-
-                    applyPageBreak(newTable);
-
-                    const originalThead = analysisTable.tHead;
-                    if (originalThead) {
-                      newTable.appendChild(originalThead.cloneNode(true));
-                    }
-
-                    const newTbody = document.createElement('tbody');
-                    newTable.appendChild(newTbody);
-
-                    for (let moveIndex = paramIndex; moveIndex < parameterRows.length; moveIndex++) {
-                      newTbody.appendChild(parameterRows[moveIndex]);
-                    }
-
-                    const parent = analysisTable.parentNode;
-                    if (parent) {
-                      parent.insertBefore(newTable, analysisTable.nextSibling);
-                    }
-
-                    analysisTables.splice(analysisIndex + 1, 0, newTable);
-
-                    break;
+                  const newTables = splitTable(analysisTable);
+                  if (newTables.length > 0) {
+                    analysisTables.splice(analysisIndex + 1, 0, ...newTables);
                   }
                 }
               }
