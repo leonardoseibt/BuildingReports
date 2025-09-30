@@ -981,212 +981,227 @@ export async function generateReportPdf(reportId: number, userId: number): Promi
     // Implementa o pseudo-algoritmo de paginação usando JavaScript puro
     await page.addScriptTag({
       content: `
-        (function() {
-          var MM_TO_PX = 96 / 25.4;
-          var TOP_MARGIN_MM = 18;
-          var BOTTOM_MARGIN_MM = 15;
-          var PAGE_HEIGHT_PX = (297 - TOP_MARGIN_MM - BOTTOM_MARGIN_MM) * MM_TO_PX;
-          var topMarginPx = TOP_MARGIN_MM * MM_TO_PX;
-          var bodyStyle = window.getComputedStyle(document.body);
-          var paddingTop = parseFloat(bodyStyle.paddingTop || '0') || 0;
-          var layoutOffset = topMarginPx + paddingTop;
+        (() => {
+          const MM_TO_PX = 96 / 25.4;
+          const CONFIG = { topMarginMm: 18, bottomMarginMm: 15, safetyGap: 10 };
+          const PAGE_HEIGHT_PX = (297 - CONFIG.topMarginMm - CONFIG.bottomMarginMm) * MM_TO_PX;
+          const MAX_PAGE_CONTENT_HEIGHT = PAGE_HEIGHT_PX - CONFIG.safetyGap;
+          const topMarginPx = CONFIG.topMarginMm * MM_TO_PX;
+          const bodyStyle = window.getComputedStyle(document.body);
+          const paddingTop = parseFloat(bodyStyle.paddingTop || '0') || 0;
+          const layoutOffset = topMarginPx + paddingTop;
 
-          function getElementTop(element) {
-            var rect = element.getBoundingClientRect();
+          const getElementTop = (element) => {
+            const rect = element?.getBoundingClientRect?.();
+            if (!rect) return 0;
             return Math.max(0, rect.top + window.scrollY - layoutOffset);
-          }
+          };
 
-          function getElementHeight(element) {
-            return element.getBoundingClientRect().height;
-          }
+          const getElementHeight = (element) => {
+            const rect = element?.getBoundingClientRect?.();
+            return rect ? rect.height : 0;
+          };
 
-          function applyPageBreak(element) {
+          const applyPageBreak = (element) => {
+            if (!element) return;
             element.style.pageBreakBefore = 'always';
             element.style.setProperty('break-before', 'page');
-          }
+          };
 
-          function getAvailableSpace(element) {
-            var elementTop = getElementTop(element);
-            var currentPage = Math.floor(elementTop / PAGE_HEIGHT_PX);
-            var pageBottom = (currentPage + 1) * PAGE_HEIGHT_PX;
+          const getAvailableSpace = (element) => {
+            const elementTop = getElementTop(element);
+            const currentPage = Math.floor(elementTop / PAGE_HEIGHT_PX);
+            const pageBottom = (currentPage + 1) * PAGE_HEIGHT_PX;
             return pageBottom - elementTop;
-          }
+          };
 
-          function calculateConjuntoHeight(elements) {
-            var total = 0;
-            for (var i = 0; i < elements.length; i++) {
-              total += getElementHeight(elements[i]);
+          const sumHeights = (elements) => elements.reduce((total, el) => total + getElementHeight(el), 0);
+
+          const filterValidElements = (elements) => elements.filter((element) => element && element instanceof HTMLElement);
+
+          const fitsInCurrentPage = (elements) => {
+            const validElements = filterValidElements(elements);
+            if (validElements.length === 0) return true;
+
+            const totalHeight = sumHeights(validElements);
+            if (totalHeight > MAX_PAGE_CONTENT_HEIGHT) return true;
+
+            const availableSpace = getAvailableSpace(validElements[0]);
+            return totalHeight <= availableSpace - CONFIG.safetyGap;
+          };
+
+          const ensureGroupFits = (elements, breakTarget) => {
+            const validElements = filterValidElements(elements);
+            if (validElements.length === 0) return;
+
+            const totalHeight = sumHeights(validElements);
+            if (totalHeight > MAX_PAGE_CONTENT_HEIGHT) return;
+
+            const availableSpace = getAvailableSpace(validElements[0]);
+            if (totalHeight > availableSpace - CONFIG.safetyGap) {
+              applyPageBreak(breakTarget || validElements[0]);
             }
-            return total;
-          }
+          };
 
-          function fitsInCurrentPage(elements) {
-            if (elements.length === 0) return true;
-            var firstElement = elements[0];
-            var availableSpace = getAvailableSpace(firstElement);
-            var totalHeight = calculateConjuntoHeight(elements);
-            return totalHeight <= availableSpace - 10; // margem de segurança
-          }
+          const hasParameters = (table) => Boolean(table?.tBodies?.[0]?.rows?.length);
 
-          // Implementa exatamente o pseudo-algoritmo fornecido
-          function implementPseudoAlgorithm() {
-            var requirements = Array.from(document.querySelectorAll('[data-requirement-id]'));
-            
-            // for requisitos
-            for (var reqIndex = 0; reqIndex < requirements.length; reqIndex++) {
-              var requirement = requirements[reqIndex];
-              var requirementTitle = requirement.querySelector('[data-role="requirement-title"]');
-              var criterionSections = requirement.querySelectorAll('.criterion-section');
-              
-              if (criterionSections.length === 0) continue;
-              
-              // Elementos do conjunto 1: requisito + critério + análise + cabeçalhos + pelo menos um parâmetro
-              var firstCriterion = criterionSections[0];
-              var firstTable = firstCriterion.querySelector('table.criterion-table');
-              var conjunto1Elements = [];
-              
-              if (requirementTitle) conjunto1Elements.push(requirementTitle);
-              if (firstTable) {
-                var thead = firstTable.tHead;
-                if (thead) conjunto1Elements.push(thead);
-                var tbody = firstTable.tBodies[0];
-                if (tbody && tbody.rows[0]) conjunto1Elements.push(tbody.rows[0]);
-              }
-              
-              // (analisar se cabe na página atual o conjunto 1)
-              if (!fitsInCurrentPage(conjunto1Elements)) {
-                // caso não caiba -> quebra de página
-                if (requirementTitle) applyPageBreak(requirementTitle);
-              }
-              
-              // for critérios
-              for (var criterionIndex = 0; criterionIndex < criterionSections.length; criterionIndex++) {
-                var criterionSection = criterionSections[criterionIndex];
-                var tables = criterionSection.querySelectorAll('table.criterion-table');
-                
-                if (tables.length === 0) continue;
-                
-                // Primeira tabela do critério
-                var firstAnalysisTable = tables[0];
-                
-                // Elementos do conjunto 2: critério + análise + cabeçalhos + pelo menos um parâmetro
-                var conjunto2Elements = [];
-                var thead = firstAnalysisTable.tHead;
-                if (thead) conjunto2Elements.push(thead);
-                var tbody = firstAnalysisTable.tBodies[0];
-                if (tbody && tbody.rows[0]) conjunto2Elements.push(tbody.rows[0]);
-                
-                // (analisar se cabe na página atual o conjunto 2)
-                if (criterionIndex > 0 && !fitsInCurrentPage(conjunto2Elements)) {
-                  // caso não caiba -> quebra de página + imprime o conjunto 2
-                  applyPageBreak(firstAnalysisTable);
+          const getConjunto3Elements = (table) => {
+            if (!table) return [];
+            const elements = [];
+
+            if (table.tHead) {
+              elements.push(...Array.from(table.tHead.rows));
+            }
+
+            const firstRow = table.tBodies?.[0]?.rows?.[0];
+            if (firstRow) {
+              elements.push(firstRow);
+            }
+
+            return elements;
+          };
+
+          const getConjunto2Elements = (table) => getConjunto3Elements(table);
+
+          const getConjunto1Elements = (requirementElement, table) => {
+            if (!requirementElement || !table) return [];
+            const elements = [];
+            const requirementTitle = requirementElement.querySelector('[data-role="requirement-title"]');
+            if (requirementTitle) {
+              elements.push(requirementTitle);
+            }
+            elements.push(...getConjunto2Elements(table));
+            return elements;
+          };
+
+          const copyDataset = (source, target) => {
+            if (!source?.dataset || !target?.dataset) return;
+            for (const key of Object.keys(source.dataset)) {
+              target.dataset[key] = source.dataset[key];
+            }
+          };
+
+          const splitTable = (analysisTable) => {
+            const createdTables = [];
+            const tbody = analysisTable?.tBodies?.[0];
+            if (!tbody) return createdTables;
+
+            const parameterRows = Array.from(tbody.rows);
+
+            for (let rowIndex = 0; rowIndex < parameterRows.length; rowIndex++) {
+              const parameterRow = parameterRows[rowIndex];
+              if (!parameterRow) continue;
+
+              if (!fitsInCurrentPage([parameterRow])) {
+                if (rowIndex === 0) {
+                  applyPageBreak(analysisTable);
+                  rowIndex = -1;
+                  continue;
                 }
-                
-                // for análises
-                for (var analysisIndex = 0; analysisIndex < tables.length; analysisIndex++) {
-                  var analysisTable = tables[analysisIndex];
-                  
-                  if (analysisIndex > 0) {
-                    // Elementos do conjunto 3: análise + cabeçalhos + pelo menos um parâmetro
-                    var conjunto3Elements = [];
-                    var thead = analysisTable.tHead;
-                    if (thead) conjunto3Elements.push(thead);
-                    var tbody = analysisTable.tBodies[0];
-                    if (tbody && tbody.rows[0]) conjunto3Elements.push(tbody.rows[0]);
-                    
-                    // (analisar se cabe na página atual o conjunto 3)
-                    if (!fitsInCurrentPage(conjunto3Elements)) {
-                      // caso não caiba -> quebra de página + imprime o conjunto 2
-                      applyPageBreak(analysisTable);
-                    }
-                  }
-                  
-                  // for parâmetros
-                  var tbody = analysisTable.querySelector('tbody');
-                  if (tbody) {
-                    var parameterRows = Array.from(tbody.children);
-                    
-                    for (var paramIndex = 0; paramIndex < parameterRows.length; paramIndex++) {
-                      var parameterRow = parameterRows[paramIndex];
-                      
-                      // (analisar se cabe na página atual o parâmetro atual)
-                      if (!fitsInCurrentPage([parameterRow])) {
-                        // caso não caiba -> quebra de página + imprime o conjunto 2
-                        if (paramIndex > 0) {
-                          // Cria nova tabela para as linhas restantes
-                          var newTable = analysisTable.cloneNode(false);
-                          newTable.className = analysisTable.className;
-                          
-                          // Copia atributos de dados
-                          if (analysisTable.dataset && analysisTable.dataset.criterionId) {
-                            newTable.dataset.criterionId = analysisTable.dataset.criterionId;
-                          }
-                          if (analysisTable.dataset && analysisTable.dataset.analysisId) {
-                            newTable.dataset.analysisId = analysisTable.dataset.analysisId;
-                          }
-                          
-                          applyPageBreak(newTable);
-                          
-                          // Reimprime cabeçalhos (conjunto 2)
-                          var originalThead = analysisTable.querySelector('thead');
-                          if (originalThead) {
-                            newTable.appendChild(originalThead.cloneNode(true));
-                          }
-                          
-                          // Move parâmetros restantes
-                          var newTbody = document.createElement('tbody');
-                          newTable.appendChild(newTbody);
-                          
-                          for (var moveIndex = paramIndex; moveIndex < parameterRows.length; moveIndex++) {
-                            newTbody.appendChild(parameterRows[moveIndex]);
-                          }
-                          
-                          // Insere nova tabela
-                          analysisTable.parentNode.insertBefore(newTable, analysisTable.nextSibling);
-                          break; // Sai do loop de parâmetros
-                        } else {
-                          // Primeiro parâmetro não cabe - move tabela inteira
-                          applyPageBreak(analysisTable);
-                        }
-                      }
-                    }
+
+                const newTable = analysisTable.cloneNode(false);
+                newTable.className = analysisTable.className;
+                copyDataset(analysisTable, newTable);
+                applyPageBreak(newTable);
+
+                const originalThead = analysisTable.tHead;
+                if (originalThead) {
+                  newTable.appendChild(originalThead.cloneNode(true));
+                }
+
+                const newTbody = document.createElement('tbody');
+                newTable.appendChild(newTbody);
+
+                for (let moveIndex = rowIndex; moveIndex < parameterRows.length; moveIndex++) {
+                  const rowToMove = parameterRows[moveIndex];
+                  if (rowToMove) {
+                    newTbody.appendChild(rowToMove);
                   }
                 }
+
+                const parent = analysisTable.parentNode;
+                if (parent) {
+                  parent.insertBefore(newTable, analysisTable.nextSibling);
+                }
+
+                createdTables.push(newTable);
+                break;
               }
             }
-          }
 
-          // Esconde cabeçalhos duplicados de critério na mesma página
-          function hideDuplicateHeaders() {
-            var tables = Array.from(document.querySelectorAll('table.criterion-table'));
-            var criterionPages = {};
-            
-            for (var i = 0; i < tables.length; i++) {
-              var table = tables[i];
-              var criterionId = table.dataset && table.dataset.criterionId;
-              var headerRow = table.querySelector('.criterion-header');
-              
+            return createdTables;
+          };
+
+          const implementPseudoAlgorithm = () => {
+            const requirements = Array.from(document.querySelectorAll('[data-requirement-id]'));
+
+            for (const requirement of requirements) {
+              const requirementTables = Array.from(requirement.querySelectorAll('table.criterion-table')).filter(hasParameters);
+              const firstRequirementTable = requirementTables[0];
+
+              const conjunto1 = getConjunto1Elements(requirement, firstRequirementTable);
+              if (conjunto1.length > 0) {
+                const requirementTitle = requirement.querySelector('[data-role="requirement-title"]');
+                ensureGroupFits(conjunto1, requirementTitle || firstRequirementTable);
+              }
+
+              const criterionSections = Array.from(requirement.querySelectorAll('.criterion-section'));
+
+              for (const criterionSection of criterionSections) {
+                const analysisTables = Array.from(criterionSection.querySelectorAll('table.criterion-table')).filter(hasParameters);
+                if (analysisTables.length === 0) continue;
+
+                const firstAnalysisTable = analysisTables[0];
+                const conjunto2 = getConjunto2Elements(firstAnalysisTable);
+                if (conjunto2.length > 0) {
+                  ensureGroupFits(conjunto2, firstAnalysisTable);
+                }
+
+                for (let analysisIndex = 0; analysisIndex < analysisTables.length; analysisIndex++) {
+                  const analysisTable = analysisTables[analysisIndex];
+
+                  const conjunto3 = getConjunto3Elements(analysisTable);
+                  if (conjunto3.length > 0) {
+                    ensureGroupFits(conjunto3, analysisTable);
+                  }
+
+                  const newTables = splitTable(analysisTable);
+                  if (newTables.length > 0) {
+                    analysisTables.splice(analysisIndex + 1, 0, ...newTables);
+                  }
+                }
+              }
+            }
+          };
+
+          const hideDuplicateHeaders = () => {
+            const tables = Array.from(document.querySelectorAll('table.criterion-table'));
+            const criterionPages = new Map();
+
+            for (const table of tables) {
+              const criterionId = table.dataset?.criterionId;
+              const headerRow = table.querySelector('.criterion-header');
+
               if (!criterionId || !headerRow) continue;
-              
-              var tableTop = getElementTop(table);
-              var tablePage = Math.floor(tableTop / PAGE_HEIGHT_PX);
-              
-              if (!criterionPages[criterionId]) {
-                criterionPages[criterionId] = {};
+
+              const tableTop = getElementTop(table);
+              const tablePage = Math.floor(tableTop / PAGE_HEIGHT_PX);
+
+              if (!criterionPages.has(criterionId)) {
+                criterionPages.set(criterionId, new Set());
               }
-              
-              if (criterionPages[criterionId][tablePage]) {
-                // Já existe cabeçalho do critério nesta página - esconde
+
+              const pages = criterionPages.get(criterionId);
+
+              if (pages.has(tablePage)) {
                 headerRow.style.display = 'none';
               } else {
-                // Primeira ocorrência do critério nesta página - mantém visível
                 headerRow.style.display = '';
-                criterionPages[criterionId][tablePage] = true;
+                pages.add(tablePage);
               }
             }
-          }
+          };
 
-          // Executa o algoritmo
           implementPseudoAlgorithm();
           hideDuplicateHeaders();
         })();
