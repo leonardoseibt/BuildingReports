@@ -82,7 +82,7 @@ test('GET /api/reports/definitions returns aggregated requirement payload', asyn
     ...req,
     createdAt: req.createdAt instanceof Date ? req.createdAt.toISOString() : req.createdAt,
     updatedAt: req.updatedAt instanceof Date ? req.updatedAt.toISOString() : req.updatedAt,
-    criteria: req.criteria.map((criterion) => ({
+    criteria: req.criteria.map((criterion: RequirementWithCriteria['criteria'][number]) => ({
       ...criterion,
       createdAt:
         criterion.createdAt instanceof Date ? criterion.createdAt.toISOString() : criterion.createdAt,

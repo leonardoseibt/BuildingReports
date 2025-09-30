@@ -1,0 +1,30 @@
+2025-09-30T20:05:12.016Z - error: Error when starting http server on port 5000 Error: listen EADDRINUSE: address already in use :::5000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at Server.listen (node:net:2102:7)
+    at C:\Users\Leonardo Seibt\source\BuildingReports\node_modules\@jsreport\jsreport-express\lib\main.js:22:12
+    at new Promise (<anonymous>)
+    at startAsync (C:\Users\Leonardo Seibt\source\BuildingReports\node_modules\@jsreport\jsreport-express\lib\main.js:16:10)
+    at C:\Users\Leonardo Seibt\source\BuildingReports\node_modules\@jsreport\jsreport-express\lib\main.js:50:14
+    at Object.start (C:\Users\Leonardo Seibt\source\BuildingReports\node_modules\@jsreport\jsreport-express\lib\main.js:125:13)
+    at Object.<anonymous> (C:\Users\Leonardo Seibt\source\BuildingReports\node_modules\@jsreport\jsreport-express\lib\main.js:333:30)
+    at async ListenerCollection.fire (C:\Users\Leonardo Seibt\source\BuildingReports\node_modules\@jsreport\jsreport-core\lib\shared\listenerCollection.js:157:21)
+    at async MainReporter.init (C:\Users\Leonardo Seibt\source\BuildingReports\node_modules\@jsreport\jsreport-core\lib\main\reporter.js:265:7)
+    at async <anonymous> (C:\Users\Leonardo Seibt\source\BuildingReports\server\jsreport\report-generator.ts:14:7)
+    at async generateReportPdfJsreport (C:\Users\Leonardo Seibt\source\BuildingReports\server\jsreport\report-generator.ts:31:20)
+    at async <anonymous> (C:\Users\Leonardo Seibt\source\BuildingReports\server\routes.ts:637:33)
+2025-09-30T20:05:12.018Z - error: Error occurred during reporter init: Error: listen EADDRINUSE: address already in use :::5000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at Server.listen (node:net:2102:7)
+    at C:\Users\Leonardo Seibt\source\BuildingReports\node_modules\@jsreport\jsreport-express\lib\main.js:22:12
+    at new Promise (<anonymous>)
+    at startAsync (C:\Users\Leonardo Seibt\source\BuildingReports\node_modules\@jsreport\jsreport-express\lib\main.js:16:10)
+    at C:\Users\Leonardo Seibt\source\BuildingReports\node_modules\@jsreport\jsreport-express\lib\main.js:50:14
+    at Object.start (C:\Users\Leonardo Seibt\source\BuildingReports\node_modules\@jsreport\jsreport-express\lib\main.js:125:13)
+    at Object.<anonymous> (C:\Users\Leonardo Seibt\source\BuildingReports\node_modules\@jsreport\jsreport-express\lib\main.js:333:30)
+    at async ListenerCollection.fire (C:\Users\Leonardo Seibt\source\BuildingReports\node_modules\@jsreport\jsreport-core\lib\shared\listenerCollection.js:157:21)
+    at async MainReporter.init (C:\Users\Leonardo Seibt\source\BuildingReports\node_modules\@jsreport\jsreport-core\lib\main\reporter.js:265:7)
+    at async <anonymous> (C:\Users\Leonardo Seibt\source\BuildingReports\server\jsreport\report-generator.ts:14:7)
+    at async generateReportPdfJsreport (C:\Users\Leonardo Seibt\source\BuildingReports\server\jsreport\report-generator.ts:31:20)
+    at async <anonymous> (C:\Users\Leonardo Seibt\source\BuildingReports\server\routes.ts:637:33)

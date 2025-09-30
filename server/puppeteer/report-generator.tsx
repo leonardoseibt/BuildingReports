@@ -533,6 +533,108 @@ function buildFilename(building: Building, report: Report): string {
   return `PDE_${name}_${date}.pdf`;
 }
 
+export async function buildReportRenderData(reportId: number, userId: number) {
+  const context = await loadReportContext(reportId, userId);
+  const html = '<!DOCTYPE html>' + renderToStaticMarkup(<ReportHtml context={context} />);
+  const filename = buildFilename(context.building, context.report);
+  return { context, html, filename };
+}
+
+
+
+function resolveParameterLevelValue(parameter: Parameter, level: string): unknown {
+  const map: Record<string, unknown> = {
+    minimum: parameter.minimumValue,
+    intermediate: parameter.intermediateValue,
+    superior: parameter.superiorValue
+  };
+  const direct = map[level];
+  if (direct !== undefined && direct !== null && String(direct).trim() !== '') {
+    return direct;
+  }
+  const nested: any = (parameter as any).values?.[level];
+  const nestedValue = nested?.value;
+  if (nestedValue !== undefined && nestedValue !== null && String(nestedValue).trim() !== '') {
+    return nestedValue;
+  }
+  return null;
+}
+
+function buildReportJsonPayload(context: ReportRenderContext) {
+  const buildingInfo = buildBuildingInfoSections(context.building, context.report, {
+    typologies: context.typologies,
+    technicians: context.technicians,
+    noiseClasses: context.noiseClasses,
+    aggressivenessClasses: context.aggressivenessClasses,
+    bioclimaticZones: context.bioclimaticZones,
+    isopleths: context.isopleths
+  });
+
+  const requisitos = context.sections.map((requirement) => ({
+    id: requirement.id,
+    codigo: requirement.code,
+    titulo: normalizeText(requirement.label),
+    tituloOriginal: requirement.label,
+    criterios: requirement.criteria.map((criterion) => ({
+      id: criterion.id,
+      codigo: criterion.code,
+      titulo: normalizeText(criterion.label),
+      tituloOriginal: criterion.label,
+      analises: criterion.analyses.map((analysis) => ({
+        id: analysis.id,
+        codigo: analysis.code,
+        titulo: normalizeText(analysis.label),
+        tituloOriginal: analysis.label,
+        niveisSelecionados: analysis.selectedLevels,
+        parametros: analysis.parameters.map((parameter) => {
+          const observation = parameter.notes ?? (parameter as any).observation ?? null;
+          const valores = analysis.selectedLevels.map((level) => ({
+            nivel: level,
+            titulo: levelLabels[level] || level,
+            valor: resolveParameterLevelValue(parameter, level)
+          }));
+
+          return {
+            id: parameter.id,
+            codigo: (parameter as any).code ?? null,
+            titulo: normalizeText(parameter.label),
+            tituloOriginal: parameter.label,
+            unidade: parameter.unit ?? null,
+            observacao: observation ? normalizeText(observation) : null,
+            observacaoOriginal: observation,
+            valores
+          };
+        })
+      }))
+    }))
+  }));
+
+  return {
+    relatorio: context.report,
+    edificacao: context.building,
+    informacoesDaEdificacao: buildingInfo,
+    meta: {
+      tipologias: context.typologies,
+      classesDeRuido: context.noiseClasses,
+      classesDeAgressividade: context.aggressivenessClasses,
+      tecnicos: context.technicians,
+      zonasBioclimaticas: context.bioclimaticZones,
+      isolinhas: context.isopleths
+    },
+    requisitos
+  };
+}
+
+type ReportJsonPayload = ReturnType<typeof buildReportJsonPayload>;
+
+export async function generateReportJson(reportId: number, userId: number): Promise<{ filename: string; payload: ReportJsonPayload; json: string }> {
+  const { context, filename } = await buildReportRenderData(reportId, userId);
+  const payload = buildReportJsonPayload(context);
+  const suggested = filename.replace(/\.pdf$/i, '.json');
+  const finalFilename = /\.json$/i.test(suggested) ? suggested : `${suggested}.json`;
+  const json = JSON.stringify(payload, null, 2);
+  return { filename: finalFilename, payload, json };
+}
 function ReportHtml({ context }: { context: ReportRenderContext }) {
   const { building, sections, typologies, noiseClasses, aggressivenessClasses, technicians, bioclimaticZones, isopleths } = context;
 
@@ -962,8 +1064,7 @@ async function loadReportContext(reportId: number, userId: number): Promise<Repo
 }
 
 export async function generateReportPdf(reportId: number, userId: number): Promise<{ filename: string; pdf: Buffer }> {
-  const context = await loadReportContext(reportId, userId);
-  const html = '<!DOCTYPE html>' + renderToStaticMarkup(<ReportHtml context={context} />);
+  const { html, filename } = await buildReportRenderData(reportId, userId);
   const browser = await puppeteer.launch({
     headless: true,
     args: ['--no-sandbox', '--disable-setuid-sandbox']
@@ -978,125 +1079,217 @@ export async function generateReportPdf(reportId: number, userId: number): Promi
     await page.setContent(html, { waitUntil: 'networkidle0' });
     await page.emulateMediaType('screen');
 
-    // Implementação simplificada de paginação
+    // Paginação com prevenção de títulos órfãos e cabeçalhos de critério por página
     await page.evaluate(() => {
       const MM_TO_PX = 96 / 25.4;
-      const PAGE_HEIGHT_PX = (297 - 18 - 15) * MM_TO_PX; // A4 - margens
-      const topMarginPx = 18 * MM_TO_PX;
+      // Altura útil: A4 (297mm) - margens top/bottom do PDF (18mm e 15mm)
+      const PAGE_HEIGHT_PX = (297 - 18 - 15) * MM_TO_PX;
+      const TOP_MARGIN_PX = 18 * MM_TO_PX;
+
       const bodyStyle = window.getComputedStyle(document.body);
       const paddingTop = parseFloat(bodyStyle.paddingTop || '0') || 0;
-      const layoutOffset = topMarginPx + paddingTop;
+      const layoutOffset = TOP_MARGIN_PX + paddingTop;
 
-      function getElementTop(element: any) {
-        const rect = element.getBoundingClientRect();
-        return Math.max(0, rect.top + window.scrollY - layoutOffset);
+      const SAFETY = 10; // px
+
+      function getTop(el: Element): number {
+        const r = el.getBoundingClientRect();
+        return Math.max(0, r.top + window.scrollY - layoutOffset);
+      }
+      function getHeight(el: Element): number {
+        return el.getBoundingClientRect().height;
+      }
+      function pageOf(y: number): number {
+        return Math.floor(y / PAGE_HEIGHT_PX);
+      }
+      function overflows(el: Element): boolean {
+        const top = getTop(el);
+        const h = getHeight(el);
+        const bottom = (pageOf(top) + 1) * PAGE_HEIGHT_PX;
+        return top + h > bottom - SAFETY;
+      }
+      function addPageBreakBefore(el: HTMLElement) {
+        el.style.pageBreakBefore = 'always';
+        el.style.setProperty('break-before', 'page');
       }
 
-      function applyPageBreak(element: any) {
-        element.style.pageBreakBefore = 'always';
-        element.style.setProperty('break-before', 'page');
+      function clearPageBreakBefore(el: HTMLElement) {
+        el.style.removeProperty('page-break-before');
+        el.style.removeProperty('break-before');
       }
 
-      function elementOverflowsPage(element: any) {
-        const elementTop = getElementTop(element);
-        const elementHeight = element.getBoundingClientRect().height;
-        const currentPage = Math.floor(elementTop / PAGE_HEIGHT_PX);
-        const pageBottom = (currentPage + 1) * PAGE_HEIGHT_PX;
-        return (elementTop + elementHeight) > pageBottom - 10; // margem de segurança
+      // 1) Evitar títulos órfãos de REQUISITO (h2.section-title)
+      function avoidOrphanRequirementTitles() {
+        const requirementSections = Array.from(document.querySelectorAll('[data-requirement-id]')) as HTMLElement[];
+        for (const section of requirementSections) {
+          const title = section.querySelector('.section-title') as HTMLElement | null;
+          if (!title) continue;
+
+          // Próximo bloco relevante (primeira .criterion-table dentro da seção)
+          const nextTable = section.querySelector('table.criterion-table') as HTMLElement | null;
+          if (!nextTable) continue;
+
+          const titleTop = getTop(title);
+          const titleHeight = getHeight(title);
+          const nextTableHeader = nextTable.querySelector('thead') as HTMLElement | null;
+          const requiredBlock = nextTableHeader ?? nextTable;
+
+          const needed = titleHeight + (requiredBlock ? getHeight(requiredBlock) : 0);
+          const currentBottom = (pageOf(titleTop) + 1) * PAGE_HEIGHT_PX;
+
+          // Se o título + cabeçalho da próxima tabela não couberem, quebra antes do título
+          const shouldBreak = titleTop + needed > currentBottom - SAFETY;
+          if (shouldBreak) {
+            addPageBreakBefore(title);
+          } else {
+            clearPageBreakBefore(title);
+          }
+        }
       }
 
-      // Implementação básica do pseudo-algoritmo
-      function simplePagination() {
-        const requirements = Array.from(document.querySelectorAll('[data-requirement-id]'));
-        
-        for (const requirement of requirements) {
-          const tables = Array.from(requirement.querySelectorAll('table.criterion-table'));
-          
-          for (let i = 0; i < tables.length; i++) {
-            const table = tables[i] as HTMLTableElement;
-            const tbody = table.querySelector('tbody');
-            if (!tbody) continue;
-            
-            const rows = Array.from(tbody.querySelectorAll('tr'));
-            
-            for (let j = 0; j < rows.length; j++) {
-              const row = rows[j];
-              
-              if (elementOverflowsPage(row)) {
-                if (j === 0) {
-                  // Primeira linha não cabe - mover tabela inteira
-                  applyPageBreak(table);
+      // 2) Paginar tabelas de critérios (divisão por linhas), garantindo:
+      //    - Se nenhuma linha de dados cabe após os cabeçalhos, move a tabela inteira
+      //    - Ao dividir, replica THEAD
+      function paginateCriterionTables() {
+        const tables = Array.from(document.querySelectorAll('table.criterion-table')) as HTMLTableElement[];
+
+        for (let t = 0; t < tables.length; t++) {
+          const table = tables[t];
+          const thead = table.tHead as HTMLTableSectionElement | null;
+          const tbody = table.tBodies[0] as HTMLTableSectionElement | null;
+          if (!tbody) continue;
+
+          const rows = Array.from(tbody.querySelectorAll('tr')) as HTMLTableRowElement[];
+          if (rows.length === 0) continue;
+
+          // Verificar se cabe ao menos 1 linha depois do cabeçalho; se não, quebra antes da tabela
+          const headerBlock = thead ?? table.querySelector('thead') as HTMLElement | null;
+          const headerHeight = headerBlock ? getHeight(headerBlock) : 0;
+          const tableTop = getTop(table);
+          const currentBottom = (pageOf(tableTop) + 1) * PAGE_HEIGHT_PX;
+
+          // Altura da primeira linha
+          const firstRowH = getHeight(rows[0]);
+
+          if (tableTop + headerHeight + firstRowH > currentBottom - SAFETY) {
+            // Move tabela inteira para a próxima página (evita cabeçalho órfão)
+            addPageBreakBefore(table);
+          }
+
+          // Recalcular após possível quebra
+          const rowsAfter = Array.from((table.tBodies[0] || tbody).querySelectorAll('tr')) as HTMLTableRowElement[];
+
+          // Percorrer e fatiar quando estourar
+          for (let j = 0; j < rowsAfter.length; j++) {
+            const row = rowsAfter[j];
+
+            if (overflows(row)) {
+              if (j === 0) {
+                // Primeira linha estoura (deveria ter sido pego pelo guard acima, mas por segurança)
+                addPageBreakBefore(table);
+                break;
+              } else {
+                // Criar nova tabela para as linhas restantes
+                const newTable = table.cloneNode(false) as HTMLTableElement;
+                newTable.className = table.className;
+
+                // Copiar data-attributes
+                (newTable as any).dataset = { ...(table as any).dataset };
+
+                // Quebra antes da nova tabela
+                addPageBreakBefore(newTable);
+
+                // Copiar cabeçalho
+                if (thead) {
+                  newTable.appendChild(thead.cloneNode(true));
                 } else {
-                  // Criar nova tabela para linhas restantes
-                  const newTable = table.cloneNode(false) as HTMLTableElement;
-                  newTable.className = table.className;
-                  
-                  // Copiar dataset
-                  if ((table as any).dataset?.criterionId) {
-                    (newTable as any).dataset.criterionId = (table as any).dataset.criterionId;
-                  }
-                  if ((table as any).dataset?.analysisId) {
-                    (newTable as any).dataset.analysisId = (table as any).dataset.analysisId;
-                  }
-                  
-                  applyPageBreak(newTable);
-                  
-                  // Copiar cabeçalho
-                  if (table.tHead) {
-                    newTable.appendChild(table.tHead.cloneNode(true));
-                  }
-                  
-                  // Mover linhas restantes
-                  const newTbody = document.createElement('tbody');
-                  newTable.appendChild(newTbody);
-                  
-                  for (let k = j; k < rows.length; k++) {
-                    newTbody.appendChild(rows[k]);
-                  }
-                  
-                  if (table.parentNode) {
-                    table.parentNode.insertBefore(newTable, table.nextSibling);
-                  }
-                  break;
+                  const originalThead = table.querySelector('thead');
+                  if (originalThead) newTable.appendChild(originalThead.cloneNode(true));
                 }
+
+                // Criar novo tbody e mover as linhas remanescentes
+                const newTbody = document.createElement('tbody');
+                newTable.appendChild(newTbody);
+
+                for (let k = j; k < rowsAfter.length; k++) {
+                  newTbody.appendChild(rowsAfter[k]);
+                }
+
+                // Inserir a nova tabela após a atual
+                if (table.parentNode) {
+                  table.parentNode.insertBefore(newTable, table.nextSibling);
+                }
+                break;
               }
             }
           }
         }
       }
 
-      // Esconder cabeçalhos duplicados na mesma página
-      function hideDuplicateHeaders() {
-        const tables = Array.from(document.querySelectorAll('table.criterion-table'));
-        const criterionPages = new Map();
-        
+      // 3) Exibir cabeçalho de CRITÉRIO apenas uma vez por página, mas repetir quando mudar de página.
+      function resolveCriterionHeadersPerPage() {
+        const tables = Array.from(document.querySelectorAll('table.criterion-table')) as HTMLTableElement[];
+        const seen = new Map<string, Set<number>>();
+
         for (const table of tables) {
-          const criterionId = (table as any).dataset?.criterionId;
-          const headerRow = table.querySelector('.criterion-header') as HTMLElement;
-          
+          const criterionId = (table as any).dataset?.criterionId || '';
+          const headerRow = table.querySelector('.criterion-header') as HTMLElement | null;
           if (!criterionId || !headerRow) continue;
-          
-          const tableTop = getElementTop(table);
-          const tablePage = Math.floor(tableTop / PAGE_HEIGHT_PX);
-          
-          if (!criterionPages.has(criterionId)) {
-            criterionPages.set(criterionId, new Set());
+
+          const top = getTop(table);
+          const p = pageOf(top);
+
+          if (!seen.has(criterionId)) {
+            seen.set(criterionId, new Set<number>());
           }
-          
-          const pages = criterionPages.get(criterionId);
-          
-          if (pages.has(tablePage)) {
+          const pages = seen.get(criterionId)!;
+
+          // Se já houve um cabeçalho desse critério nesta página, esconder; senão, mostrar
+          if (pages.has(p)) {
             headerRow.style.display = 'none';
           } else {
             headerRow.style.display = '';
-            pages.add(tablePage);
+            pages.add(p);
           }
         }
       }
 
-      // Executar paginação
-      simplePagination();
-      hideDuplicateHeaders();
+      // 4) Evitar órfãos do cabeçalho de ANÁLISE (garantir pelo menos 1 linha de dados após thead)
+      function avoidOrphanAnalysisHeaders() {
+        const tables = Array.from(document.querySelectorAll('table.criterion-table')) as HTMLTableElement[];
+
+        for (const table of tables) {
+          const thead = table.tHead as HTMLTableSectionElement | null;
+          const tbody = table.tBodies[0] as HTMLTableSectionElement | null;
+          if (!thead || !tbody) continue;
+
+          const firstRow = tbody.querySelector('tr') as HTMLTableRowElement | null;
+          if (!firstRow) continue;
+
+          const headerTop = getTop(thead);
+          const headerH = getHeight(thead);
+          const rowH = getHeight(firstRow);
+          const bottom = (pageOf(headerTop) + 1) * PAGE_HEIGHT_PX;
+
+          if (headerTop + headerH + rowH > bottom - SAFETY) {
+            // Move a tabela inteira para a próxima página para não deixar análise órfã
+            addPageBreakBefore(table);
+          }
+        }
+      }
+
+      // Executar em ordem para minimizar reflows inconsistentes
+      function applyTableLayoutAdjustments() {
+        paginateCriterionTables();
+        avoidOrphanAnalysisHeaders();
+        paginateCriterionTables();
+        resolveCriterionHeadersPerPage();
+      }
+
+      applyTableLayoutAdjustments();
+      avoidOrphanRequirementTitles();
+      applyTableLayoutAdjustments();
+      avoidOrphanRequirementTitles();
     });
 
     const footerTemplate = `
@@ -1113,7 +1306,6 @@ export async function generateReportPdf(reportId: number, userId: number): Promi
       printBackground: true
     });
 
-    const filename = buildFilename(context.building, context.report);
     const buffer = Buffer.isBuffer(pdfBuffer) ? pdfBuffer : Buffer.from(pdfBuffer);
 
     return { filename, pdf: buffer };

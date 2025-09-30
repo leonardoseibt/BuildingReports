@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { PaginationSimple as Pagination } from '@/components/ui/pagination';
-import { Plus, Pencil, Trash2, MapPin, Search, Printer, FileText } from 'lucide-react';
+import { Plus, Pencil, Trash2, MapPin, Search, Printer, FileText, FileDown, Braces } from 'lucide-react';
 import ReportForm from '@/components/reports/report-form';
 import type { Report } from '@shared/schema';
 import { apiRequest } from '@/lib/queryClient';
@@ -121,6 +121,36 @@ export default function ReportsList() {
     }
   }
 
+  function openReportPdfJs(item: ReportItem) {
+    const pdfUrl = `/api/reports/${item.id}/jsreport?inline=1`;
+    const popup = window.open('', '_blank');
+    if (popup) {
+      try {
+        popup.opener = null;
+      } catch {
+        /* noop */
+      }
+      popup.location.href = pdfUrl;
+    } else {
+      window.location.href = pdfUrl;
+    }
+  }
+
+  function openReportJson(item: ReportItem) {
+    const jsonUrl = `/api/reports/${item.id}/json?inline=1`;
+    const popup = window.open('', '_blank');
+    if (popup) {
+      try {
+        popup.opener = null;
+      } catch {
+        /* noop */
+      }
+      popup.location.href = jsonUrl;
+    } else {
+      window.location.href = jsonUrl;
+    }
+  }
+
   function confirmDelete() {
     if (!selectedItem) return;
     deleteMutation.mutate(selectedItem.id);
@@ -216,8 +246,14 @@ export default function ReportsList() {
                           <Button variant="ghost" size="icon" onClick={() => { setEditItem(r); setFormKey(k => k + 1); setOpen(true); }}>
                             <Pencil className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="icon" onClick={() => openReportPdf(r)} title="Gerar PDF">
+                          <Button variant="ghost" size="icon" onClick={() => openReportPdf(r)} title="Gerar PDF (Puppeteer)">
                             <Printer className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => openReportPdfJs(r)} title="Gerar PDF (jsreport)">
+                            <FileDown className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => openReportJson(r)} title="Gerar JSON">
+                            <Braces className="h-4 w-4" />
                           </Button>
                           <Button variant="ghost" size="icon" className="text-rose-600 hover:bg-rose-50 hover:text-rose-700" onClick={() => askDelete(r)}>
                             <Trash2 className="h-4 w-4" />

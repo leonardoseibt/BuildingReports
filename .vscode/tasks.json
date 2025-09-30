@@ -123,6 +123,41 @@
 				"$tsc"
 			],
 			"group": "build"
+		},
+		{
+			"label": "Typecheck",
+			"type": "shell",
+			"command": "npm run check"
+		},
+		{
+			"label": "Typecheck",
+			"type": "shell",
+			"command": "npm run check"
+		},
+		{
+			"label": "Typecheck",
+			"type": "shell",
+			"command": "npm run check"
+		},
+		{
+			"label": "Typecheck",
+			"type": "shell",
+			"command": "npm run check"
+		},
+		{
+			"label": "Typecheck",
+			"type": "shell",
+			"command": "npm run check"
+		},
+		{
+			"label": "Typecheck",
+			"type": "shell",
+			"command": "npm run check"
+		},
+		{
+			"label": "Typecheck",
+			"type": "shell",
+			"command": "npm run check"
 		}
 	]
 }
