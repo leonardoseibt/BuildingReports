@@ -1025,56 +1025,76 @@ export async function generateReportPdf(reportId: number, userId: number): Promi
             }
           };
 
+          const getFirstParameterRow = (table) => table?.tBodies?.[0]?.rows?.[0] ?? null;
+
+          const hasParameters = (table) => {
+            const firstRow = getFirstParameterRow(table);
+            return Boolean(firstRow);
+          };
+
+          const getConjunto3Elements = (table) => {
+            if (!table) return [];
+            const elements = [];
+
+            if (table.tHead) {
+              elements.push(...Array.from(table.tHead.rows));
+            }
+
+            const firstRow = getFirstParameterRow(table);
+            if (firstRow) {
+              elements.push(firstRow);
+            }
+
+            return elements;
+          };
+
+          const getConjunto2Elements = (table) => getConjunto3Elements(table);
+
+          const getConjunto1Elements = (requirementElement, table) => {
+            if (!table) return [];
+            const elements = [];
+            const requirementTitle = requirementElement.querySelector('[data-role="requirement-title"]');
+            if (requirementTitle) {
+              elements.push(requirementTitle);
+            }
+            elements.push(...getConjunto2Elements(table));
+            return elements;
+          };
+
           const implementPseudoAlgorithm = () => {
             const requirements = Array.from(document.querySelectorAll('[data-requirement-id]'));
 
             for (const requirement of requirements) {
               const requirementTitle = requirement.querySelector('[data-role="requirement-title"]');
-              const criterionSections = Array.from(requirement.querySelectorAll('.criterion-section'));
+              const requirementTables = Array.from(requirement.querySelectorAll('table.criterion-table')).filter(hasParameters);
 
-              if (criterionSections.length === 0) continue;
-
-              const firstCriterion = criterionSections[0];
-              const firstTable = firstCriterion.querySelector('table.criterion-table');
-
-              const conjunto1 = [];
-              if (requirementTitle) conjunto1.push(requirementTitle);
-              if (firstTable?.tHead) conjunto1.push(firstTable.tHead);
-              const firstTableBody = firstTable?.tBodies?.[0];
-              if (firstTableBody?.rows?.[0]) conjunto1.push(firstTableBody.rows[0]);
+              const firstRequirementTable = requirementTables[0];
+              const conjunto1 = getConjunto1Elements(requirement, firstRequirementTable);
 
               if (conjunto1.length > 0) {
-                ensureGroupFits(conjunto1, requirementTitle || firstTable);
+                ensureGroupFits(conjunto1, requirementTitle || firstRequirementTable);
               }
 
-              for (let criterionIndex = 0; criterionIndex < criterionSections.length; criterionIndex++) {
-                const criterionSection = criterionSections[criterionIndex];
-                const analysisTables = Array.from(criterionSection.querySelectorAll('table.criterion-table'));
+              const criterionSections = Array.from(requirement.querySelectorAll('.criterion-section'));
+
+              for (const criterionSection of criterionSections) {
+                const analysisTables = Array.from(criterionSection.querySelectorAll('table.criterion-table')).filter(hasParameters);
 
                 if (analysisTables.length === 0) continue;
 
                 const firstAnalysisTable = analysisTables[0];
-                const conjunto2 = [];
-                if (firstAnalysisTable.tHead) conjunto2.push(firstAnalysisTable.tHead);
-                const firstAnalysisBody = firstAnalysisTable.tBodies?.[0];
-                if (firstAnalysisBody?.rows?.[0]) conjunto2.push(firstAnalysisBody.rows[0]);
+                const conjunto2 = getConjunto2Elements(firstAnalysisTable);
 
-                if (criterionIndex > 0 && conjunto2.length > 0) {
+                if (conjunto2.length > 0) {
                   ensureGroupFits(conjunto2, firstAnalysisTable);
                 }
 
                 for (let analysisIndex = 0; analysisIndex < analysisTables.length; analysisIndex++) {
                   const analysisTable = analysisTables[analysisIndex];
+                  const conjunto3 = getConjunto3Elements(analysisTable);
 
-                  if (analysisIndex > 0) {
-                    const conjunto3 = [];
-                    if (analysisTable.tHead) conjunto3.push(analysisTable.tHead);
-                    const analysisBody = analysisTable.tBodies?.[0];
-                    if (analysisBody?.rows?.[0]) conjunto3.push(analysisBody.rows[0]);
-
-                    if (conjunto3.length > 0) {
-                      ensureGroupFits(conjunto3, analysisTable);
-                    }
+                  if (conjunto3.length > 0) {
+                    ensureGroupFits(conjunto3, analysisTable);
                   }
 
                   const tbody = analysisTable.tBodies?.[0];
@@ -1096,11 +1116,9 @@ export async function generateReportPdf(reportId: number, userId: number): Promi
                     const newTable = analysisTable.cloneNode(false);
                     newTable.className = analysisTable.className;
 
-                    if (analysisTable.dataset) {
-                      for (const key in analysisTable.dataset) {
-                        if (Object.prototype.hasOwnProperty.call(analysisTable.dataset, key)) {
-                          newTable.dataset[key] = analysisTable.dataset[key];
-                        }
+                    for (const key in analysisTable.dataset) {
+                      if (Object.prototype.hasOwnProperty.call(analysisTable.dataset, key)) {
+                        newTable.dataset[key] = analysisTable.dataset[key];
                       }
                     }
 
@@ -1122,6 +1140,8 @@ export async function generateReportPdf(reportId: number, userId: number): Promi
                     if (parent) {
                       parent.insertBefore(newTable, analysisTable.nextSibling);
                     }
+
+                    analysisTables.splice(analysisIndex + 1, 0, newTable);
 
                     break;
                   }
