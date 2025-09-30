@@ -978,239 +978,130 @@ export async function generateReportPdf(reportId: number, userId: number): Promi
     await page.setContent(html, { waitUntil: 'networkidle0' });
     await page.emulateMediaType('screen');
 
-    // Implementa o pseudo-algoritmo de paginação usando JavaScript puro
-    await page.addScriptTag({
-      content: `
-        (() => {
-          const MM_TO_PX = 96 / 25.4;
-          const CONFIG = { topMarginMm: 18, bottomMarginMm: 15, safetyGap: 10 };
-          const PAGE_HEIGHT_PX = (297 - CONFIG.topMarginMm - CONFIG.bottomMarginMm) * MM_TO_PX;
-          const MAX_PAGE_CONTENT_HEIGHT = PAGE_HEIGHT_PX - CONFIG.safetyGap;
-          const topMarginPx = CONFIG.topMarginMm * MM_TO_PX;
-          const bodyStyle = window.getComputedStyle(document.body);
-          const paddingTop = parseFloat(bodyStyle.paddingTop || '0') || 0;
-          const layoutOffset = topMarginPx + paddingTop;
+    // Implementação simplificada de paginação
+    await page.evaluate(() => {
+      const MM_TO_PX = 96 / 25.4;
+      const PAGE_HEIGHT_PX = (297 - 18 - 15) * MM_TO_PX; // A4 - margens
+      const topMarginPx = 18 * MM_TO_PX;
+      const bodyStyle = window.getComputedStyle(document.body);
+      const paddingTop = parseFloat(bodyStyle.paddingTop || '0') || 0;
+      const layoutOffset = topMarginPx + paddingTop;
 
-          const getElementTop = (element) => {
-            const rect = element?.getBoundingClientRect?.();
-            if (!rect) return 0;
-            return Math.max(0, rect.top + window.scrollY - layoutOffset);
-          };
+      function getElementTop(element: any) {
+        const rect = element.getBoundingClientRect();
+        return Math.max(0, rect.top + window.scrollY - layoutOffset);
+      }
 
-          const getElementHeight = (element) => {
-            const rect = element?.getBoundingClientRect?.();
-            return rect ? rect.height : 0;
-          };
+      function applyPageBreak(element: any) {
+        element.style.pageBreakBefore = 'always';
+        element.style.setProperty('break-before', 'page');
+      }
 
-          const applyPageBreak = (element) => {
-            if (!element) return;
-            element.style.pageBreakBefore = 'always';
-            element.style.setProperty('break-before', 'page');
-          };
+      function elementOverflowsPage(element: any) {
+        const elementTop = getElementTop(element);
+        const elementHeight = element.getBoundingClientRect().height;
+        const currentPage = Math.floor(elementTop / PAGE_HEIGHT_PX);
+        const pageBottom = (currentPage + 1) * PAGE_HEIGHT_PX;
+        return (elementTop + elementHeight) > pageBottom - 10; // margem de segurança
+      }
 
-          const getAvailableSpace = (element) => {
-            const elementTop = getElementTop(element);
-            const currentPage = Math.floor(elementTop / PAGE_HEIGHT_PX);
-            const pageBottom = (currentPage + 1) * PAGE_HEIGHT_PX;
-            return pageBottom - elementTop;
-          };
-
-          const sumHeights = (elements) => elements.reduce((total, el) => total + getElementHeight(el), 0);
-
-          const filterValidElements = (elements) => elements.filter((element) => element && element instanceof HTMLElement);
-
-          const fitsInCurrentPage = (elements) => {
-            const validElements = filterValidElements(elements);
-            if (validElements.length === 0) return true;
-
-            const totalHeight = sumHeights(validElements);
-            if (totalHeight > MAX_PAGE_CONTENT_HEIGHT) return true;
-
-            const availableSpace = getAvailableSpace(validElements[0]);
-            return totalHeight <= availableSpace - CONFIG.safetyGap;
-          };
-
-          const ensureGroupFits = (elements, breakTarget) => {
-            const validElements = filterValidElements(elements);
-            if (validElements.length === 0) return;
-
-            const totalHeight = sumHeights(validElements);
-            if (totalHeight > MAX_PAGE_CONTENT_HEIGHT) return;
-
-            const availableSpace = getAvailableSpace(validElements[0]);
-            if (totalHeight > availableSpace - CONFIG.safetyGap) {
-              applyPageBreak(breakTarget || validElements[0]);
-            }
-          };
-
-          const hasParameters = (table) => Boolean(table?.tBodies?.[0]?.rows?.length);
-
-          const getConjunto3Elements = (table) => {
-            if (!table) return [];
-            const elements = [];
-
-            if (table.tHead) {
-              elements.push(...Array.from(table.tHead.rows));
-            }
-
-            const firstRow = table.tBodies?.[0]?.rows?.[0];
-            if (firstRow) {
-              elements.push(firstRow);
-            }
-
-            return elements;
-          };
-
-          const getConjunto2Elements = (table) => getConjunto3Elements(table);
-
-          const getConjunto1Elements = (requirementElement, table) => {
-            if (!requirementElement || !table) return [];
-            const elements = [];
-            const requirementTitle = requirementElement.querySelector('[data-role="requirement-title"]');
-            if (requirementTitle) {
-              elements.push(requirementTitle);
-            }
-            elements.push(...getConjunto2Elements(table));
-            return elements;
-          };
-
-          const copyDataset = (source, target) => {
-            if (!source?.dataset || !target?.dataset) return;
-            for (const key of Object.keys(source.dataset)) {
-              target.dataset[key] = source.dataset[key];
-            }
-          };
-
-          const splitTable = (analysisTable) => {
-            const createdTables = [];
-            const tbody = analysisTable?.tBodies?.[0];
-            if (!tbody) return createdTables;
-
-            const parameterRows = Array.from(tbody.rows);
-
-            for (let rowIndex = 0; rowIndex < parameterRows.length; rowIndex++) {
-              const parameterRow = parameterRows[rowIndex];
-              if (!parameterRow) continue;
-
-              if (!fitsInCurrentPage([parameterRow])) {
-                if (rowIndex === 0) {
-                  applyPageBreak(analysisTable);
-                  rowIndex = -1;
-                  continue;
-                }
-
-                const newTable = analysisTable.cloneNode(false);
-                newTable.className = analysisTable.className;
-                copyDataset(analysisTable, newTable);
-                applyPageBreak(newTable);
-
-                const originalThead = analysisTable.tHead;
-                if (originalThead) {
-                  newTable.appendChild(originalThead.cloneNode(true));
-                }
-
-                const newTbody = document.createElement('tbody');
-                newTable.appendChild(newTbody);
-
-                for (let moveIndex = rowIndex; moveIndex < parameterRows.length; moveIndex++) {
-                  const rowToMove = parameterRows[moveIndex];
-                  if (rowToMove) {
-                    newTbody.appendChild(rowToMove);
+      // Implementação básica do pseudo-algoritmo
+      function simplePagination() {
+        const requirements = Array.from(document.querySelectorAll('[data-requirement-id]'));
+        
+        for (const requirement of requirements) {
+          const tables = Array.from(requirement.querySelectorAll('table.criterion-table'));
+          
+          for (let i = 0; i < tables.length; i++) {
+            const table = tables[i] as HTMLTableElement;
+            const tbody = table.querySelector('tbody');
+            if (!tbody) continue;
+            
+            const rows = Array.from(tbody.querySelectorAll('tr'));
+            
+            for (let j = 0; j < rows.length; j++) {
+              const row = rows[j];
+              
+              if (elementOverflowsPage(row)) {
+                if (j === 0) {
+                  // Primeira linha não cabe - mover tabela inteira
+                  applyPageBreak(table);
+                } else {
+                  // Criar nova tabela para linhas restantes
+                  const newTable = table.cloneNode(false) as HTMLTableElement;
+                  newTable.className = table.className;
+                  
+                  // Copiar dataset
+                  if ((table as any).dataset?.criterionId) {
+                    (newTable as any).dataset.criterionId = (table as any).dataset.criterionId;
                   }
-                }
-
-                const parent = analysisTable.parentNode;
-                if (parent) {
-                  parent.insertBefore(newTable, analysisTable.nextSibling);
-                }
-
-                createdTables.push(newTable);
-                break;
-              }
-            }
-
-            return createdTables;
-          };
-
-          const implementPseudoAlgorithm = () => {
-            const requirements = Array.from(document.querySelectorAll('[data-requirement-id]'));
-
-            for (const requirement of requirements) {
-              const requirementTables = Array.from(requirement.querySelectorAll('table.criterion-table')).filter(hasParameters);
-              const firstRequirementTable = requirementTables[0];
-
-              const conjunto1 = getConjunto1Elements(requirement, firstRequirementTable);
-              if (conjunto1.length > 0) {
-                const requirementTitle = requirement.querySelector('[data-role="requirement-title"]');
-                ensureGroupFits(conjunto1, requirementTitle || firstRequirementTable);
-              }
-
-              const criterionSections = Array.from(requirement.querySelectorAll('.criterion-section'));
-
-              for (const criterionSection of criterionSections) {
-                const analysisTables = Array.from(criterionSection.querySelectorAll('table.criterion-table')).filter(hasParameters);
-                if (analysisTables.length === 0) continue;
-
-                const firstAnalysisTable = analysisTables[0];
-                const conjunto2 = getConjunto2Elements(firstAnalysisTable);
-                if (conjunto2.length > 0) {
-                  ensureGroupFits(conjunto2, firstAnalysisTable);
-                }
-
-                for (let analysisIndex = 0; analysisIndex < analysisTables.length; analysisIndex++) {
-                  const analysisTable = analysisTables[analysisIndex];
-
-                  const conjunto3 = getConjunto3Elements(analysisTable);
-                  if (conjunto3.length > 0) {
-                    ensureGroupFits(conjunto3, analysisTable);
+                  if ((table as any).dataset?.analysisId) {
+                    (newTable as any).dataset.analysisId = (table as any).dataset.analysisId;
                   }
-
-                  const newTables = splitTable(analysisTable);
-                  if (newTables.length > 0) {
-                    analysisTables.splice(analysisIndex + 1, 0, ...newTables);
+                  
+                  applyPageBreak(newTable);
+                  
+                  // Copiar cabeçalho
+                  if (table.tHead) {
+                    newTable.appendChild(table.tHead.cloneNode(true));
                   }
+                  
+                  // Mover linhas restantes
+                  const newTbody = document.createElement('tbody');
+                  newTable.appendChild(newTbody);
+                  
+                  for (let k = j; k < rows.length; k++) {
+                    newTbody.appendChild(rows[k]);
+                  }
+                  
+                  if (table.parentNode) {
+                    table.parentNode.insertBefore(newTable, table.nextSibling);
+                  }
+                  break;
                 }
               }
             }
-          };
+          }
+        }
+      }
 
-          const hideDuplicateHeaders = () => {
-            const tables = Array.from(document.querySelectorAll('table.criterion-table'));
-            const criterionPages = new Map();
+      // Esconder cabeçalhos duplicados na mesma página
+      function hideDuplicateHeaders() {
+        const tables = Array.from(document.querySelectorAll('table.criterion-table'));
+        const criterionPages = new Map();
+        
+        for (const table of tables) {
+          const criterionId = (table as any).dataset?.criterionId;
+          const headerRow = table.querySelector('.criterion-header') as HTMLElement;
+          
+          if (!criterionId || !headerRow) continue;
+          
+          const tableTop = getElementTop(table);
+          const tablePage = Math.floor(tableTop / PAGE_HEIGHT_PX);
+          
+          if (!criterionPages.has(criterionId)) {
+            criterionPages.set(criterionId, new Set());
+          }
+          
+          const pages = criterionPages.get(criterionId);
+          
+          if (pages.has(tablePage)) {
+            headerRow.style.display = 'none';
+          } else {
+            headerRow.style.display = '';
+            pages.add(tablePage);
+          }
+        }
+      }
 
-            for (const table of tables) {
-              const criterionId = table.dataset?.criterionId;
-              const headerRow = table.querySelector('.criterion-header');
-
-              if (!criterionId || !headerRow) continue;
-
-              const tableTop = getElementTop(table);
-              const tablePage = Math.floor(tableTop / PAGE_HEIGHT_PX);
-
-              if (!criterionPages.has(criterionId)) {
-                criterionPages.set(criterionId, new Set());
-              }
-
-              const pages = criterionPages.get(criterionId);
-
-              if (pages.has(tablePage)) {
-                headerRow.style.display = 'none';
-              } else {
-                headerRow.style.display = '';
-                pages.add(tablePage);
-              }
-            }
-          };
-
-          implementPseudoAlgorithm();
-          hideDuplicateHeaders();
-        })();
-      `
+      // Executar paginação
+      simplePagination();
+      hideDuplicateHeaders();
     });
 
     const footerTemplate = `
       <div style="font-size:10px;width:100%;text-align:right;color:#6b7280;padding-right:20mm;">
-        P\u00E1gina <span class="pageNumber"></span> de <span class="totalPages"></span>
+        Página <span class="pageNumber"></span> de <span class="totalPages"></span>
       </div>`;
 
     const pdfBuffer = await page.pdf({
