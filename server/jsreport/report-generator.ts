@@ -547,7 +547,6 @@ function buildReportHtml(context: ReportRenderContext): string {
 async function getJsReportInstance() {
   if (!jsreportInstancePromise) {
     jsreportInstancePromise = (async () => {
-      // @ts-expect-error jsreport does not provide ESM typings compatible with dynamic import
       const mod = await import('jsreport');
       const factory = (mod as any)?.default ?? (mod as any);
       const instance = factory({
