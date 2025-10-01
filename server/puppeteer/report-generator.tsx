@@ -1204,6 +1204,9 @@ export async function generateReportPdf(reportId: number, userId: number): Promi
 
     // Paginação com prevenção de títulos órfãos e cabeçalhos de critério por página
     await page.evaluate(() => {
+      const __name = (target: any, value: string) =>
+        Object.defineProperty(target, 'name', { value, configurable: true });
+
       const MM_TO_PX = 96 / 25.4;
       // Altura útil: A4 (297mm) - margens top/bottom do PDF (18mm e 15mm)
       const PAGE_HEIGHT_PX = (297 - 18 - 15) * MM_TO_PX;
