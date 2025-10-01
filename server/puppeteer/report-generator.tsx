@@ -655,82 +655,212 @@ function ReportHtml({ context }: { context: ReportRenderContext }) {
         <style>{`
           * { box-sizing: border-box; }
           body {
-            font-family: 'Helvetica', Arial, sans-serif;
+            font-family: 'Times New Roman', 'Liberation Serif', serif;
             margin: 0;
-            padding: 24px 0 24px 4mm;
-            color: #1f2937;
+            padding: 0;
+            color: #1f2933;
+            background: #eef1f6;
           }
           h1, h2, h3, h4, h5 { margin: 0; }
 
-          .header { margin-bottom: 24px; }
-          .header h1 { font-size: 24px; font-weight: 700; color: #111827; }
+          .document {
+            max-width: 100%;
+            margin: 0 auto;
+            background: #ffffff;
+            padding: 32px 40px 48px;
+          }
 
-          .card { background: #fff; border: 1px solid #d1d5db; padding: 20px; border-radius: 12px; margin-bottom: 24px; }
+          .header {
+            margin-bottom: 28px;
+          }
 
-          .grid { display: grid; gap: 12px; }
-          .grid-cols-3 { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
-          .grid-cols-4 { grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
+          .header h1 {
+            font-size: 24px;
+            font-weight: 700;
+            color: #1e2a44;
+            letter-spacing: 0.4px;
+          }
 
-          .info-card { background: #f9fafb; border: 1px solid #e5e7eb; padding: 12px; border-radius: 8px; }
-          .info-label { font-size: 12px; font-weight: 600; color: #6b7280; margin-bottom: 4px; text-transform: uppercase; }
-          .info-value { font-size: 14px; font-weight: 600; color: #111827; }
+          .header-subtitle {
+            font-size: 13px;
+            color: #4b5563;
+            margin-top: 6px;
+          }
 
-          .building-info-section { margin-bottom: 20px; page-break-inside: avoid; break-inside: avoid; }
-          .building-info-title { font-size: 13px; font-weight: 700; color: #4b5563; margin-bottom: 8px; text-transform: uppercase; border-bottom: 1px solid #d1d5db; padding-bottom: 6px; }
+          .info-wrapper {
+            display: grid;
+            gap: 18px;
+            margin-bottom: 36px;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+          }
 
-          .building-info-table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
-          .building-info-label { text-align: left !important; width: 28%; background: #e0ecff; color: #1f3a8a; font-weight: 600; padding: 6px 10px; }
-          .building-info-value { text-align: left !important; width: 72%; font-weight: bold; padding: 6px 10px; }
-          .building-info-value.full { width: 72%; }
-          .building-info-unit { text-align: center !important; width: 18%; white-space: nowrap; }
+          .building-info-section {
+            border: 1px solid #d7dce5;
+            border-radius: 6px;
+            background: #f7f8fb;
+            padding: 16px 18px;
+            page-break-inside: avoid;
+            break-inside: avoid;
+          }
 
-          .section { margin-bottom: 32px; }
+          .building-info-title {
+            font-size: 12px;
+            font-weight: 700;
+            color: #2f3b58;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            margin-bottom: 12px;
+            border-bottom: 1px solid #d7dce5;
+            padding-bottom: 6px;
+          }
 
-          .section-title { font-size: 18px; font-weight: 700; color: #1f2937; border-bottom: 2px solid #4b5563; padding-bottom: 8px; margin-bottom: 16px; text-transform: uppercase; page-break-after: avoid; break-after: avoid; }
+          .building-info-table {
+            width: 100%;
+            border-collapse: collapse;
+          }
 
-          .criterion-section { margin-bottom: 32px; page-break-inside: avoid; break-inside: avoid; }
-          .criterion-section--spaced { margin-top: 24px; }
+          .building-info-table tr:not(:last-child) td {
+            border-bottom: 1px solid #e2e6ef;
+          }
 
-          .criterion-header { page-break-after: avoid; break-after: avoid; }
-          .criterion-header th { font-size: 15px; font-weight: 600; color: #374151; border-bottom: 1px solid #d1d5db; padding: 6px 10px; text-transform: uppercase; text-align: left; background: #ffffff; }
+          .building-info-label {
+            font-size: 10.5pt;
+            font-weight: 600;
+            color: #4b5563;
+            text-align: left;
+            padding: 6px 0;
+            width: 48%;
+          }
 
-          .criterion-header--hidden { display: none !important; }
+          .building-info-value {
+            font-size: 10.5pt;
+            color: #111827;
+            padding: 6px 0;
+            text-align: right;
+            width: 52%;
+          }
 
-          .analysis-header { page-break-after: avoid; break-after: avoid; }
-          .analysis-header--spaced th { padding-top: 16px; }
+          .section {
+            margin-bottom: 40px;
+          }
 
-          .analysis-header th { background: #e0ecff; color: #1f3a8a; padding: 6px 10px; font-weight: 600; border-radius: 6px 6px 0 0; text-align: left; }
+          .section-title {
+            font-size: 17pt;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: #1e2a44;
+            border-bottom: 3px solid #1e3a8a;
+            padding-bottom: 8px;
+            margin-bottom: 18px;
+            letter-spacing: 0.8px;
+            page-break-after: avoid;
+            break-after: avoid;
+          }
 
-          .analysis-columns { page-break-after: avoid; break-after: avoid; }
+          .criterion-section {
+            border: 1px solid #d5d9e2;
+            border-radius: 8px;
+            margin-bottom: 28px;
+            background: #ffffff;
+            overflow: hidden;
+            page-break-inside: avoid;
+            break-inside: avoid;
+          }
 
-          .criterion-table { width: 100%; border-collapse: collapse; margin-bottom: 24px; page-break-inside: auto; break-inside: auto; table-layout: auto; }
-          .criterion-table + .criterion-table { margin-top: 24px; }
+          .criterion-section--spaced {
+            margin-top: 36px;
+          }
 
-          thead { display: table-header-group !important; page-break-after: avoid; break-after: avoid; page-break-inside: avoid; break-inside: avoid; }
-          thead tr { background: #f3f4f6; }
+          .analysis-wrapper {
+            padding: 18px 18px 22px;
+            page-break-inside: avoid;
+            break-inside: avoid;
+          }
 
-          .analysis-header-group { display: table-header-group !important; page-break-after: avoid !important; break-after: avoid; page-break-inside: avoid !important; break-inside: avoid; }
+          .analysis-wrapper + .analysis-wrapper {
+            border-top: 1px solid #d5d9e2;
+          }
 
-          .analysis-data-body { display: table-row-group !important; page-break-before: avoid !important; break-before: avoid; page-break-inside: auto; break-inside: auto; }
+          .criterion-table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: auto;
+          }
 
-          tbody { page-break-inside: auto; break-inside: auto; }
-          tbody tr { page-break-inside: avoid; break-inside: avoid; }
+          .criterion-header th {
+            background: #f2f4f8;
+            color: #1f2d4f;
+            font-weight: 700;
+            font-size: 11.5pt;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            text-align: left;
+            padding: 12px 16px;
+            border: 1px solid #d5d9e2;
+          }
 
-          th, td { border: 1px solid #d1d5db; padding: 8px; font-size: 12px; }
-          th { text-align: center; font-weight: 600; color: #1f2937; }
-          th.value-col, td.value-col { white-space: nowrap; text-align: center; vertical-align: middle; }
+          .analysis-heading-row th {
+            background: #e6ecf9;
+            color: #1f3a8a;
+            font-weight: 600;
+            font-size: 11pt;
+            text-transform: none;
+            text-align: left;
+            padding: 10px 16px;
+            border: 1px solid #d5d9e2;
+          }
 
-          .param-col { width: auto; }
-          td { vertical-align: top; }
+          .criterion-table thead th {
+            background: #f1f4fb;
+            color: #1f2d4f;
+            font-weight: 700;
+            font-size: 10.5pt;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 10px 8px;
+            border: 1px solid #d5d9e2;
+          }
 
-          .param-label { font-weight: 600; color: #111827; }
-          .param-observation { font-size: 11px; color: #4b5563; margin-top: 6px; background: #f9fafb; padding: 6px; border-left: 2px solid #9ca3af; }
+          .criterion-table tbody td {
+            border: 1px solid #d5d9e2;
+            padding: 10px 8px;
+            font-size: 10.5pt;
+            vertical-align: top;
+          }
+
+          .criterion-table tbody tr:nth-child(even) {
+            background: #f9fbff;
+          }
+
+          .param-col {
+            width: 55%;
+          }
+
+          .param-label {
+            font-weight: 700;
+            color: #1f2d4f;
+            letter-spacing: 0.2px;
+          }
+
+          .param-observation {
+            font-size: 9.5pt;
+            color: #4b5563;
+            margin-top: 6px;
+            line-height: 1.45;
+          }
+
+          .value-col {
+            white-space: nowrap;
+            text-align: center;
+            font-weight: 600;
+            color: #1f2d4f;
+          }
 
           @page {
-            margin: 20mm;
+            margin: 18mm 16mm 20mm 16mm;
             @bottom-right {
               content: "Página " counter(page) " de " counter(pages);
-              font-size: 10px;
+              font-size: 9pt;
               color: #6b7280;
             }
           }
@@ -738,130 +868,123 @@ function ReportHtml({ context }: { context: ReportRenderContext }) {
       </head>
 
       <body>
-        <div className="header">
-          <h1>Perfil de Desempenho da Edificação - PDE</h1>
-        </div>
+        <div className="document">
+          <div className="header">
+            <h1>Perfil de Desempenho da Edificação - PDE</h1>
+            <div className="header-subtitle">Relatório técnico detalhado da avaliação de desempenho</div>
+          </div>
 
-        <div className="card">
           {buildingInfoSections.length > 0 && (
-            <div className="section" style={{ marginBottom: '0' }}>
-              {buildingInfoSections.map((section: BuildingInfoSection) => {
+            <div className="info-wrapper">
+              {buildingInfoSections.map((section: BuildingInfoSection) => (
+                <div key={section.title} className="building-info-section">
+                  <h3 className="building-info-title">{section.title}</h3>
+                  <table className="building-info-table">
+                    <tbody>
+                      {section.rows.map((row: BuildingInfoRow, index: number) => {
+                        const displayValue = row.unit && row.unit.trim() !== ''
+                          ? `${formatWithSeparators(row.value)} ${formatWithSeparators(row.unit)}`
+                          : formatWithSeparators(row.value);
+                        return (
+                          <tr key={`${section.title}-${row.label}-${index}`}>
+                            <td className="building-info-label">{formatWithSeparators(row.label)}</td>
+                            <td className="building-info-value">{displayValue}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {sections.map((requirement) => (
+            <div
+              key={requirement.id}
+              className="section"
+              data-requirement-id={String(requirement.id)}
+            >
+              <h2 className="section-title" data-role="requirement-title">Requisito: {normalizeText(requirement.label)}</h2>
+
+              {requirement.criteria.map((criterion, criterionIndex) => {
+                const analysesWithData = criterion.analyses.filter((analysis) => analysis.parameters.length > 0);
+                if (analysesWithData.length === 0) {
+                  return null;
+                }
+
+                const previousCriteriaWithParams = requirement.criteria
+                  .slice(0, criterionIndex)
+                  .some((c) => c.analyses.some((a) => a.parameters.length > 0));
+                const criterionClassName = `criterion-section${previousCriteriaWithParams ? ' criterion-section--spaced' : ''}`;
+                const criterionTitle = `Critério: ${normalizeText(criterion.label)}`;
+
                 return (
-                  <div key={section.title} className="building-info-section">
-                    <h3 className="building-info-title">{section.title}</h3>
-                    <table className="building-info-table">
-                      <tbody>
-                        {section.rows.map((row: BuildingInfoRow, index: number) => {
-                          const displayValue = row.unit && row.unit.trim() !== ''
-                            ? `${formatWithSeparators(row.value)} ${formatWithSeparators(row.unit)}`
-                            : formatWithSeparators(row.value);
-                          return (
-                            <tr key={`${section.title}-${row.label}-${index}`}>
-                              <td className="building-info-label">{formatWithSeparators(row.label)}</td>
-                              <td className="building-info-value full">{displayValue}</td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
+                  <div key={criterion.id} className={criterionClassName} data-criterion-id={String(criterion.id)}>
+                    {analysesWithData.map((analysis) => {
+                      const columns = ['Parâmetro', 'UN', ...analysis.selectedLevels.map((level) => levelLabels[level] || level)];
+
+                      return (
+                        <div key={analysis.id} className="analysis-wrapper">
+                          <table
+                            className="criterion-table"
+                            data-criterion-id={String(criterion.id)}
+                            data-analysis-id={String(analysis.id)}
+                            data-conjunto="3"
+                          >
+                            <thead className="analysis-header-group">
+                              <tr className="criterion-header">
+                                <th colSpan={columns.length}>{criterionTitle}</th>
+                              </tr>
+                              <tr className="analysis-heading-row">
+                                <th colSpan={columns.length}>Análise: {normalizeText(analysis.label)}</th>
+                              </tr>
+                              <tr className="analysis-columns">
+                                {columns.map((column, index) => (
+                                  <th key={`${analysis.id}-${column}-${index}`} className={index === 0 ? 'param-col' : 'value-col'}>
+                                    {column}
+                                  </th>
+                                ))}
+                              </tr>
+                            </thead>
+                            <tbody className="analysis-data-body">
+                              {analysis.parameters.map((parameter) => {
+                                const observation = parameter.notes ?? (parameter as any).observation;
+                                return (
+                                  <tr key={parameter.id}>
+                                    <td className="param-col">
+                                      <div className="param-label">{formatWithSeparators(parameter.label)}</div>
+                                      {observation && (
+                                        <div className="param-observation">{formatWithSeparators(observation)}</div>
+                                      )}
+                                    </td>
+                                    <td className="value-col">{normalizeDisplayValue(parameter.unit)}</td>
+                                    {analysis.selectedLevels.map((level) => {
+                                      const directValue = (level === 'minimum' && parameter.minimumValue)
+                                        || (level === 'intermediate' && parameter.intermediateValue)
+                                        || (level === 'superior' && parameter.superiorValue);
+                                      const nested = (parameter as any).values?.[level];
+                                      const fallback = nested?.value;
+                                      const value = directValue ?? fallback;
+
+                                      return (
+                                        <td key={level} className="value-col">{normalizeDisplayValue(value)}</td>
+                                      );
+                                    })}
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      );
+                    })}
                   </div>
                 );
               })}
             </div>
-          )}
+          ))}
         </div>
-
-        {/* Página nova apenas para iniciar os requisitos */}
-        <div style={{ pageBreakBefore: 'always' }}></div>
-
-        {sections.map((requirement) => (
-          <div
-            key={requirement.id}
-            className="section"
-            data-requirement-id={String(requirement.id)}
-          >
-            <h2 className="section-title" data-role="requirement-title">Requisito: {normalizeText(requirement.label)}</h2>
-
-            {requirement.criteria.map((criterion, criterionIndex) => {
-              const criterionHasParameters = criterion.analyses.some((analysis) => analysis.parameters.length > 0);
-
-              const previousCriteriaWithParams = requirement.criteria
-                .slice(0, criterionIndex)
-                .some((c) => c.analyses.some((a) => a.parameters.length > 0));
-              const criterionClassName = `criterion-section${criterionHasParameters && previousCriteriaWithParams ? ' criterion-section--spaced' : ''}`;
-
-              const criterionTitle = `Critério: ${normalizeText(criterion.label)}`;
-
-              return (
-                <React.Fragment key={criterion.id}>
-                  <div className={criterionClassName}>
-                    {criterion.analyses.map((analysis, analysisIndex) => {
-                      const columns = ['Parâmetro', 'UN', ...analysis.selectedLevels.map((level) => levelLabels[level] || level)];
-                      const headerClass = `analysis-header${analysisIndex > 0 ? ' analysis-header--spaced' : ''}`;
-
-                      return (
-                        <table
-                          key={analysis.id}
-                          className="criterion-table"
-                          data-criterion-id={String(criterion.id)}
-                          data-analysis-id={String(analysis.id)}
-                          data-conjunto="3"
-                        >
-                          <thead className="analysis-header-group">
-                            <tr className="criterion-header">
-                              <th colSpan={columns.length}>{criterionTitle}</th>
-                            </tr>
-
-                            <tr className={headerClass}>
-                              <th colSpan={columns.length}>Análise: {normalizeText(analysis.label)}</th>
-                            </tr>
-
-                            <tr className="analysis-columns">
-                              {columns.map((column, index) => (
-                                <th key={`${analysis.id}-${column}-${index}`} className={index === 0 ? 'param-col' : 'value-col'}>
-                                  {column}
-                                </th>
-                              ))}
-                            </tr>
-                          </thead>
-
-                          <tbody className="analysis-data-body">
-                            {analysis.parameters.map((parameter) => {
-                              const observation = parameter.notes ?? (parameter as any).observation;
-                              return (
-                                <tr key={parameter.id}>
-                                  <td className="param-col">
-                                    <div className="param-label">{formatWithSeparators(parameter.label)}</div>
-                                    {observation && (<div className="param-observation">{formatWithSeparators(observation)}</div>)}
-                                  </td>
-
-                                  <td className="value-col">{normalizeDisplayValue(parameter.unit)}</td>
-
-                                  {analysis.selectedLevels.map((level) => {
-                                    const directValue = (level === 'minimum' && parameter.minimumValue)
-                                      || (level === 'intermediate' && parameter.intermediateValue)
-                                      || (level === 'superior' && parameter.superiorValue);
-                                    const nested = (parameter as any).values?.[level];
-                                    const fallback = nested?.value;
-                                    const value = directValue ?? fallback;
-
-                                    return (
-                                      <td key={level} className="value-col">{normalizeDisplayValue(value)}</td>
-                                    );
-                                  })}
-                                </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
-                      );
-                    })}
-                  </div>
-                </React.Fragment>
-              );
-            })}
-          </div>
-        ))}
       </body>
     </html>
   );
@@ -1081,6 +1204,9 @@ export async function generateReportPdf(reportId: number, userId: number): Promi
 
     // Paginação com prevenção de títulos órfãos e cabeçalhos de critério por página
     await page.evaluate(() => {
+      const __name = (target: any, value: string) =>
+        Object.defineProperty(target, 'name', { value, configurable: true });
+
       const MM_TO_PX = 96 / 25.4;
       // Altura útil: A4 (297mm) - margens top/bottom do PDF (18mm e 15mm)
       const PAGE_HEIGHT_PX = (297 - 18 - 15) * MM_TO_PX;
