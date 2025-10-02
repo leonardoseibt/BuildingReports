@@ -535,9 +535,18 @@ function buildFilename(building: Building, report: Report): string {
 
 export async function buildReportRenderData(reportId: number, userId: number) {
   const context = await loadReportContext(reportId, userId);
-  const html = '<!DOCTYPE html>' + renderToStaticMarkup(<ReportHtml context={context} />);
+  const buildingInfoSections = buildBuildingInfoSections(context.building, context.report, {
+    typologies: context.typologies,
+    technicians: context.technicians,
+    noiseClasses: context.noiseClasses,
+    aggressivenessClasses: context.aggressivenessClasses,
+    bioclimaticZones: context.bioclimaticZones,
+    isopleths: context.isopleths
+  });
+  const contextWithInfo = { ...context, buildingInfoSections };
+  const html = '<!DOCTYPE html>' + renderToStaticMarkup(<ReportHtml context={contextWithInfo} />);
   const filename = buildFilename(context.building, context.report);
-  return { context, html, filename };
+  return { context: contextWithInfo, html, filename };
 }
 
 
@@ -667,7 +676,7 @@ function ReportHtml({ context }: { context: ReportRenderContext }) {
             max-width: 100%;
             margin: 0 auto;
             background: #ffffff;
-            padding: 32px 40px 48px;
+            padding: 28px 12px 48px;
           }
 
           .header {
@@ -692,6 +701,8 @@ function ReportHtml({ context }: { context: ReportRenderContext }) {
             gap: 18px;
             margin-bottom: 36px;
             grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            page-break-after: always;
+            break-after: page;
           }
 
           .building-info-section {
@@ -699,8 +710,6 @@ function ReportHtml({ context }: { context: ReportRenderContext }) {
             border-radius: 6px;
             background: #f7f8fb;
             padding: 16px 18px;
-            page-break-inside: avoid;
-            break-inside: avoid;
           }
 
           .building-info-title {
@@ -741,7 +750,7 @@ function ReportHtml({ context }: { context: ReportRenderContext }) {
           }
 
           .section {
-            margin-bottom: 40px;
+            margin-bottom: 28px;
           }
 
           .section-title {
@@ -758,33 +767,33 @@ function ReportHtml({ context }: { context: ReportRenderContext }) {
           }
 
           .criterion-section {
-            border: 1px solid #d5d9e2;
-            border-radius: 8px;
-            margin-bottom: 28px;
+            margin-bottom: 16px;
             background: #ffffff;
             overflow: hidden;
-            page-break-inside: avoid;
-            break-inside: avoid;
-          }
-
-          .criterion-section--spaced {
-            margin-top: 36px;
           }
 
           .analysis-wrapper {
-            padding: 18px 18px 22px;
-            page-break-inside: avoid;
-            break-inside: avoid;
+            padding: 10px 0 12px;
           }
 
           .analysis-wrapper + .analysis-wrapper {
-            border-top: 1px solid #d5d9e2;
+            border-top: 1px solid #e8ecf2;
+            padding-top: 12px;
           }
 
           .criterion-table {
             width: 100%;
             border-collapse: collapse;
             table-layout: auto;
+            border: 1px solid #d5d9e2;
+          }
+          
+          .criterion-table thead {
+            display: table-header-group;
+          }
+          
+          .criterion-table tbody {
+            display: table-row-group;
           }
 
           .criterion-header th {
@@ -795,10 +804,15 @@ function ReportHtml({ context }: { context: ReportRenderContext }) {
             text-transform: uppercase;
             letter-spacing: 0.6px;
             text-align: left;
-            padding: 12px 16px;
+            padding: 10px 12px;
             border: 1px solid #d5d9e2;
           }
 
+          .analysis-heading-row {
+            page-break-after: avoid;
+            break-after: avoid;
+          }
+          
           .analysis-heading-row th {
             background: #e6ecf9;
             color: #1f3a8a;
@@ -806,8 +820,13 @@ function ReportHtml({ context }: { context: ReportRenderContext }) {
             font-size: 11pt;
             text-transform: none;
             text-align: left;
-            padding: 10px 16px;
+            padding: 9px 12px;
             border: 1px solid #d5d9e2;
+          }
+          
+          .analysis-columns {
+            page-break-after: avoid;
+            break-after: avoid;
           }
 
           .criterion-table thead th {
@@ -817,23 +836,44 @@ function ReportHtml({ context }: { context: ReportRenderContext }) {
             font-size: 10.5pt;
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            padding: 10px 8px;
+            padding: 9px 10px;
             border: 1px solid #d5d9e2;
+          }
+          
+          .criterion-table tbody tr {
+            page-break-inside: avoid;
+            break-inside: avoid;
+          }
+          
+          .criterion-table thead th.param-col {
+            text-align: left;
+          }
+          
+          .criterion-table thead th.value-col {
+            text-align: center;
           }
 
           .criterion-table tbody td {
             border: 1px solid #d5d9e2;
-            padding: 10px 8px;
+            padding: 9px 10px;
             font-size: 10.5pt;
-            vertical-align: top;
+            vertical-align: middle;
           }
 
           .criterion-table tbody tr:nth-child(even) {
             background: #f9fbff;
           }
 
+          .criterion-table {
+            width: 100%;
+            table-layout: auto;
+          }
+
           .param-col {
-            width: 55%;
+            width: auto;
+            min-width: 200px;
+            text-align: left;
+            vertical-align: top;
           }
 
           .param-label {
@@ -850,8 +890,10 @@ function ReportHtml({ context }: { context: ReportRenderContext }) {
           }
 
           .value-col {
+            width: 1%;
             white-space: nowrap;
             text-align: center;
+            vertical-align: middle;
             font-weight: 600;
             color: #1f2d4f;
           }
@@ -913,14 +955,10 @@ function ReportHtml({ context }: { context: ReportRenderContext }) {
                   return null;
                 }
 
-                const previousCriteriaWithParams = requirement.criteria
-                  .slice(0, criterionIndex)
-                  .some((c) => c.analyses.some((a) => a.parameters.length > 0));
-                const criterionClassName = `criterion-section${previousCriteriaWithParams ? ' criterion-section--spaced' : ''}`;
                 const criterionTitle = `Critério: ${normalizeText(criterion.label)}`;
 
                 return (
-                  <div key={criterion.id} className={criterionClassName} data-criterion-id={String(criterion.id)}>
+                  <div key={criterion.id} className="criterion-section" data-criterion-id={String(criterion.id)}>
                     {analysesWithData.map((analysis) => {
                       const columns = ['Parâmetro', 'UN', ...analysis.selectedLevels.map((level) => levelLabels[level] || level)];
 
@@ -1202,175 +1240,288 @@ export async function generateReportPdf(reportId: number, userId: number): Promi
     await page.setContent(html, { waitUntil: 'networkidle0' });
     await page.emulateMediaType('screen');
 
-    // Paginação com prevenção de títulos órfãos e cabeçalhos de critério por página
-    await page.evaluate(() => {
-      const __name = (target: any, value: string) =>
-        Object.defineProperty(target, 'name', { value, configurable: true });
+    // Paginação inteligente: evita títulos órfãos e garante que tabelas não sejam cortadas
+    await page.evaluate(`(function() {
+      // Constantes de medida (A4: 297mm altura, margens: 18mm top, 15mm bottom)
+      var MM_TO_PX = 96 / 25.4;
+      var TOP_MARGIN_MM = 18;
+      var BOTTOM_MARGIN_MM = 15;
+      var PAGE_HEIGHT_MM = 297;
+      var USABLE_HEIGHT_MM = PAGE_HEIGHT_MM - TOP_MARGIN_MM - BOTTOM_MARGIN_MM;
+      var PAGE_HEIGHT_PX = USABLE_HEIGHT_MM * MM_TO_PX;
+      var TOP_MARGIN_PX = TOP_MARGIN_MM * MM_TO_PX;
 
-      const MM_TO_PX = 96 / 25.4;
-      // Altura útil: A4 (297mm) - margens top/bottom do PDF (18mm e 15mm)
-      const PAGE_HEIGHT_PX = (297 - 18 - 15) * MM_TO_PX;
-      const TOP_MARGIN_PX = 18 * MM_TO_PX;
+      var bodyStyle = window.getComputedStyle(document.body);
+      var bodyPaddingTop = parseFloat(bodyStyle.paddingTop || '0') || 0;
+      
+      // Offset para começar a contar do início do conteúdo (após margens)
+      var layoutOffset = TOP_MARGIN_PX + bodyPaddingTop;
 
-      const bodyStyle = window.getComputedStyle(document.body);
-      const paddingTop = parseFloat(bodyStyle.paddingTop || '0') || 0;
-      const layoutOffset = TOP_MARGIN_PX + paddingTop;
+      // Margem de segurança para prevenir cortes
+      var SAFETY = 25;
 
-      const SAFETY = 10; // px
-
-      function getTop(el: Element): number {
-        const r = el.getBoundingClientRect();
-        return Math.max(0, r.top + window.scrollY - layoutOffset);
+      // Funções utilitárias para medições de layout
+      function getTop(el) {
+        var rect = el.getBoundingClientRect();
+        var absoluteTop = rect.top + window.scrollY;
+        
+        // Normaliza a posição considerando o offset do layout
+        // O offsetTop já considera a posição relativa ao documento
+        return Math.max(0, absoluteTop - layoutOffset);
       }
-      function getHeight(el: Element): number {
-        return el.getBoundingClientRect().height;
+      
+      function getHeight(el) {
+        // offsetHeight inclui padding e border, é mais preciso para cálculos de layout
+        // Força o navegador a recalcular se necessário
+        var height = el.offsetHeight;
+        
+        // Se offsetHeight retornar 0, usa getBoundingClientRect como fallback
+        if (height === 0) {
+          height = el.getBoundingClientRect().height;
+        }
+        
+        return height;
       }
-      function pageOf(y: number): number {
+      
+      // Calcula altura real de uma linha de tabela, considerando conteúdo multi-linha
+      function getRealRowHeight(row) {
+        if (!row) return 0;
+        
+        // Força layout da linha antes de medir
+        row.offsetHeight;
+        
+        // Encontra a célula mais alta da linha (importante para linhas com param-observation)
+        var cells = Array.from(row.querySelectorAll('td'));
+        var maxCellHeight = 0;
+        
+        for (var i = 0; i < cells.length; i++) {
+          var cell = cells[i];
+          // Força cálculo do conteúdo interno
+          cell.offsetHeight;
+          
+          // Verifica se tem param-label e param-observation
+          var label = cell.querySelector('.param-label');
+          var observation = cell.querySelector('.param-observation');
+          
+          if (label || observation) {
+            // Recalcula altura considerando o conteúdo interno
+            var labelHeight = label ? label.offsetHeight : 0;
+            var observationHeight = observation ? observation.offsetHeight : 0;
+            var cellPadding = parseFloat(window.getComputedStyle(cell).paddingTop || '0') +
+                             parseFloat(window.getComputedStyle(cell).paddingBottom || '0');
+            var totalCellHeight = labelHeight + observationHeight + cellPadding;
+            
+            if (totalCellHeight > maxCellHeight) {
+              maxCellHeight = totalCellHeight;
+            }
+          } else {
+            var cellHeight = cell.offsetHeight;
+            if (cellHeight > maxCellHeight) {
+              maxCellHeight = cellHeight;
+            }
+          }
+        }
+        
+        // Retorna a maior altura encontrada ou o offsetHeight da linha
+        var rowHeight = row.offsetHeight;
+        return Math.max(maxCellHeight, rowHeight);
+      }
+      
+      function pageOf(y) {
         return Math.floor(y / PAGE_HEIGHT_PX);
       }
-      function overflows(el: Element): boolean {
-        const top = getTop(el);
-        const h = getHeight(el);
-        const bottom = (pageOf(top) + 1) * PAGE_HEIGHT_PX;
-        return top + h > bottom - SAFETY;
+      
+      function spaceLeftOnPage(y) {
+        var currentPage = pageOf(y);
+        var pageBottom = (currentPage + 1) * PAGE_HEIGHT_PX;
+        return pageBottom - y;
       }
-      function addPageBreakBefore(el: HTMLElement) {
+      
+      // Funções para controlar quebras de página
+      function addPageBreakBefore(el) {
         el.style.pageBreakBefore = 'always';
         el.style.setProperty('break-before', 'page');
       }
 
-      function clearPageBreakBefore(el: HTMLElement) {
-        el.style.removeProperty('page-break-before');
-        el.style.removeProperty('break-before');
+      function preventBreakInside(el) {
+        el.style.pageBreakInside = 'avoid';
+        el.style.setProperty('break-inside', 'avoid');
+      }
+      
+      function clearAllPageBreaks() {
+        // Remove apenas page-breaks dinâmicos aplicados por JavaScript
+        // Não remove as quebras definidas no CSS (.info-wrapper)
+        var allElements = Array.from(document.querySelectorAll('.section-title, table.criterion-table'));
+        for (var i = 0; i < allElements.length; i++) {
+          allElements[i].style.removeProperty('page-break-before');
+          allElements[i].style.removeProperty('break-before');
+        }
       }
 
-      // 1) Evitar títulos órfãos de REQUISITO (h2.section-title)
+      // Evita que títulos de requisitos fiquem órfãos (sem conteúdo na mesma página)
       function avoidOrphanRequirementTitles() {
-        const requirementSections = Array.from(document.querySelectorAll('[data-requirement-id]')) as HTMLElement[];
-        for (const section of requirementSections) {
-          const title = section.querySelector('.section-title') as HTMLElement | null;
+        var requirementSections = Array.from(document.querySelectorAll('[data-requirement-id]'));
+        for (var i = 0; i < requirementSections.length; i++) {
+          var section = requirementSections[i];
+          var title = section.querySelector('.section-title');
           if (!title) continue;
 
-          // Próximo bloco relevante (primeira .criterion-table dentro da seção)
-          const nextTable = section.querySelector('table.criterion-table') as HTMLElement | null;
+          preventBreakInside(title);
+
+          var nextTable = section.querySelector('table.criterion-table');
           if (!nextTable) continue;
 
-          const titleTop = getTop(title);
-          const titleHeight = getHeight(title);
-          const nextTableHeader = nextTable.querySelector('thead') as HTMLElement | null;
-          const requiredBlock = nextTableHeader ?? nextTable;
+          var titleTop = getTop(title);
+          var currentPage = pageOf(titleTop);
+          var titleHeight = getHeight(title);
+          var tableHeader = nextTable.querySelector('thead');
+          var firstRow = nextTable.querySelector('tbody tr');
+          var secondRow = nextTable.querySelector('tbody tr:nth-child(2)');
+          
+          // MUITO RIGOROSO: Exige título + cabeçalho + DUAS primeiras linhas
+          // Isso garante contexto suficiente e evita órfãos
+          var neededHeight = titleHeight + 10; // +10 para margem do título
+          
+          if (tableHeader) {
+            neededHeight += getHeight(tableHeader);
+          }
+          if (firstRow) {
+            neededHeight += getRealRowHeight(firstRow);
+          }
+          if (secondRow) {
+            neededHeight += getRealRowHeight(secondRow);
+          }
+          
+          var spaceLeft = spaceLeftOnPage(titleTop);
 
-          const needed = titleHeight + (requiredBlock ? getHeight(requiredBlock) : 0);
-          const currentBottom = (pageOf(titleTop) + 1) * PAGE_HEIGHT_PX;
+          // Verifica se já está próximo do topo da página
+          var distanceFromPageTop = titleTop - (currentPage * PAGE_HEIGHT_PX);
+          var isNearPageTop = distanceFromPageTop < 30;
 
-          // Se o título + cabeçalho da próxima tabela não couberem, quebra antes do título
-          const shouldBreak = titleTop + needed > currentBottom - SAFETY;
-          if (shouldBreak) {
+          // Força quebra se não couber
+          if (!isNearPageTop && neededHeight > spaceLeft - (SAFETY * 2)) {
             addPageBreakBefore(title);
-          } else {
-            clearPageBreakBefore(title);
           }
         }
       }
 
-      // 2) Paginar tabelas de critérios (divisão por linhas), garantindo:
-      //    - Se nenhuma linha de dados cabe após os cabeçalhos, move a tabela inteira
-      //    - Ao dividir, replica THEAD
-      function paginateCriterionTables() {
-        const tables = Array.from(document.querySelectorAll('table.criterion-table')) as HTMLTableElement[];
+      // Divide tabelas que não cabem e repete cabeçalhos
+      function splitAndRepeatTableHeaders() {
+        var tables = Array.from(document.querySelectorAll('table.criterion-table'));
+        var newTables = [];
 
-        for (let t = 0; t < tables.length; t++) {
-          const table = tables[t];
-          const thead = table.tHead as HTMLTableSectionElement | null;
-          const tbody = table.tBodies[0] as HTMLTableSectionElement | null;
-          if (!tbody) continue;
+        for (var t = 0; t < tables.length; t++) {
+          var table = tables[t];
+          var thead = table.tHead || table.querySelector('thead');
+          var tbody = table.tBodies[0];
+          
+          if (!tbody || !thead) continue;
 
-          const rows = Array.from(tbody.querySelectorAll('tr')) as HTMLTableRowElement[];
+          var rows = Array.from(tbody.querySelectorAll('tr'));
           if (rows.length === 0) continue;
 
-          // Verificar se cabe ao menos 1 linha depois do cabeçalho; se não, quebra antes da tabela
-          const headerBlock = thead ?? table.querySelector('thead') as HTMLElement | null;
-          const headerHeight = headerBlock ? getHeight(headerBlock) : 0;
-          const tableTop = getTop(table);
-          const currentBottom = (pageOf(tableTop) + 1) * PAGE_HEIGHT_PX;
+          var tableTop = getTop(table);
+          var currentPage = pageOf(tableTop);
+          var headerHeight = getHeight(thead);
+          var firstRowHeight = getRealRowHeight(rows[0]);
+          var spaceLeft = spaceLeftOnPage(tableTop);
 
-          // Altura da primeira linha
-          const firstRowH = getHeight(rows[0]);
-
-          if (tableTop + headerHeight + firstRowH > currentBottom - SAFETY) {
-            // Move tabela inteira para a próxima página (evita cabeçalho órfão)
+          // Verifica se já está próximo do topo
+          var distanceFromPageTop = tableTop - (currentPage * PAGE_HEIGHT_PX);
+          var isNearPageTop = distanceFromPageTop < 50;
+          
+          // Se não couber cabeçalho + primeira linha, move tabela inteira
+          var minSpaceNeeded = headerHeight + firstRowHeight + SAFETY;
+          
+          if (!isNearPageTop && spaceLeft < minSpaceNeeded) {
             addPageBreakBefore(table);
+            continue;
           }
 
-          // Recalcular após possível quebra
-          const rowsAfter = Array.from((table.tBodies[0] || tbody).querySelectorAll('tr')) as HTMLTableRowElement[];
+          // Verifica se a tabela precisa ser dividida
+          var currentY = tableTop + headerHeight;
+          var rowsToSplit = [];
+          var splitAtIndex = -1;
+          
+          for (var j = 0; j < rows.length; j++) {
+            var row = rows[j];
+            preventBreakInside(row);
+            
+            var rowHeight = getRealRowHeight(row);
+            var rowSpaceLeft = spaceLeftOnPage(currentY);
+            
+            // Se a linha não cabe, marca para dividir
+            if (rowHeight > rowSpaceLeft - SAFETY && j > 0) {
+              splitAtIndex = j;
+              break;
+            }
+            
+            currentY += rowHeight;
+          }
 
-          // Percorrer e fatiar quando estourar
-          for (let j = 0; j < rowsAfter.length; j++) {
-            const row = rowsAfter[j];
-
-            if (overflows(row)) {
-              if (j === 0) {
-                // Primeira linha estoura (deveria ter sido pego pelo guard acima, mas por segurança)
-                addPageBreakBefore(table);
-                break;
-              } else {
-                // Criar nova tabela para as linhas restantes
-                const newTable = table.cloneNode(false) as HTMLTableElement;
-                newTable.className = table.className;
-
-                // Copiar data-attributes
-                (newTable as any).dataset = { ...(table as any).dataset };
-
-                // Quebra antes da nova tabela
-                addPageBreakBefore(newTable);
-
-                // Copiar cabeçalho
-                if (thead) {
-                  newTable.appendChild(thead.cloneNode(true));
-                } else {
-                  const originalThead = table.querySelector('thead');
-                  if (originalThead) newTable.appendChild(originalThead.cloneNode(true));
+          // Se precisa dividir, cria nova tabela com cabeçalhos repetidos
+          if (splitAtIndex > 0 && splitAtIndex < rows.length) {
+            // Clona a estrutura da tabela
+            var newTable = table.cloneNode(false);
+            newTable.className = table.className;
+            
+            // Copia datasets
+            if (table.dataset) {
+              for (var key in table.dataset) {
+                if (table.dataset.hasOwnProperty(key)) {
+                  newTable.dataset[key] = table.dataset[key];
                 }
-
-                // Criar novo tbody e mover as linhas remanescentes
-                const newTbody = document.createElement('tbody');
-                newTable.appendChild(newTbody);
-
-                for (let k = j; k < rowsAfter.length; k++) {
-                  newTbody.appendChild(rowsAfter[k]);
-                }
-
-                // Inserir a nova tabela após a atual
-                if (table.parentNode) {
-                  table.parentNode.insertBefore(newTable, table.nextSibling);
-                }
-                break;
               }
+            }
+            
+            // Adiciona quebra de página antes da nova tabela
+            addPageBreakBefore(newTable);
+            
+            // Clona o thead COMPLETO (com todas as linhas de cabeçalho)
+            var newThead = thead.cloneNode(true);
+            newTable.appendChild(newThead);
+            
+            // Cria novo tbody
+            var newTbody = document.createElement('tbody');
+            newTable.appendChild(newTbody);
+            
+            // Move as linhas restantes para a nova tabela
+            for (var k = splitAtIndex; k < rows.length; k++) {
+              newTbody.appendChild(rows[k]);
+            }
+            
+            // Insere a nova tabela após a original
+            if (table.parentNode) {
+              table.parentNode.insertBefore(newTable, table.nextSibling);
+              newTables.push(newTable);
             }
           }
         }
+        
+        // Retorna as novas tabelas criadas para processar recursivamente
+        return newTables;
       }
 
-      // 3) Exibir cabeçalho de CRITÉRIO apenas uma vez por página, mas repetir quando mudar de página.
-      function resolveCriterionHeadersPerPage() {
-        const tables = Array.from(document.querySelectorAll('table.criterion-table')) as HTMLTableElement[];
-        const seen = new Map<string, Set<number>>();
+      // Oculta cabeçalhos de critério duplicados na mesma página
+      function hideDuplicateCriterionHeaders() {
+        var tables = Array.from(document.querySelectorAll('table.criterion-table'));
+        var seen = new Map();
 
-        for (const table of tables) {
-          const criterionId = (table as any).dataset?.criterionId || '';
-          const headerRow = table.querySelector('.criterion-header') as HTMLElement | null;
+        for (var i = 0; i < tables.length; i++) {
+          var table = tables[i];
+          var criterionId = (table.dataset && table.dataset.criterionId) || '';
+          var headerRow = table.querySelector('.criterion-header');
           if (!criterionId || !headerRow) continue;
 
-          const top = getTop(table);
-          const p = pageOf(top);
+          var top = getTop(table);
+          var p = pageOf(top);
 
           if (!seen.has(criterionId)) {
-            seen.set(criterionId, new Set<number>());
+            seen.set(criterionId, new Set());
           }
-          const pages = seen.get(criterionId)!;
+          var pages = seen.get(criterionId);
 
-          // Se já houve um cabeçalho desse critério nesta página, esconder; senão, mostrar
+          // Se já vimos este critério nesta página, oculta o cabeçalho
           if (pages.has(p)) {
             headerRow.style.display = 'none';
           } else {
@@ -1380,52 +1531,69 @@ export async function generateReportPdf(reportId: number, userId: number): Promi
         }
       }
 
-      // 4) Evitar órfãos do cabeçalho de ANÁLISE (garantir pelo menos 1 linha de dados após thead)
-      function avoidOrphanAnalysisHeaders() {
-        const tables = Array.from(document.querySelectorAll('table.criterion-table')) as HTMLTableElement[];
-
-        for (const table of tables) {
-          const thead = table.tHead as HTMLTableSectionElement | null;
-          const tbody = table.tBodies[0] as HTMLTableSectionElement | null;
-          if (!thead || !tbody) continue;
-
-          const firstRow = tbody.querySelector('tr') as HTMLTableRowElement | null;
-          if (!firstRow) continue;
-
-          const headerTop = getTop(thead);
-          const headerH = getHeight(thead);
-          const rowH = getHeight(firstRow);
-          const bottom = (pageOf(headerTop) + 1) * PAGE_HEIGHT_PX;
-
-          if (headerTop + headerH + rowH > bottom - SAFETY) {
-            // Move a tabela inteira para a próxima página para não deixar análise órfã
-            addPageBreakBefore(table);
-          }
+      // Força o layout para obter alturas reais dos elementos com texto multi-linha
+      function forceLayout() {
+        // Força o navegador a calcular todos os layouts pendentes
+        document.body.offsetHeight;
+        
+        // Garante que todas as células de parâmetros tenham altura calculada corretamente
+        var allCells = Array.from(document.querySelectorAll('.criterion-table tbody td'));
+        for (var i = 0; i < allCells.length; i++) {
+          // Acessa propriedades que forçam cálculo de layout
+          allCells[i].offsetHeight;
+        }
+        
+        // Força cálculo de todas as tabelas
+        var allTables = Array.from(document.querySelectorAll('table.criterion-table'));
+        for (var t = 0; t < allTables.length; t++) {
+          allTables[t].offsetHeight;
+        }
+      }
+      
+      // Aplica estilos iniciais de quebra de página
+      function applyInitialStyles() {
+        var allTables = Array.from(document.querySelectorAll('table.criterion-table'));
+        for (var i = 0; i < allTables.length; i++) {
+          var table = allTables[i];
+          table.style.pageBreakInside = 'auto';
+          table.style.setProperty('break-inside', 'auto');
+        }
+        
+        var allTitles = Array.from(document.querySelectorAll('.section-title'));
+        for (var t = 0; t < allTitles.length; t++) {
+          preventBreakInside(allTitles[t]);
         }
       }
 
-      // Executar em ordem para minimizar reflows inconsistentes
-      function applyTableLayoutAdjustments() {
-        paginateCriterionTables();
-        avoidOrphanAnalysisHeaders();
-        paginateCriterionTables();
-        resolveCriterionHeadersPerPage();
+      // Execução da paginação em ordem otimizada
+      forceLayout();                        // 0. FORÇA cálculo de layout para obter alturas reais
+      clearAllPageBreaks();                 // 1. Limpa estilos anteriores
+      applyInitialStyles();                 // 2. Aplica estilos base
+      
+      // 3. Previne títulos órfãos (MUITO RIGOROSO: exige 2 linhas)
+      avoidOrphanRequirementTitles();
+      
+      // 4. Divide tabelas e repete cabeçalhos (processa recursivamente)
+      var newTables = splitAndRepeatTableHeaders();
+      var attempts = 0;
+      while (newTables.length > 0 && attempts < 10) {
+        forceLayout();  // Recalcula após split
+        newTables = splitAndRepeatTableHeaders();
+        attempts++;
       }
-
-      applyTableLayoutAdjustments();
-      avoidOrphanRequirementTitles();
-      applyTableLayoutAdjustments();
-      avoidOrphanRequirementTitles();
-    });
+      
+      // 5. Remove cabeçalhos de critério duplicados na mesma página
+      hideDuplicateCriterionHeaders();
+    })();`);
 
     const footerTemplate = `
-      <div style="font-size:10px;width:100%;text-align:right;color:#6b7280;padding-right:20mm;">
+      <div style="font-size:10px;width:100%;text-align:right;color:#6b7280;padding-right:8mm;">
         Página <span class="pageNumber"></span> de <span class="totalPages"></span>
       </div>`;
 
     const pdfBuffer = await page.pdf({
       format: 'A4',
-      margin: { top: '18mm', right: '8mm', bottom: '15mm', left: '10mm' },
+      margin: { top: '18mm', right: '8mm', bottom: '15mm', left: '8mm' },
       displayHeaderFooter: true,
       headerTemplate: '<div></div>',
       footerTemplate,
