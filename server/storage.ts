@@ -651,7 +651,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async saveReportStructure(reportId: number, structure: {
-    requirements: Array<{ id: number; position: number }>;
+    requirements: Array<{ id: number; position: number; isEnabled: boolean }>;
     criteria: Array<{ id: number; position: number }>;
     analyses: Array<{ id: number; position: number; levels: string[]; }>;
   }): Promise<boolean> {
@@ -675,6 +675,7 @@ export class DatabaseStorage implements IStorage {
                 reportId,
                 requirementId: req.id,
                 position: req.position,
+                isEnabled: req.isEnabled,
               }))
             )
           );
@@ -806,6 +807,7 @@ export class DatabaseStorage implements IStorage {
           code: row.requirements?.code,
           label: row.requirements?.label,
           position: row.report_requirements.position,
+          isEnabled: row.report_requirements.isEnabled ?? true,
         })),
         criteria: criteriaData.map(row => ({
           id: row.criteria?.id,

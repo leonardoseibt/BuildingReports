@@ -332,6 +332,7 @@ export const reportRequirements = pgTable("report_requirements", {
   reportId: integer("report_id").references(() => reports.id, { onDelete: 'cascade' }).notNull(),
   requirementId: integer("requirement_id").references(() => requirements.id, { onDelete: 'cascade' }).notNull(),
   position: integer("position").default(0).notNull(),
+  isEnabled: boolean("is_enabled").default(true).notNull(), // Controls if requirement is shown in PDF
   createdAt: timestamp("created_at").defaultNow(),
 }, (table) => [
   index("idx_report_requirements_report").on(table.reportId),

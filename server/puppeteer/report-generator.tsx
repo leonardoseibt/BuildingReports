@@ -1072,6 +1072,14 @@ async function loadReportContext(reportId: number, userId: number): Promise<Repo
   // Load report structure from relational tables
   const reportStructure = await storage.loadReportStructure(reportId);
 
+  // Build set of enabled requirement IDs
+  const enabledRequirementIds = new Set<number>();
+  for (const req of reportStructure.requirements) {
+    if (req.isEnabled) {
+      enabledRequirementIds.add(req.id);
+    }
+  }
+
   // Build selectedEvaluations map - only include analyses that are actually in the report structure
   const selectedEvaluations = new Map<string, string[]>();
   for (const analysis of reportStructure.analyses) {
@@ -1158,6 +1166,11 @@ async function loadReportContext(reportId: number, userId: number): Promise<Repo
 
   const sections = groupedData
     .map((requirement) => {
+      // Skip disabled requirements
+      if (!enabledRequirementIds.has(requirement.id)) {
+        return null;
+      }
+      
       const mappedCriteria = requirement.criteria
         .map((criterion) => {
           const analysesWithLevels = criterion.analyses

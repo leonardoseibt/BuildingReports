@@ -125,9 +125,15 @@ export default function ReportForm({ initialItem, onSuccess, onCancel }: { initi
     // Usar estrutura relacional
     const enabled: Record<number, boolean> = {};
     if (reportStructure?.requirements) {
-      const enabledIds = new Set(reportStructure.requirements.map((r: any) => r.id));
+      // Criar mapa de requisitos com seus valores isEnabled
+      const requirementMap = new Map<number, boolean>(
+        reportStructure.requirements.map((r: any) => [r.id, r.isEnabled ?? true])
+      );
+      
       groupedData.forEach(req => {
-        enabled[req.id] = enabledIds.has(req.id);
+        // Se o requisito está na estrutura, usar seu isEnabled. Senão, false.
+        const isEnabled = requirementMap.get(req.id);
+        enabled[req.id] = isEnabled !== undefined ? isEnabled : false;
       });
     } else {
       // Novo relatório - todos habilitados por padrão
@@ -272,18 +278,17 @@ export default function ReportForm({ initialItem, onSuccess, onCancel }: { initi
   const mutation = useMutation({
     mutationFn: async (values: FormData) => {
       // Preparar estrutura relacional (otimizado)
-      const enabledRequirementIds = Object.entries(enabledRequirements)
-        .filter(([_, enabled]) => enabled)
-        .map(([id]) => Number(id));
-      
+      // Coletar TODOS os requisitos que têm análises selecionadas, com flag isEnabled
+      const requirementsWithData: Array<{ id: number; position: number; isEnabled: boolean }> = [];
       const enabledCriteriaIds = new Set<number>();
       const analysesWithLevels: Array<{ id: number; position: number; levels: string[] }> = [];
       
+      let requirementPosition = 0;
       let analysisPosition = 0;
       
-      // Iterar pelos requisitos habilitados na ordem do groupedData
+      // Iterar por TODOS os requisitos na ordem do groupedData
       for (const req of groupedData) {
-        if (!enabledRequirements[req.id]) continue;
+        let hasRequirementAnalyses = false;
         
         for (const crit of req.criteria) {
           let hasCriterionAnalyses = false;
@@ -299,6 +304,7 @@ export default function ReportForm({ initialItem, onSuccess, onCancel }: { initi
                 levels: selectedLevels
               });
               hasCriterionAnalyses = true;
+              hasRequirementAnalyses = true;
             }
           }
           
@@ -307,11 +313,20 @@ export default function ReportForm({ initialItem, onSuccess, onCancel }: { initi
             enabledCriteriaIds.add(crit.id);
           }
         }
+        
+        // Adicionar requisito se tiver análises, com status de habilitação
+        if (hasRequirementAnalyses) {
+          requirementsWithData.push({
+            id: req.id,
+            position: requirementPosition++,
+            isEnabled: enabledRequirements[req.id] ?? true
+          });
+        }
       }
       
       // Estrutura para API
       const structure = {
-        requirements: enabledRequirementIds.map((id, index) => ({ id, position: index })),
+        requirements: requirementsWithData,
         criteria: Array.from(enabledCriteriaIds).map((id, index) => ({ id, position: index })),
         analyses: analysesWithLevels
       };
