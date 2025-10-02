@@ -231,7 +231,7 @@ export const requirements = pgTable("requirements", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// Criteria (Critérios) - agora desacoplados; relação M:N via requirementsCriteria
+// Criteria (Critérios) - relação com Requirements via analyses
 export const criteria = pgTable("criteria", {
   id: integer("id").generatedAlwaysAsIdentity().primaryKey(),
   code: varchar("code", { length: 16 }).notNull().unique(),
@@ -241,17 +241,7 @@ export const criteria = pgTable("criteria", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// Pivot Requisitos <-> Critérios (M:N)
-export const requirementsCriteria = pgTable("requirements_criteria", {
-  requirementId: integer("requirement_id").references(() => requirements.id, { onDelete: 'cascade' }).notNull(),
-  criterionId: integer("criterion_id").references(() => criteria.id, { onDelete: 'cascade' }).notNull(),
-}, (table) => [
-  primaryKey({ columns: [table.requirementId, table.criterionId] }),
-  index("idx_reqcrit_requirement").on(table.requirementId),
-  index("idx_reqcrit_criterion").on(table.criterionId)
-]);
-
-// Analyses (Análises) - dependem de Critérios (1:N)
+// Analyses (Análises) - estabelece relação entre Requirements e Criteria
 export const analyses = pgTable("analyses", {
   id: integer("id").generatedAlwaysAsIdentity().primaryKey(),
   requirementId: integer("requirement_id").references(() => requirements.id).notNull(),
@@ -442,18 +432,6 @@ export const parametersRelations = relations(parameters, ({ one }) => ({
 
 export const criteriaRelations = relations(criteria, ({ many }) => ({
   analyses: many(analyses),
-  requirementLinks: many(requirementsCriteria),
-}));
-
-export const requirementsCriteriaRelations = relations(requirementsCriteria, ({ one }) => ({
-  requirement: one(requirements, {
-    fields: [requirementsCriteria.requirementId],
-    references: [requirements.id],
-  }),
-  criterion: one(criteria, {
-    fields: [requirementsCriteria.criterionId],
-    references: [criteria.id],
-  }),
 }));
 
 // Insert Schemas

@@ -39,7 +39,6 @@ import {
   aggressivenessClasses,
   constructiveSystems,
   requirements,
-  requirementsCriteria,
   bioclimaticZones,
   bioclimaticZoneCoverages,
   isopleths,
@@ -174,8 +173,6 @@ export interface IStorage {
   createCriterion(item: InsertCriterion): Promise<Criterion>;
   updateCriterion(id: number, item: Partial<InsertCriterion>): Promise<Criterion>;
   deleteCriterion(id: number): Promise<boolean>;
-  linkCriterionToRequirement(requirementId: number, criterionId: number): Promise<boolean>;
-  unlinkCriterionFromRequirement(requirementId: number, criterionId: number): Promise<boolean>;
   // Analyses
   listAnalyses(criterionId?: number, requirementId?: number): Promise<Analysis[]>;
   listAnalysesPaginated(params: { criterionId?: number; requirementId?: number; page: number; limit: number }): Promise<{ items: Analysis[]; total: number }>;
@@ -1179,6 +1176,7 @@ export class DatabaseStorage implements IStorage {
     return rows as any;
   }
   async listRequirementsWithCriteria(): Promise<RequirementWithCriteria[]> {
+    // Usar analyses para determinar a relação requirement -> criterion
     const rows = await db
       .select({
         id: requirements.id,
@@ -1187,19 +1185,26 @@ export class DatabaseStorage implements IStorage {
         isActive: requirements.isActive,
         createdAt: requirements.createdAt,
         updatedAt: requirements.updatedAt,
-        criteria: sql<any>`coalesce(json_agg(json_build_object(
+        criteria: sql<any>`coalesce(json_agg(DISTINCT json_build_object(
           'id', ${criteria.id},
           'code', ${criteria.code},
           'label', ${criteria.label},
           'isActive', ${criteria.isActive},
           'createdAt', ${criteria.createdAt},
           'updatedAt', ${criteria.updatedAt}
-        ) order by length(${criteria.code}), ${criteria.code} collate "pt-BR-x-icu")
+        ) order by json_build_object(
+          'id', ${criteria.id},
+          'code', ${criteria.code},
+          'label', ${criteria.label},
+          'isActive', ${criteria.isActive},
+          'createdAt', ${criteria.createdAt},
+          'updatedAt', ${criteria.updatedAt}
+        )->>'code' collate "pt-BR-x-icu")
         filter (where ${criteria.id} is not null), '[]'::json)`
       })
       .from(requirements)
-      .leftJoin(requirementsCriteria, eq(requirements.id, requirementsCriteria.requirementId))
-      .leftJoin(criteria, eq(criteria.id, requirementsCriteria.criterionId))
+      .leftJoin(analyses, eq(requirements.id, analyses.requirementId))
+      .leftJoin(criteria, eq(criteria.id, analyses.criterionId))
       .groupBy(
         requirements.id,
         requirements.code,
@@ -1262,8 +1267,9 @@ export class DatabaseStorage implements IStorage {
   // Criteria
   async listCriteria(requirementId?: number): Promise<Criterion[]> {
     if (requirementId) {
+      // Usar analyses para buscar critérios de um requirement específico
       const rows = await db
-        .select({
+        .selectDistinct({
           id: criteria.id,
           code: criteria.code,
           label: criteria.label,
@@ -1272,8 +1278,8 @@ export class DatabaseStorage implements IStorage {
           updatedAt: criteria.updatedAt,
         })
         .from(criteria)
-        .innerJoin(requirementsCriteria, eq(criteria.id, requirementsCriteria.criterionId))
-        .where(eq(requirementsCriteria.requirementId, requirementId))
+        .innerJoin(analyses, eq(criteria.id, analyses.criterionId))
+        .where(eq(analyses.requirementId, requirementId))
         .orderBy(sql`length(${criteria.code})`, sql`${criteria.code} collate "pt-BR-x-icu"`);
       return rows as any;
     }
@@ -1290,14 +1296,6 @@ export class DatabaseStorage implements IStorage {
   async updateCriterion(id: number, item: Partial<InsertCriterion>): Promise<Criterion> {
     const [row] = await db.update(criteria).set({ ...(item as any), updatedAt: new Date() }).where(eq(criteria.id, id)).returning();
     return row as Criterion;
-  }
-  async linkCriterionToRequirement(requirementId: number, criterionId: number): Promise<boolean> {
-    await db.insert(requirementsCriteria).values({ requirementId, criterionId }).onConflictDoNothing();
-    return true;
-  }
-  async unlinkCriterionFromRequirement(requirementId: number, criterionId: number): Promise<boolean> {
-    const deleted = await db.delete(requirementsCriteria).where(and(eq(requirementsCriteria.requirementId, requirementId), eq(requirementsCriteria.criterionId, criterionId))).returning({ requirementId: requirementsCriteria.requirementId });
-    return deleted.length > 0;
   }
   async deleteCriterion(id: number): Promise<boolean> {
     // App-level guard to avoid deleting a Criterion still referenced by Analyses / Parameters

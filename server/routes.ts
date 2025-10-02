@@ -1069,24 +1069,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(await storage.listCriteria(requirementId));
     } catch { res.status(500).json({ message: 'Failed to fetch criteria' }); }
   });
-  app.post('/api/requirements/:requirementId/criteria/:criterionId', isAuthenticated, requireModuleAccess('requirements'), async (req, res) => {
-    try {
-      const requirementId = Number(req.params.requirementId);
-      const criterionId = Number(req.params.criterionId);
-      if (!Number.isFinite(requirementId) || !Number.isFinite(criterionId)) return res.status(400).json({ message: 'IDs inválidos' });
-      await storage.linkCriterionToRequirement(requirementId, criterionId);
-      res.json({ ok: true });
-    } catch { res.status(500).json({ message: 'Failed to link criterion to requirement' }); }
-  });
-  app.delete('/api/requirements/:requirementId/criteria/:criterionId', isAuthenticated, requireModuleAccess('requirements'), async (req, res) => {
-    try {
-      const requirementId = Number(req.params.requirementId);
-      const criterionId = Number(req.params.criterionId);
-      if (!Number.isFinite(requirementId) || !Number.isFinite(criterionId)) return res.status(400).json({ message: 'IDs inválidos' });
-      const ok = await storage.unlinkCriterionFromRequirement(requirementId, criterionId);
-      res.json({ ok });
-    } catch { res.status(500).json({ message: 'Failed to unlink criterion from requirement' }); }
-  });
   app.post('/api/criteria', isAuthenticated, requireModuleAccess('criteria'), express.json(), async (req, res) => {
     try {
       const data = insertCriterionSchema.parse(req.body);
