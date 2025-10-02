@@ -1069,32 +1069,17 @@ async function loadReportContext(reportId: number, userId: number): Promise<Repo
     throw Object.assign(new Error('Access denied'), { statusCode: 403 });
   }
 
-  const reportData = typeof report.reportData === 'string'
-    ? (() => {
-        try {
-          return JSON.parse(report.reportData);
-        } catch {
-          return {};
-        }
-      })()
-    : (report.reportData || {});
-  const evaluations = Array.isArray((reportData as any).evaluations) ? (reportData as any).evaluations : [];
+  // Load report structure from relational tables
+  const reportStructure = await storage.loadReportStructure(reportId);
 
+  // Build selectedEvaluations map - only include analyses that are actually in the report structure
   const selectedEvaluations = new Map<string, string[]>();
-  for (const evaluation of evaluations) {
-    const level = evaluation?.level;
-    if (!level) continue;
-    const key = evaluation?.analysisId
-      ? `analysis-${evaluation.analysisId}`
-      : evaluation?.criterionId
-        ? `crit-${evaluation.criterionId}`
-        : evaluation?.requirementId
-          ? `req-${evaluation.requirementId}`
-          : undefined;
-    if (!key) continue;
-    if (!selectedEvaluations.has(key)) selectedEvaluations.set(key, []);
-    const list = selectedEvaluations.get(key)!;
-    if (!list.includes(level)) list.push(level);
+  for (const analysis of reportStructure.analyses) {
+    const key = `analysis-${analysis.id}`;
+    // Only set if there are levels selected. Empty levels means the analysis is not selected.
+    if (analysis.levels && analysis.levels.length > 0) {
+      selectedEvaluations.set(key, analysis.levels);
+    }
   }
 
   const [
@@ -1177,7 +1162,10 @@ async function loadReportContext(reportId: number, userId: number): Promise<Repo
         .map((criterion) => {
           const analysesWithLevels = criterion.analyses
             .map((analysis) => {
-              let selectedLevels = selectedEvaluations.get(`analysis-${analysis.id}`)?.slice() ?? levelOrder.slice();
+              // Get selected levels from map. If not in map, analysis is not selected - return null.
+              const selectedLevels = selectedEvaluations.get(`analysis-${analysis.id}`);
+              if (!selectedLevels || selectedLevels.length === 0) return null;
+              
               const filteredParameters = analysis.parameters.filter((parameter) =>
                 hasValuesForSelectedLevels(parameter, selectedLevels)
               );

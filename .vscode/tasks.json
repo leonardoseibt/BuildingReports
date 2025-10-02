@@ -125,6 +125,20 @@
 			"group": "build"
 		},
 		{
+			"label": "db:migrate:report-structure",
+			"type": "shell",
+			"command": "npx",
+			"args": [
+				"tsx",
+				"scripts/migrate-report-structure.ts"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$tsc"
+			],
+			"group": "build"
+		},
+		{
 			"label": "Typecheck",
 			"type": "shell",
 			"command": "npm run check"

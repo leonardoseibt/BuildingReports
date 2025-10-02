@@ -321,11 +321,53 @@ export const structuralSystems = pgTable("structural_systems", {
 export const reports = pgTable("reports", {
   id: integer("id").generatedAlwaysAsIdentity().primaryKey(),
   buildingId: integer("building_id").references(() => buildings.id).notNull(),
-  reportData: jsonb("report_data").notNull(), // complete report structure
   version: integer("version").default(1),
   isActive: boolean("is_active").default(true),
   generatedAt: timestamp("generated_at").defaultNow(),
 });
+
+// Tabelas relacionais para estrutura do relatório (substituem reportData JSONB)
+export const reportRequirements = pgTable("report_requirements", {
+  id: integer("id").generatedAlwaysAsIdentity().primaryKey(),
+  reportId: integer("report_id").references(() => reports.id, { onDelete: 'cascade' }).notNull(),
+  requirementId: integer("requirement_id").references(() => requirements.id, { onDelete: 'cascade' }).notNull(),
+  position: integer("position").default(0).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_report_requirements_report").on(table.reportId),
+  index("idx_report_requirements_requirement").on(table.requirementId),
+]);
+
+export const reportCriteria = pgTable("report_criteria", {
+  id: integer("id").generatedAlwaysAsIdentity().primaryKey(),
+  reportId: integer("report_id").references(() => reports.id, { onDelete: 'cascade' }).notNull(),
+  criterionId: integer("criterion_id").references(() => criteria.id, { onDelete: 'cascade' }).notNull(),
+  position: integer("position").default(0).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_report_criteria_report").on(table.reportId),
+  index("idx_report_criteria_criterion").on(table.criterionId),
+]);
+
+export const reportAnalyses = pgTable("report_analyses", {
+  id: integer("id").generatedAlwaysAsIdentity().primaryKey(),
+  reportId: integer("report_id").references(() => reports.id, { onDelete: 'cascade' }).notNull(),
+  analysisId: integer("analysis_id").references(() => analyses.id, { onDelete: 'cascade' }).notNull(),
+  position: integer("position").default(0).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_report_analyses_report").on(table.reportId),
+  index("idx_report_analyses_analysis").on(table.analysisId),
+]);
+
+export const reportAnalysisLevels = pgTable("report_analysis_levels", {
+  id: integer("id").generatedAlwaysAsIdentity().primaryKey(),
+  reportAnalysisId: integer("report_analysis_id").references(() => reportAnalyses.id, { onDelete: 'cascade' }).notNull(),
+  level: varchar("level", { length: 20 }).notNull(), // 'minimum', 'intermediate', 'superior'
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_report_analysis_levels_report_analysis").on(table.reportAnalysisId),
+]);
 
 // Technicians (Responsáveis Técnicos)
 export const technicians = pgTable("technicians", {
@@ -397,10 +439,54 @@ export const structuralSystemsRelations = relations(structuralSystems, ({ one })
   }),
 }));
 
-export const reportsRelations = relations(reports, ({ one }) => ({
+export const reportsRelations = relations(reports, ({ one, many }) => ({
   building: one(buildings, {
     fields: [reports.buildingId],
     references: [buildings.id],
+  }),
+  reportRequirements: many(reportRequirements),
+  reportCriteria: many(reportCriteria),
+  reportAnalyses: many(reportAnalyses),
+}));
+
+export const reportRequirementsRelations = relations(reportRequirements, ({ one }) => ({
+  report: one(reports, {
+    fields: [reportRequirements.reportId],
+    references: [reports.id],
+  }),
+  requirement: one(requirements, {
+    fields: [reportRequirements.requirementId],
+    references: [requirements.id],
+  }),
+}));
+
+export const reportCriteriaRelations = relations(reportCriteria, ({ one }) => ({
+  report: one(reports, {
+    fields: [reportCriteria.reportId],
+    references: [reports.id],
+  }),
+  criterion: one(criteria, {
+    fields: [reportCriteria.criterionId],
+    references: [criteria.id],
+  }),
+}));
+
+export const reportAnalysesRelations = relations(reportAnalyses, ({ one, many }) => ({
+  report: one(reports, {
+    fields: [reportAnalyses.reportId],
+    references: [reports.id],
+  }),
+  analysis: one(analyses, {
+    fields: [reportAnalyses.analysisId],
+    references: [analyses.id],
+  }),
+  levels: many(reportAnalysisLevels),
+}));
+
+export const reportAnalysisLevelsRelations = relations(reportAnalysisLevels, ({ one }) => ({
+  reportAnalysis: one(reportAnalyses, {
+    fields: [reportAnalysisLevels.reportAnalysisId],
+    references: [reportAnalyses.id],
   }),
 }));
 
@@ -564,6 +650,10 @@ export type InsertStructuralSystem = z.infer<typeof insertStructuralSystemSchema
 export type StructuralSystem = typeof structuralSystems.$inferSelect;
 export type InsertReport = z.infer<typeof insertReportSchema>;
 export type Report = typeof reports.$inferSelect;
+export type ReportRequirement = typeof reportRequirements.$inferSelect;
+export type ReportCriterion = typeof reportCriteria.$inferSelect;
+export type ReportAnalysis = typeof reportAnalyses.$inferSelect;
+export type ReportAnalysisLevel = typeof reportAnalysisLevels.$inferSelect;
 export type InsertTechnician = z.infer<typeof insertTechnicianSchema>;
 export type Technician = typeof technicians.$inferSelect;
 export type UpdateTechnician = z.infer<typeof updateTechnicianSchema>;

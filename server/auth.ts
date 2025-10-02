@@ -84,16 +84,29 @@ function buildSessionMiddleware() {
     createTableIfMissing: !isProd,
     ttl: ttlSeconds,
     tableName: "sessions",
-    // Pass through minimal pool config to reduce idle disconnect churn
+    // Reduzir intervalo de limpeza para evitar timeout em conexões inativas
     pruneSessionInterval: Number(process.env.SESSION_PRUNE_INTERVAL_SEC || 60),
+    // Log de erros customizado para melhor visibilidade
+    errorLog: (err: any) => {
+      if (err?.code === 'ECONNRESET' || err?.message?.includes('Connection terminated')) {
+        console.warn('⚠️  [session-store] Connection issue (will auto-retry):', err.message);
+      } else if (err?.code === 'ETIMEDOUT') {
+        console.warn('⚠️  [session-store] Connection timeout (will retry)');
+      } else {
+        console.error('❌ [session-store] Error:', err);
+      }
+    },
   });
-  // Rebuild store on ECONNRESET (network flakiness / Neon socket close)
+  
+  // Tratamento de erros do store
   store.on?.('error', (err: any) => {
-    if (err?.code === 'ECONNRESET') {
-      console.error('[session-store] ECONNRESET detected, recreating session store');
-      cachedSessionMw = null; // force rebuild next request
+    if (err?.code === 'ECONNRESET' || err?.message?.includes('Connection terminated')) {
+      console.warn('⚠️  [session-store] Connection reset - pool will reconnect automatically');
+      // Não limpar cache - o pool interno reconecta automaticamente
+    } else if (err?.code === 'ETIMEDOUT') {
+      console.warn('⚠️  [session-store] Timeout - will retry on next operation');
     } else {
-      console.error('[session-store] error', err);
+      console.error('❌ [session-store] Unexpected error:', err);
     }
   });
   return session({

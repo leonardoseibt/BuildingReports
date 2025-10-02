@@ -56,11 +56,31 @@ export function createLoggingMiddleware(logger = log) {
 }
 
 // In dev, keep the process alive and surface errors clearly
-process.on("unhandledRejection", (reason) => {
-  console.error("Unhandled Promise rejection:", reason);
+process.on("unhandledRejection", (reason: any) => {
+  // Erros de conexão DB são transientes - não crashar o servidor
+  if (reason?.code === 'ECONNRESET' || reason?.message?.includes('Connection terminated')) {
+    console.warn('⚠️  Unhandled DB connection rejection (transient):', reason.message);
+    return;
+  }
+  if (reason?.code === 'ETIMEDOUT') {
+    console.warn('⚠️  Unhandled DB timeout rejection:', reason.message);
+    return;
+  }
+  console.error("❌ Unhandled Promise rejection:", reason);
 });
-process.on("uncaughtException", (err) => {
-  console.error("Uncaught Exception:", err);
+
+process.on("uncaughtException", (err: any) => {
+  // Erros de conexão DB são transientes - não crashar o servidor
+  if (err?.code === 'ECONNRESET' || err?.message?.includes('Connection terminated')) {
+    console.warn('⚠️  Uncaught DB connection exception (transient):', err.message);
+    return;
+  }
+  if (err?.code === 'ETIMEDOUT') {
+    console.warn('⚠️  Uncaught DB timeout exception:', err.message);
+    return;
+  }
+  console.error("❌ Uncaught Exception:", err);
+  // Em produção, considerar process.exit(1) para restart pelo gerenciador de processos
 });
 
 const app = express();
@@ -154,6 +174,29 @@ if (process.env.NODE_ENV !== "test") {
   });
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+    // Erros de conexão com banco de dados (transientes - não devem crashar o servidor)
+    if (err?.code === 'ECONNRESET' || err?.message?.includes('Connection terminated')) {
+      console.warn('⚠️  Database connection issue (transient):', err.message);
+      if (!res.headersSent) {
+        res.status(503).json({ 
+          message: 'Serviço temporariamente indisponível. Tente novamente.',
+          code: 'DB_CONNECTION_ERROR' 
+        });
+      }
+      return;
+    }
+    
+    if (err?.code === 'ETIMEDOUT') {
+      console.warn('⚠️  Database connection timeout:', err.message);
+      if (!res.headersSent) {
+        res.status(504).json({ 
+          message: 'Tempo de resposta excedido. Tente novamente.',
+          code: 'DB_TIMEOUT' 
+        });
+      }
+      return;
+    }
+
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
 

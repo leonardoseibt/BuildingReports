@@ -501,6 +501,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Report routes
+  // Endpoint otimizado: cria relatório + estrutura em uma única request
+  app.post('/api/reports/with-structure', isAuthenticated, async (req: any, res) => {
+    try {
+      const { buildingId, structure } = req.body;
+      
+      if (!buildingId || !structure) {
+        return res.status(400).json({ message: "buildingId and structure are required" });
+      }
+      
+      // Verify user owns the building
+      const building = await storage.getBuilding(buildingId);
+      if (!building || building.userId !== Number(req.user.claims.sub)) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      // Create report
+      const report = await storage.createReport({
+        buildingId,
+        version: 1,
+        isActive: true,
+      });
+      
+      // Save structure
+      const success = await storage.saveReportStructure(report.id, structure);
+      
+      if (!success) {
+        return res.status(500).json({ message: "Report created but structure save failed" });
+      }
+      
+      res.json(report);
+    } catch (error) {
+      console.error("Error creating report with structure:", error);
+      res.status(500).json({ message: "Failed to create report" });
+    }
+  });
+
   app.post('/api/reports', isAuthenticated, async (req: any, res) => {
     try {
       const reportData = insertReportSchema.parse(req.body);
@@ -558,6 +594,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Endpoint otimizado: atualiza relatório + estrutura em uma única request
+  app.put('/api/reports/:id/with-structure', isAuthenticated, async (req: any, res) => {
+    try {
+      const id = Number(req.params.id);
+      if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' });
+      
+      const { buildingId, structure } = req.body;
+      
+      if (!structure) {
+        return res.status(400).json({ message: "structure is required" });
+      }
+      
+      const existing = await storage.getReport(id);
+      if (!existing) return res.status(404).json({ message: 'Report not found' });
+      
+      const finalBuildingId = buildingId ?? existing.buildingId;
+      const building = await storage.getBuilding(finalBuildingId);
+      if (!building || building.userId !== Number(req.user.claims.sub)) {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+      
+      // Update report (if buildingId changed)
+      let updated = existing;
+      if (buildingId && buildingId !== existing.buildingId) {
+        updated = await storage.updateReport(id, { buildingId });
+      }
+      
+      // Save structure
+      const success = await storage.saveReportStructure(id, structure);
+      
+      if (!success) {
+        return res.status(500).json({ message: "Report updated but structure save failed" });
+      }
+      
+      res.json(updated);
+    } catch (error) {
+      console.error('Error updating report with structure:', error);
+      res.status(500).json({ message: 'Failed to update report' });
+    }
+  });
+
   app.put('/api/reports/:id', isAuthenticated, async (req: any, res) => {
     try {
       const id = Number(req.params.id);
@@ -596,6 +673,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error deleting report:', error);
       res.status(500).json({ message: 'Failed to delete report' });
+    }
+  });
+
+  // Report structure routes (for Crystal Reports compatibility)
+  app.post('/api/reports/:id/structure', isAuthenticated, async (req: any, res) => {
+    try {
+      const id = Number(req.params.id);
+      if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' });
+      
+      // Verify report exists and user has access
+      const report = await storage.getReport(id);
+      if (!report) return res.status(404).json({ message: 'Report not found' });
+      
+      const building = await storage.getBuilding(report.buildingId);
+      if (!building || building.userId !== Number(req.user.claims.sub)) {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+      
+      // Validate structure data
+      const structure = req.body;
+      if (!structure.requirements || !structure.criteria || !structure.analyses) {
+        return res.status(400).json({ message: 'Invalid structure data' });
+      }
+      
+      const success = await storage.saveReportStructure(id, structure);
+      if (success) {
+        res.json({ success: true });
+      } else {
+        res.status(500).json({ message: 'Failed to save report structure' });
+      }
+    } catch (error) {
+      console.error('Error saving report structure:', error);
+      res.status(500).json({ message: 'Failed to save report structure' });
+    }
+  });
+
+  app.get('/api/reports/:id/structure', isAuthenticated, async (req: any, res) => {
+    try {
+      const id = Number(req.params.id);
+      if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' });
+      
+      // Verify report exists and user has access
+      const report = await storage.getReport(id);
+      if (!report) return res.status(404).json({ message: 'Report not found' });
+      
+      const building = await storage.getBuilding(report.buildingId);
+      if (!building || building.userId !== Number(req.user.claims.sub)) {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+      
+      const structure = await storage.loadReportStructure(id);
+      res.json(structure);
+    } catch (error) {
+      console.error('Error loading report structure:', error);
+      res.status(500).json({ message: 'Failed to load report structure' });
     }
   });
 

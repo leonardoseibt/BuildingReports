@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -11,7 +11,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { NotchedField } from '@/components/ui/notched-field';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { CheckCheck, X } from 'lucide-react';
+import { CheckCheck, X, Loader2 } from 'lucide-react';
 import type { Building, Requirement, Criterion, Analysis, Report } from '@shared/schema';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
@@ -55,6 +55,17 @@ export default function ReportForm({ initialItem, onSuccess, onCancel }: { initi
     enabled: true 
   });
 
+  // Carregar estrutura relacional do relatório (se estiver editando)
+  const { data: reportStructure } = useQuery({
+    queryKey: ['/api/reports', initialItem?.id, 'structure'],
+    queryFn: async () => {
+      if (!initialItem?.id) return null;
+      const res = await apiRequest('GET', `/api/reports/${initialItem.id}/structure`);
+      return res.json();
+    },
+    enabled: !!initialItem?.id,
+  });
+
   // Agrupar dados por Requisito -> Critério -> Análises
   const groupedData: RequirementWithCriteria[] = requirements.map(req => ({
     ...req,
@@ -73,67 +84,60 @@ export default function ReportForm({ initialItem, onSuccess, onCancel }: { initi
       }))
   })).filter(req => req.criteria.length > 0); // Apenas requisitos que têm critérios com análises
 
-  const [levels, setLevels] = useState<Record<string, string[]>>(() => {
-    const data: any = initialItem?.reportData;
-    if (!data) return {};
+  const [levels, setLevels] = useState<Record<string, string[]>>({});
+  const [levelsInitialized, setLevelsInitialized] = useState(false);
+
+  // Effect para carregar níveis da estrutura relacional (apenas uma vez)
+  useEffect(() => {
+    if (levelsInitialized) return; // Já foi inicializado
     
-    // Usar allEvaluations se disponível (novo formato), senão usar evaluations (formato antigo)
-    const evaluationsToUse = data.allEvaluations || data.evaluations || [];
-    const map: Record<string, string[]> = {};
-    
-    for (const ev of evaluationsToUse) {
-      let key: string;
-      if (ev.analysisId) {
-        key = `analysis-${ev.analysisId}`;
-      } else if (ev.criterionId) {
-        key = `crit-${ev.criterionId}`;
-      } else {
-        key = `req-${ev.requirementId}`;
-      }
-      if (!map[key]) map[key] = [];
-      if (!map[key].includes(ev.level)) map[key].push(ev.level);
+    if (reportStructure === undefined && initialItem?.id) {
+      return; // Aguardar carregamento da estrutura relacional
     }
-    return map;
-  });
+    
+    // Usar estrutura relacional
+    const map: Record<string, string[]> = {};
+    if (reportStructure?.analyses) {
+      for (const analysis of reportStructure.analyses) {
+        if (analysis.id && analysis.levels) {
+          const key = `analysis-${analysis.id}`;
+          map[key] = analysis.levels;
+        }
+      }
+    }
+    setLevels(map);
+    setLevelsInitialized(true);
+  }, [reportStructure, initialItem, levelsInitialized]);
 
   // Estado para controlar quais requisitos estão habilitados para geração de relatório
-  const [enabledRequirements, setEnabledRequirements] = useState<Record<number, boolean>>(() => {
-    const data: any = initialItem?.reportData;
+  const [enabledRequirements, setEnabledRequirements] = useState<Record<number, boolean>>({});
+  const [requirementsInitialized, setRequirementsInitialized] = useState(false);
+
+  // Effect para carregar requirements habilitados da estrutura relacional (apenas uma vez)
+  useEffect(() => {
+    if (requirementsInitialized) return; // Já foi inicializado
+    if (groupedData.length === 0) return; // Aguardar carregamento dos dados
     
-    // Se há informação específica sobre requisitos habilitados, usar essa
-    if (data?.enabledRequirements) {
-      return { ...data.enabledRequirements };
+    if (reportStructure === undefined && initialItem?.id) {
+      return; // Aguardar carregamento da estrutura relacional
     }
     
-    // Fallback para formato antigo ou novos relatórios
-    if (!data?.evaluations) {
-      // Por padrão, todos os requisitos ficam habilitados se não há dados iniciais
-      const enabled: Record<number, boolean> = {};
+    // Usar estrutura relacional
+    const enabled: Record<number, boolean> = {};
+    if (reportStructure?.requirements) {
+      const enabledIds = new Set(reportStructure.requirements.map((r: any) => r.id));
+      groupedData.forEach(req => {
+        enabled[req.id] = enabledIds.has(req.id);
+      });
+    } else {
+      // Novo relatório - todos habilitados por padrão
       groupedData.forEach(req => {
         enabled[req.id] = true;
       });
-      return enabled;
     }
-    
-    // Se há dados iniciais mas não há informação específica de requisitos habilitados,
-    // assumir que requisitos com avaliações estão habilitados
-    const enabled: Record<number, boolean> = {};
-    const requirementIds = new Set();
-    
-    // Coletar todos os requisitos que têm avaliações
-    for (const ev of data.evaluations || []) {
-      if (ev.requirementId) {
-        requirementIds.add(ev.requirementId);
-      }
-    }
-    
-    // Marcar requisitos encontrados como habilitados
-    groupedData.forEach(req => {
-      enabled[req.id] = requirementIds.has(req.id);
-    });
-    
-    return enabled;
-  });
+    setEnabledRequirements(enabled);
+    setRequirementsInitialized(true);
+  }, [reportStructure, initialItem, groupedData, requirementsInitialized]);
 
   function handleRequirementToggle(requirementId: number, enabled: boolean) {
     setEnabledRequirements(prev => ({
@@ -267,62 +271,72 @@ export default function ReportForm({ initialItem, onSuccess, onCancel }: { initi
 
   const mutation = useMutation({
     mutationFn: async (values: FormData) => {
-      // Gerar todas as avaliações (incluindo as de requisitos desabilitados)
-      const allEvaluations = Object.entries(levels).flatMap(([key, arr]) => {
-        return arr.map(level => {
-          if (key.startsWith('analysis-')) {
-            const analysisId = Number(key.slice(9));
-            // Encontrar o requisito e critério da análise
-            const analysis = analyses.find(a => a.id === analysisId);
-            const requirementId = (analysis as any)?.requirementId;
+      // Preparar estrutura relacional (otimizado)
+      const enabledRequirementIds = Object.entries(enabledRequirements)
+        .filter(([_, enabled]) => enabled)
+        .map(([id]) => Number(id));
+      
+      const enabledCriteriaIds = new Set<number>();
+      const analysesWithLevels: Array<{ id: number; position: number; levels: string[] }> = [];
+      
+      let analysisPosition = 0;
+      
+      // Iterar pelos requisitos habilitados na ordem do groupedData
+      for (const req of groupedData) {
+        if (!enabledRequirements[req.id]) continue;
+        
+        for (const crit of req.criteria) {
+          let hasCriterionAnalyses = false;
+          
+          for (const analysis of crit.analyses) {
+            const key = `analysis-${analysis.id}`;
+            const selectedLevels = levels[key];
             
-            return { 
-              analysisId,
-              requirementId,
-              criterionId: analysis?.criterionId,
-              level 
-            };
-          }
-          if (key.startsWith('req-')) {
-            const requirementId = Number(key.slice(4));
-            return { requirementId, level };
-          }
-          const criterionId = Number(key.slice(5));
-          let requirementId: number | undefined;
-          for (const req of groupedData) {
-            if (req.criteria.some(c => c.id === criterionId)) {
-              requirementId = req.id;
-              break;
+            if (selectedLevels && selectedLevels.length > 0) {
+              analysesWithLevels.push({
+                id: analysis.id,
+                position: analysisPosition++,
+                levels: selectedLevels
+              });
+              hasCriterionAnalyses = true;
             }
           }
-          return { requirementId, criterionId, level };
-        });
-      });
-
-      // Gerar apenas as avaliações dos requisitos habilitados para o relatório
-      const enabledEvaluations = allEvaluations.filter(ev => {
-        return enabledRequirements[ev.requirementId];
-      });
+          
+          // Adicionar critério apenas se tiver análises selecionadas
+          if (hasCriterionAnalyses) {
+            enabledCriteriaIds.add(crit.id);
+          }
+        }
+      }
       
-      const payload = { 
-        buildingId: values.buildingId, 
-        reportData: { 
-          evaluations: enabledEvaluations, // Apenas avaliações habilitadas para o relatório
-          allEvaluations, // Todas as avaliações para preservar configurações
-          enabledRequirements // Informação dos requisitos habilitados
-        } 
+      // Estrutura para API
+      const structure = {
+        requirements: enabledRequirementIds.map((id, index) => ({ id, position: index })),
+        criteria: Array.from(enabledCriteriaIds).map((id, index) => ({ id, position: index })),
+        analyses: analysesWithLevels
       };
+      
+      // Usar endpoint otimizado que salva tudo de uma vez
       const method = initialItem ? 'PUT' : 'POST';
-      const url = initialItem ? `/api/reports/${initialItem.id}` : '/api/reports';
-      const res = await apiRequest(method as any, url, payload);
-      return res.json();
+      const url = initialItem 
+        ? `/api/reports/${initialItem.id}/with-structure` 
+        : '/api/reports/with-structure';
+      
+      const payload = {
+        buildingId: values.buildingId,
+        structure
+      };
+      
+      const reportRes = await apiRequest(method as any, url, payload);
+      return reportRes.json();
     },
     onSuccess: () => {
       showSuccess(toast, `Relatório ${initialItem ? 'atualizado' : 'criado'} com sucesso!`);
       queryClient.invalidateQueries({ queryKey: ['/api/reports'] });
       onSuccess?.();
     },
-    onError: () => {
+    onError: (error) => {
+      console.error('Erro ao salvar relatório:', error);
       showError(toast, 'Falha ao salvar relatório');
     }
   });
@@ -719,7 +733,10 @@ export default function ReportForm({ initialItem, onSuccess, onCancel }: { initi
 
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="outline" onClick={onCancel}>Cancelar</Button>
-          <Button type="submit" disabled={mutation.isPending}>{mutation.isPending ? 'Salvando…' : 'Salvar'}</Button>
+          <Button type="submit" disabled={mutation.isPending}>
+            {mutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {mutation.isPending ? 'Salvando…' : 'Salvar'}
+          </Button>
         </div>
       </form>
     </Form>

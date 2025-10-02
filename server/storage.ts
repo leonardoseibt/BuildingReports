@@ -3,6 +3,10 @@ import {
   buildings,
   structuralSystems,
   reports,
+  reportRequirements,
+  reportCriteria,
+  reportAnalyses,
+  reportAnalysisLevels,
   type User,
   type PublicUser,
   type UpsertUser,
@@ -12,6 +16,10 @@ import {
   type InsertStructuralSystem,
   type Report,
   type InsertReport,
+  type ReportRequirement,
+  type ReportCriterion,
+  type ReportAnalysis,
+  type ReportAnalysisLevel,
   type Technician,
   type InsertTechnician,
   type Typology,
@@ -69,7 +77,6 @@ import { eq, desc, and, sql, count } from "drizzle-orm";
 export interface ReportWithBuilding {
   id: number;
   buildingId: number;
-  reportData: any;
   version: number | null;
   isActive: boolean | null;
   generatedAt: Date | null;
@@ -120,6 +127,18 @@ export interface IStorage {
   getReport(id: number): Promise<Report | undefined>;
   updateReport(id: number, report: Partial<InsertReport>): Promise<Report>;
   deleteReport(id: number): Promise<boolean>;
+  
+  // Report structure operations (tabelas relacionais)
+  saveReportStructure(reportId: number, structure: {
+    requirements: Array<{ id: number; position: number }>;
+    criteria: Array<{ id: number; position: number }>;
+    analyses: Array<{ id: number; position: number; levels: string[] }>;
+  }): Promise<boolean>;
+  loadReportStructure(reportId: number): Promise<{
+    requirements: Array<{ id: number; code: string; label: string; position: number }>;
+    criteria: Array<{ id: number; code: string; label: string; position: number }>;
+    analyses: Array<{ id: number; code: string; label: string; position: number; levels: string[] }>;
+  }>;
 
   // Dashboard statistics
   getUserStats(userId: number): Promise<{
@@ -625,11 +644,185 @@ export class DatabaseStorage implements IStorage {
   async createReport(report: InsertReport): Promise<Report> {
     const [newReport] = await db.insert(reports).values({
       buildingId: report.buildingId,
-      reportData: report.reportData,
       version: report.version,
       isActive: report.isActive,
     }).returning();
     return newReport;
+  }
+
+  async saveReportStructure(reportId: number, structure: {
+    requirements: Array<{ id: number; position: number }>;
+    criteria: Array<{ id: number; position: number }>;
+    analyses: Array<{ id: number; position: number; levels: string[]; }>;
+  }): Promise<boolean> {
+    try {
+      await db.transaction(async (tx) => {
+        // Delete existing structure (3 queries em paralelo - muito mais rápido)
+        await Promise.all([
+          tx.delete(reportRequirements).where(eq(reportRequirements.reportId, reportId)),
+          tx.delete(reportCriteria).where(eq(reportCriteria.reportId, reportId)),
+          tx.delete(reportAnalyses).where(eq(reportAnalyses.reportId, reportId)), // cascade levels
+        ]);
+
+        // Insert em paralelo também
+        const insertPromises: Promise<any>[] = [];
+
+        // Insert requirements
+        if (structure.requirements.length > 0) {
+          insertPromises.push(
+            tx.insert(reportRequirements).values(
+              structure.requirements.map(req => ({
+                reportId,
+                requirementId: req.id,
+                position: req.position,
+              }))
+            )
+          );
+        }
+
+        // Insert criteria
+        if (structure.criteria.length > 0) {
+          insertPromises.push(
+            tx.insert(reportCriteria).values(
+              structure.criteria.map(crit => ({
+                reportId,
+                criterionId: crit.id,
+                position: crit.position,
+              }))
+            )
+          );
+        }
+
+        // Aguardar requirements e criteria em paralelo
+        await Promise.all(insertPromises);
+
+        // Insert analyses - OTIMIZADO: batch insert com returning
+        if (structure.analyses.length > 0) {
+          const insertedAnalyses = await tx.insert(reportAnalyses).values(
+            structure.analyses.map(analysis => ({
+              reportId,
+              analysisId: analysis.id,
+              position: analysis.position,
+            }))
+          ).returning();
+
+          // Preparar todos os levels em um único array
+          const allLevels: Array<{ reportAnalysisId: number; level: string }> = [];
+          
+          for (let i = 0; i < insertedAnalyses.length; i++) {
+            const reportAnalysis = insertedAnalyses[i];
+            const levels = structure.analyses[i].levels;
+            
+            if (levels.length > 0) {
+              for (const level of levels) {
+                allLevels.push({
+                  reportAnalysisId: reportAnalysis.id,
+                  level,
+                });
+              }
+            }
+          }
+
+          // Insert TODOS os levels de uma vez só (1 query ao invés de N)
+          if (allLevels.length > 0) {
+            await tx.insert(reportAnalysisLevels).values(allLevels);
+          }
+        }
+      });
+      return true;
+    } catch (error) {
+      console.error('Error saving report structure:', error);
+      return false;
+    }
+  }
+
+  async loadReportStructure(reportId: number): Promise<{
+    requirements: any[];
+    criteria: any[];
+    analyses: any[];
+  }> {
+    try {
+      // Load requirements with their details
+      const requirementsData = await db
+        .select()
+        .from(reportRequirements)
+        .leftJoin(requirements, eq(reportRequirements.requirementId, requirements.id))
+        .where(eq(reportRequirements.reportId, reportId))
+        .orderBy(reportRequirements.position);
+
+      // Load criteria with their details
+      const criteriaData = await db
+        .select()
+        .from(reportCriteria)
+        .leftJoin(criteria, eq(reportCriteria.criterionId, criteria.id))
+        .where(eq(reportCriteria.reportId, reportId))
+        .orderBy(reportCriteria.position);
+
+      // Load analyses with their details and levels in a single query
+      const analysesData = await db
+        .select()
+        .from(reportAnalyses)
+        .leftJoin(analyses, eq(reportAnalyses.analysisId, analyses.id))
+        .where(eq(reportAnalyses.reportId, reportId))
+        .orderBy(reportAnalyses.position);
+
+      // Load all levels at once (much more efficient than N queries)
+      const allLevels = analysesData.length > 0 
+        ? await db
+            .select({
+              reportAnalysisId: reportAnalysisLevels.reportAnalysisId,
+              level: reportAnalysisLevels.level,
+            })
+            .from(reportAnalysisLevels)
+            .where(
+              sql`${reportAnalysisLevels.reportAnalysisId} IN (${sql.join(
+                analysesData.map(row => sql`${row.report_analyses.id}`),
+                sql`, `
+              )})`
+            )
+        : [];
+
+      // Group levels by reportAnalysisId
+      const levelsByAnalysisId = new Map<number, string[]>();
+      for (const level of allLevels) {
+        if (!levelsByAnalysisId.has(level.reportAnalysisId)) {
+          levelsByAnalysisId.set(level.reportAnalysisId, []);
+        }
+        levelsByAnalysisId.get(level.reportAnalysisId)!.push(level.level);
+      }
+
+      // Map analyses with their levels
+      const analysesWithLevels = analysesData.map(row => ({
+        id: row.analyses?.id,
+        code: row.analyses?.code,
+        label: row.analyses?.label,
+        position: row.report_analyses.position,
+        levels: levelsByAnalysisId.get(row.report_analyses.id) || [],
+      }));
+
+      return {
+        requirements: requirementsData.map(row => ({
+          id: row.requirements?.id,
+          code: row.requirements?.code,
+          label: row.requirements?.label,
+          position: row.report_requirements.position,
+        })),
+        criteria: criteriaData.map(row => ({
+          id: row.criteria?.id,
+          code: row.criteria?.code,
+          label: row.criteria?.label,
+          position: row.report_criteria.position,
+        })),
+        analyses: analysesWithLevels,
+      };
+    } catch (error) {
+      console.error('Error loading report structure:', error);
+      return {
+        requirements: [],
+        criteria: [],
+        analyses: [],
+      };
+    }
   }
 
   async getReportsByBuilding(buildingId: number): Promise<Report[]> {
@@ -653,7 +846,6 @@ export class DatabaseStorage implements IStorage {
       .select({
         id: reports.id,
         buildingId: reports.buildingId,
-        reportData: reports.reportData,
         version: reports.version,
         isActive: reports.isActive,
         generatedAt: reports.generatedAt,
