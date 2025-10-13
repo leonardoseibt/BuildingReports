@@ -310,32 +310,25 @@ async function loadReportContext(reportId: number, userId: number): Promise<Repo
     throw Object.assign(new Error('Access denied'), { statusCode: 403 });
   }
 
-  const reportData = typeof report.reportData === 'string'
-    ? (() => {
-        try {
-          return JSON.parse(report.reportData);
-        } catch {
-          return {};
-        }
-      })()
-    : (report.reportData || {});
-  const evaluations = Array.isArray((reportData as any).evaluations) ? (reportData as any).evaluations : [];
+  // Load report structure from relational tables
+  const reportStructure = await storage.loadReportStructure(reportId);
 
+  // Build set of enabled requirement IDs
+  const enabledRequirementIds = new Set<number>();
+  for (const req of reportStructure.requirements) {
+    if (req.isEnabled) {
+      enabledRequirementIds.add(req.id);
+    }
+  }
+
+  // Build selectedEvaluations map - only include analyses that are actually in the report structure
   const selectedEvaluations = new Map<string, string[]>();
-  for (const evaluation of evaluations) {
-    const level = evaluation?.level;
-    if (!level) continue;
-    const key = evaluation?.analysisId
-      ? `analysis-${evaluation.analysisId}`
-      : evaluation?.criterionId
-        ? `crit-${evaluation.criterionId}`
-        : evaluation?.requirementId
-          ? `req-${evaluation.requirementId}`
-          : undefined;
-    if (!key) continue;
-    if (!selectedEvaluations.has(key)) selectedEvaluations.set(key, []);
-    const list = selectedEvaluations.get(key)!;
-    if (!list.includes(level)) list.push(level);
+  for (const analysis of reportStructure.analyses) {
+    const key = `analysis-${analysis.id}`;
+    // Only set if there are levels selected. Empty levels means the analysis is not selected.
+    if (analysis.levels && analysis.levels.length > 0) {
+      selectedEvaluations.set(key, analysis.levels);
+    }
   }
 
   const [
@@ -398,11 +391,19 @@ async function loadReportContext(reportId: number, userId: number): Promise<Repo
 
   const sections = groupedData
     .map((requirement) => {
+      // Skip disabled requirements
+      if (!enabledRequirementIds.has(requirement.id)) {
+        return null;
+      }
+
       const mappedCriteria = requirement.criteria
         .map((criterion) => {
           const analysesWithLevels = criterion.analyses
             .map((analysis) => {
-              let selectedLevels = selectedEvaluations.get(`analysis-${analysis.id}`)?.slice() ?? levelOrder.slice();
+              // Get selected levels from map. If not in map, analysis is not selected - return null.
+              const selectedLevels = selectedEvaluations.get(`analysis-${analysis.id}`);
+              if (!selectedLevels || selectedLevels.length === 0) return null;
+
               const filteredParameters = analysis.parameters.filter((parameter) =>
                 hasValuesForSelectedLevels(parameter, selectedLevels)
               );
@@ -458,54 +459,85 @@ function buildReportHtml(context: ReportRenderContext): string {
   const requirementsHtml = sections.map((requirement) => {
     const criteriaHtml = requirement.criteria.map((criterion) => {
       const analysesHtml = criterion.analyses.map((analysis) => {
-        const parametersHtml = analysis.parameters.map((parameter) => {
+        // Build table rows for parameters
+        const parametersRows = analysis.parameters.map((parameter) => {
+          const paramLabel = escapeHtml(formatWithSeparators(parameter.label ?? ''));
+          const unit = parameter.unit ? escapeHtml(normalizeDisplayValue(parameter.unit)) : '';
           const observation = parameter.notes ?? (parameter as any).observation ?? null;
-          const levelsHtml = analysis.selectedLevels.map((level) => {
+          const notes = observation ? `<div style="font-size: 9px; color: #4b5563; margin-top: 2px;">${escapeHtml(formatWithSeparators(observation))}</div>` : '';
+          
+          // Build cells for each selected level
+          const levelCells = analysis.selectedLevels.map((level) => {
             const value = resolveParameterLevelValue(parameter, level);
-            const display = normalizeDisplayValue(value);
-            return `<li><span class="level-label">${escapeHtml(levelLabels[level] || level)}</span> <span class="level-value">${escapeHtml(display)}</span></li>`;
+            const displayValue = normalizeDisplayValue(value);
+            return `<td style="text-align: center; padding: 6px 8px; border: 1px solid #94a3b8; font-size: 10px;">${escapeHtml(displayValue)}</td>`;
           }).join('');
-
-          const unit = parameter.unit ? `<span class="parameter-unit">${escapeHtml(normalizeDisplayValue(parameter.unit))}</span>` : '';
-          const notes = observation ? `<div class="parameter-notes">${escapeHtml(formatWithSeparators(observation))}</div>` : '';
-
+          
           return `
-            <li class="parameter">
-              <div class="parameter-header">
-                <span class="parameter-name">${escapeHtml(formatWithSeparators(parameter.label ?? ''))}</span>
-                ${unit}
-              </div>
-              ${notes}
-              <ul class="parameter-levels">${levelsHtml}</ul>
-            </li>
+            <tr>
+              <td style="padding: 6px 8px; border: 1px solid #94a3b8; font-size: 10px;">
+                ${paramLabel}
+                ${notes}
+              </td>
+              <td style="text-align: center; padding: 6px 8px; border: 1px solid #94a3b8; font-weight: 700; font-size: 10px;">${unit}</td>
+              ${levelCells}
+            </tr>
           `;
         }).join('');
 
+        // Build header cells for selected levels
+        const levelHeaders = analysis.selectedLevels.map((level) => {
+          return `<th style="text-align: center; padding: 6px 8px; background-color: #e2e8f0; border: 1px solid #94a3b8; font-weight: 700; text-transform: uppercase; font-size: 10px;">${escapeHtml(levelLabels[level])}</th>`;
+        }).join('');
+
+        const tableHtml = analysis.parameters.length > 0
+          ? `
+            <table style="width: 100%; border-collapse: collapse; margin-top: 8px; margin-bottom: 4px;">
+              <thead>
+                <tr>
+                  <th style="text-align: left; padding: 6px 8px; background-color: #e2e8f0; border: 1px solid #94a3b8; font-weight: 700; text-transform: uppercase; font-size: 10px;">PARÂMETRO</th>
+                  <th style="text-align: center; padding: 6px 8px; background-color: #e2e8f0; border: 1px solid #94a3b8; font-weight: 700; text-transform: uppercase; font-size: 10px; width: 40px;">UN</th>
+                  ${levelHeaders}
+                </tr>
+              </thead>
+              <tbody>
+                ${parametersRows}
+              </tbody>
+            </table>
+          `
+          : '<p style="font-style: italic; color: #6b7280; margin: 8px 0; font-size: 10px;">Nenhum parâmetro disponível.</p>';
+
         return `
-          <div class="analysis">
-            <h4>${escapeHtml(analysis.code)} - ${escapeHtml(formatWithSeparators(analysis.label ?? ''))}</h4>
-            <ul class="parameters">${parametersHtml}</ul>
+          <div style="margin: 12px 0;">
+            <div style="background-color: #dbeafe; padding: 6px 10px; font-weight: 600; text-transform: uppercase; font-size: 10px; color: #1e40af; letter-spacing: 0.3px;">
+              ANÁLISE: ${escapeHtml(formatWithSeparators(analysis.label ?? ''))}
+            </div>
+            ${tableHtml}
           </div>
         `;
       }).join('');
 
       return `
-        <div class="criterion">
-          <h3>${escapeHtml(criterion.code)} - ${escapeHtml(formatWithSeparators(criterion.label ?? ''))}</h3>
+        <div style="margin: 16px 0;">
+          <div style="background-color: #dbeafe; padding: 7px 12px; font-weight: 700; text-transform: uppercase; font-size: 11px; color: #1e3a8a; letter-spacing: 0.4px; border-bottom: 2px solid #3b82f6;">
+            CRITÉRIO: ${escapeHtml(formatWithSeparators(criterion.label ?? ''))}
+          </div>
           ${analysesHtml}
         </div>
       `;
     }).join('');
 
     return `
-      <section class="requirement" data-requirement-id="${requirement.id}">
-        <h2>${escapeHtml(requirement.code)} - ${escapeHtml(formatWithSeparators(requirement.label ?? ''))}</h2>
+      <div style="page-break-after: auto; margin: 24px 0 32px 0;">
+        <h2 style="font-size: 16px; font-weight: 700; color: #1e3a8a; text-transform: uppercase; padding-bottom: 6px; border-bottom: 3px solid #1e40af; margin: 0 0 12px 0; letter-spacing: 0.5px;">
+          REQUISITO: ${escapeHtml(formatWithSeparators(requirement.label ?? ''))}
+        </h2>
         ${criteriaHtml}
-      </section>
+      </div>
     `;
   }).join('');
 
-  const content = requirementsHtml || '<p class="empty">Nenhum requisito disponível.</p>';
+  const content = requirementsHtml || '<p style="font-style: italic; color: #6b7280; font-size: 10px;">Nenhum requisito disponível.</p>';
 
   return `<!DOCTYPE html>
 <html lang="pt-BR">
@@ -513,33 +545,34 @@ function buildReportHtml(context: ReportRenderContext): string {
     <meta charset="utf-8" />
     <title>${escapeHtml(title || 'Relatório')}</title>
     <style>
-      body { font-family: 'Inter', Arial, sans-serif; color: #111827; margin: 0; padding: 24px; }
-      h1, h2, h3, h4 { margin: 0 0 8px; font-weight: 600; }
-      h1 { font-size: 24px; margin-bottom: 16px; }
-      h2 { font-size: 20px; margin-top: 24px; color: #1f2937; }
-      h3 { font-size: 18px; margin-top: 16px; color: #374151; }
-      h4 { font-size: 16px; margin-top: 12px; color: #4b5563; }
-      .requirement { border-top: 1px solid #d1d5db; padding-top: 16px; margin-top: 16px; }
-      .criterion { margin-left: 16px; padding-left: 16px; border-left: 3px solid #e5e7eb; }
-      .analysis { margin-left: 16px; padding-left: 16px; border-left: 2px solid #e5e7eb; }
-      .parameters { list-style: none; padding-left: 0; margin: 8px 0 16px; }
-      .parameter { margin-bottom: 12px; }
-      .parameter-header { display: flex; gap: 8px; align-items: baseline; font-weight: 500; }
-      .parameter-unit { font-size: 12px; color: #6b7280; text-transform: uppercase; }
-      .parameter-notes { font-size: 12px; color: #4b5563; margin: 4px 0 8px; }
-      .parameter-levels { list-style: none; padding-left: 0; margin: 0; display: flex; gap: 12px; flex-wrap: wrap; }
-      .level-label { font-weight: 600; color: #2563eb; margin-right: 4px; }
-      .level-value { color: #111827; }
-      .empty { font-style: italic; color: #6b7280; }
+      @page {
+        size: A4;
+        margin: 18mm 10mm 15mm 10mm;
+      }
+      body {
+        font-family: 'Arial', sans-serif;
+        color: #1e293b;
+        margin: 0;
+        padding: 0;
+        font-size: 10pt;
+      }
+      table {
+        page-break-inside: auto;
+      }
+      tr {
+        page-break-inside: avoid;
+        page-break-after: auto;
+      }
+      thead {
+        display: table-header-group;
+      }
+      h2 {
+        page-break-after: avoid;
+      }
     </style>
   </head>
   <body>
-    <header>
-      <h1>${escapeHtml(title)}</h1>
-    </header>
-    <main>
-      ${content}
-    </main>
+    ${content}
   </body>
 </html>`;
 }
