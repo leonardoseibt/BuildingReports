@@ -470,7 +470,7 @@ function buildReportHtml(context: ReportRenderContext): string {
           const levelCells = analysis.selectedLevels.map((level) => {
             const value = resolveParameterLevelValue(parameter, level);
             const displayValue = normalizeDisplayValue(value);
-            return `<td style="text-align: center; padding: 6px 8px; border: 1px solid #94a3b8; font-size: 10px;">${escapeHtml(displayValue)}</td>`;
+            return `<td style="text-align: center; padding: 6px 8px; border: 1px solid #94a3b8; font-size: 10px; width: 50px; min-width: 50px; white-space: nowrap;">${escapeHtml(displayValue)}</td>`;
           }).join('');
           
           return `
@@ -479,7 +479,7 @@ function buildReportHtml(context: ReportRenderContext): string {
                 ${paramLabel}
                 ${notes}
               </td>
-              <td style="text-align: center; padding: 6px 8px; border: 1px solid #94a3b8; font-weight: 700; font-size: 10px;">${unit}</td>
+              <td style="text-align: center; padding: 6px 8px; border: 1px solid #94a3b8; font-weight: 700; font-size: 10px; width: 50px; min-width: 50px;">${unit}</td>
               ${levelCells}
             </tr>
           `;
@@ -487,16 +487,16 @@ function buildReportHtml(context: ReportRenderContext): string {
 
         // Build header cells for selected levels
         const levelHeaders = analysis.selectedLevels.map((level) => {
-          return `<th style="text-align: center; padding: 6px 8px; background-color: #e2e8f0; border: 1px solid #94a3b8; font-weight: 700; text-transform: uppercase; font-size: 10px;">${escapeHtml(levelLabels[level])}</th>`;
+          return `<th style="text-align: center; padding: 6px 8px; background-color: #e2e8f0; border: 1px solid #94a3b8; font-weight: 700; text-transform: uppercase; font-size: 10px; width: 50px; min-width: 50px;">${escapeHtml(levelLabels[level])}</th>`;
         }).join('');
 
         const tableHtml = analysis.parameters.length > 0
           ? `
-            <table style="width: 100%; border-collapse: collapse; margin-top: 8px; margin-bottom: 4px;">
+            <table style="width: 100%; border-collapse: collapse; margin-top: 8px; margin-bottom: 4px; table-layout: fixed;">
               <thead>
                 <tr>
                   <th style="text-align: left; padding: 6px 8px; background-color: #e2e8f0; border: 1px solid #94a3b8; font-weight: 700; text-transform: uppercase; font-size: 10px;">PARÂMETRO</th>
-                  <th style="text-align: center; padding: 6px 8px; background-color: #e2e8f0; border: 1px solid #94a3b8; font-weight: 700; text-transform: uppercase; font-size: 10px; width: 40px;">UN</th>
+                  <th style="text-align: center; padding: 6px 8px; background-color: #e2e8f0; border: 1px solid #94a3b8; font-weight: 700; text-transform: uppercase; font-size: 10px; width: 50px; min-width: 50px;">UN</th>
                   ${levelHeaders}
                 </tr>
               </thead>
