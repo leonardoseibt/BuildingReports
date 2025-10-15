@@ -258,21 +258,32 @@ export default function ReportsList() {
                       <TableCell>{r.generatedAt ? new Date(r.generatedAt as any).toLocaleDateString('pt-BR') : ''}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1.5">
+                          {/* Botão Editar */}
                           <Button variant="ghost" size="icon" onClick={() => { setEditItem(r); setFormKey(k => k + 1); setOpen(true); }}>
                             <Pencil className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="icon" onClick={() => openReportPdf(r)} title="Gerar PDF (Puppeteer)">
-                            <Printer className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="icon" onClick={() => openReportReactPdf(r)} title="Gerar PDF (React-PDF)" className="text-green-600 hover:bg-green-50 hover:text-green-700">
-                            <FilePlus2 className="h-4 w-4" />
-                          </Button>
+                          
+                          {/* BOTÕES TEMPORARIAMENTE OCULTOS - Para reativar, descomente as linhas abaixo */}
+                          {false && (
+                            <>
+                              <Button variant="ghost" size="icon" onClick={() => openReportPdf(r)} title="Gerar PDF (Puppeteer)">
+                                <Printer className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="icon" onClick={() => openReportReactPdf(r)} title="Gerar PDF (React-PDF)" className="text-green-600 hover:bg-green-50 hover:text-green-700">
+                                <FilePlus2 className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="icon" onClick={() => openReportJson(r)} title="Gerar JSON">
+                                <Braces className="h-4 w-4" />
+                              </Button>
+                            </>
+                          )}
+                          
+                          {/* Botão Gerar PDF (jsreport) */}
                           <Button variant="ghost" size="icon" onClick={() => openReportPdfJs(r)} title="Gerar PDF (jsreport)">
                             <FileDown className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="icon" onClick={() => openReportJson(r)} title="Gerar JSON">
-                            <Braces className="h-4 w-4" />
-                          </Button>
+                          
+                          {/* Botão Excluir */}
                           <Button variant="ghost" size="icon" className="text-rose-600 hover:bg-rose-50 hover:text-rose-700" onClick={() => askDelete(r)}>
                             <Trash2 className="h-4 w-4" />
                           </Button>
