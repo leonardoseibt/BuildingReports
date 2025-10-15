@@ -267,6 +267,12 @@ interface ReportRenderContext {
   report: Report;
   building: Building;
   sections: RequirementRender[];
+  technician?: any;
+  typology?: any;
+  noiseClass?: any;
+  aggressivenessClass?: any;
+  bioclimaticZone?: any;
+  isopleth?: any;
 }
 
 async function loadTableData(
@@ -336,13 +342,25 @@ async function loadReportContext(reportId: number, userId: number): Promise<Repo
     criteria,
     analysesRaw,
     parametersRaw,
-    attributeDefinitions
+    attributeDefinitions,
+    typologies,
+    technicians,
+    noiseClasses,
+    aggressivenessClasses,
+    bioclimaticZones,
+    isopleths
   ] = await Promise.all([
     storage.listRequirements(),
     storage.listCriteria(),
     storage.listAnalyses(),
     storage.listParameters(),
-    storage.listAttributeDefinitions({})
+    storage.listAttributeDefinitions({}),
+    storage.listTypologies(),
+    storage.listTechnicians(building.userId, undefined, undefined),
+    storage.listNoiseClasses(),
+    storage.listAggressivenessClasses(),
+    storage.listBioclimaticZones(),
+    storage.listIsopleths()
   ]);
 
   const attributeMap = new Map<number, AttributeDefinition>();
@@ -437,10 +455,44 @@ async function loadReportContext(reportId: number, userId: number): Promise<Repo
         }))
     }));
 
+  // Match related records by ID/code
+  const techniciansList = (technicians as any)?.items || technicians || [];
+  const technician = building.technicianId 
+    ? Array.isArray(techniciansList) 
+      ? techniciansList.find((t: any) => t.id === building.technicianId)
+      : undefined
+    : undefined;
+  
+  const typology = building.typologyId 
+    ? typologies.find((t: any) => t.id === building.typologyId) 
+    : undefined;
+  
+  const noiseClass = building.noiseClassId 
+    ? noiseClasses.find((nc: any) => nc.id === building.noiseClassId) 
+    : undefined;
+  
+  const aggressivenessClass = building.aggressivenessClassId 
+    ? aggressivenessClasses.find((ac: any) => ac.id === building.aggressivenessClassId) 
+    : undefined;
+  
+  const bioclimaticZone = building.bioclimaticZone 
+    ? bioclimaticZones.find((z: any) => z.code === building.bioclimaticZone) 
+    : undefined;
+  
+  const isopleth = building.isoplethCode 
+    ? isopleths.find((i: any) => i.code === building.isoplethCode) 
+    : undefined;
+
   return {
     report,
     building,
-    sections: sortedSections
+    sections: sortedSections,
+    technician,
+    typology,
+    noiseClass,
+    aggressivenessClass,
+    bioclimaticZone,
+    isopleth
   };
 }
 
@@ -450,6 +502,128 @@ function buildFilename(building: Building, report: Report): string {
     .toLocaleDateString('pt-BR')
     .replace(/\//g, '-');
   return `PDE_${name}_${date}.pdf`;
+}
+
+function buildBuildingInfoPage(context: ReportRenderContext): string {
+  const { building, technician, typology, noiseClass, aggressivenessClass, bioclimaticZone, isopleth } = context;
+
+  const formatValue = (value: any): string => {
+    if (value === null || value === undefined || value === '') return '—';
+    return escapeHtml(String(value));
+  };
+
+  const formatDecimal = (value: any, unit: string = ''): string => {
+    if (value === null || value === undefined || value === '') return '—';
+    const num = typeof value === 'string' ? parseFloat(value) : value;
+    return `${num.toFixed(2).replace('.', ',')} ${unit}`.trim();
+  };
+
+  const formatWithDescription = (code: any, description: any): string => {
+    if (!code && !description) return '—';
+    if (code && description) return `${formatValue(code)} - ${formatValue(description)}`;
+    return formatValue(code || description);
+  };
+
+  return `
+    <div style="page-break-after: always; padding: 40px 20px;">
+      <h1 style="font-size: 24px; font-weight: 700; color: #1e3a8a; text-align: center; margin-bottom: 40px; text-transform: uppercase; letter-spacing: 1px; border-bottom: 4px solid #1e40af; padding-bottom: 16px;">
+        PERFIL DE DESEMPENHO DA EDIFICAÇÃO - PDE
+      </h1>
+
+      <h2 style="font-size: 16px; font-weight: 700; color: #1e3a8a; margin-bottom: 16px; text-transform: uppercase; border-bottom: 2px solid #3b82f6; padding-bottom: 8px;">
+        IDENTIFICAÇÃO
+      </h2>
+
+      <table style="width: 100%; border-collapse: collapse; margin-bottom: 24px;">
+        <tr>
+          <td style="padding: 12px; border: 1px solid #cbd5e1; background-color: #f1f5f9; font-weight: 700; width: 35%; font-size: 11px;">NOME DA EDIFICAÇÃO</td>
+          <td style="padding: 12px; border: 1px solid #cbd5e1; font-size: 11px;">${formatValue(building.name)}</td>
+        </tr>
+        ${technician ? `
+        <tr>
+          <td style="padding: 12px; border: 1px solid #cbd5e1; background-color: #f1f5f9; font-weight: 700; font-size: 11px;">RESPONSÁVEL TÉCNICO</td>
+          <td style="padding: 12px; border: 1px solid #cbd5e1; font-size: 11px;">${formatValue(technician.fullName)}</td>
+        </tr>
+        ` : ''}
+        <tr>
+          <td style="padding: 12px; border: 1px solid #cbd5e1; background-color: #f1f5f9; font-weight: 700; font-size: 11px;">ENDEREÇO</td>
+          <td style="padding: 12px; border: 1px solid #cbd5e1; font-size: 11px;">${formatValue(building.street)}${building.addressNumber ? ', ' + formatValue(building.addressNumber) : ''}</td>
+        </tr>
+        <tr>
+          <td style="padding: 12px; border: 1px solid #cbd5e1; background-color: #f1f5f9; font-weight: 700; font-size: 11px;">BAIRRO</td>
+          <td style="padding: 12px; border: 1px solid #cbd5e1; font-size: 11px;">${formatValue(building.neighborhood)}</td>
+        </tr>
+        <tr>
+          <td style="padding: 12px; border: 1px solid #cbd5e1; background-color: #f1f5f9; font-weight: 700; font-size: 11px;">CIDADE / ESTADO</td>
+          <td style="padding: 12px; border: 1px solid #cbd5e1; font-size: 11px;">${formatValue(building.city)} / ${formatValue(building.state)}</td>
+        </tr>
+        <tr>
+          <td style="padding: 12px; border: 1px solid #cbd5e1; background-color: #f1f5f9; font-weight: 700; font-size: 11px;">CEP</td>
+          <td style="padding: 12px; border: 1px solid #cbd5e1; font-size: 11px;">${formatValue(building.cep)}</td>
+        </tr>
+      </table>
+
+      <h2 style="font-size: 16px; font-weight: 700; color: #1e3a8a; margin-top: 32px; margin-bottom: 16px; text-transform: uppercase; border-bottom: 2px solid #3b82f6; padding-bottom: 8px;">
+        CARACTERÍSTICAS TÉCNICAS
+      </h2>
+
+      <table style="width: 100%; border-collapse: collapse; margin-bottom: 24px;">
+        ${typology ? `
+        <tr>
+          <td style="padding: 12px; border: 1px solid #cbd5e1; background-color: #f1f5f9; font-weight: 700; width: 35%; font-size: 11px;">TIPOLOGIA</td>
+          <td style="padding: 12px; border: 1px solid #cbd5e1; font-size: 11px;">${formatValue(typology.label)}</td>
+        </tr>
+        ` : ''}
+        <tr>
+          <td style="padding: 12px; border: 1px solid #cbd5e1; background-color: #f1f5f9; font-weight: 700; width: 35%; font-size: 11px;">ÁREA TOTAL</td>
+          <td style="padding: 12px; border: 1px solid #cbd5e1; font-size: 11px;">${formatDecimal(building.totalArea, 'm²')}</td>
+        </tr>
+        <tr>
+          <td style="padding: 12px; border: 1px solid #cbd5e1; background-color: #f1f5f9; font-weight: 700; font-size: 11px;">ALTURA DA EDIFICAÇÃO</td>
+          <td style="padding: 12px; border: 1px solid #cbd5e1; font-size: 11px;">${formatDecimal(building.buildingHeight, 'm')}</td>
+        </tr>
+        <tr>
+          <td style="padding: 12px; border: 1px solid #cbd5e1; background-color: #f1f5f9; font-weight: 700; font-size: 11px;">PROFUNDIDADE DE SUBSOLO</td>
+          <td style="padding: 12px; border: 1px solid #cbd5e1; font-size: 11px;">${formatDecimal(building.basementDepth, 'm')}</td>
+        </tr>
+        <tr>
+          <td style="padding: 12px; border: 1px solid #cbd5e1; background-color: #f1f5f9; font-weight: 700; font-size: 11px;">NÚMERO DE PAVIMENTOS</td>
+          <td style="padding: 12px; border: 1px solid #cbd5e1; font-size: 11px;">${formatValue(building.floors)}</td>
+        </tr>
+        <tr>
+          <td style="padding: 12px; border: 1px solid #cbd5e1; background-color: #f1f5f9; font-weight: 700; font-size: 11px;">NÚMERO DE UNIDADES</td>
+          <td style="padding: 12px; border: 1px solid #cbd5e1; font-size: 11px;">${formatValue(building.units)}</td>
+        </tr>
+      </table>
+
+      <h2 style="font-size: 16px; font-weight: 700; color: #1e3a8a; margin-top: 32px; margin-bottom: 16px; text-transform: uppercase; border-bottom: 2px solid #3b82f6; padding-bottom: 8px;">
+        CLASSIFICAÇÕES AMBIENTAIS
+      </h2>
+
+      <table style="width: 100%; border-collapse: collapse;">
+        <tr>
+          <td style="padding: 12px; border: 1px solid #cbd5e1; background-color: #f1f5f9; font-weight: 700; width: 35%; font-size: 11px;">ZONA BIOCLIMÁTICA</td>
+          <td style="padding: 12px; border: 1px solid #cbd5e1; font-size: 11px;">${formatWithDescription(building.bioclimaticZone, bioclimaticZone?.label)}</td>
+        </tr>
+        <tr>
+          <td style="padding: 12px; border: 1px solid #cbd5e1; background-color: #f1f5f9; font-weight: 700; font-size: 11px;">ISOPLETA</td>
+          <td style="padding: 12px; border: 1px solid #cbd5e1; font-size: 11px;">${formatWithDescription(building.isoplethCode, isopleth?.label)}</td>
+        </tr>
+        ${noiseClass ? `
+        <tr>
+          <td style="padding: 12px; border: 1px solid #cbd5e1; background-color: #f1f5f9; font-weight: 700; font-size: 11px;">CLASSE DE RUÍDO</td>
+          <td style="padding: 12px; border: 1px solid #cbd5e1; font-size: 11px;">${formatValue(noiseClass.label)}</td>
+        </tr>
+        ` : ''}
+        ${aggressivenessClass ? `
+        <tr>
+          <td style="padding: 12px; border: 1px solid #cbd5e1; background-color: #f1f5f9; font-weight: 700; font-size: 11px;">CLASSE DE AGRESSIVIDADE</td>
+          <td style="padding: 12px; border: 1px solid #cbd5e1; font-size: 11px;">${formatValue(aggressivenessClass.label)}</td>
+        </tr>
+        ` : ''}
+      </table>
+    </div>
+  `;
 }
 
 function buildReportHtml(context: ReportRenderContext): string {
@@ -537,6 +711,7 @@ function buildReportHtml(context: ReportRenderContext): string {
     `;
   }).join('');
 
+  const buildingInfoPage = buildBuildingInfoPage(context);
   const content = requirementsHtml || '<p style="font-style: italic; color: #6b7280; font-size: 10px;">Nenhum requisito disponível.</p>';
 
   return `<!DOCTYPE html>
@@ -566,12 +741,13 @@ function buildReportHtml(context: ReportRenderContext): string {
       thead {
         display: table-header-group;
       }
-      h2 {
+      h1, h2 {
         page-break-after: avoid;
       }
     </style>
   </head>
   <body>
+    ${buildingInfoPage}
     ${content}
   </body>
 </html>`;

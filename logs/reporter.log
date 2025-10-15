@@ -1383,3 +1383,304 @@ Error: chrome pdf generation timed out
 2025-10-13T20:29:46.217Z - debug: Running chrome with params {"printBackground":true,"waitForNetworkIdle":true,"timeout":119226,"marginTop":"18mm","marginBottom":"15mm","marginLeft":"10mm","marginRight":"8mm","launchOptions":{"args":["--no-sandbox","--disable-setuid-sandbox"]},"margin":{"top":"18mm","right":"8mm","bottom":"15mm","left":"10mm"}} rootId=71ln17o3sgr8l8m, id=71ln17o3sgr8l8m
 2025-10-13T20:29:47.037Z - debug: Skipping storing report. rootId=71ln17o3sgr8l8m, id=71ln17o3sgr8l8m
 2025-10-13T20:29:47.037Z - info: Rendering request 1 finished in 3493 ms rootId=71ln17o3sgr8l8m, id=71ln17o3sgr8l8m
+2025-10-15T14:09:45.826Z - info: Initializing jsreport (version: 4.10.1, configuration file: none, nodejs: 24.10.0)
+2025-10-15T14:09:45.828Z - info: Searching for available extensions in C:\Users\Leonardo Seibt\source\BuildingReports\
+2025-10-15T14:09:45.841Z - info: Extensions location cache contains up to date information, skipping crawling in C:\Users\Leonardo Seibt\source\BuildingReports\
+2025-10-15T14:09:46.424Z - info: Found 35 extension(s)
+2025-10-15T14:09:46.472Z - debug: Writing extension locations cache to C:\Users\LEONAR~1\AppData\Local\Temp\jsreport\core\locations.json
+2025-10-15T14:09:46.474Z - debug: Discovered 35 extensions
+2025-10-15T14:09:46.528Z - info: Using extension authentication@4.2.3
+2025-10-15T14:09:46.855Z - debug: Extension authentication@4.2.3 was disabled
+2025-10-15T14:09:46.857Z - info: Using extension base@4.0.0
+2025-10-15T14:09:46.862Z - info: Using extension child-templates@4.1.0
+2025-10-15T14:09:46.866Z - info: Using extension cli@4.1.2
+2025-10-15T14:09:46.875Z - info: Using extension components@4.0.2
+2025-10-15T14:09:46.880Z - info: Using extension data@4.1.0
+2025-10-15T14:09:46.882Z - debug: Extension express@4.2.3 is disabled, skipping
+2025-10-15T14:09:46.882Z - info: Using extension freeze@4.0.0
+2025-10-15T14:09:46.885Z - info: Using extension fs-store@4.1.1
+2025-10-15T14:09:47.192Z - debug: Extension fs-store@4.1.1 was disabled
+2025-10-15T14:09:47.193Z - info: Using extension handlebars@4.0.1
+2025-10-15T14:09:47.195Z - info: Using extension import-export@4.0.8
+2025-10-15T14:09:47.577Z - info: Using extension jsrender@4.0.0
+2025-10-15T14:09:47.579Z - info: Using extension licensing@4.0.5
+2025-10-15T14:09:47.623Z - info: Using extension localization@4.0.1
+2025-10-15T14:09:47.624Z - info: Using extension npm@4.0.1
+2025-10-15T14:09:47.630Z - info: Using extension pdf-utils@4.4.1
+2025-10-15T14:09:47.634Z - info: Using extension reports@4.1.5
+2025-10-15T14:09:47.638Z - info: Using extension tags@4.0.1
+2025-10-15T14:09:47.640Z - info: Using extension text@4.0.2
+2025-10-15T14:09:47.641Z - info: Using extension version-control@4.1.1
+2025-10-15T14:09:47.665Z - info: Using extension assets@4.2.3
+2025-10-15T14:09:47.685Z - info: Using extension authorization@4.1.0
+2025-10-15T14:09:47.693Z - debug: Extension authorization@4.1.0 was disabled
+2025-10-15T14:09:47.694Z - info: Using extension browser-client@4.1.0
+2025-10-15T14:09:47.698Z - info: Using extension chrome-pdf@4.3.0
+2025-10-15T14:09:47.701Z - debug: Chrome strategy is chrome-pool, numberOfWorkers: 1
+2025-10-15T14:09:47.701Z - debug: Chrome custom launch options are args=--no-sandbox,--disable-setuid-sandbox, protocolTimeout=120000
+2025-10-15T14:09:47.702Z - info: Using extension docx@4.9.0
+2025-10-15T14:09:47.705Z - info: Using extension html-to-xlsx@4.2.4
+2025-10-15T14:09:48.082Z - info: html-to-xlsx detected chrome as available html engine
+2025-10-15T14:09:48.082Z - info: Using extension pptx@4.4.2
+2025-10-15T14:09:48.085Z - info: Using extension scheduling@4.1.0
+2025-10-15T14:09:48.134Z - info: Using extension scripts@4.2.0
+2025-10-15T14:09:48.135Z - info: Using extension static-pdf@4.1.0
+2025-10-15T14:09:48.136Z - info: Using extension studio@4.3.2
+2025-10-15T14:09:48.269Z - info: Using extension xlsx@4.5.1
+2025-10-15T14:09:48.272Z - info: Using extension public-templates@4.0.0
+2025-10-15T14:09:48.274Z - debug: Extension public-templates@4.0.0 was disabled
+2025-10-15T14:09:48.274Z - info: Using extension sample-template@4.0.2
+2025-10-15T14:09:48.277Z - info: Using extension studio-theme-dark@4.0.0
+2025-10-15T14:09:48.280Z - info: Using general timeout for rendering (reportTimeout: 120000)
+2025-10-15T14:09:48.280Z - info: Using memory provider for template store. The saved templates will be lost after restart
+2025-10-15T14:09:48.296Z - debug: studio default theme is: light
+2025-10-15T14:09:48.301Z - info: Verifying license key free
+2025-10-15T14:09:48.302Z - info: Using free license
+2025-10-15T14:09:48.306Z - info: pdf footers check started
+2025-10-15T14:09:48.306Z - info: pdf footers check finished without found problems
+2025-10-15T14:09:48.311Z - info: Migrating templates chrome settings (waitForNetworkIddle -> waitForNetworkIdle)
+2025-10-15T14:09:48.312Z - info: Migration successful
+2025-10-15T14:09:48.313Z - debug: Creating samples is disabled
+2025-10-15T14:09:48.313Z - info: Initializing worker threads
+2025-10-15T14:09:48.314Z - debug: Extensions in workers: base, child-templates, components, data, handlebars, jsrender, localization, npm, pdf-utils, reports, text, version-control, assets, browser-client, chrome-pdf, docx, html-to-xlsx, pptx, scripts, static-pdf, studio, xlsx
+2025-10-15T14:09:49.540Z - info: 2 worker threads initialized in 1227ms
+2025-10-15T14:09:49.541Z - info: Starting temp files cleanup with 180000ms threshold
+2025-10-15T14:09:49.542Z - info: reporter initialized
+2025-10-15T14:09:49.546Z - info: Render request 1 queued for execution and waiting for available worker rootId=8sxbrsli5kckp2x, id=8sxbrsli5kckp2x
+2025-10-15T14:09:49.558Z - info: Starting rendering request 1 rootId=8sxbrsli5kckp2x, id=8sxbrsli5kckp2x
+2025-10-15T14:09:49.559Z - info: Rendering anonymous template { recipe: chrome-pdf, engine: none } rootId=8sxbrsli5kckp2x, id=8sxbrsli5kckp2x
+2025-10-15T14:09:49.559Z - debug: Data item not defined for this template. rootId=8sxbrsli5kckp2x, id=8sxbrsli5kckp2x
+2025-10-15T14:09:49.561Z - debug: Base url not specified, skipping its injection. rootId=8sxbrsli5kckp2x, id=8sxbrsli5kckp2x
+2025-10-15T14:09:49.562Z - debug: Rendering engine none rootId=8sxbrsli5kckp2x, id=8sxbrsli5kckp2x
+2025-10-15T14:09:50.213Z - debug: Executing recipe chrome-pdf rootId=8sxbrsli5kckp2x, id=8sxbrsli5kckp2x
+2025-10-15T14:09:51.273Z - debug: Converting with chrome Chrome/131.0.6778.204 using chrome-pool strategy rootId=8sxbrsli5kckp2x, id=8sxbrsli5kckp2x
+2025-10-15T14:09:51.336Z - debug: Chrome will wait for network iddle before printing rootId=8sxbrsli5kckp2x, id=8sxbrsli5kckp2x
+2025-10-15T14:09:51.378Z - debug: Page request: GET (document) file:///C:/Users/LEONAR%7E1/AppData/Local/Temp/jsreport/autocleanup/f4f548be-a69b-41d1-91e9-6018338e949a-chrome-pdf.html rootId=8sxbrsli5kckp2x, id=8sxbrsli5kckp2x
+2025-10-15T14:09:51.409Z - debug: Page request finished: GET (document) 200 file:///C:/Users/LEONAR%7E1/AppData/Local/Temp/jsreport/autocleanup/f4f548be-a69b-41d1-91e9-6018338e949a-chrome-pdf.html rootId=8sxbrsli5kckp2x, id=8sxbrsli5kckp2x
+2025-10-15T14:09:52.084Z - debug: Running chrome with params {"printBackground":true,"waitForNetworkIdle":true,"timeout":119321,"marginTop":"18mm","marginBottom":"15mm","marginLeft":"10mm","marginRight":"8mm","launchOptions":{"args":["--no-sandbox","--disable-setuid-sandbox"]},"margin":{"top":"18mm","right":"8mm","bottom":"15mm","left":"10mm"}} rootId=8sxbrsli5kckp2x, id=8sxbrsli5kckp2x
+2025-10-15T14:09:52.910Z - debug: Skipping storing report. rootId=8sxbrsli5kckp2x, id=8sxbrsli5kckp2x
+2025-10-15T14:09:52.910Z - info: Rendering request 1 finished in 3367 ms rootId=8sxbrsli5kckp2x, id=8sxbrsli5kckp2x
+2025-10-15T14:11:40.173Z - info: Render request 2 queued for execution and waiting for available worker rootId=3ex7egzrde3nu2a, id=3ex7egzrde3nu2a
+2025-10-15T14:11:40.179Z - info: Starting rendering request 2 rootId=3ex7egzrde3nu2a, id=3ex7egzrde3nu2a
+2025-10-15T14:11:40.180Z - info: Rendering anonymous template { recipe: chrome-pdf, engine: none } rootId=3ex7egzrde3nu2a, id=3ex7egzrde3nu2a
+2025-10-15T14:11:40.180Z - debug: Data item not defined for this template. rootId=3ex7egzrde3nu2a, id=3ex7egzrde3nu2a
+2025-10-15T14:11:40.183Z - debug: Base url not specified, skipping its injection. rootId=3ex7egzrde3nu2a, id=3ex7egzrde3nu2a
+2025-10-15T14:11:40.185Z - debug: Rendering engine none rootId=3ex7egzrde3nu2a, id=3ex7egzrde3nu2a
+2025-10-15T14:11:40.701Z - debug: Executing recipe chrome-pdf rootId=3ex7egzrde3nu2a, id=3ex7egzrde3nu2a
+2025-10-15T14:11:41.156Z - debug: Converting with chrome Chrome/131.0.6778.204 using chrome-pool strategy rootId=3ex7egzrde3nu2a, id=3ex7egzrde3nu2a
+2025-10-15T14:11:41.227Z - debug: Chrome will wait for network iddle before printing rootId=3ex7egzrde3nu2a, id=3ex7egzrde3nu2a
+2025-10-15T14:11:41.299Z - debug: Page request: GET (document) file:///C:/Users/LEONAR%7E1/AppData/Local/Temp/jsreport/autocleanup/09d6b90b-e97a-40c4-8e3c-6e58115debb1-chrome-pdf.html rootId=3ex7egzrde3nu2a, id=3ex7egzrde3nu2a
+2025-10-15T14:11:41.331Z - debug: Page request finished: GET (document) 200 file:///C:/Users/LEONAR%7E1/AppData/Local/Temp/jsreport/autocleanup/09d6b90b-e97a-40c4-8e3c-6e58115debb1-chrome-pdf.html rootId=3ex7egzrde3nu2a, id=3ex7egzrde3nu2a
+2025-10-15T14:11:41.979Z - debug: Running chrome with params {"printBackground":true,"waitForNetworkIdle":true,"timeout":119463,"marginTop":"18mm","marginBottom":"15mm","marginLeft":"10mm","marginRight":"8mm","launchOptions":{"args":["--no-sandbox","--disable-setuid-sandbox"]},"margin":{"top":"18mm","right":"8mm","bottom":"15mm","left":"10mm"}} rootId=3ex7egzrde3nu2a, id=3ex7egzrde3nu2a
+2025-10-15T14:11:42.547Z - debug: Skipping storing report. rootId=3ex7egzrde3nu2a, id=3ex7egzrde3nu2a
+2025-10-15T14:11:42.547Z - info: Rendering request 2 finished in 2376 ms rootId=3ex7egzrde3nu2a, id=3ex7egzrde3nu2a
+2025-10-15T14:13:45.444Z - info: Render request 3 queued for execution and waiting for available worker rootId=ag50ji2aa3z1djf, id=ag50ji2aa3z1djf
+2025-10-15T14:13:45.446Z - info: Starting rendering request 3 rootId=ag50ji2aa3z1djf, id=ag50ji2aa3z1djf
+2025-10-15T14:13:45.446Z - info: Rendering anonymous template { recipe: chrome-pdf, engine: none } rootId=ag50ji2aa3z1djf, id=ag50ji2aa3z1djf
+2025-10-15T14:13:45.446Z - debug: Data item not defined for this template. rootId=ag50ji2aa3z1djf, id=ag50ji2aa3z1djf
+2025-10-15T14:13:45.448Z - debug: Base url not specified, skipping its injection. rootId=ag50ji2aa3z1djf, id=ag50ji2aa3z1djf
+2025-10-15T14:13:45.448Z - debug: Rendering engine none rootId=ag50ji2aa3z1djf, id=ag50ji2aa3z1djf
+2025-10-15T14:13:45.460Z - debug: Executing recipe chrome-pdf rootId=ag50ji2aa3z1djf, id=ag50ji2aa3z1djf
+2025-10-15T14:13:45.462Z - debug: Converting with chrome Chrome/131.0.6778.204 using chrome-pool strategy rootId=ag50ji2aa3z1djf, id=ag50ji2aa3z1djf
+2025-10-15T14:13:45.534Z - debug: Chrome will wait for network iddle before printing rootId=ag50ji2aa3z1djf, id=ag50ji2aa3z1djf
+2025-10-15T14:13:45.544Z - debug: Page request: GET (document) file:///C:/Users/LEONAR%7E1/AppData/Local/Temp/jsreport/autocleanup/74dee383-3050-4f3f-80be-aef96435fcea-chrome-pdf.html rootId=ag50ji2aa3z1djf, id=ag50ji2aa3z1djf
+2025-10-15T14:13:45.558Z - debug: Page request finished: GET (document) 200 file:///C:/Users/LEONAR%7E1/AppData/Local/Temp/jsreport/autocleanup/74dee383-3050-4f3f-80be-aef96435fcea-chrome-pdf.html rootId=ag50ji2aa3z1djf, id=ag50ji2aa3z1djf
+2025-10-15T14:13:46.521Z - debug: Running chrome with params {"printBackground":true,"waitForNetworkIdle":true,"timeout":119981,"marginTop":"18mm","marginBottom":"15mm","marginLeft":"10mm","marginRight":"8mm","launchOptions":{"args":["--no-sandbox","--disable-setuid-sandbox"]},"margin":{"top":"18mm","right":"8mm","bottom":"15mm","left":"10mm"}} rootId=ag50ji2aa3z1djf, id=ag50ji2aa3z1djf
+2025-10-15T14:13:47.135Z - debug: Skipping storing report. rootId=ag50ji2aa3z1djf, id=ag50ji2aa3z1djf
+2025-10-15T14:13:47.135Z - info: Rendering request 3 finished in 1693 ms rootId=ag50ji2aa3z1djf, id=ag50ji2aa3z1djf
+2025-10-15T14:21:48.196Z - info: Render request 4 queued for execution and waiting for available worker rootId=1di5ekwz9silsto, id=1di5ekwz9silsto
+2025-10-15T14:21:48.198Z - info: Starting rendering request 4 rootId=1di5ekwz9silsto, id=1di5ekwz9silsto
+2025-10-15T14:21:48.198Z - info: Rendering anonymous template { recipe: chrome-pdf, engine: none } rootId=1di5ekwz9silsto, id=1di5ekwz9silsto
+2025-10-15T14:21:48.198Z - debug: Data item not defined for this template. rootId=1di5ekwz9silsto, id=1di5ekwz9silsto
+2025-10-15T14:21:48.199Z - debug: Base url not specified, skipping its injection. rootId=1di5ekwz9silsto, id=1di5ekwz9silsto
+2025-10-15T14:21:48.200Z - debug: Rendering engine none rootId=1di5ekwz9silsto, id=1di5ekwz9silsto
+2025-10-15T14:21:48.218Z - debug: Executing recipe chrome-pdf rootId=1di5ekwz9silsto, id=1di5ekwz9silsto
+2025-10-15T14:21:48.221Z - debug: Converting with chrome Chrome/131.0.6778.204 using chrome-pool strategy rootId=1di5ekwz9silsto, id=1di5ekwz9silsto
+2025-10-15T14:21:48.299Z - debug: Chrome will wait for network iddle before printing rootId=1di5ekwz9silsto, id=1di5ekwz9silsto
+2025-10-15T14:21:48.310Z - debug: Page request: GET (document) file:///C:/Users/LEONAR%7E1/AppData/Local/Temp/jsreport/autocleanup/e16544fa-4029-4521-9b59-bbf03a190af2-chrome-pdf.html rootId=1di5ekwz9silsto, id=1di5ekwz9silsto
+2025-10-15T14:21:48.333Z - debug: Page request finished: GET (document) 200 file:///C:/Users/LEONAR%7E1/AppData/Local/Temp/jsreport/autocleanup/e16544fa-4029-4521-9b59-bbf03a190af2-chrome-pdf.html rootId=1di5ekwz9silsto, id=1di5ekwz9silsto
+2025-10-15T14:21:49.277Z - debug: Running chrome with params {"printBackground":true,"waitForNetworkIdle":true,"timeout":119974,"marginTop":"18mm","marginBottom":"15mm","marginLeft":"10mm","marginRight":"8mm","launchOptions":{"args":["--no-sandbox","--disable-setuid-sandbox"]},"margin":{"top":"18mm","right":"8mm","bottom":"15mm","left":"10mm"}} rootId=1di5ekwz9silsto, id=1di5ekwz9silsto
+2025-10-15T14:21:49.738Z - debug: Skipping storing report. rootId=1di5ekwz9silsto, id=1di5ekwz9silsto
+2025-10-15T14:21:49.738Z - info: Rendering request 4 finished in 1544 ms rootId=1di5ekwz9silsto, id=1di5ekwz9silsto
+2025-10-15T14:26:06.685Z - info: Initializing jsreport (version: 4.10.1, configuration file: none, nodejs: 24.10.0)
+2025-10-15T14:26:06.688Z - info: Searching for available extensions in C:\Users\Leonardo Seibt\source\BuildingReports\
+2025-10-15T14:26:06.694Z - info: Extensions location cache contains up to date information, skipping crawling in C:\Users\Leonardo Seibt\source\BuildingReports\
+2025-10-15T14:26:07.060Z - info: Found 35 extension(s)
+2025-10-15T14:26:07.094Z - debug: Writing extension locations cache to C:\Users\LEONAR~1\AppData\Local\Temp\jsreport\core\locations.json
+2025-10-15T14:26:07.096Z - debug: Discovered 35 extensions
+2025-10-15T14:26:07.151Z - info: Using extension authentication@4.2.3
+2025-10-15T14:26:07.373Z - debug: Extension authentication@4.2.3 was disabled
+2025-10-15T14:26:07.374Z - info: Using extension base@4.0.0
+2025-10-15T14:26:07.376Z - info: Using extension child-templates@4.1.0
+2025-10-15T14:26:07.378Z - info: Using extension cli@4.1.2
+2025-10-15T14:26:07.382Z - info: Using extension components@4.0.2
+2025-10-15T14:26:07.384Z - info: Using extension data@4.1.0
+2025-10-15T14:26:07.386Z - debug: Extension express@4.2.3 is disabled, skipping
+2025-10-15T14:26:07.386Z - info: Using extension freeze@4.0.0
+2025-10-15T14:26:07.387Z - info: Using extension fs-store@4.1.1
+2025-10-15T14:26:07.621Z - debug: Extension fs-store@4.1.1 was disabled
+2025-10-15T14:26:07.622Z - info: Using extension handlebars@4.0.1
+2025-10-15T14:26:07.623Z - info: Using extension import-export@4.0.8
+2025-10-15T14:26:07.933Z - info: Using extension jsrender@4.0.0
+2025-10-15T14:26:07.934Z - info: Using extension licensing@4.0.5
+2025-10-15T14:26:07.965Z - info: Using extension localization@4.0.1
+2025-10-15T14:26:07.966Z - info: Using extension npm@4.0.1
+2025-10-15T14:26:07.972Z - info: Using extension pdf-utils@4.4.1
+2025-10-15T14:26:07.976Z - info: Using extension reports@4.1.5
+2025-10-15T14:26:07.980Z - info: Using extension tags@4.0.1
+2025-10-15T14:26:07.983Z - info: Using extension text@4.0.2
+2025-10-15T14:26:07.984Z - info: Using extension version-control@4.1.1
+2025-10-15T14:26:08.001Z - info: Using extension assets@4.2.3
+2025-10-15T14:26:08.015Z - info: Using extension authorization@4.1.0
+2025-10-15T14:26:08.020Z - debug: Extension authorization@4.1.0 was disabled
+2025-10-15T14:26:08.021Z - info: Using extension browser-client@4.1.0
+2025-10-15T14:26:08.023Z - info: Using extension chrome-pdf@4.3.0
+2025-10-15T14:26:08.026Z - debug: Chrome strategy is chrome-pool, numberOfWorkers: 1
+2025-10-15T14:26:08.026Z - debug: Chrome custom launch options are args=--no-sandbox,--disable-setuid-sandbox, protocolTimeout=120000
+2025-10-15T14:26:08.027Z - info: Using extension docx@4.9.0
+2025-10-15T14:26:08.030Z - info: Using extension html-to-xlsx@4.2.4
+2025-10-15T14:26:08.265Z - info: html-to-xlsx detected chrome as available html engine
+2025-10-15T14:26:08.266Z - info: Using extension pptx@4.4.2
+2025-10-15T14:26:08.268Z - info: Using extension scheduling@4.1.0
+2025-10-15T14:26:08.308Z - info: Using extension scripts@4.2.0
+2025-10-15T14:26:08.309Z - info: Using extension static-pdf@4.1.0
+2025-10-15T14:26:08.310Z - info: Using extension studio@4.3.2
+2025-10-15T14:26:08.423Z - info: Using extension xlsx@4.5.1
+2025-10-15T14:26:08.426Z - info: Using extension public-templates@4.0.0
+2025-10-15T14:26:08.427Z - debug: Extension public-templates@4.0.0 was disabled
+2025-10-15T14:26:08.427Z - info: Using extension sample-template@4.0.2
+2025-10-15T14:26:08.430Z - info: Using extension studio-theme-dark@4.0.0
+2025-10-15T14:26:08.432Z - info: Using general timeout for rendering (reportTimeout: 120000)
+2025-10-15T14:26:08.433Z - info: Using memory provider for template store. The saved templates will be lost after restart
+2025-10-15T14:26:08.444Z - debug: studio default theme is: light
+2025-10-15T14:26:08.451Z - info: Verifying license key free
+2025-10-15T14:26:08.452Z - info: Using free license
+2025-10-15T14:26:08.455Z - info: pdf footers check started
+2025-10-15T14:26:08.456Z - info: pdf footers check finished without found problems
+2025-10-15T14:26:08.460Z - info: Migrating templates chrome settings (waitForNetworkIddle -> waitForNetworkIdle)
+2025-10-15T14:26:08.461Z - info: Migration successful
+2025-10-15T14:26:08.461Z - debug: Creating samples is disabled
+2025-10-15T14:26:08.462Z - info: Initializing worker threads
+2025-10-15T14:26:08.462Z - debug: Extensions in workers: base, child-templates, components, data, handlebars, jsrender, localization, npm, pdf-utils, reports, text, version-control, assets, browser-client, chrome-pdf, docx, html-to-xlsx, pptx, scripts, static-pdf, studio, xlsx
+2025-10-15T14:26:09.517Z - info: 2 worker threads initialized in 1055ms
+2025-10-15T14:26:09.518Z - info: Starting temp files cleanup with 180000ms threshold
+2025-10-15T14:26:09.519Z - info: reporter initialized
+2025-10-15T14:26:09.522Z - info: Render request 1 queued for execution and waiting for available worker rootId=nh9b2iprhzz4l96, id=nh9b2iprhzz4l96
+2025-10-15T14:26:09.536Z - info: Starting rendering request 1 rootId=nh9b2iprhzz4l96, id=nh9b2iprhzz4l96
+2025-10-15T14:26:09.537Z - info: Rendering anonymous template { recipe: chrome-pdf, engine: none } rootId=nh9b2iprhzz4l96, id=nh9b2iprhzz4l96
+2025-10-15T14:26:09.537Z - debug: Data item not defined for this template. rootId=nh9b2iprhzz4l96, id=nh9b2iprhzz4l96
+2025-10-15T14:26:09.539Z - debug: Base url not specified, skipping its injection. rootId=nh9b2iprhzz4l96, id=nh9b2iprhzz4l96
+2025-10-15T14:26:09.540Z - debug: Rendering engine none rootId=nh9b2iprhzz4l96, id=nh9b2iprhzz4l96
+2025-10-15T14:26:10.056Z - debug: Executing recipe chrome-pdf rootId=nh9b2iprhzz4l96, id=nh9b2iprhzz4l96
+2025-10-15T14:26:10.538Z - debug: Converting with chrome Chrome/131.0.6778.204 using chrome-pool strategy rootId=nh9b2iprhzz4l96, id=nh9b2iprhzz4l96
+2025-10-15T14:26:10.598Z - debug: Chrome will wait for network iddle before printing rootId=nh9b2iprhzz4l96, id=nh9b2iprhzz4l96
+2025-10-15T14:26:10.675Z - debug: Page request: GET (document) file:///C:/Users/LEONAR%7E1/AppData/Local/Temp/jsreport/autocleanup/8e9a9a0d-95be-4c07-af66-9140528e329b-chrome-pdf.html rootId=nh9b2iprhzz4l96, id=nh9b2iprhzz4l96
+2025-10-15T14:26:10.709Z - debug: Page request finished: GET (document) 200 file:///C:/Users/LEONAR%7E1/AppData/Local/Temp/jsreport/autocleanup/8e9a9a0d-95be-4c07-af66-9140528e329b-chrome-pdf.html rootId=nh9b2iprhzz4l96, id=nh9b2iprhzz4l96
+2025-10-15T14:26:11.351Z - debug: Running chrome with params {"printBackground":true,"waitForNetworkIdle":true,"timeout":119457,"marginTop":"18mm","marginBottom":"15mm","marginLeft":"10mm","marginRight":"8mm","launchOptions":{"args":["--no-sandbox","--disable-setuid-sandbox"]},"margin":{"top":"18mm","right":"8mm","bottom":"15mm","left":"10mm"}} rootId=nh9b2iprhzz4l96, id=nh9b2iprhzz4l96
+2025-10-15T14:26:11.834Z - debug: Skipping storing report. rootId=nh9b2iprhzz4l96, id=nh9b2iprhzz4l96
+2025-10-15T14:26:11.834Z - info: Rendering request 1 finished in 2315 ms rootId=nh9b2iprhzz4l96, id=nh9b2iprhzz4l96
+2025-10-15T14:40:38.337Z - info: Initializing jsreport (version: 4.10.1, configuration file: none, nodejs: 24.10.0)
+2025-10-15T14:40:38.340Z - info: Searching for available extensions in C:\Users\Leonardo Seibt\source\BuildingReports\
+2025-10-15T14:40:38.348Z - info: Extensions location cache contains up to date information, skipping crawling in C:\Users\Leonardo Seibt\source\BuildingReports\
+2025-10-15T14:40:38.638Z - info: Found 35 extension(s)
+2025-10-15T14:40:38.666Z - debug: Writing extension locations cache to C:\Users\LEONAR~1\AppData\Local\Temp\jsreport\core\locations.json
+2025-10-15T14:40:38.667Z - debug: Discovered 35 extensions
+2025-10-15T14:40:38.708Z - info: Using extension authentication@4.2.3
+2025-10-15T14:40:38.936Z - debug: Extension authentication@4.2.3 was disabled
+2025-10-15T14:40:38.937Z - info: Using extension base@4.0.0
+2025-10-15T14:40:38.939Z - info: Using extension child-templates@4.1.0
+2025-10-15T14:40:38.940Z - info: Using extension cli@4.1.2
+2025-10-15T14:40:38.944Z - info: Using extension components@4.0.2
+2025-10-15T14:40:38.947Z - info: Using extension data@4.1.0
+2025-10-15T14:40:38.948Z - debug: Extension express@4.2.3 is disabled, skipping
+2025-10-15T14:40:38.948Z - info: Using extension freeze@4.0.0
+2025-10-15T14:40:38.950Z - info: Using extension fs-store@4.1.1
+2025-10-15T14:40:39.160Z - debug: Extension fs-store@4.1.1 was disabled
+2025-10-15T14:40:39.160Z - info: Using extension handlebars@4.0.1
+2025-10-15T14:40:39.162Z - info: Using extension import-export@4.0.8
+2025-10-15T14:40:39.445Z - info: Using extension jsrender@4.0.0
+2025-10-15T14:40:39.446Z - info: Using extension licensing@4.0.5
+2025-10-15T14:40:39.480Z - info: Using extension localization@4.0.1
+2025-10-15T14:40:39.482Z - info: Using extension npm@4.0.1
+2025-10-15T14:40:39.488Z - info: Using extension pdf-utils@4.4.1
+2025-10-15T14:40:39.491Z - info: Using extension reports@4.1.5
+2025-10-15T14:40:39.498Z - info: Using extension tags@4.0.1
+2025-10-15T14:40:39.501Z - info: Using extension text@4.0.2
+2025-10-15T14:40:39.503Z - info: Using extension version-control@4.1.1
+2025-10-15T14:40:39.537Z - info: Using extension assets@4.2.3
+2025-10-15T14:40:39.554Z - info: Using extension authorization@4.1.0
+2025-10-15T14:40:39.560Z - debug: Extension authorization@4.1.0 was disabled
+2025-10-15T14:40:39.561Z - info: Using extension browser-client@4.1.0
+2025-10-15T14:40:39.564Z - info: Using extension chrome-pdf@4.3.0
+2025-10-15T14:40:39.568Z - debug: Chrome strategy is chrome-pool, numberOfWorkers: 1
+2025-10-15T14:40:39.569Z - debug: Chrome custom launch options are args=--no-sandbox,--disable-setuid-sandbox, protocolTimeout=120000
+2025-10-15T14:40:39.569Z - info: Using extension docx@4.9.0
+2025-10-15T14:40:39.572Z - info: Using extension html-to-xlsx@4.2.4
+2025-10-15T14:40:39.829Z - info: html-to-xlsx detected chrome as available html engine
+2025-10-15T14:40:39.829Z - info: Using extension pptx@4.4.2
+2025-10-15T14:40:39.832Z - info: Using extension scheduling@4.1.0
+2025-10-15T14:40:39.876Z - info: Using extension scripts@4.2.0
+2025-10-15T14:40:39.878Z - info: Using extension static-pdf@4.1.0
+2025-10-15T14:40:39.880Z - info: Using extension studio@4.3.2
+2025-10-15T14:40:40.044Z - info: Using extension xlsx@4.5.1
+2025-10-15T14:40:40.048Z - info: Using extension public-templates@4.0.0
+2025-10-15T14:40:40.051Z - debug: Extension public-templates@4.0.0 was disabled
+2025-10-15T14:40:40.052Z - info: Using extension sample-template@4.0.2
+2025-10-15T14:40:40.056Z - info: Using extension studio-theme-dark@4.0.0
+2025-10-15T14:40:40.059Z - info: Using general timeout for rendering (reportTimeout: 120000)
+2025-10-15T14:40:40.059Z - info: Using memory provider for template store. The saved templates will be lost after restart
+2025-10-15T14:40:40.078Z - debug: studio default theme is: light
+2025-10-15T14:40:40.084Z - info: Verifying license key free
+2025-10-15T14:40:40.085Z - info: Using free license
+2025-10-15T14:40:40.088Z - info: pdf footers check started
+2025-10-15T14:40:40.089Z - info: pdf footers check finished without found problems
+2025-10-15T14:40:40.095Z - info: Migrating templates chrome settings (waitForNetworkIddle -> waitForNetworkIdle)
+2025-10-15T14:40:40.095Z - info: Migration successful
+2025-10-15T14:40:40.096Z - debug: Creating samples is disabled
+2025-10-15T14:40:40.097Z - info: Initializing worker threads
+2025-10-15T14:40:40.097Z - debug: Extensions in workers: base, child-templates, components, data, handlebars, jsrender, localization, npm, pdf-utils, reports, text, version-control, assets, browser-client, chrome-pdf, docx, html-to-xlsx, pptx, scripts, static-pdf, studio, xlsx
+2025-10-15T14:40:41.191Z - info: 2 worker threads initialized in 1094ms
+2025-10-15T14:40:41.192Z - info: Starting temp files cleanup with 180000ms threshold
+2025-10-15T14:40:41.193Z - info: reporter initialized
+2025-10-15T14:40:41.196Z - info: Render request 1 queued for execution and waiting for available worker rootId=mkcqlxyflc1tu6p, id=mkcqlxyflc1tu6p
+2025-10-15T14:40:41.211Z - info: Starting rendering request 1 rootId=mkcqlxyflc1tu6p, id=mkcqlxyflc1tu6p
+2025-10-15T14:40:41.212Z - info: Rendering anonymous template { recipe: chrome-pdf, engine: none } rootId=mkcqlxyflc1tu6p, id=mkcqlxyflc1tu6p
+2025-10-15T14:40:41.212Z - debug: Data item not defined for this template. rootId=mkcqlxyflc1tu6p, id=mkcqlxyflc1tu6p
+2025-10-15T14:40:41.215Z - debug: Base url not specified, skipping its injection. rootId=mkcqlxyflc1tu6p, id=mkcqlxyflc1tu6p
+2025-10-15T14:40:41.217Z - debug: Rendering engine none rootId=mkcqlxyflc1tu6p, id=mkcqlxyflc1tu6p
+2025-10-15T14:40:41.822Z - debug: Executing recipe chrome-pdf rootId=mkcqlxyflc1tu6p, id=mkcqlxyflc1tu6p
+2025-10-15T14:40:42.347Z - debug: Converting with chrome Chrome/131.0.6778.204 using chrome-pool strategy rootId=mkcqlxyflc1tu6p, id=mkcqlxyflc1tu6p
+2025-10-15T14:40:42.413Z - debug: Chrome will wait for network iddle before printing rootId=mkcqlxyflc1tu6p, id=mkcqlxyflc1tu6p
+2025-10-15T14:40:42.501Z - debug: Page request: GET (document) file:///C:/Users/LEONAR%7E1/AppData/Local/Temp/jsreport/autocleanup/01f1d182-c40f-41fd-84ff-8c206a414f1c-chrome-pdf.html rootId=mkcqlxyflc1tu6p, id=mkcqlxyflc1tu6p
+2025-10-15T14:40:42.527Z - debug: Page request finished: GET (document) 200 file:///C:/Users/LEONAR%7E1/AppData/Local/Temp/jsreport/autocleanup/01f1d182-c40f-41fd-84ff-8c206a414f1c-chrome-pdf.html rootId=mkcqlxyflc1tu6p, id=mkcqlxyflc1tu6p
+2025-10-15T14:40:43.165Z - debug: Running chrome with params {"printBackground":true,"waitForNetworkIdle":true,"timeout":119361,"marginTop":"18mm","marginBottom":"15mm","marginLeft":"10mm","marginRight":"8mm","launchOptions":{"args":["--no-sandbox","--disable-setuid-sandbox"]},"margin":{"top":"18mm","right":"8mm","bottom":"15mm","left":"10mm"}} rootId=mkcqlxyflc1tu6p, id=mkcqlxyflc1tu6p
+2025-10-15T14:40:43.706Z - debug: Skipping storing report. rootId=mkcqlxyflc1tu6p, id=mkcqlxyflc1tu6p
+2025-10-15T14:40:43.706Z - info: Rendering request 1 finished in 2512 ms rootId=mkcqlxyflc1tu6p, id=mkcqlxyflc1tu6p
+2025-10-15T14:41:43.644Z - info: Render request 2 queued for execution and waiting for available worker rootId=qt3pnmc9bmja08d, id=qt3pnmc9bmja08d
+2025-10-15T14:41:43.648Z - info: Starting rendering request 2 rootId=qt3pnmc9bmja08d, id=qt3pnmc9bmja08d
+2025-10-15T14:41:43.649Z - info: Rendering anonymous template { recipe: chrome-pdf, engine: none } rootId=qt3pnmc9bmja08d, id=qt3pnmc9bmja08d
+2025-10-15T14:41:43.649Z - debug: Data item not defined for this template. rootId=qt3pnmc9bmja08d, id=qt3pnmc9bmja08d
+2025-10-15T14:41:43.651Z - debug: Base url not specified, skipping its injection. rootId=qt3pnmc9bmja08d, id=qt3pnmc9bmja08d
+2025-10-15T14:41:43.652Z - debug: Rendering engine none rootId=qt3pnmc9bmja08d, id=qt3pnmc9bmja08d
+2025-10-15T14:41:44.240Z - debug: Executing recipe chrome-pdf rootId=qt3pnmc9bmja08d, id=qt3pnmc9bmja08d
+2025-10-15T14:41:44.794Z - debug: Converting with chrome Chrome/131.0.6778.204 using chrome-pool strategy rootId=qt3pnmc9bmja08d, id=qt3pnmc9bmja08d
+2025-10-15T14:41:44.871Z - debug: Chrome will wait for network iddle before printing rootId=qt3pnmc9bmja08d, id=qt3pnmc9bmja08d
+2025-10-15T14:41:44.918Z - debug: Page request: GET (document) file:///C:/Users/LEONAR%7E1/AppData/Local/Temp/jsreport/autocleanup/73e197f6-b7bf-40bb-a130-602256b1a50b-chrome-pdf.html rootId=qt3pnmc9bmja08d, id=qt3pnmc9bmja08d
+2025-10-15T14:41:44.950Z - debug: Page request finished: GET (document) 200 file:///C:/Users/LEONAR%7E1/AppData/Local/Temp/jsreport/autocleanup/73e197f6-b7bf-40bb-a130-602256b1a50b-chrome-pdf.html rootId=qt3pnmc9bmja08d, id=qt3pnmc9bmja08d
+2025-10-15T14:41:46.125Z - debug: Running chrome with params {"printBackground":true,"waitForNetworkIdle":true,"timeout":119395,"marginTop":"18mm","marginBottom":"15mm","marginLeft":"10mm","marginRight":"8mm","launchOptions":{"args":["--no-sandbox","--disable-setuid-sandbox"]},"margin":{"top":"18mm","right":"8mm","bottom":"15mm","left":"10mm"}} rootId=qt3pnmc9bmja08d, id=qt3pnmc9bmja08d
+2025-10-15T14:41:47.087Z - debug: Skipping storing report. rootId=qt3pnmc9bmja08d, id=qt3pnmc9bmja08d
+2025-10-15T14:41:47.087Z - info: Rendering request 2 finished in 3445 ms rootId=qt3pnmc9bmja08d, id=qt3pnmc9bmja08d
+2025-10-15T14:42:35.585Z - info: Render request 3 queued for execution and waiting for available worker rootId=zjnf7w2tl96do71, id=zjnf7w2tl96do71
+2025-10-15T14:42:35.590Z - info: Starting rendering request 3 rootId=zjnf7w2tl96do71, id=zjnf7w2tl96do71
+2025-10-15T14:42:35.591Z - info: Rendering anonymous template { recipe: chrome-pdf, engine: none } rootId=zjnf7w2tl96do71, id=zjnf7w2tl96do71
+2025-10-15T14:42:35.591Z - debug: Data item not defined for this template. rootId=zjnf7w2tl96do71, id=zjnf7w2tl96do71
+2025-10-15T14:42:35.592Z - debug: Base url not specified, skipping its injection. rootId=zjnf7w2tl96do71, id=zjnf7w2tl96do71
+2025-10-15T14:42:35.595Z - debug: Rendering engine none rootId=zjnf7w2tl96do71, id=zjnf7w2tl96do71
+2025-10-15T14:42:35.617Z - debug: Executing recipe chrome-pdf rootId=zjnf7w2tl96do71, id=zjnf7w2tl96do71
+2025-10-15T14:42:35.620Z - debug: Converting with chrome Chrome/131.0.6778.204 using chrome-pool strategy rootId=zjnf7w2tl96do71, id=zjnf7w2tl96do71
+2025-10-15T14:42:35.677Z - debug: Chrome will wait for network iddle before printing rootId=zjnf7w2tl96do71, id=zjnf7w2tl96do71
+2025-10-15T14:42:35.686Z - debug: Page request: GET (document) file:///C:/Users/LEONAR%7E1/AppData/Local/Temp/jsreport/autocleanup/48927867-3891-4020-b676-e533fb57a898-chrome-pdf.html rootId=zjnf7w2tl96do71, id=zjnf7w2tl96do71
+2025-10-15T14:42:35.706Z - debug: Page request finished: GET (document) 200 file:///C:/Users/LEONAR%7E1/AppData/Local/Temp/jsreport/autocleanup/48927867-3891-4020-b676-e533fb57a898-chrome-pdf.html rootId=zjnf7w2tl96do71, id=zjnf7w2tl96do71
+2025-10-15T14:42:36.677Z - debug: Running chrome with params {"printBackground":true,"waitForNetworkIdle":true,"timeout":119963,"marginTop":"18mm","marginBottom":"15mm","marginLeft":"10mm","marginRight":"8mm","launchOptions":{"args":["--no-sandbox","--disable-setuid-sandbox"]},"margin":{"top":"18mm","right":"8mm","bottom":"15mm","left":"10mm"}} rootId=zjnf7w2tl96do71, id=zjnf7w2tl96do71
+2025-10-15T14:42:37.453Z - debug: Skipping storing report. rootId=zjnf7w2tl96do71, id=zjnf7w2tl96do71
+2025-10-15T14:42:37.453Z - info: Rendering request 3 finished in 1871 ms rootId=zjnf7w2tl96do71, id=zjnf7w2tl96do71
