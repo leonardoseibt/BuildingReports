@@ -1684,3 +1684,17 @@ Error: chrome pdf generation timed out
 2025-10-15T14:42:36.677Z - debug: Running chrome with params {"printBackground":true,"waitForNetworkIdle":true,"timeout":119963,"marginTop":"18mm","marginBottom":"15mm","marginLeft":"10mm","marginRight":"8mm","launchOptions":{"args":["--no-sandbox","--disable-setuid-sandbox"]},"margin":{"top":"18mm","right":"8mm","bottom":"15mm","left":"10mm"}} rootId=zjnf7w2tl96do71, id=zjnf7w2tl96do71
 2025-10-15T14:42:37.453Z - debug: Skipping storing report. rootId=zjnf7w2tl96do71, id=zjnf7w2tl96do71
 2025-10-15T14:42:37.453Z - info: Rendering request 3 finished in 1871 ms rootId=zjnf7w2tl96do71, id=zjnf7w2tl96do71
+2025-10-15T18:09:31.228Z - info: Render request 4 queued for execution and waiting for available worker rootId=zk1p5jrdtnhp0on, id=zk1p5jrdtnhp0on
+2025-10-15T18:09:31.231Z - info: Starting rendering request 4 rootId=zk1p5jrdtnhp0on, id=zk1p5jrdtnhp0on
+2025-10-15T18:09:31.231Z - info: Rendering anonymous template { recipe: chrome-pdf, engine: none } rootId=zk1p5jrdtnhp0on, id=zk1p5jrdtnhp0on
+2025-10-15T18:09:31.231Z - debug: Data item not defined for this template. rootId=zk1p5jrdtnhp0on, id=zk1p5jrdtnhp0on
+2025-10-15T18:09:31.231Z - debug: Base url not specified, skipping its injection. rootId=zk1p5jrdtnhp0on, id=zk1p5jrdtnhp0on
+2025-10-15T18:09:31.232Z - debug: Rendering engine none rootId=zk1p5jrdtnhp0on, id=zk1p5jrdtnhp0on
+2025-10-15T18:09:31.241Z - debug: Executing recipe chrome-pdf rootId=zk1p5jrdtnhp0on, id=zk1p5jrdtnhp0on
+2025-10-15T18:09:31.244Z - debug: Converting with chrome Chrome/131.0.6778.204 using chrome-pool strategy rootId=zk1p5jrdtnhp0on, id=zk1p5jrdtnhp0on
+2025-10-15T18:09:31.315Z - debug: Chrome will wait for network iddle before printing rootId=zk1p5jrdtnhp0on, id=zk1p5jrdtnhp0on
+2025-10-15T18:09:31.323Z - debug: Page request: GET (document) file:///C:/Users/LEONAR%7E1/AppData/Local/Temp/jsreport/autocleanup/c0f674cc-ca4b-4bf1-9063-bf16f2769166-chrome-pdf.html rootId=zk1p5jrdtnhp0on, id=zk1p5jrdtnhp0on
+2025-10-15T18:09:31.348Z - debug: Page request finished: GET (document) 200 file:///C:/Users/LEONAR%7E1/AppData/Local/Temp/jsreport/autocleanup/c0f674cc-ca4b-4bf1-9063-bf16f2769166-chrome-pdf.html rootId=zk1p5jrdtnhp0on, id=zk1p5jrdtnhp0on
+2025-10-15T18:09:32.312Z - debug: Running chrome with params {"printBackground":true,"waitForNetworkIdle":true,"timeout":119984,"marginTop":"18mm","marginBottom":"15mm","marginLeft":"10mm","marginRight":"8mm","launchOptions":{"args":["--no-sandbox","--disable-setuid-sandbox"]},"margin":{"top":"18mm","right":"8mm","bottom":"15mm","left":"10mm"}} rootId=zk1p5jrdtnhp0on, id=zk1p5jrdtnhp0on
+2025-10-15T18:09:32.832Z - debug: Skipping storing report. rootId=zk1p5jrdtnhp0on, id=zk1p5jrdtnhp0on
+2025-10-15T18:09:32.833Z - info: Rendering request 4 finished in 1606 ms rootId=zk1p5jrdtnhp0on, id=zk1p5jrdtnhp0on
