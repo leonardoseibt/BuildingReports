@@ -26,6 +26,7 @@ const MODULE_OPTIONS: Array<{ key: string; label: string }> = [
   { key: 'typologies', label: 'Tipos de Uso' },
   { key: 'noise-classes', label: 'Classes de Ruído' },
   { key: 'aggressiveness-classes', label: 'Classes de Agressividade' },
+  { key: 'predominant-colors', label: 'Cores Predominantes' },
   { key: 'constructive-systems', label: 'Sistemas Construtivos' },
   { key: 'requirements', label: 'Requisitos' },
   { key: 'criteria', label: 'Critérios' },

@@ -57,7 +57,13 @@ const buildingFormSchema = z.object({
     .refine((val) => typeof val === 'number' && !Number.isNaN(val) && val >= 1, 'Número de unidades deve ser >= 1'),
   noiseClassId: z.union([z.string(), z.number()]).transform((v)=> typeof v==='string'? Number(v): v).optional(),
   aggressivenessClassId: z.union([z.string(), z.number()]).transform((v)=> typeof v==='string'? Number(v): v).optional(),
-  predominantColorId: z.union([z.string(), z.number()]).transform((v)=> typeof v==='string'? Number(v): v).optional(),
+  predominantColorId: z.union([z.string(), z.number(), z.undefined(), z.null()])
+    .transform((v) => {
+      if (v === undefined || v === null || v === '') return undefined;
+      const num = typeof v === 'string' ? Number(v) : v;
+      return isNaN(num) ? undefined : num;
+    })
+    .optional(),
 });
 
 type BuildingFormData = z.infer<typeof buildingFormSchema>;

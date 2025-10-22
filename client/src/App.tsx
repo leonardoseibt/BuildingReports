@@ -16,6 +16,7 @@ import TechniciansList from "@/pages/technicians/list";
 import TypologiesList from "@/pages/typologies/list";
 import NoiseClassesList from "@/pages/noise-classes/list";
 import AggressivenessClassesList from "@/pages/aggressiveness-classes/list";
+import PredominantColorsList from "@/pages/predominant-colors/list";
 import ConstructiveSystemsList from "@/pages/constructive-systems/list.tsx";
 import RequirementsList from "@/pages/requirements/list.tsx";
 import CriteriaList from "@/pages/criteria/list";
@@ -73,7 +74,8 @@ function Router() {
       <PrivateRoute path="/typologies" component={TypologiesList} module="typologies" />
       <PrivateRoute path="/noise-classes" component={NoiseClassesList} module="noise-classes" />
       <PrivateRoute path="/aggressiveness-classes" component={AggressivenessClassesList} module="aggressiveness-classes" />
-  <PrivateRoute path="/constructive-systems" component={ConstructiveSystemsList} module="constructive-systems" />
+      <PrivateRoute path="/predominant-colors" component={PredominantColorsList} module="predominant-colors" />
+      <PrivateRoute path="/constructive-systems" component={ConstructiveSystemsList} module="constructive-systems" />
   <PrivateRoute path="/requirements" component={RequirementsList} module="requirements" />
   <PrivateRoute path="/criteria" component={CriteriaList} module="criteria" />
   <PrivateRoute path="/analyses" component={AnalysesList} module="analyses" />

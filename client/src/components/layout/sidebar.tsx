@@ -15,6 +15,7 @@ import {
   Volume2,
   AlertTriangle,
   Hammer,
+  Palette,
   ListChecks,
   Target,
   Map,
@@ -175,6 +176,7 @@ export default function Sidebar() {
   const canTypologies = hasAccess("typologies");
   const canNoiseClasses = hasAccess("noise-classes");
   const canAggressivenessClasses = hasAccess("aggressiveness-classes");
+  const canPredominantColors = hasAccess("predominant-colors");
   const canConstructiveSystems = hasAccess("constructive-systems");
   const canRequirements = hasAccess("requirements");
   const canCriteria = hasAccess("criteria");
@@ -190,7 +192,7 @@ export default function Sidebar() {
   const showCadLocalizacao =
     canStates || canCities || canBioclimatic || canIsopleths;
   const showCadAuxiliares =
-    canTypologies || canNoiseClasses || canAggressivenessClasses || canConstructiveSystems;
+    canTypologies || canNoiseClasses || canAggressivenessClasses || canPredominantColors || canConstructiveSystems;
   const showCadParametros =
     canRequirements || canCriteria || canAnalyses || canAttributes || canParameters;
   const showCadastros =
@@ -419,6 +421,15 @@ export default function Sidebar() {
                               label="Classes de Agressividade"
                               isActive={location === '/aggressiveness-classes'}
                               testId="nav-classes-de-agressividade"
+                            />
+                          )}
+                          {canPredominantColors && (
+                            <NavLink
+                              href="/predominant-colors"
+                              icon={Palette}
+                              label="Cores Predominantes"
+                              isActive={location === '/predominant-colors'}
+                              testId="nav-cores-predominantes"
                             />
                           )}
                           {canConstructiveSystems && (

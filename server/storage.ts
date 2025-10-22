@@ -432,7 +432,7 @@ export class DatabaseStorage implements IStorage {
   async createBuilding(building: InsertBuilding): Promise<Building> {
     // Fetch optional foreign keys in parallel. These lookups can be avoided if
     // relying solely on database FK constraints.
-    const [[t], [n], [a]] = await Promise.all([
+    const [[t], [n], [a], [p]] = await Promise.all([
       (building as any).typologyId
         ? db
             .select()
@@ -450,6 +450,12 @@ export class DatabaseStorage implements IStorage {
             .select()
             .from(aggressivenessClasses)
             .where(eq(aggressivenessClasses.id, (building as any).aggressivenessClassId))
+        : Promise.resolve<[undefined]>([undefined]),
+      (building as any).predominantColorId
+        ? db
+            .select()
+            .from(predominantColors)
+            .where(eq(predominantColors.id, (building as any).predominantColorId))
         : Promise.resolve<[undefined]>([undefined]),
     ]);
 
@@ -475,6 +481,7 @@ export class DatabaseStorage implements IStorage {
     if (t) values.typologyId = t.id;
     if (n) values.noiseClassId = n.id;
     if (a) values.aggressivenessClassId = a.id;
+    if (p) values.predominantColorId = p.id;
 
     const [newBuilding] = await db.insert(buildings).values(values).returning();
     return newBuilding;
@@ -596,6 +603,10 @@ export class DatabaseStorage implements IStorage {
     if (rest.aggressivenessClassId != null) {
       const [a] = await db.select().from(aggressivenessClasses).where(eq(aggressivenessClasses.id, rest.aggressivenessClassId));
       if (a) { updates.aggressivenessClassId = a.id; }
+    }
+    if (rest.predominantColorId != null) {
+      const [p] = await db.select().from(predominantColors).where(eq(predominantColors.id, rest.predominantColorId));
+      if (p) { updates.predominantColorId = p.id; }
     }
 
     const [updatedBuilding] = await db.update(buildings).set(updates).where(eq(buildings.id, id)).returning();

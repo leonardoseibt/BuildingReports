@@ -340,7 +340,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (tech.userId !== userId && !canManageTechnicians) return res.status(403).json({ message: 'Access denied' });
       }
       // Validate master ids (if provided)
-      const { typologyId, noiseClassId, aggressivenessClassId } = buildingData as any;
+      const { typologyId, noiseClassId, aggressivenessClassId, predominantColorId } = buildingData as any;
       if (typologyId) {
         const typology = await storage.getTypology(Number(typologyId));
         if (!typology) return res.status(400).json({ message: 'Tipo de uso inválido' });
@@ -352,6 +352,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (aggressivenessClassId) {
         const aggressivenessClass = await storage.getAggressivenessClass(Number(aggressivenessClassId));
         if (!aggressivenessClass) return res.status(400).json({ message: 'Classe de agressividade inválida' });
+      }
+      if (predominantColorId) {
+        const predominantColor = await storage.getPredominantColor(Number(predominantColorId));
+        if (!predominantColor) return res.status(400).json({ message: 'Cor predominante inválida' });
       }
 
       const building = await storage.createBuilding(buildingData);
@@ -425,7 +429,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (tech.userId !== userId && !canManageTechnicians) return res.status(403).json({ message: 'Access denied' });
       }
       // Validate master ids (if provided)
-      const { typologyId, noiseClassId, aggressivenessClassId } = data as any;
+      const { typologyId, noiseClassId, aggressivenessClassId, predominantColorId } = data as any;
       if (typologyId) {
         const typology = await storage.getTypology(Number(typologyId));
         if (!typology) return res.status(400).json({ message: 'Tipo de uso inválido' });
@@ -437,6 +441,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (aggressivenessClassId) {
         const aggressivenessClass = await storage.getAggressivenessClass(Number(aggressivenessClassId));
         if (!aggressivenessClass) return res.status(400).json({ message: 'Classe de agressividade inválida' });
+      }
+      if (predominantColorId) {
+        const predominantColor = await storage.getPredominantColor(Number(predominantColorId));
+        if (!predominantColor) return res.status(400).json({ message: 'Cor predominante inválida' });
       }
       const saved = await storage.updateBuilding(id, data as any);
       res.json(saved);
