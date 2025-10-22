@@ -13,6 +13,7 @@ import type {
   Typology,
   NoiseClass,
   AggressivenessClass,
+  PredominantColor,
   Technician,
   BioclimaticZone,
   Isopleth
@@ -248,6 +249,7 @@ interface ReportRenderContext {
   typologies: Typology[];
   noiseClasses: NoiseClass[];
   aggressivenessClasses: AggressivenessClass[];
+  predominantColors: PredominantColor[];
   technicians: Technician[];
   bioclimaticZones: BioclimaticZone[];
   isopleths: Isopleth[];
@@ -327,6 +329,7 @@ function buildBuildingInfoSections(
     technicians: Technician[];
     noiseClasses: NoiseClass[];
     aggressivenessClasses: AggressivenessClass[];
+    predominantColors: PredominantColor[];
     bioclimaticZones: BioclimaticZone[];
     isopleths: Isopleth[];
   }
@@ -393,6 +396,15 @@ function buildBuildingInfoSections(
       } as BuildingInfoRow;
     })
     .filter(Boolean) as BuildingInfoRow[];
+
+  // Add predominant color to technical section
+  const predominantColorInfo = getPredominantColorInfo(building, helpers.predominantColors);
+  if (predominantColorInfo) {
+    technicalRows.push({
+      label: 'Cor Predominante da Fachada',
+      value: predominantColorInfo
+    });
+  }
 
   if (technicalRows.length > 0) {
     sections.push({
@@ -465,6 +477,31 @@ function getAggressivenessClassInfo(building: Building, aggressiveness: Aggressi
   if (!building.aggressivenessClassId) return null;
   const item = aggressiveness.find((a) => a.id === building.aggressivenessClassId);
   return item ? `${item.code} - ${item.label}` : null;
+}
+
+function getPredominantColorInfo(building: Building, predominantColors: PredominantColor[]): string | null {
+  if (!building.predominantColorId) return null;
+  const item = predominantColors.find((c) => c.id === building.predominantColorId);
+  if (!item) return null;
+
+  const formatAbsorptance = (value: any) => {
+    if (value === null || value === undefined) return null;
+    const num = Number(value);
+    if (Number.isNaN(num)) return null;
+    return num.toFixed(3);
+  };
+
+  const min = formatAbsorptance(item.absorptanceMin);
+  const max = formatAbsorptance(item.absorptanceMax);
+  
+  let range = '';
+  if (min !== null && max !== null) {
+    range = ` (α: ${min} - ${max})`;
+  } else if (min !== null) {
+    range = ` (α: ${min})`;
+  }
+
+  return `${item.code} - ${item.label}${range}`;
 }
 
 function getTechnicianInfo(building: Building, technicians: Technician[]): string | null {
@@ -540,6 +577,7 @@ export async function buildReportRenderData(reportId: number, userId: number) {
     technicians: context.technicians,
     noiseClasses: context.noiseClasses,
     aggressivenessClasses: context.aggressivenessClasses,
+    predominantColors: context.predominantColors,
     bioclimaticZones: context.bioclimaticZones,
     isopleths: context.isopleths
   });
@@ -575,6 +613,7 @@ function buildReportJsonPayload(context: ReportRenderContext) {
     technicians: context.technicians,
     noiseClasses: context.noiseClasses,
     aggressivenessClasses: context.aggressivenessClasses,
+    predominantColors: context.predominantColors,
     bioclimaticZones: context.bioclimaticZones,
     isopleths: context.isopleths
   });
@@ -645,13 +684,14 @@ export async function generateReportJson(reportId: number, userId: number): Prom
   return { filename: finalFilename, payload, json };
 }
 function ReportHtml({ context }: { context: ReportRenderContext }) {
-  const { building, sections, typologies, noiseClasses, aggressivenessClasses, technicians, bioclimaticZones, isopleths } = context;
+  const { building, sections, typologies, noiseClasses, aggressivenessClasses, predominantColors, technicians, bioclimaticZones, isopleths } = context;
 
   const buildingInfoSections = buildBuildingInfoSections(building, context.report, {
     typologies,
     technicians,
     noiseClasses,
     aggressivenessClasses,
+    predominantColors,
     bioclimaticZones,
     isopleths
   });
@@ -1099,6 +1139,7 @@ async function loadReportContext(reportId: number, userId: number): Promise<Repo
     typologies,
     noiseClasses,
     aggressivenessClasses,
+    predominantColors,
     techniciansWrapper,
     bioclimaticZones,
     isopleths
@@ -1111,6 +1152,7 @@ async function loadReportContext(reportId: number, userId: number): Promise<Repo
     storage.listTypologies(),
     storage.listNoiseClasses(),
     storage.listAggressivenessClasses(),
+    storage.listPredominantColors(),
     storage.listTechnicians(building.userId, undefined, undefined),
     storage.listBioclimaticZones(),
     storage.listIsopleths()
@@ -1219,6 +1261,7 @@ async function loadReportContext(reportId: number, userId: number): Promise<Repo
     typologies,
     noiseClasses,
     aggressivenessClasses,
+    predominantColors,
     technicians,
     bioclimaticZones,
     isopleths
