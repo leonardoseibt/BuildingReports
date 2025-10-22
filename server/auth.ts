@@ -11,6 +11,34 @@ import { createRequire } from "module";
 
 const isProd = process.env.NODE_ENV === "production";
 
+// ============================================
+// Security: Validate SESSION_SECRET
+// ============================================
+if (!process.env.SESSION_SECRET) {
+  console.error('❌ CRITICAL: SESSION_SECRET não configurado no .env');
+  console.error('   Adicione: SESSION_SECRET=<valor-seguro>');
+  process.exit(1);
+}
+
+// Validar força do secret APENAS em produção
+if (isProd) {
+  const secret = process.env.SESSION_SECRET;
+  
+  if (secret === 'dev-super-secret-change-me') {
+    console.error('❌ CRITICAL: SESSION_SECRET usando valor de exemplo do .env.example!');
+    console.error('   Gere um novo secret com: openssl rand -base64 64');
+    process.exit(1);
+  }
+  
+  if (secret.length < 32) {
+    console.error('❌ CRITICAL: SESSION_SECRET muito curto (mínimo 32 caracteres)');
+    console.error('   Gere um novo secret com: openssl rand -base64 64');
+    process.exit(1);
+  }
+  
+  console.log('✅ SESSION_SECRET configurado com segurança');
+}
+
 // Idle (rolling) and absolute lifetimes
 const SESSION_IDLE_MS = Number(process.env.SESSION_IDLE_MS || 60 * 60 * 1000); // 1h cookie idle auto-refresh window
 const SESSION_TTL_MS = Number(process.env.SESSION_TTL_MS || 7 * 24 * 60 * 60 * 1000); // 7d absolute

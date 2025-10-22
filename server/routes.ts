@@ -13,6 +13,9 @@ import { eq } from 'drizzle-orm';
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { pool } from './db';
+import { strictLoginLimiter, readLimiter, writeLimiter, heavyOperationLimiter, userCreationLimiter } from './rate-limiters';
+import { validateNumericId, sanitizeBody } from './validators';
+import logger, { requestLogger, errorLogger, logAudit, AuditEventType } from './logger';
 
 export function getPaginationParams(query: any) {
   const rawLimit = Number.parseInt(query?.limit as string, 10);
@@ -47,6 +50,9 @@ const updateSettingsSchema = z.object({
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
   await setupAuth(app);
+
+  // Logging middleware - deve vir ANTES das rotas
+  app.use('/api', requestLogger);
 
   // Auth routes
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
@@ -115,7 +121,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // User management routes
-  app.get('/api/users', isAuthenticated, requireModuleAccess('users'), async (req: any, res) => {
+  app.get('/api/users', isAuthenticated, requireModuleAccess('users'), readLimiter, async (req: any, res) => {
     try {
       const { limit, offset, page } = getPaginationParams(req.query);
       const { items, total } = await storage.listUsers(limit, offset);
@@ -221,7 +227,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/users', isAuthenticated, requireModuleAccess('users'), express.json(), async (req, res) => {
+  app.post('/api/users', isAuthenticated, requireModuleAccess('users'), userCreationLimiter, sanitizeBody, express.json(), async (req, res) => {
     try {
       const data = insertUserSchema.parse(req.body);
       const normalizedEmail = data.email.trim().toLowerCase();
@@ -272,10 +278,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put('/api/users/:id', isAuthenticated, requireModuleAccess('users'), express.json(), async (req, res) => {
+  app.put('/api/users/:id', isAuthenticated, requireModuleAccess('users'), validateNumericId(), writeLimiter, sanitizeBody, express.json(), async (req, res) => {
     try {
-      const id = Number(req.params.id);
-  if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' });
+      const id = (req as any).validatedId;
       const data = updateUserSchema.parse(req.body);
       let update: any = { email: data.email.trim().toLowerCase(), fullName: data.fullName, phone: data.phone };
       if (typeof (req.body as any).isAdmin === 'boolean') {
@@ -303,10 +308,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/users/:id', isAuthenticated, requireModuleAccess('users'), async (req: any, res) => {
+  app.delete('/api/users/:id', isAuthenticated, requireModuleAccess('users'), validateNumericId(), writeLimiter, async (req: any, res) => {
     try {
-      const id = Number(req.params.id);
-      if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' });
+      const id = (req as any).validatedId;
       // prevent deleting yourself to avoid locking the session out unexpectedly
       const currentUserId: number = Number(req.user.claims.sub);
       if (id === currentUserId) return res.status(400).json({ message: 'Você não pode excluir o próprio usuário logado.' });
@@ -323,7 +327,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Building routes
-  app.post('/api/buildings', isAuthenticated, async (req: any, res) => {
+  app.post('/api/buildings', isAuthenticated, writeLimiter, sanitizeBody, async (req: any, res) => {
     try {
       const userId: number = Number(req.user.claims.sub);
       const buildingData = insertBuildingSchema.parse({
@@ -369,7 +373,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/buildings', isAuthenticated, async (req: any, res) => {
+  app.get('/api/buildings', isAuthenticated, readLimiter, async (req: any, res) => {
     try {
       const userId: number = Number(req.user.claims.sub);
       const me = await storage.getUser(userId);
@@ -386,10 +390,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/buildings/:id', isAuthenticated, async (req: any, res) => {
+  app.get('/api/buildings/:id', isAuthenticated, validateNumericId(), readLimiter, async (req: any, res) => {
     try {
-      const id = Number(req.params.id);
-  if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' });
+      const id = (req as any).validatedId;
       const building = await storage.getBuilding(id);
       if (!building) {
         return res.status(404).json({ message: "Building not found" });
@@ -410,10 +413,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put('/api/buildings/:id', isAuthenticated, express.json(), async (req: any, res) => {
+  app.put('/api/buildings/:id', isAuthenticated, validateNumericId(), writeLimiter, sanitizeBody, express.json(), async (req: any, res) => {
     try {
-      const id = Number(req.params.id);
-  if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' });
+      const id = (req as any).validatedId;
       const existing = await storage.getBuilding(id);
       if (!existing) return res.status(404).json({ message: 'Edificação não encontrada' });
       const userId: number = Number(req.user.claims.sub);
@@ -457,10 +459,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/buildings/:id', isAuthenticated, async (req: any, res) => {
+  app.delete('/api/buildings/:id', isAuthenticated, validateNumericId(), writeLimiter, async (req: any, res) => {
     try {
-      const id = Number(req.params.id);
-  if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' });
+      const id = (req as any).validatedId;
       const existing = await storage.getBuilding(id);
       if (!existing) return res.status(404).json({ message: 'Edificação não encontrada' });
       const userId: number = Number(req.user.claims.sub);
@@ -749,10 +750,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/reports/:id/puppeteer', isAuthenticated, async (req: any, res) => {
+  app.get('/api/reports/:id/puppeteer', isAuthenticated, validateNumericId(), heavyOperationLimiter, async (req: any, res) => {
     try {
-      const id = Number(req.params.id);
-      if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID invalido' });
+      const id = (req as any).validatedId;
       const userId = Number(req.user.claims.sub);
       const { filename, pdf } = await generateReportPdf(id, userId);
       const safeName = encodeURIComponent(filename);
@@ -794,10 +794,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/reports/:id/react-pdf', isAuthenticated, async (req: any, res) => {
+  app.get('/api/reports/:id/react-pdf', isAuthenticated, validateNumericId(), heavyOperationLimiter, async (req: any, res) => {
     try {
-      const id = Number(req.params.id);
-      if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID invalido' });
+      const id = (req as any).validatedId;
       const userId = Number(req.user.claims.sub);
       const { document, filename } = await generateReportPDF(id, userId);
       const pdfBuffer = await renderToBuffer(document);
@@ -817,10 +816,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/reports/:id/jsreport', isAuthenticated, async (req: any, res) => {
+  app.get('/api/reports/:id/jsreport', isAuthenticated, validateNumericId(), heavyOperationLimiter, async (req: any, res) => {
     try {
-      const id = Number(req.params.id);
-      if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID invalido' });
+      const id = (req as any).validatedId;
       const userId = Number(req.user.claims.sub);
       const { filename, pdf } = await generateReportPdfJsreport(id, userId);
       const safeName = encodeURIComponent(filename);
@@ -1461,6 +1459,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Integração attributeId concluída.
+
+  // Error logger deve vir DEPOIS de todas as rotas
+  app.use(errorLogger);
 
   const httpServer = createServer(app);
   return httpServer;

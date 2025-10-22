@@ -1929,3 +1929,6 @@ Error: chrome pdf generation timed out
 2025-10-22T10:51:02.137Z - debug: Running chrome with params {"printBackground":true,"waitForNetworkIdle":true,"timeout":119289,"marginTop":"18mm","marginBottom":"15mm","marginLeft":"10mm","marginRight":"8mm","launchOptions":{"args":["--no-sandbox","--disable-setuid-sandbox"]},"margin":{"top":"18mm","right":"8mm","bottom":"15mm","left":"10mm"}} rootId=vancuydgs9gop8t, id=vancuydgs9gop8t
 2025-10-22T10:51:02.563Z - debug: Skipping storing report. rootId=vancuydgs9gop8t, id=vancuydgs9gop8t
 2025-10-22T10:51:02.563Z - info: Rendering request 1 finished in 2972 ms rootId=vancuydgs9gop8t, id=vancuydgs9gop8t
+2025-10-22T14:40:21.068Z - info: Initializing jsreport (version: 4.10.1, configuration file: none, nodejs: 25.0.0)
+2025-10-22T14:40:21.069Z - info: Searching for available extensions in C:\Users\Leonardo Seibt\source\BuildingReports\
+2025-10-22T14:40:21.080Z - info: Extensions location cache C:\Users\LEONAR~1\AppData\Local\Temp\jsreport\core\locations.json contains older information, crawling
