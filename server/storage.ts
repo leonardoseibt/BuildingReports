@@ -499,6 +499,7 @@ export class DatabaseStorage implements IStorage {
         typologyId: buildings.typologyId,
         noiseClassId: buildings.noiseClassId,
         aggressivenessClassId: buildings.aggressivenessClassId,
+        predominantColorId: buildings.predominantColorId,
         cep: buildings.cep,
   street: buildings.street,
   addressNumber: buildings.addressNumber,
@@ -520,11 +521,14 @@ export class DatabaseStorage implements IStorage {
         noiseClassLabel: noiseClasses.label,
         aggressivenessClassCode: aggressivenessClasses.code,
         aggressivenessClassLabel: aggressivenessClasses.label,
+        predominantColorCode: predominantColors.code,
+        predominantColorLabel: predominantColors.label,
       })
       .from(buildings)
       .leftJoin(typologies, eq(buildings.typologyId, typologies.id))
       .leftJoin(noiseClasses, eq(buildings.noiseClassId, noiseClasses.id))
       .leftJoin(aggressivenessClasses, eq(buildings.aggressivenessClassId, aggressivenessClasses.id))
+      .leftJoin(predominantColors, eq(buildings.predominantColorId, predominantColors.id))
       .where(eq(buildings.userId, userId))
       .orderBy(desc(buildings.createdAt));
     if (limit !== undefined) query = (query as any).limit(limit);
@@ -543,6 +547,7 @@ export class DatabaseStorage implements IStorage {
         typologyId: buildings.typologyId,
         noiseClassId: buildings.noiseClassId,
         aggressivenessClassId: buildings.aggressivenessClassId,
+        predominantColorId: buildings.predominantColorId,
         cep: buildings.cep,
   street: buildings.street,
   addressNumber: buildings.addressNumber,
@@ -564,11 +569,14 @@ export class DatabaseStorage implements IStorage {
         noiseClassLabel: noiseClasses.label,
         aggressivenessClassCode: aggressivenessClasses.code,
         aggressivenessClassLabel: aggressivenessClasses.label,
+        predominantColorCode: predominantColors.code,
+        predominantColorLabel: predominantColors.label,
       })
       .from(buildings)
       .leftJoin(typologies, eq(buildings.typologyId, typologies.id))
       .leftJoin(noiseClasses, eq(buildings.noiseClassId, noiseClasses.id))
       .leftJoin(aggressivenessClasses, eq(buildings.aggressivenessClassId, aggressivenessClasses.id))
+      .leftJoin(predominantColors, eq(buildings.predominantColorId, predominantColors.id))
       .where(eq(buildings.id, id));
     return row as any;
   }
@@ -954,6 +962,7 @@ export class DatabaseStorage implements IStorage {
         typologyId: buildings.typologyId,
         noiseClassId: buildings.noiseClassId,
         aggressivenessClassId: buildings.aggressivenessClassId,
+        predominantColorId: buildings.predominantColorId,
         cep: buildings.cep,
         street: buildings.street,
         addressNumber: buildings.addressNumber,
@@ -975,11 +984,14 @@ export class DatabaseStorage implements IStorage {
         noiseClassLabel: noiseClasses.label,
         aggressivenessClassCode: aggressivenessClasses.code,
         aggressivenessClassLabel: aggressivenessClasses.label,
+        predominantColorCode: predominantColors.code,
+        predominantColorLabel: predominantColors.label,
       })
       .from(buildings)
       .leftJoin(typologies, eq(buildings.typologyId, typologies.id))
       .leftJoin(noiseClasses, eq(buildings.noiseClassId, noiseClasses.id))
       .leftJoin(aggressivenessClasses, eq(buildings.aggressivenessClassId, aggressivenessClasses.id))
+      .leftJoin(predominantColors, eq(buildings.predominantColorId, predominantColors.id))
       .orderBy(desc(buildings.createdAt));
     if (limit !== undefined) query = (query as any).limit(limit);
     if (offset !== undefined) query = (query as any).offset(offset);
