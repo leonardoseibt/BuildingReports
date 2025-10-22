@@ -2,7 +2,7 @@ import express, { type Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated, refreshSession, requireModuleAccess } from "./auth";
-import { insertBuildingSchema, updateBuildingSchema, insertStructuralSystemSchema, insertReportSchema, insertTechnicianSchema, updateTechnicianSchema, insertUserSchema, updateUserSchema, insertTypologySchema, insertNoiseClassSchema, insertAggressivenessClassSchema, insertBioclimaticZoneSchema, insertBioclimaticZoneCoverageSchema, insertStateSchema, insertCitySchema, insertConstructiveSystemSchema, insertRequirementSchema, insertCriterionSchema, insertAnalysisSchema, insertIsoplethSchema } from "@shared/schema";
+import { insertBuildingSchema, updateBuildingSchema, insertStructuralSystemSchema, insertReportSchema, insertTechnicianSchema, updateTechnicianSchema, insertUserSchema, updateUserSchema, insertTypologySchema, insertNoiseClassSchema, insertAggressivenessClassSchema, insertPredominantColorSchema, insertBioclimaticZoneSchema, insertBioclimaticZoneCoverageSchema, insertStateSchema, insertCitySchema, insertConstructiveSystemSchema, insertRequirementSchema, insertCriterionSchema, insertAnalysisSchema, insertIsoplethSchema } from "@shared/schema";
 import { insertParameterSchema, attributeDefinitions } from '@shared/schema';
 import { generateReportPdf, generateReportJson } from './puppeteer/report-generator';
 import { generateReportPdfJsreport } from './jsreport/report-generator';
@@ -1156,6 +1156,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       const status = (error as any)?.status || 500;
       const message = (error as any)?.message || 'Falha ao excluir classe de agressividade';
+      res.status(status).json({ message });
+    }
+  });
+
+  // Master tables: Predominant colors
+  app.get('/api/predominant-colors', isAuthenticated, requireModuleAccess('predominant-colors'), async (_req, res) => {
+    try { res.json(await storage.listPredominantColors()); } catch (e) { res.status(500).json({ message: 'Failed to fetch predominant colors' }); }
+  });
+  app.post('/api/predominant-colors', isAuthenticated, requireModuleAccess('predominant-colors'), express.json(), async (req, res) => {
+    try { const data = insertPredominantColorSchema.parse(req.body); const row = await storage.createPredominantColor(data as any); res.json(row); }
+    catch (error) { if (error instanceof z.ZodError) return res.status(400).json({ message: 'Validation error', errors: error.errors }); if ((error as any)?.code === '23505') return res.status(409).json({ message: 'Código já cadastrado.' }); res.status(500).json({ message: 'Failed to create predominant color' }); }
+  });
+  app.put('/api/predominant-colors/:id', isAuthenticated, requireModuleAccess('predominant-colors'), express.json(), async (req, res) => {
+    try { const id = Number(req.params.id); if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' }); const data = insertPredominantColorSchema.partial().parse(req.body); const row = await storage.updatePredominantColor(id, data as any); res.json(row); }
+    catch (error) { if (error instanceof z.ZodError) return res.status(400).json({ message: 'Validation error', errors: error.errors }); if ((error as any)?.code === '23505') return res.status(409).json({ message: 'Código já cadastrado.' }); res.status(500).json({ message: 'Failed to update predominant color' }); }
+  });
+  app.delete('/api/predominant-colors/:id', isAuthenticated, requireModuleAccess('predominant-colors'), async (req: any, res) => {
+    try {
+      const id = Number(req.params.id);
+      if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' });
+      const ok = await storage.deletePredominantColor(id);
+      res.json({ ok });
+    } catch (error: any) {
+      const status = (error as any)?.status || 500;
+      const message = (error as any)?.message || 'Falha ao excluir cor predominante';
       res.status(status).json({ message });
     }
   });

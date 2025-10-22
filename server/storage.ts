@@ -28,6 +28,9 @@ import {
   type InsertNoiseClass,
   type AggressivenessClass,
   type InsertAggressivenessClass,
+  predominantColors,
+  type PredominantColor,
+  type InsertPredominantColor,
   type ConstructiveSystem,
   type InsertConstructiveSystem,
   type Requirement,
@@ -173,6 +176,13 @@ export interface IStorage {
   createAggressivenessClass(item: InsertAggressivenessClass): Promise<AggressivenessClass>;
   updateAggressivenessClass(id: number, item: Partial<InsertAggressivenessClass>): Promise<AggressivenessClass>;
   deleteAggressivenessClass(id: number): Promise<boolean>;
+
+  // Predominant colors
+  getPredominantColor(id: number): Promise<PredominantColor | undefined>;
+  listPredominantColors(): Promise<PredominantColor[]>;
+  createPredominantColor(item: InsertPredominantColor): Promise<PredominantColor>;
+  updatePredominantColor(id: number, item: Partial<InsertPredominantColor>): Promise<PredominantColor>;
+  deletePredominantColor(id: number): Promise<boolean>;
 
   // Constructive systems
   listConstructiveSystems(): Promise<ConstructiveSystem[]>;
@@ -1325,6 +1335,55 @@ export class DatabaseStorage implements IStorage {
           throw e;
         }
         const deleted = await tx.delete(aggressivenessClasses).where(eq(aggressivenessClasses.id, id)).returning({ id: aggressivenessClasses.id });
+        return deleted.length > 0;
+      });
+    } catch (err: any) {
+      if (err?.status === 409) throw err;
+      if (err?.code === '23503') { const e: any = new Error('Não é possível excluir: existem registros relacionados.'); e.status = 409; throw e; }
+      throw err;
+    }
+  }
+
+  // Predominant colors
+  async getPredominantColor(id: number): Promise<PredominantColor | undefined> {
+    const [row] = await db.select().from(predominantColors).where(eq(predominantColors.id, id)).limit(1);
+    return row as any;
+  }
+  async listPredominantColors(): Promise<PredominantColor[]> {
+    const rows = await db
+      .select()
+      .from(predominantColors)
+      .orderBy(
+        sql`length(${predominantColors.code})`,
+        sql`${predominantColors.code} collate "pt-BR-x-icu"`
+      );
+    return rows as any;
+  }
+  async createPredominantColor(item: InsertPredominantColor): Promise<PredominantColor> {
+    const [row] = await db.insert(predominantColors).values({ 
+      code: (item as any).code, 
+      label: (item as any).label,
+      absorptanceMin: (item as any).absorptanceMin,
+      absorptanceMax: (item as any).absorptanceMax,
+      isActive: (item as any).isActive ?? true 
+    }).returning();
+    return row as PredominantColor;
+  }
+  async updatePredominantColor(id: number, item: Partial<InsertPredominantColor>): Promise<PredominantColor> {
+    const [row] = await db.update(predominantColors).set({ ...(item as any), updatedAt: new Date() }).where(eq(predominantColors.id, id)).returning();
+    return row as PredominantColor;
+  }
+  async deletePredominantColor(id: number): Promise<boolean> {
+    try {
+      return await db.transaction(async (tx) => {
+        const countRes = await tx.select({ value: count() }).from(buildings).where(eq(buildings.predominantColorId, id));
+        const c = Number(countRes[0]?.value ?? 0);
+        if (c > 0) {
+          const e: any = new Error(`Não é possível excluir: existem ${c} edificação(ões) vinculadas a esta cor predominante.`);
+          e.status = 409;
+          throw e;
+        }
+        const deleted = await tx.delete(predominantColors).where(eq(predominantColors.id, id)).returning({ id: predominantColors.id });
         return deleted.length > 0;
       });
     } catch (err: any) {

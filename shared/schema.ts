@@ -176,6 +176,7 @@ export const buildings = pgTable("buildings", {
   units: integer("units").default(1),
   noiseClassId: integer("noise_class_id").references(() => noiseClasses.id),
   aggressivenessClassId: integer("aggressiveness_class_id").references(() => aggressivenessClasses.id),
+  predominantColorId: integer("predominant_color_id").references(() => predominantColors.id),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -206,6 +207,18 @@ export const aggressivenessClasses = pgTable("aggressiveness_classes", {
   code: varchar("code", { length: 64 }).notNull().unique(),
   label: varchar("label", { length: 255 }).notNull(),
   risk: aggressivenessRiskEnum('risk').notNull().default('Insignificante'),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Predominant Colors (Cores Predominantes) - para absortância térmica
+export const predominantColors = pgTable("predominant_colors", {
+  id: integer("id").generatedAlwaysAsIdentity().primaryKey(),
+  code: varchar("code", { length: 64 }).notNull().unique(),
+  label: varchar("label", { length: 255 }).notNull(),
+  absorptanceMin: decimal("absorptance_min", { precision: 5, scale: 3 }),
+  absorptanceMax: decimal("absorptance_max", { precision: 5, scale: 3 }),
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -282,7 +295,7 @@ export const parameters = pgTable("parameters", {
 
 // Attribute Definitions (metadados de atributos de edificações / parâmetros)
 export const attributeDataKindEnum = [ 'numeric', 'reference', 'text', 'boolean', 'date' ] as const;
-export const attributeValueSourceEnum = [ 'typologies', 'noise_classes', 'aggressiveness_classes', 'bioclimatic_zones', 'isopleths' ] as const; // extensível depois
+export const attributeValueSourceEnum = [ 'typologies', 'noise_classes', 'aggressiveness_classes', 'bioclimatic_zones', 'isopleths', 'predominant_colors' ] as const; // extensível depois
 
 export const attributeDefinitions = pgTable('attribute_definitions', {
   id: integer('id').generatedAlwaysAsIdentity().primaryKey(),
@@ -587,6 +600,11 @@ export const insertTechnicianSchema = createInsertSchema(technicians)
 export const insertTypologySchema = createInsertSchema(typologies);
 export const insertNoiseClassSchema = createInsertSchema(noiseClasses);
 export const insertAggressivenessClassSchema = createInsertSchema(aggressivenessClasses);
+export const insertPredominantColorSchema = createInsertSchema(predominantColors)
+  .extend({
+    absorptanceMin: decimalInput.optional(),
+    absorptanceMax: decimalInput.optional(),
+  });
 export const insertConstructiveSystemSchema = createInsertSchema(constructiveSystems);
 export const insertRequirementSchema = createInsertSchema(requirements);
 export const insertCriterionSchema = createInsertSchema(criteria);
@@ -664,6 +682,8 @@ export type NoiseClass = typeof noiseClasses.$inferSelect;
 export type InsertNoiseClass = z.infer<typeof insertNoiseClassSchema>;
 export type AggressivenessClass = typeof aggressivenessClasses.$inferSelect;
 export type InsertAggressivenessClass = z.infer<typeof insertAggressivenessClassSchema>;
+export type PredominantColor = typeof predominantColors.$inferSelect;
+export type InsertPredominantColor = z.infer<typeof insertPredominantColorSchema>;
 export type ConstructiveSystem = typeof constructiveSystems.$inferSelect;
 export type InsertConstructiveSystem = z.infer<typeof insertConstructiveSystemSchema>;
 export type Requirement = typeof requirements.$inferSelect;
