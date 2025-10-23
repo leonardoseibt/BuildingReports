@@ -11,7 +11,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { NotchedField } from '@/components/ui/notched-field';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { CheckCheck, X, Loader2 } from 'lucide-react';
+import { CheckCheck, X, Loader2, MinusCircle, CircleDot, PlusCircle, Eraser } from 'lucide-react';
 import type { Building, Requirement, Criterion, Analysis, Report } from '@shared/schema';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
@@ -182,6 +182,48 @@ export default function ReportForm({ initialItem, onSuccess, onCancel }: { initi
     } else {
       setLevels({});
     }
+  }
+
+  function handleSelectAllByLevel(level: 'minimum' | 'intermediate' | 'superior') {
+    const updated: Record<string, string[]> = { ...levels };
+    
+    // Verificar se todos os requisitos habilitados já têm esse nível marcado
+    const allAnalyses: number[] = [];
+    for (const req of groupedData) {
+      if (enabledRequirements[req.id]) {
+        for (const crit of req.criteria) {
+          allAnalyses.push(...crit.analyses.map(a => a.id));
+        }
+      }
+    }
+    
+    const allSelected = allAnalyses.every(analysisId => {
+      const key = `analysis-${analysisId}`;
+      return updated[key]?.includes(level) || false;
+    });
+    
+    // Se todos estão marcados, desmarcar. Caso contrário, marcar
+    for (const analysisId of allAnalyses) {
+      const key = `analysis-${analysisId}`;
+      const currentLevels = updated[key] || [];
+      
+      if (allSelected) {
+        // Desmarcar: remover o nível
+        const newLevels = currentLevels.filter(l => l !== level);
+        if (newLevels.length > 0) {
+          updated[key] = newLevels;
+        } else {
+          delete updated[key];
+        }
+      } else {
+        // Marcar: adicionar o nível se não estiver presente
+        if (!currentLevels.includes(level)) {
+          updated[key] = [...currentLevels, level];
+        }
+      }
+    }
+    
+    setLevels(updated);
   }
 
   function handleSelectByCriterionLevel(requirementId: number, criterionId: number, level: 'minimum' | 'intermediate' | 'superior') {
@@ -397,8 +439,9 @@ export default function ReportForm({ initialItem, onSuccess, onCancel }: { initi
                       });
                       setEnabledRequirements(allEnabled);
                     }}
-                    className="h-8 px-3 hover:bg-slate-200 text-xs"
+                    className="h-8 px-3 hover:bg-slate-200 text-xs gap-1.5"
                   >
+                    <CheckCheck className="w-3.5 h-3.5" />
                     Todos Req.
                   </Button>
                 </TooltipTrigger>
@@ -427,8 +470,9 @@ export default function ReportForm({ initialItem, onSuccess, onCancel }: { initi
                       });
                       setEnabledRequirements(allDisabled);
                     }}
-                    className="h-8 px-3 hover:bg-slate-200 text-xs"
+                    className="h-8 px-3 hover:bg-slate-200 text-xs gap-1.5"
                   >
+                    <X className="w-3.5 h-3.5" />
                     Nenhum Req.
                   </Button>
                 </TooltipTrigger>
@@ -451,10 +495,11 @@ export default function ReportForm({ initialItem, onSuccess, onCancel }: { initi
                     type="button" 
                     size="sm" 
                     variant="ghost" 
-                    onClick={() => handleSelectAll(true)}
-                    className="h-8 px-3 hover:bg-slate-200"
+                    onClick={() => handleSelectAllByLevel('minimum')}
+                    className="h-8 px-3 hover:bg-green-50 hover:text-green-700 text-xs gap-1.5"
                   >
-                    <CheckCheck className="w-4 h-4" />
+                    <MinusCircle className="w-3.5 h-3.5" />
+                    Todos Mín.
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent 
@@ -464,7 +509,55 @@ export default function ReportForm({ initialItem, onSuccess, onCancel }: { initi
                   avoidCollisions={true}
                   className="z-[60]"
                 >
-                  <p>Marcar todas as análises (todos os níveis) dos requisitos habilitados</p>
+                  <p>Selecionar todos os níveis mínimos dos requisitos habilitados</p>
+                </TooltipContent>
+              </Tooltip>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    type="button" 
+                    size="sm" 
+                    variant="ghost" 
+                    onClick={() => handleSelectAllByLevel('intermediate')}
+                    className="h-8 px-3 hover:bg-blue-50 hover:text-blue-700 text-xs gap-1.5"
+                  >
+                    <CircleDot className="w-3.5 h-3.5" />
+                    Todos Int.
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent 
+                  side="bottom" 
+                  sideOffset={8} 
+                  collisionPadding={10}
+                  avoidCollisions={true}
+                  className="z-[60]"
+                >
+                  <p>Selecionar todos os níveis intermediários dos requisitos habilitados</p>
+                </TooltipContent>
+              </Tooltip>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    type="button" 
+                    size="sm" 
+                    variant="ghost" 
+                    onClick={() => handleSelectAllByLevel('superior')}
+                    className="h-8 px-3 hover:bg-amber-50 hover:text-amber-700 text-xs gap-1.5"
+                  >
+                    <PlusCircle className="w-3.5 h-3.5" />
+                    Todos Sup.
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent 
+                  side="bottom" 
+                  sideOffset={8} 
+                  collisionPadding={10}
+                  avoidCollisions={true}
+                  className="z-[60]"
+                >
+                  <p>Selecionar todos os níveis superiores dos requisitos habilitados</p>
                 </TooltipContent>
               </Tooltip>
               
@@ -475,9 +568,10 @@ export default function ReportForm({ initialItem, onSuccess, onCancel }: { initi
                     size="sm" 
                     variant="ghost" 
                     onClick={() => handleSelectAll(false)}
-                    className="h-8 px-3 hover:bg-slate-200"
+                    className="h-8 px-3 hover:bg-red-50 hover:text-red-700 gap-1.5"
                   >
-                    <X className="w-4 h-4" />
+                    <Eraser className="w-3.5 h-3.5" />
+                    <span className="text-xs">Limpar</span>
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent 
