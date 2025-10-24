@@ -114,7 +114,7 @@ app.use(helmet({
           "connect-src": ["'self'"],
           "object-src": ["'none'"],
           "frame-ancestors": ["'self'"],
-          "upgrade-insecure-requests": [],
+          // Removido upgrade-insecure-requests para permitir HTTP até SSL ser configurado
         },
       },
 }));
