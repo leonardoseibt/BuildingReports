@@ -183,7 +183,13 @@ export async function setupAuth(app: Express) {
   });
 
   // CSRF protection: aplica globalmente, exceto para GET /api/login (atalho dev)
-  const csrfProtection = csurf({ cookie: false });
+  const csrfProtection = csurf({ 
+    cookie: false,
+    value: (req) => {
+      // Aceita o token do header 'csrf-token' (enviado pelo frontend)
+      return req.headers['csrf-token'] as string || req.body?._csrf || req.query?._csrf;
+    }
+  });
   app.use((req, res, next) => {
     if (req.method === 'GET' && req.path === '/api/login') {
       return next();
