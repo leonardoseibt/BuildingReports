@@ -149,6 +149,8 @@ ssh deploy@143.198.123.45
 
 ### **Passo 3.1: Instalar Node.js 18**
 
+> ⚠️ **IMPORTANTE**: O código atual foi atualizado para ser compatível com Node.js 18+. Se você já tinha instalado antes da correção, faça o deploy atualizado conforme **FIX_NODE18_ERROR.md**
+
 ```bash
 # Baixar script de instalação do Node.js 18
 curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
