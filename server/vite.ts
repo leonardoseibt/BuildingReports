@@ -6,8 +6,8 @@ import { type Server } from "http";
 import viteConfig from "../vite.config";
 import { nanoid } from "nanoid";
 
-// Use process.cwd() which works reliably in both dev and bundled production
-const rootDir = process.cwd();
+// Use global root dir if available (production bundle), otherwise process.cwd() (dev)
+const rootDir = (globalThis as any).__projectRoot || process.cwd();
 
 const viteLogger = createLogger();
 

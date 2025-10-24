@@ -2,8 +2,8 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import path from "path";
 
-// Use process.cwd() which works reliably in both dev and bundled production
-const rootDir = process.cwd();
+// Use global root dir if available (production bundle), otherwise process.cwd() (dev)
+const rootDir = (globalThis as any).__projectRoot || process.cwd();
 
 // Standalone Vite config
 
