@@ -1,13 +1,18 @@
 import express, { type Express } from "express";
 import fs from "fs";
 import path from "path";
+import { fileURLToPath } from "url";
 import { createServer as createViteServer, createLogger } from "vite";
 import { type Server } from "http";
 import viteConfig from "../vite.config";
 import { nanoid } from "nanoid";
 
-// Use global root dir if available (production bundle), otherwise process.cwd() (dev)
-const rootDir = (globalThis as any).__projectRoot || process.cwd();
+// Resolve project root from current file location
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+// In dev: server/vite.ts -> go up one level to project root
+// In production bundle: dist/index.js -> go up one level to project root  
+const rootDir = path.resolve(__dirname, '..');
 
 const viteLogger = createLogger();
 

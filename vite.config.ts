@@ -1,9 +1,13 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import path from "path";
+import { fileURLToPath } from "url";
 
-// Use global root dir if available (production bundle), otherwise process.cwd() (dev)
-const rootDir = (globalThis as any).__projectRoot || process.cwd();
+// Resolve project root from current file location
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+// vite.config.ts is at project root, so __dirname IS the root
+const rootDir = __dirname;
 
 // Standalone Vite config
 

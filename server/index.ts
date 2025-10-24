@@ -8,10 +8,6 @@ import { registerRoutes } from "./routes";
 import { storage } from './storage';
 import { setupVite, serveStatic, log } from "./vite";
 
-// Define root directory for production bundle - must be at top level
-// This will be available to vite.config when bundled by esbuild
-(globalThis as any).__projectRoot = process.cwd();
-
 const SENSITIVE_FIELDS = ["password", "passwordHash", "token", "secret"];
 
 export function sanitizeLogData(obj: any): any {
