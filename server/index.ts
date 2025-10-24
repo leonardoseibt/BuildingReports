@@ -108,9 +108,9 @@ app.use(helmet({
         directives: {
           "default-src": ["'self'"],
           "script-src": ["'self'"],
-          "style-src": ["'self'", "https:", "'unsafe-inline'"],
+          "style-src": ["'self'", "https://fonts.googleapis.com", "'unsafe-inline'"],
           "img-src": ["'self'", 'data:'],
-          "font-src": ["'self'", "https:", 'data:'],
+          "font-src": ["'self'", "https://fonts.gstatic.com", 'data:'],
           "connect-src": ["'self'"],
           "object-src": ["'none'"],
           "frame-ancestors": ["'self'"],
