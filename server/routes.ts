@@ -865,9 +865,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Bioclimatic Zones API
-  app.get('/api/bioclimatic-zones', isAuthenticated, requireModuleAccess('bioclimatic-zones'), async (_req, res) => {
+  // GET routes: read-only access for all authenticated users
+  app.get('/api/bioclimatic-zones', isAuthenticated, async (_req, res) => {
     try { res.json(await storage.listBioclimaticZones()); } catch { res.status(500).json({ message: 'Failed to fetch zones' }); }
   });
+  // POST/PUT/DELETE routes: require module access
   app.post('/api/bioclimatic-zones', isAuthenticated, requireModuleAccess('bioclimatic-zones'), express.json(), async (req, res) => {
     try { const data = insertBioclimaticZoneSchema.parse(req.body); const row = await storage.createBioclimaticZone(data as any); res.json(row); }
     catch (error) { if (error instanceof z.ZodError) return res.status(400).json({ message: 'Validation error', errors: error.errors }); if ((error as any)?.code === '23505') return res.status(409).json({ message: 'Código já cadastrado.' }); res.status(500).json({ message: 'Failed to create zone' }); }
@@ -880,13 +882,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try { const id = Number(req.params.id); if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' }); const ok = await storage.deleteBioclimaticZone(id); res.json({ ok }); }
     catch (error: any) { const status = (error as any)?.status || 500; const message = (error as any)?.message || 'Failed to delete zone'; res.status(status).json({ message }); }
   });
-  // Coverages
-  app.get('/api/bioclimatic-zones/:id/coverages', isAuthenticated, requireModuleAccess('bioclimatic-zones'), async (req, res) => {
+  // Coverages - read-only access
+  app.get('/api/bioclimatic-zones/:id/coverages', isAuthenticated, async (req, res) => {
     try { const id = Number(req.params.id); if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' }); res.json(await storage.listBioclimaticZoneCoverages(id)); }
     catch { res.status(500).json({ message: 'Failed to fetch coverages' }); }
   });
-  // Find zones by city name (for filtering zones by city search)
-  app.get('/api/bioclimatic-zones/search-by-city', isAuthenticated, requireModuleAccess('bioclimatic-zones'), async (req, res) => {
+  // Find zones by city name (for filtering zones by city search) - read-only access
+  app.get('/api/bioclimatic-zones/search-by-city', isAuthenticated, async (req, res) => {
     try {
       const q = String((req.query.q ?? '') as string).trim();
       if (!q) return res.json([]);
@@ -926,9 +928,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Isopleths (Isopletas) API
-  app.get('/api/isopleths', isAuthenticated, requireModuleAccess('isopleths'), async (_req, res) => {
+  // GET routes: read-only access for all authenticated users
+  app.get('/api/isopleths', isAuthenticated, async (_req, res) => {
     try { res.json(await storage.listIsopleths()); } catch { res.status(500).json({ message: 'Failed to fetch isopletas' }); }
   });
+  // POST/PUT/DELETE routes: require module access
   app.post('/api/isopleths', isAuthenticated, requireModuleAccess('isopleths'), express.json(), async (req, res) => {
     try { const data = insertIsoplethSchema.parse(req.body); const row = await storage.createIsopleth(data as any); res.json(row); }
     catch (error) { if (error instanceof z.ZodError) return res.status(400).json({ message: 'Validation error', errors: error.errors }); if ((error as any)?.code === '23505') return res.status(409).json({ message: 'Código já cadastrado.' }); res.status(500).json({ message: 'Failed to create isopleth' }); }
@@ -942,14 +946,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     catch { res.status(500).json({ message: 'Failed to delete isopleth' }); }
   });
 
-  // Isopleths coverages
-  app.get('/api/isopleths/:id/coverages', isAuthenticated, requireModuleAccess('isopleths'), async (req, res) => {
+  // Isopleths coverages - read-only access
+  app.get('/api/isopleths/:id/coverages', isAuthenticated, async (req, res) => {
     try { const id = Number(req.params.id); if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' }); res.json(await storage.listIsoplethCoverages(id)); }
     catch { res.status(500).json({ message: 'Failed to fetch isopleth coverages' }); }
   });
-  app.get('/api/isopleths/coverages-index', isAuthenticated, requireModuleAccess('isopleths'), async (_req, res) => {
+  app.get('/api/isopleths/coverages-index', isAuthenticated, async (_req, res) => {
     try { res.json(await storage.listIsoplethsCoveragesIndex()); } catch { res.status(500).json({ message: 'Failed to fetch isopleth coverages index' }); }
   });
+  // Coverages POST/DELETE: require module access
   app.post('/api/isopleths/:id/coverages', isAuthenticated, requireModuleAccess('isopleths'), express.json(), async (req, res) => {
     try { const id = Number(req.params.id); if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' }); const payload = { cityId: Number((req.body as any).cityId) }; const row = await storage.createIsoplethCoverage(id, payload as any); res.json(row); }
     catch (error) { if (error instanceof z.ZodError) return res.status(400).json({ message: 'Validation error', errors: error.errors }); res.status(500).json({ message: 'Failed to create isopleth coverage' }); }
@@ -960,9 +965,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // States & Cities endpoints
-  app.get('/api/states', isAuthenticated, requireModuleAccess('states'), async (_req, res) => {
+  // GET routes: read-only access for all authenticated users
+  app.get('/api/states', isAuthenticated, async (_req, res) => {
     try { res.json(await storage.listStates()); } catch { res.status(500).json({ message: 'Failed to fetch states' }); }
   });
+  // POST/PUT/DELETE routes: require module access
   app.post('/api/states', isAuthenticated, requireModuleAccess('states'), express.json(), async (req, res) => {
     try { const data = insertStateSchema.parse(req.body); const row = await storage.createState(data as any); res.json(row); }
     catch (error) { if (error instanceof z.ZodError) return res.status(400).json({ message: 'Validation error', errors: error.errors }); res.status(500).json({ message: 'Failed to create state' }); }
@@ -975,13 +982,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try { const id = Number(req.params.id); if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' }); const ok = await storage.deleteState(id); res.json({ ok }); }
     catch { res.status(500).json({ message: 'Failed to delete state' }); }
   });
-  app.get('/api/states/:stateId/cities', isAuthenticated, requireModuleAccess('cities'), async (req, res) => {
+  // Cities GET routes: read-only access
+  app.get('/api/states/:stateId/cities', isAuthenticated, async (req, res) => {
     try { const stateId = Number(req.params.stateId); if (!Number.isFinite(stateId)) return res.status(400).json({ message: 'ID inválido' }); res.json(await storage.listCitiesByState(stateId)); }
     catch { res.status(500).json({ message: 'Failed to fetch cities' }); }
   });
-  app.get('/api/cities', isAuthenticated, requireModuleAccess('cities'), async (_req, res) => {
+  app.get('/api/cities', isAuthenticated, async (_req, res) => {
     try { res.json(await storage.listCities()); } catch { res.status(500).json({ message: 'Failed to fetch cities' }); }
   });
+  // Cities POST/PUT/DELETE: require module access
   app.post('/api/cities', isAuthenticated, requireModuleAccess('cities'), express.json(), async (req, res) => {
     try { const data = insertCitySchema.parse(req.body); const row = await storage.createCity(data as any); res.json(row); }
     catch (error) { if (error instanceof z.ZodError) return res.status(400).json({ message: 'Validation error', errors: error.errors }); res.status(500).json({ message: 'Failed to create city' }); }
@@ -1088,9 +1097,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Master tables: Typologies
-  app.get('/api/typologies', isAuthenticated, requireModuleAccess('typologies'), async (_req, res) => {
+  // GET route: read-only access for all authenticated users
+  app.get('/api/typologies', isAuthenticated, async (_req, res) => {
     try { res.json(await storage.listTypologies()); } catch (e) { res.status(500).json({ message: 'Failed to fetch typologies' }); }
   });
+  // POST/PUT/DELETE routes: require module access
   app.post('/api/typologies', isAuthenticated, requireModuleAccess('typologies'), express.json(), async (req, res) => {
     try { const data = insertTypologySchema.parse(req.body); const row = await storage.createTypology(data as any); res.json(row); }
     catch (error) { if (error instanceof z.ZodError) return res.status(400).json({ message: 'Validation error', errors: error.errors }); if ((error as any)?.code === '23505') return res.status(409).json({ message: 'Código já cadastrado.' }); res.status(500).json({ message: 'Failed to create typology' }); }
@@ -1113,9 +1124,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Master tables: Noise classes
-  app.get('/api/noise-classes', isAuthenticated, requireModuleAccess('noise-classes'), async (_req, res) => {
+  // GET route: read-only access for all authenticated users
+  app.get('/api/noise-classes', isAuthenticated, async (_req, res) => {
     try { res.json(await storage.listNoiseClasses()); } catch (e) { res.status(500).json({ message: 'Failed to fetch noise classes' }); }
   });
+  // POST/PUT/DELETE routes: require module access
   app.post('/api/noise-classes', isAuthenticated, requireModuleAccess('noise-classes'), express.json(), async (req, res) => {
     try { const data = insertNoiseClassSchema.parse(req.body); const row = await storage.createNoiseClass(data as any); res.json(row); }
     catch (error) { if (error instanceof z.ZodError) return res.status(400).json({ message: 'Validation error', errors: error.errors }); if ((error as any)?.code === '23505') return res.status(409).json({ message: 'Código já cadastrado.' }); res.status(500).json({ message: 'Failed to create noise class' }); }
@@ -1138,9 +1151,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Master tables: Aggressiveness classes
-  app.get('/api/aggressiveness-classes', isAuthenticated, requireModuleAccess('aggressiveness-classes'), async (_req, res) => {
+  // GET route: read-only access for all authenticated users
+  app.get('/api/aggressiveness-classes', isAuthenticated, async (_req, res) => {
     try { res.json(await storage.listAggressivenessClasses()); } catch (e) { res.status(500).json({ message: 'Failed to fetch aggressiveness classes' }); }
   });
+  // POST/PUT/DELETE routes: require module access
   app.post('/api/aggressiveness-classes', isAuthenticated, requireModuleAccess('aggressiveness-classes'), express.json(), async (req, res) => {
     try { const data = insertAggressivenessClassSchema.parse(req.body); const row = await storage.createAggressivenessClass(data as any); res.json(row); }
     catch (error) { if (error instanceof z.ZodError) return res.status(400).json({ message: 'Validation error', errors: error.errors }); if ((error as any)?.code === '23505') return res.status(409).json({ message: 'Código já cadastrado.' }); res.status(500).json({ message: 'Failed to create aggressiveness class' }); }
@@ -1163,9 +1178,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Master tables: Predominant colors
-  app.get('/api/predominant-colors', isAuthenticated, requireModuleAccess('predominant-colors'), async (_req, res) => {
+  // GET route: read-only access for all authenticated users
+  app.get('/api/predominant-colors', isAuthenticated, async (_req, res) => {
     try { res.json(await storage.listPredominantColors()); } catch (e) { res.status(500).json({ message: 'Failed to fetch predominant colors' }); }
   });
+  // POST/PUT/DELETE routes: require module access
   app.post('/api/predominant-colors', isAuthenticated, requireModuleAccess('predominant-colors'), express.json(), async (req, res) => {
     try { const data = insertPredominantColorSchema.parse(req.body); const row = await storage.createPredominantColor(data as any); res.json(row); }
     catch (error) { if (error instanceof z.ZodError) return res.status(400).json({ message: 'Validation error', errors: error.errors }); if ((error as any)?.code === '23505') return res.status(409).json({ message: 'Código já cadastrado.' }); res.status(500).json({ message: 'Failed to create predominant color' }); }
@@ -1188,9 +1205,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Master tables: Constructive systems
-  app.get('/api/constructive-systems', isAuthenticated, requireModuleAccess('constructive-systems'), async (_req, res) => {
+  // GET route: read-only access for all authenticated users
+  app.get('/api/constructive-systems', isAuthenticated, async (_req, res) => {
     try { res.json(await storage.listConstructiveSystems()); } catch (e) { res.status(500).json({ message: 'Failed to fetch constructive systems' }); }
   });
+  // POST/PUT/DELETE routes: require module access
   app.post('/api/constructive-systems', isAuthenticated, requireModuleAccess('constructive-systems'), express.json(), async (req, res) => {
     try { const data = insertConstructiveSystemSchema.parse(req.body); const row = await storage.createConstructiveSystem(data as any); res.json(row); }
     catch (error) { if (error instanceof z.ZodError) return res.status(400).json({ message: 'Validation error', errors: error.errors }); if ((error as any)?.code === '23505') return res.status(409).json({ message: 'Código já cadastrado.' }); res.status(500).json({ message: 'Failed to create constructive system' }); }
@@ -1205,9 +1224,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Master tables: Requirements
-  app.get('/api/requirements', isAuthenticated, requireModuleAccess('requirements'), async (_req, res) => {
+  // GET route: read-only access for all authenticated users
+  app.get('/api/requirements', isAuthenticated, async (_req, res) => {
     try { res.json(await storage.listRequirements()); } catch (e) { res.status(500).json({ message: 'Failed to fetch requirements' }); }
   });
+  // POST/PUT/DELETE routes: require module access
   app.post('/api/requirements', isAuthenticated, requireModuleAccess('requirements'), express.json(), async (req, res) => {
     try { const data = insertRequirementSchema.parse(req.body); const row = await storage.createRequirement(data as any); res.json(row); }
     catch (error) { if (error instanceof z.ZodError) return res.status(400).json({ message: 'Validation error', errors: error.errors }); if ((error as any)?.code === '23505') return res.status(409).json({ message: 'Código já cadastrado.' }); res.status(500).json({ message: 'Failed to create requirement' }); }
@@ -1222,12 +1243,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Criteria (Critérios) endpoints
-  app.get('/api/criteria', isAuthenticated, requireModuleAccess('criteria'), async (req, res) => {
+  // GET route: read-only access for all authenticated users
+  app.get('/api/criteria', isAuthenticated, async (req, res) => {
     try {
       const requirementId = req.query.requirementId ? Number(req.query.requirementId) : undefined;
       res.json(await storage.listCriteria(requirementId));
     } catch { res.status(500).json({ message: 'Failed to fetch criteria' }); }
   });
+  // POST/PUT/DELETE routes: require module access
   app.post('/api/criteria', isAuthenticated, requireModuleAccess('criteria'), express.json(), async (req, res) => {
     try {
       const data = insertCriterionSchema.parse(req.body);
