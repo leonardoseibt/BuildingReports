@@ -186,8 +186,9 @@ export async function setupAuth(app: Express) {
   const csrfProtection = csurf({ 
     cookie: false,
     value: (req) => {
-      // Aceita o token do header 'csrf-token' (enviado pelo frontend)
-      return req.headers['csrf-token'] as string || req.body?._csrf || req.query?._csrf;
+      // Aceita o token do header 'csrf-token' ou 'Csrf-Token' (case-insensitive)
+      const token = req.headers['csrf-token'] || req.headers['Csrf-Token'];
+      return token as string || req.body?._csrf || req.query?._csrf;
     }
   });
   app.use((req, res, next) => {
