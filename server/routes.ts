@@ -375,13 +375,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/buildings', isAuthenticated, readLimiter, async (req: any, res) => {
     try {
-      const userId: number = Number(req.user.claims.sub);
-      const me = await storage.getUser(userId);
       const { limit, offset } = getPaginationParams(req.query);
-      const canViewAll = !!(me && ((me as any).isAdmin || ((me as any).allowedModules || []).includes('buildings')));
-      const { items } = canViewAll
-        ? await storage.listAllBuildings(limit, offset)
-        : await storage.getBuildingsByUser(userId, limit, offset);
+      // All authenticated users can view all buildings
+      const { items } = await storage.listAllBuildings(limit, offset);
       // Client expects a plain array.
       res.json(items);
     } catch (error) {
@@ -569,12 +565,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/reports', isAuthenticated, async (req: any, res) => {
     try {
-      const userId: number = Number(req.user.claims.sub);
       const { limit, offset, page } = getPaginationParams(req.query);
-      const { items, total } = await storage.getReportsByUser(userId, limit, offset);
-  // Temporarily return a plain array to align with current frontend expectations.
-  // (Pagination metadata suppressed until client is updated to consume it.)
-  res.json(items);
+      // All authenticated users can view all reports
+      const { items, total } = await storage.listAllReports(limit, offset);
+      // Temporarily return a plain array to align with current frontend expectations.
+      // (Pagination metadata suppressed until client is updated to consume it.)
+      res.json(items);
     } catch (error) {
       console.error("Error fetching reports:", error);
       res.status(500).json({ message: "Failed to fetch reports" });

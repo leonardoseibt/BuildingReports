@@ -127,6 +127,7 @@ export interface IStorage {
   createReport(report: InsertReport): Promise<Report>;
   getReportsByBuilding(buildingId: number): Promise<Report[]>;
   getReportsByUser(userId: number, limit?: number, offset?: number): Promise<{ items: Report[]; total: number }>;
+  listAllReports(limit?: number, offset?: number): Promise<{ items: Report[]; total: number }>;
   getReport(id: number): Promise<Report | undefined>;
   updateReport(id: number, report: Partial<InsertReport>): Promise<Report>;
   deleteReport(id: number): Promise<boolean>;
@@ -890,6 +891,39 @@ export class DatabaseStorage implements IStorage {
       .from(reports)
       .leftJoin(buildings, eq(reports.buildingId, buildings.id))
       .where(and(eq(buildings.userId, userId), eq(reports.isActive, true)))
+      .orderBy(desc(reports.generatedAt));
+      
+    if (limit !== undefined) query = (query as any).limit(limit);
+    if (offset !== undefined) query = (query as any).offset(offset);
+    const items = await query;
+    return { items, total };
+  }
+
+  async listAllReports(limit?: number, offset?: number): Promise<{ items: ReportWithBuilding[]; total: number }> {
+    const totalRes = await db
+      .select({ value: count() })
+      .from(reports)
+      .leftJoin(buildings, eq(reports.buildingId, buildings.id))
+      .where(eq(reports.isActive, true));
+    const total = Number(totalRes[0]?.value ?? 0);
+    
+    let query = db
+      .select({
+        id: reports.id,
+        buildingId: reports.buildingId,
+        version: reports.version,
+        isActive: reports.isActive,
+        generatedAt: reports.generatedAt,
+        buildingName: buildings.name,
+        buildingLocation: sql<string>`${buildings.city} || ', ' || ${buildings.state}`,
+        buildingArea: buildings.totalArea,
+        buildingHeight: buildings.buildingHeight,
+        buildingBasementDepth: buildings.basementDepth,
+        buildingFloors: buildings.floors,
+      })
+      .from(reports)
+      .leftJoin(buildings, eq(reports.buildingId, buildings.id))
+      .where(eq(reports.isActive, true))
       .orderBy(desc(reports.generatedAt));
       
     if (limit !== undefined) query = (query as any).limit(limit);
