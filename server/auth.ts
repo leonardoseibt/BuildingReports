@@ -186,9 +186,11 @@ export async function setupAuth(app: Express) {
   const csrfProtection = csurf({ 
     cookie: false,
     value: (req) => {
-      // Aceita o token do header 'csrf-token' ou 'Csrf-Token' (case-insensitive)
-      const token = req.headers['csrf-token'] || req.headers['Csrf-Token'];
-      return token as string || req.body?._csrf || req.query?._csrf;
+      // Express normaliza headers para lowercase, então acessamos diretamente
+      const token = req.headers['csrf-token'] || req.body?._csrf || req.query?._csrf;
+      console.log('[CSRF DEBUG] Headers:', Object.keys(req.headers).filter(k => k.includes('csrf')));
+      console.log('[CSRF DEBUG] Token found:', token ? 'YES' : 'NO');
+      return token as string;
     }
   });
   app.use((req, res, next) => {
