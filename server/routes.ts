@@ -171,7 +171,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
     // Attribute Definitions (independent CRUD for validation phase)
-    app.get('/api/attributes', isAuthenticated, requireModuleAccess('attributes'), async (req, res) => {
+    // GET route: read-only access for all authenticated users
+    app.get('/api/attributes', isAuthenticated, async (req, res) => {
       try {
         const dataKind = typeof req.query.dataKind === 'string' ? req.query.dataKind : undefined;
         const valueSource = typeof req.query.valueSource === 'string' ? req.query.valueSource : undefined;
@@ -182,6 +183,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.error('Erro ao listar atributos', err); res.status(500).json({ message: 'Falha ao listar atributos' });
       }
     });
+    // POST/PUT/DELETE routes: require module access
     app.post('/api/attributes', isAuthenticated, requireModuleAccess('attributes'), express.json(), async (req, res) => {
       try {
         const item = req.body || {};
@@ -1287,7 +1289,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Analyses endpoints
-  app.get('/api/analyses', isAuthenticated, requireModuleAccess('analyses'), async (req, res) => {
+  // GET routes: read-only access for all authenticated users
+  app.get('/api/analyses', isAuthenticated, async (req, res) => {
     try {
       const criterionId = req.query.criterionId ? Number(req.query.criterionId) : undefined;
       const requirementId = req.query.requirementId ? Number(req.query.requirementId) : undefined;
@@ -1304,7 +1307,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: 'Failed to fetch analyses' });
     }
   });
-  app.get('/api/analyses/next-code', isAuthenticated, requireModuleAccess('analyses'), async (req, res) => {
+  app.get('/api/analyses/next-code', isAuthenticated, async (req, res) => {
     const requirementId = Number(req.query.requirementId);
     const criterionId = Number(req.query.criterionId);
     if (!Number.isFinite(requirementId) || !Number.isFinite(criterionId)) {
@@ -1317,6 +1320,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: 'Failed to generate analysis code' });
     }
   });
+  // POST/PUT/DELETE routes: require module access
   app.post('/api/analyses', isAuthenticated, requireModuleAccess('analyses'), express.json(), async (req, res) => {
     try {
       const data = insertAnalysisSchema.parse(req.body);
@@ -1354,7 +1358,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Parameters endpoints
-  app.get('/api/parameters', isAuthenticated, requireModuleAccess('parameters'), async (req, res) => {
+  // GET route: read-only access for all authenticated users
+  app.get('/api/parameters', isAuthenticated, async (req, res) => {
     try {
       const analysisId = req.query.analysisId ? Number(req.query.analysisId) : undefined;
       const criterionId = req.query.criterionId ? Number(req.query.criterionId) : undefined;
@@ -1373,6 +1378,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: 'Failed to fetch parameters' });
     }
   });
+  // POST/PUT/DELETE routes: require module access
   app.post('/api/parameters', isAuthenticated, requireModuleAccess('parameters'), express.json(), async (req, res) => {
     try {
       const data = insertParameterSchema.parse(req.body);
@@ -1437,8 +1443,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     catch { res.status(500).json({ message: 'Failed to delete parameter' }); }
   });
 
-  // Unified attribute value options endpoint
-  app.get('/api/attributes/:id/values', isAuthenticated, requireModuleAccess('attributes'), async (req, res) => {
+  // Unified attribute value options endpoint - read-only access
+  app.get('/api/attributes/:id/values', isAuthenticated, async (req, res) => {
     try {
       const id = Number(req.params.id);
       if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' });
