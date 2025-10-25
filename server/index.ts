@@ -104,7 +104,7 @@ app.use(helmet({
   contentSecurityPolicy: process.env.NODE_ENV === 'development'
     ? false
     : {
-        useDefaults: false, // Desabilitar defaults que incluem upgrade-insecure-requests
+        useDefaults: false,
         directives: {
           "default-src": ["'self'"],
           "script-src": ["'self'"],
@@ -116,6 +116,7 @@ app.use(helmet({
           "frame-ancestors": ["'self'"],
           "base-uri": ["'self'"],
           "form-action": ["'self'"],
+          "upgrade-insecure-requests": [],
         },
       },
 }));

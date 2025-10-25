@@ -146,8 +146,8 @@ function buildSessionMiddleware() {
     rolling: true,
     cookie: {
       httpOnly: true,
-      secure: false, // TODO: Mudar para 'true' após configurar HTTPS
-      sameSite: 'lax',
+      secure: isProd,
+      sameSite: isProd ? 'lax' : 'lax',
       maxAge: Math.min(SESSION_IDLE_MS, SESSION_TTL_MS),
     },
   });
@@ -186,12 +186,8 @@ export async function setupAuth(app: Express) {
   const csrfProtection = csurf({ 
     cookie: false,
     value: (req) => {
-      // Express normaliza headers para lowercase, então acessamos diretamente
-      const token = req.headers['csrf-token'] || req.body?._csrf || req.query?._csrf;
-      console.log('[CSRF DEBUG] Headers:', Object.keys(req.headers).filter(k => k.includes('csrf')));
-      console.log('[CSRF DEBUG] Token received:', token);
-      console.log('[CSRF DEBUG] Session ID:', (req.session as any)?.id);
-      return token as string;
+      // Express normaliza headers para lowercase
+      return req.headers['csrf-token'] as string || req.body?._csrf || req.query?._csrf;
     }
   });
   app.use((req, res, next) => {
@@ -205,7 +201,6 @@ export async function setupAuth(app: Express) {
   app.get('/api/csrf-token', (req: any, res) => {
     try {
       const token = (req as any).csrfToken?.();
-      console.log('[CSRF] Generated token:', token);
       res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
       res.set('Pragma', 'no-cache');
       res.set('Expires', '0');
