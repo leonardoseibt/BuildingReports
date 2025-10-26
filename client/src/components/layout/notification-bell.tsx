@@ -42,7 +42,9 @@ export function NotificationBell() {
       if (!response.ok) throw new Error("Failed to fetch notifications");
       return response.json();
     },
-    refetchInterval: 30000, // Refetch every 30 seconds
+    staleTime: 60000, // Consider data fresh for 1 minute
+    refetchInterval: 120000, // Refetch every 2 minutes
+    refetchOnWindowFocus: false, // Don't refetch on window focus
   });
 
   // Fetch unread count
@@ -55,7 +57,9 @@ export function NotificationBell() {
       if (!response.ok) throw new Error("Failed to fetch unread count");
       return response.json();
     },
-    refetchInterval: 30000, // Refetch every 30 seconds
+    staleTime: 60000, // Consider data fresh for 1 minute
+    refetchInterval: 120000, // Refetch every 2 minutes
+    refetchOnWindowFocus: false, // Don't refetch on window focus
   });
 
   // Mark as read mutation
