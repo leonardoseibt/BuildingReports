@@ -517,10 +517,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "buildingId and structure are required" });
       }
       
-      // Verify user owns the building
+      // Verify building exists (shared access model - no ownership check)
       const building = await storage.getBuilding(buildingId);
-      if (!building || building.userId !== Number(req.user.claims.sub)) {
-        return res.status(403).json({ message: "Access denied" });
+      if (!building) {
+        return res.status(404).json({ message: "Building not found" });
       }
       
       // Create report
@@ -548,10 +548,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const reportData = insertReportSchema.parse(req.body);
       
-      // Verify user owns the building
+      // Verify building exists (shared access model - no ownership check)
       const building = await storage.getBuilding(reportData.buildingId);
-      if (!building || building.userId !== Number(req.user.claims.sub)) {
-        return res.status(403).json({ message: "Access denied" });
+      if (!building) {
+        return res.status(404).json({ message: "Building not found" });
       }
       
       const report = await storage.createReport(reportData);
@@ -588,12 +588,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Report not found" });
       }
       
-      // Check if report belongs to user
-  const building = await storage.getBuilding(report.buildingId);
-  if (!building || building.userId !== Number(req.user.claims.sub)) {
-        return res.status(403).json({ message: "Access denied" });
-      }
-      
+      // All authenticated users can view all reports (shared access model)
       res.json(report);
     } catch (error) {
       console.error("Error fetching report:", error);
@@ -616,10 +611,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const existing = await storage.getReport(id);
       if (!existing) return res.status(404).json({ message: 'Report not found' });
       
+      // Verify building exists (shared access model - no ownership check)
       const finalBuildingId = buildingId ?? existing.buildingId;
       const building = await storage.getBuilding(finalBuildingId);
-      if (!building || building.userId !== Number(req.user.claims.sub)) {
-        return res.status(403).json({ message: 'Access denied' });
+      if (!building) {
+        return res.status(404).json({ message: 'Building not found' });
       }
       
       // Update report (if buildingId changed)
@@ -649,11 +645,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const data = insertReportSchema.partial().parse(req.body);
       const existing = await storage.getReport(id);
       if (!existing) return res.status(404).json({ message: 'Report not found' });
+      
+      // Verify building exists (shared access model - no ownership check)
       const buildingId = data.buildingId ?? existing.buildingId;
       const building = await storage.getBuilding(buildingId);
-      if (!building || building.userId !== Number(req.user.claims.sub)) {
-        return res.status(403).json({ message: 'Access denied' });
+      if (!building) {
+        return res.status(404).json({ message: 'Building not found' });
       }
+      
       const updated = await storage.updateReport(id, data as any);
       res.json(updated);
     } catch (error) {
@@ -671,10 +670,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' });
       const existing = await storage.getReport(id);
       if (!existing) return res.status(404).json({ message: 'Report not found' });
-      const building = await storage.getBuilding(existing.buildingId);
-      if (!building || building.userId !== Number(req.user.claims.sub)) {
-        return res.status(403).json({ message: 'Access denied' });
-      }
+      
+      // All authenticated users can delete reports (shared access model)
       const ok = await storage.deleteReport(id);
       res.json({ ok });
     } catch (error) {
@@ -689,14 +686,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const id = Number(req.params.id);
       if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' });
       
-      // Verify report exists and user has access
+      // Verify report exists
       const report = await storage.getReport(id);
       if (!report) return res.status(404).json({ message: 'Report not found' });
       
-      const building = await storage.getBuilding(report.buildingId);
-      if (!building || building.userId !== Number(req.user.claims.sub)) {
-        return res.status(403).json({ message: 'Access denied' });
-      }
+      // All authenticated users can modify report structures (shared access model)
       
       // Validate structure data
       const structure = req.body;
@@ -721,15 +715,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const id = Number(req.params.id);
       if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' });
       
-      // Verify report exists and user has access
+      // Verify report exists
       const report = await storage.getReport(id);
       if (!report) return res.status(404).json({ message: 'Report not found' });
       
-      const building = await storage.getBuilding(report.buildingId);
-      if (!building || building.userId !== Number(req.user.claims.sub)) {
-        return res.status(403).json({ message: 'Access denied' });
-      }
-      
+      // All authenticated users can view report structures (shared access model)
       const structure = await storage.loadReportStructure(id);
       res.json(structure);
     } catch (error) {
