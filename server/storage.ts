@@ -7,6 +7,7 @@ import {
   reportCriteria,
   reportAnalyses,
   reportAnalysisLevels,
+  notifications,
   type User,
   type PublicUser,
   type UpsertUser,
@@ -20,6 +21,8 @@ import {
   type ReportCriterion,
   type ReportAnalysis,
   type ReportAnalysisLevel,
+  type Notification,
+  type InsertNotification,
   type Technician,
   type InsertTechnician,
   type Typology,
@@ -257,6 +260,12 @@ export interface IStorage {
   createCity(item: InsertCity): Promise<City>;
   updateCity(id: number, item: Partial<InsertCity>): Promise<City>;
   deleteCity(id: number): Promise<boolean>;
+
+  // Notifications
+  createNotification(data: InsertNotification): Promise<Notification>;
+  listUserNotifications(userId: number, limit?: number, onlyUnread?: boolean): Promise<Notification[]>;
+  markNotificationAsRead(notificationId: number): Promise<void>;
+  getUnreadNotificationCount(userId: number): Promise<number>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -2252,6 +2261,44 @@ export class DatabaseStorage implements IStorage {
   async deleteCity(id: number): Promise<boolean> {
     const deleted = await db.delete(cities).where(eq(cities.id, id)).returning({ id: cities.id });
     return deleted.length > 0;
+  }
+
+  // Notifications
+  async createNotification(data: InsertNotification): Promise<Notification> {
+    const [notification] = await db
+      .insert(notifications)
+      .values(data)
+      .returning();
+    return notification;
+  }
+
+  async listUserNotifications(userId: number, limit: number = 20, onlyUnread: boolean = false): Promise<Notification[]> {
+    const conditions = onlyUnread 
+      ? and(eq(notifications.userId, userId), eq(notifications.read, false))
+      : eq(notifications.userId, userId);
+
+    return await db
+      .select()
+      .from(notifications)
+      .where(conditions)
+      .orderBy(desc(notifications.createdAt))
+      .limit(limit);
+  }
+
+  async markNotificationAsRead(notificationId: number): Promise<void> {
+    await db
+      .update(notifications)
+      .set({ read: true })
+      .where(eq(notifications.id, notificationId));
+  }
+
+  async getUnreadNotificationCount(userId: number): Promise<number> {
+    const [result] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(notifications)
+      .where(and(eq(notifications.userId, userId), eq(notifications.read, false)));
+    
+    return result?.count || 0;
   }
 }
 

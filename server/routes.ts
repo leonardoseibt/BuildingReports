@@ -328,6 +328,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Notification routes
+  app.get('/api/notifications', isAuthenticated, readLimiter, async (req: any, res) => {
+    try {
+      const userId: number = Number(req.user.claims.sub);
+      const limit = req.query.limit ? Number(req.query.limit) : 20;
+      const onlyUnread = req.query.onlyUnread === 'true';
+      
+      const notifications = await storage.listUserNotifications(userId, limit, onlyUnread);
+      res.json(notifications);
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+      res.status(500).json({ message: 'Falha ao buscar notificações' });
+    }
+  });
+
+  app.post('/api/notifications/:id/read', isAuthenticated, writeLimiter, async (req: any, res) => {
+    try {
+      const notificationId = Number(req.params.id);
+      if (!Number.isFinite(notificationId)) {
+        return res.status(400).json({ message: 'ID inválido' });
+      }
+      
+      await storage.markNotificationAsRead(notificationId);
+      res.json({ ok: true });
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+      res.status(500).json({ message: 'Falha ao marcar notificação como lida' });
+    }
+  });
+
+  app.get('/api/notifications/unread-count', isAuthenticated, readLimiter, async (req: any, res) => {
+    try {
+      const userId: number = Number(req.user.claims.sub);
+      const count = await storage.getUnreadNotificationCount(userId);
+      res.json({ count });
+    } catch (error) {
+      console.error('Error fetching unread notification count:', error);
+      res.status(500).json({ message: 'Falha ao buscar contador de notificações' });
+    }
+  });
+
   // Building routes
   app.post('/api/buildings', isAuthenticated, writeLimiter, sanitizeBody, async (req: any, res) => {
     try {
@@ -1315,6 +1356,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const data = insertAnalysisSchema.parse(req.body);
       const row = await storage.createAnalysis(data as any);
+      
+      // Check if analysis has parameters and create notification if not
+      const parameters = await storage.listParameters(row.id);
+      if (parameters.length === 0) {
+        // Get all users to notify them
+        const { items: allUsers } = await storage.listUsers(1000); // Get up to 1000 users
+        
+        // Create notification for each user
+        for (const user of allUsers) {
+          await storage.createNotification({
+            userId: user.id,
+            type: 'analysis_unused',
+            title: 'Nova análise sem parâmetros',
+            message: `A análise ${row.code} - ${row.label} foi criada mas ainda não possui parâmetros associados.`,
+            link: `/parameters?analysisId=${row.id}`,
+            metadata: {
+              analysisId: row.id,
+              analysisCode: row.code,
+              analysisLabel: row.label,
+            },
+          });
+        }
+      }
+      
       res.json(row);
     } catch (error) {
       if (error instanceof z.ZodError) return res.status(400).json({ message: 'Validation error', errors: error.errors });

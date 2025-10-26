@@ -70,6 +70,42 @@ export const userSettings = pgTable(
 export type UserSetting = typeof userSettings.$inferSelect;
 export type InsertUserSetting = typeof userSettings.$inferInsert;
 
+// Notifications enum
+export const notificationTypeEnum = pgEnum('notification_type', [
+  'analysis_unused',
+  'report_generated',
+  'report_error',
+  'building_updated',
+  'system_alert'
+]);
+
+// Notifications table
+export const notifications = pgTable("notifications", {
+  id: integer("id").generatedAlwaysAsIdentity().primaryKey(),
+  userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+  type: notificationTypeEnum("type").notNull(),
+  title: text("title").notNull(),
+  message: text("message").notNull(),
+  read: boolean("read").default(false).notNull(),
+  link: text("link"), // Optional link to navigate when clicking notification
+  metadata: jsonb("metadata").$type<{
+    analysisId?: number;
+    analysisCode?: string;
+    analysisLabel?: string;
+    buildingId?: number;
+    reportId?: number;
+    [key: string]: any;
+  }>(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("idx_notifications_user_id").on(table.userId),
+  index("idx_notifications_read").on(table.read),
+  index("idx_notifications_created_at").on(table.createdAt),
+]);
+
+export type Notification = typeof notifications.$inferSelect;
+export type InsertNotification = typeof notifications.$inferInsert;
+
 // Enums
 export const bioclimaticZoneEnum = pgEnum('bioclimatic_zone', [
   'ZB1', 'ZB2', 'ZB3', 'ZB4', 'ZB5', 'ZB6', 'ZB7', 'ZB8'
