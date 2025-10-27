@@ -30,7 +30,7 @@ export default function AnalysesList() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<Analysis | null>(null);
   const [search, setSearch] = useState('');
-  const [sortBy, setSortBy] = useState<'code' | 'label' | 'isActive' | 'criterionId' | 'requirementId' | 'createdAt' | null>(null);
+  const [sortBy, setSortBy] = useState<'code' | 'label' | 'isActive' | 'criterionId' | 'requirementId' | 'createdAt' | null>('code');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
   const [criterionFilter, setCriterionFilter] = useState<number | 'all'>('all');
   const [requirementFilter, setRequirementFilter] = useState<number | 'all'>('all');
