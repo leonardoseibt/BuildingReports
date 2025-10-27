@@ -102,13 +102,28 @@ export default function AnalysesList() {
         const ar = aReqId ? requirementLabelById[aReqId] ?? '' : '';
         const br = bReqId ? requirementLabelById[bReqId] ?? '' : '';
         cmp = comparePt(ar, br);
+      } else if (sortBy === 'code') {
+        // Ordenação numérica de código com grupos separados por ponto
+        // Ex: 1.1.1 < 1.1.2 < 1.2.1 < 1.10.1
+        const aParts = String(av || '').split('.').map(p => parseInt(p, 10) || 0);
+        const bParts = String(bv || '').split('.').map(p => parseInt(p, 10) || 0);
+        const maxLen = Math.max(aParts.length, bParts.length);
+        
+        for (let i = 0; i < maxLen; i++) {
+          const aVal = aParts[i] || 0;
+          const bVal = bParts[i] || 0;
+          if (aVal !== bVal) {
+            cmp = aVal - bVal;
+            break;
+          }
+        }
       } else {
         cmp = comparePt(av, bv);
       }
       return sortDir === 'asc' ? cmp : -cmp;
     });
     return arr;
-  }, [filtered, sortBy, sortDir]);
+  }, [filtered, sortBy, sortDir, criteriaById, requirementLabelById]);
 
   const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize));
   const pageSafe = Math.min(page, totalPages);
