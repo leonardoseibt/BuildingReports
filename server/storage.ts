@@ -264,8 +264,8 @@ export interface IStorage {
   createBioclimaticZoneCoverage(zoneId: number, item: Omit<InsertBioclimaticZoneCoverage, 'zoneId'>): Promise<BioclimaticZoneCoverage>;
   updateBioclimaticZoneCoverage(id: number, item: Partial<InsertBioclimaticZoneCoverage>): Promise<BioclimaticZoneCoverage>;
   deleteBioclimaticZoneCoverage(id: number): Promise<boolean>;
-  findBioclimaticZoneForLocation(state: string, city?: string | null): Promise<string | null>;
-  findIsoplethForLocation(state: string, city?: string | null): Promise<string | null>;
+  findBioclimaticZoneForLocation(state: string, city?: string | null): Promise<number | null>;
+  findIsoplethForLocation(state: string, city?: string | null): Promise<number | null>;
   findZonesByCityName(q: string): Promise<Array<{ id: number; code: string; label: string }>>;
 
   // States & Cities
@@ -498,8 +498,8 @@ export class DatabaseStorage implements IStorage {
       neighborhood: (building as any).neighborhood,
       city: (building as any).city,
       state: (building as any).state,
-      bioclimaticZone: building.bioclimaticZone,
-      isoplethCode: (building as any).isoplethCode,
+      bioclimaticZoneId: (building as any).bioclimaticZoneId,
+      isoplethId: (building as any).isoplethId,
       totalArea: building.totalArea,
       buildingHeight: (building as any).buildingHeight,
       basementDepth: (building as any).basementDepth,
@@ -534,8 +534,8 @@ export class DatabaseStorage implements IStorage {
   neighborhood: buildings.neighborhood,
   city: buildings.city,
   state: buildings.state,
-        bioclimaticZone: buildings.bioclimaticZone,
-        isoplethCode: buildings.isoplethCode,
+        bioclimaticZoneId: buildings.bioclimaticZoneId,
+        isoplethId: buildings.isoplethId,
         totalArea: buildings.totalArea,
   buildingHeight: buildings.buildingHeight,
   basementDepth: buildings.basementDepth,
@@ -582,8 +582,8 @@ export class DatabaseStorage implements IStorage {
   neighborhood: buildings.neighborhood,
   city: buildings.city,
   state: buildings.state,
-        bioclimaticZone: buildings.bioclimaticZone,
-        isoplethCode: buildings.isoplethCode,
+        bioclimaticZoneId: buildings.bioclimaticZoneId,
+        isoplethId: buildings.isoplethId,
         totalArea: buildings.totalArea,
   buildingHeight: buildings.buildingHeight,
   basementDepth: buildings.basementDepth,
@@ -621,8 +621,8 @@ export class DatabaseStorage implements IStorage {
   if (rest.neighborhood !== undefined) updates.neighborhood = rest.neighborhood as any;
   if (rest.city !== undefined) updates.city = rest.city as any;
   if (rest.state !== undefined) updates.state = rest.state as any;
-    if (rest.bioclimaticZone != null) updates.bioclimaticZone = rest.bioclimaticZone;
-    if (rest.isoplethCode !== undefined) updates.isoplethCode = rest.isoplethCode;
+    if (rest.bioclimaticZoneId != null) updates.bioclimaticZoneId = rest.bioclimaticZoneId;
+    if (rest.isoplethId !== undefined) updates.isoplethId = rest.isoplethId;
     if (rest.totalArea != null) updates.totalArea = rest.totalArea;
   if (rest.buildingHeight !== undefined) updates.buildingHeight = rest.buildingHeight as any;
   if (rest.basementDepth !== undefined) updates.basementDepth = rest.basementDepth as any;
@@ -1030,8 +1030,8 @@ export class DatabaseStorage implements IStorage {
         neighborhood: buildings.neighborhood,
         city: buildings.city,
         state: buildings.state,
-        bioclimaticZone: buildings.bioclimaticZone,
-        isoplethCode: buildings.isoplethCode,
+        bioclimaticZoneId: buildings.bioclimaticZoneId,
+        isoplethId: buildings.isoplethId,
         totalArea: buildings.totalArea,
         buildingHeight: buildings.buildingHeight,
         basementDepth: buildings.basementDepth,
@@ -2269,7 +2269,7 @@ export class DatabaseStorage implements IStorage {
     return deleted.length > 0;
   }
 
-  async findBioclimaticZoneForLocation(state: string, city?: string | null): Promise<string | null> {
+  async findBioclimaticZoneForLocation(state: string, city?: string | null): Promise<number | null> {
     const uf = (state || '').toUpperCase();
     const cityName = (city || '').trim();
     if (!uf || !cityName) return null;
@@ -2291,12 +2291,10 @@ export class DatabaseStorage implements IStorage {
       .from(bioclimaticZoneCoverages)
       .where(eq(bioclimaticZoneCoverages.cityId, (ci as any).id))
       .limit(1);
-    if (!cov) return null;
-    const [zone] = await db.select({ code: bioclimaticZones.code }).from(bioclimaticZones).where(eq(bioclimaticZones.id, cov.zoneId)).limit(1);
-    return zone?.code ?? null;
+    return cov?.zoneId ?? null;
   }
 
-  async findIsoplethForLocation(state: string, city?: string | null): Promise<string | null> {
+  async findIsoplethForLocation(state: string, city?: string | null): Promise<number | null> {
     const uf = (state || '').toUpperCase();
     const cityName = (city || '').trim();
     if (!uf || !cityName) return null;
@@ -2319,9 +2317,7 @@ export class DatabaseStorage implements IStorage {
       .from(isoplethCoverages)
       .where(eq(isoplethCoverages.cityId, (ci as any).id))
       .limit(1);
-    if (!coverage.length) return null;
-    const [iso] = await db.select({ code: isopleths.code }).from(isopleths).where(eq(isopleths.id, coverage[0].isoplethId)).limit(1);
-    return iso?.code || null;
+    return coverage.length ? coverage[0].isoplethId : null;
   }
 
   // States & Cities

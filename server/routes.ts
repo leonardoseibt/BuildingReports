@@ -878,18 +878,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (data.erro) {
         return res.status(404).json({ message: "CEP not found" });
       }
-  // Determine bioclimatic zone & isopleth code based on DB coverages (city first, then UF)
-  const zoneFromDb = await storage.findBioclimaticZoneForLocation(data.uf, data.localidade);
-  const bioclimaticZone = zoneFromDb || 'ZB3';
-  const isoplethCode = await storage.findIsoplethForLocation(data.uf, data.localidade);
+      // Determine bioclimatic zone & isopleth ID based on DB coverages (city first, then UF)
+      const bioclimaticZoneId = await storage.findBioclimaticZoneForLocation(data.uf, data.localidade);
+      const isoplethId = await storage.findIsoplethForLocation(data.uf, data.localidade);
       
       res.json({
         address: data.logradouro || '',
         neighborhood: data.bairro || '',
         city: data.localidade || '',
         state: data.uf || '',
-        bioclimaticZone,
-        isoplethCode: isoplethCode || null,
+        bioclimaticZoneId: bioclimaticZoneId || null,
+        isoplethId: isoplethId || null,
       });
     } catch (error) {
       console.error("Error looking up CEP:", error);

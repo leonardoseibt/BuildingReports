@@ -147,9 +147,11 @@ export function calculateThermalTransmittance(
  * Calculate thermal performance based on transmittance and bioclimatic zone
  */
 export function calculateThermalPerformance(
-  building: Building
+  building: Building,
+  bioclimaticZoneCode?: string
 ): ThermalPerformanceResult {
-  const zoneLimit = THERMAL_LIMITS[building.bioclimaticZone]?.wall || 3.7;
+  const zoneCode = bioclimaticZoneCode || 'ZB3'; // Default to ZB3 if not provided
+  const zoneLimit = THERMAL_LIMITS[zoneCode]?.wall || 3.7;
   
   // Use default conservative values for calculation
   const thermalTransmittance = 4.0; // Default conservative value
@@ -180,10 +182,10 @@ export function calculateThermalPerformance(
   }
   
   // Zone-specific recommendations
-  if (['ZB1', 'ZB2'].includes(building.bioclimaticZone)) {
+  if (['ZB1', 'ZB2'].includes(zoneCode)) {
     recommendations.push("Zona fria: priorizar isolamento térmico");
     recommendations.push("Considerar orientação solar para aquecimento passivo");
-  } else if (['ZB7', 'ZB8'].includes(building.bioclimaticZone)) {
+  } else if (['ZB7', 'ZB8'].includes(zoneCode)) {
     recommendations.push("Zona quente: priorizar ventilação e sombreamento");
     recommendations.push("Considerar cores claras e telhados ventilados");
   }

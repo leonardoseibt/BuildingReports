@@ -36,8 +36,14 @@ const buildingFormSchema = z.object({
   neighborhood: z.string().optional(),
   city: z.string().optional(),
   state: z.string().length(2, 'UF deve ter 2 letras').optional(),
-  bioclimaticZone: z.string().optional(),
-  isoplethCode: z.string().optional(),
+  bioclimaticZoneId: z.union([z.string(), z.number()]).transform((v) => typeof v === 'string' ? Number(v) : v).optional(),
+  isoplethId: z.union([z.string(), z.number(), z.undefined(), z.null()])
+    .transform((v) => {
+      if (v === undefined || v === null || v === '') return undefined;
+      const num = typeof v === 'string' ? Number(v) : v;
+      return isNaN(num) ? undefined : num;
+    })
+    .optional(),
   totalArea: z.string()
     .min(1, "Área total é obrigatória")
     .transform((val) => parseFloat(val))
@@ -116,8 +122,8 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
       neighborhood: '',
       city: '',
       state: undefined,
-      bioclimaticZone: undefined as any,
-  isoplethCode: undefined as any,
+      bioclimaticZoneId: undefined as any,
+      isoplethId: undefined as any,
       totalArea: 0 as any,
       buildingHeight: 0 as any,
       basementDepth: 0 as any,
@@ -136,8 +142,8 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
       form.reset({
         name: '', technicianId: undefined as any, typologyId: undefined as any,
         cep: '', street: '', addressNumber: '', neighborhood: '', city: '', state: undefined,
-        bioclimaticZone: undefined as any,
-  isoplethCode: undefined as any,
+        bioclimaticZoneId: undefined as any,
+        isoplethId: undefined as any,
         totalArea: 0 as any, buildingHeight: 0 as any, basementDepth: 0 as any, floors: 0 as any, units: 1 as any,
         noiseClassId: undefined as any, aggressivenessClassId: undefined as any, predominantColorId: undefined as any,
       });
@@ -148,13 +154,13 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
       technicianId: (building as any).technicianId as any,
       typologyId: (building as any).typologyId ?? undefined,
       cep: building.cep || '',
-  street: (building as any).street || '',
+      street: (building as any).street || '',
       addressNumber: (building as any).addressNumber || '',
       neighborhood: (building as any).neighborhood || '',
       city: (building as any).city || '',
       state: (building as any).state || undefined,
-      bioclimaticZone: (building.bioclimaticZone as any) || undefined,
-  isoplethCode: (building as any).isoplethCode || undefined,
+      bioclimaticZoneId: (building as any).bioclimaticZoneId ?? undefined,
+      isoplethId: (building as any).isoplethId ?? undefined,
       totalArea: String(building.totalArea) as any,
       buildingHeight: (building as any).buildingHeight != null ? String((building as any).buildingHeight) as any : "0",
       basementDepth: (building as any).basementDepth != null ? String((building as any).basementDepth) as any : "0",
@@ -221,21 +227,26 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
         if (data.neighborhood) form.setValue('neighborhood', data.neighborhood);
         if (data.city) form.setValue('city', data.city);
         if (data.state) form.setValue('state', data.state);
-        form.setValue('bioclimaticZone', data.bioclimaticZone);
-        setZoneLocked(true);
-        if (data.isoplethCode) {
-          form.setValue('isoplethCode', data.isoplethCode);
+        if (data.bioclimaticZoneId) {
+          form.setValue('bioclimaticZoneId', data.bioclimaticZoneId);
+          setZoneLocked(true);
+        }
+        if (data.isoplethId) {
+          form.setValue('isoplethId', data.isoplethId);
           setIsoplethLocked(true);
         } else {
           setIsoplethLocked(false);
         }
+        
+        const zone = zones.find(z => z.id === data.bioclimaticZoneId);
+        const isopleth = isopleths.find(i => i.id === data.isoplethId);
         toast({
           title: "CEP encontrado",
-          description: `Zona: ${data.bioclimaticZone}${data.isoplethCode ? ' • Isopleta: '+data.isoplethCode : ''}`,
+          description: `Zona: ${zone?.code || data.bioclimaticZoneId}${isopleth ? ' • Isopleta: '+isopleth.code : ''}`,
         });
       } else {
-  setZoneLocked(false);
-  setIsoplethLocked(false);
+        setZoneLocked(false);
+        setIsoplethLocked(false);
         toast({
           title: "CEP não encontrado",
           description: "Verifique o CEP informado.",
@@ -475,7 +486,7 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
               />
               <FormField
                 control={form.control}
-                name="bioclimaticZone"
+                name="bioclimaticZoneId"
                 render={({ field }) => (
                   <FormItem className="md:col-span-5">
                     <FormControl>
@@ -490,9 +501,9 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
                               disabled={zoneLocked}
                             >
                               {(() => {
-                                const code = form.watch('bioclimaticZone') as string | undefined;
-                                const z = zones.find((zz) => zz.code === code);
-                                return z ? `${z.code} - ${z.label}` : (code || 'Selecione ou busque…');
+                                const zoneId = form.watch('bioclimaticZoneId') as number | undefined;
+                                const z = zones.find((zz) => zz.id === zoneId);
+                                return z ? `${z.code} - ${z.label}` : 'Selecione ou busque…';
                               })()}
                               <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                             </Button>
@@ -507,10 +518,10 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
                                     <CommandItem
                                       key={z.id}
                                       value={`${z.code} - ${z.label}`}
-                                      onSelect={() => { form.setValue('bioclimaticZone', z.code as any, { shouldDirty: true }); setOpenZone(false); }}
+                                      onSelect={() => { form.setValue('bioclimaticZoneId', z.id as any, { shouldDirty: true }); setOpenZone(false); }}
                                     >
                                       {z.code} - {z.label}
-                                      <Check className={cn('ml-auto h-4 w-4', (form.getValues('bioclimaticZone') || '') === z.code ? 'opacity-100' : 'opacity-0')} />
+                                      <Check className={cn('ml-auto h-4 w-4', (form.getValues('bioclimaticZoneId') || 0) === z.id ? 'opacity-100' : 'opacity-0')} />
                                     </CommandItem>
                                   ))}
                                 </CommandGroup>
@@ -529,7 +540,7 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
               />
               <FormField
                 control={form.control}
-                name="isoplethCode"
+                name="isoplethId"
                 render={({ field }) => (
                   <FormItem className="md:col-span-5">
                     <FormControl>
@@ -550,10 +561,10 @@ export default function BuildingForm({ onSuccess, onCancel, building }: Building
                               if (fmax) return ` (<= ${fmax} m/s)`;
                               return '';
                             })();
-                            return { value: i.code, label: `${i.code} - ${i.label}${range}` };
+                            return { value: String(i.id), label: `${i.code} - ${i.label}${range}` };
                           })}
-                        value={field.value ? String(field.value) : undefined}
-                        onChange={field.onChange}
+                        value={field.value != null ? String(field.value) : undefined}
+                        onChange={(val) => field.onChange(val ? Number(val) : undefined)}
                         placeholder="Selecione a isopleta"
                         triggerTestId="select-isopleth"
                         className="border-0 bg-transparent shadow-none focus:ring-0 focus:ring-offset-0 h-8 px-2"

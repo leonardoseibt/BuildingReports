@@ -100,7 +100,6 @@ export default function BuildingList() {
     return buildings.filter((b) => {
       const name = normText(b.name);
       const typology = normText((b as any).typologyLabel || (b as any).typologyCode || "");
-      const zone = normText(b.bioclimaticZone || "");
       const city = normText((b as any).city || "");
       const state = normText((b as any).state || "");
       const responsible = normText(b.technicianId ? (techNameById[b.technicianId] ?? "") : "");
@@ -108,7 +107,6 @@ export default function BuildingList() {
       return (
         name.includes(q) ||
         typology.includes(q) ||
-        zone.includes(q) ||
         city.includes(q) ||
         state.includes(q) ||
         responsible.includes(q) ||

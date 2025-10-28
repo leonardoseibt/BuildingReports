@@ -181,10 +181,11 @@ export default function ParameterForm({ onSuccess, onCancel, initialItem }: { on
         superiorValue: clean(values.superiorValue),
         unit: values.unit === '' ? null : values.unit,
         notes: values.notes === '' ? null : values.notes,
-  attributeId: values.attributeId ? Number(values.attributeId) : null,
-        attributeValueId: values.attributeValueId ? Number(values.attributeValueId) : null,
-        attribute2Id: values.attribute2Id ? Number(values.attribute2Id) : null,
-        attributeValue2Id: values.attributeValue2Id ? Number(values.attributeValue2Id) : null,
+        // Converte para número apenas se não for string vazia/null/undefined
+        attributeId: (values.attributeId !== '' && values.attributeId != null) ? Number(values.attributeId) : null,
+        attributeValueId: (values.attributeValueId !== '' && values.attributeValueId != null) ? Number(values.attributeValueId) : null,
+        attribute2Id: (values.attribute2Id !== '' && values.attribute2Id != null) ? Number(values.attribute2Id) : null,
+        attributeValue2Id: (values.attributeValue2Id !== '' && values.attributeValue2Id != null) ? Number(values.attributeValue2Id) : null,
         isActive: values.isActive,
       };
       const method = isEdit ? 'PUT' : 'POST';

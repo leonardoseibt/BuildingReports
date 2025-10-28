@@ -203,8 +203,8 @@ export const buildings = pgTable("buildings", {
   neighborhood: varchar("neighborhood", { length: 128 }),
   city: varchar("city", { length: 128 }),
   state: varchar("state", { length: 2 }),
-  bioclimaticZone: varchar("bioclimatic_zone", { length: 16 }).notNull(),
-  isoplethCode: varchar("isopleth_code", { length: 16 }),
+  bioclimaticZoneId: integer("bioclimatic_zone_id").references(() => bioclimaticZones.id).notNull(),
+  isoplethId: integer("isopleth_id").references(() => isopleths.id),
   totalArea: decimal("total_area", { precision: 10, scale: 2 }).notNull(),
   buildingHeight: decimal("building_height", { precision: 10, scale: 2 }).default("0.00"),
   basementDepth: decimal("basement_depth", { precision: 10, scale: 2 }).default("0.00"),
@@ -625,7 +625,8 @@ export const insertBuildingSchema = createInsertSchema(buildings)
   street: z.string().min(1, 'Logradouro é obrigatório'),
   city: z.string().optional().nullable().transform(v => v ? v : undefined),
   state: z.string().optional().nullable().transform(v => v ? v : undefined),
-  isoplethCode: z.string().optional().nullable().transform(v => v ? v : undefined),
+  bioclimaticZoneId: z.coerce.number().int().positive('Zona bioclimática é obrigatória'),
+  isoplethId: z.coerce.number().int().positive().optional().nullable(),
   });
 
 // Allow partial updates on buildings (no userId changes through API)

@@ -44,8 +44,8 @@ const snakeToCamelOverrides: Record<string, string> = {
   typology_id: 'typologyId',
   noise_class_id: 'noiseClassId',
   aggressiveness_class_id: 'aggressivenessClassId',
-  bioclimatic_zone: 'bioclimaticZone',
-  isopleth_code: 'isoplethCode'
+  bioclimatic_zone_id: 'bioclimaticZoneId',
+  isopleth_id: 'isoplethId'
 };
 
 const snakeToCamelMap: Record<string, string> = { ...technicalFieldMap, ...snakeToCamelOverrides };
@@ -592,15 +592,15 @@ function getTechnicianInfo(building: Building, technicians: Technician[]): strin
 }
 
 function getBioclimaticZoneInfo(building: Building, zones: BioclimaticZone[]): string | null {
-  if (!building.bioclimaticZone) return null;
-  const item = zones.find((z) => z.code === building.bioclimaticZone);
-  return item ? `${item.code} - ${item.label}` : building.bioclimaticZone;
+  if (!building.bioclimaticZoneId) return null;
+  const item = zones.find((z) => z.id === building.bioclimaticZoneId);
+  return item ? `${item.code} - ${item.label}` : `ID ${building.bioclimaticZoneId}`;
 }
 
 function getIsoplethInfo(building: Building, isopleths: Isopleth[]): string | null {
-  if (!building.isoplethCode) return null;
-  const item = isopleths.find((i) => i.code === building.isoplethCode);
-  if (!item) return building.isoplethCode;
+  if (!building.isoplethId) return null;
+  const item = isopleths.find((i) => i.id === building.isoplethId);
+  if (!item) return `ID ${building.isoplethId}`;
 
   const formatNumber = (raw: any) => {
     const num = Number(raw);

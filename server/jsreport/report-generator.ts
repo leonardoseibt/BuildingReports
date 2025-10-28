@@ -504,12 +504,12 @@ async function loadReportContext(reportId: number, userId: number): Promise<Repo
     ? aggressivenessClasses.find((ac: any) => ac.id === building.aggressivenessClassId) 
     : undefined;
   
-  const bioclimaticZone = building.bioclimaticZone 
-    ? bioclimaticZones.find((z: any) => z.code === building.bioclimaticZone) 
+  const bioclimaticZone = building.bioclimaticZoneId 
+    ? bioclimaticZones.find((z: any) => z.id === building.bioclimaticZoneId) 
     : undefined;
   
-  const isopleth = building.isoplethCode 
-    ? isopleths.find((i: any) => i.code === building.isoplethCode) 
+  const isopleth = building.isoplethId 
+    ? isopleths.find((i: any) => i.id === building.isoplethId) 
     : undefined;
 
   return {
@@ -632,11 +632,11 @@ function buildBuildingInfoPage(context: ReportRenderContext): string {
       <table style="width: 100%; border-collapse: collapse;">
         <tr>
           <td style="padding: 12px; border: 1px solid #cbd5e1; background-color: #f1f5f9; font-weight: 700; width: 35%; font-size: 11px;">ZONA BIOCLIMÁTICA</td>
-          <td style="padding: 12px; border: 1px solid #cbd5e1; font-size: 11px;">${formatWithDescription(building.bioclimaticZone, bioclimaticZone?.label)}</td>
+          <td style="padding: 12px; border: 1px solid #cbd5e1; font-size: 11px;">${formatWithDescription(bioclimaticZone?.code, bioclimaticZone?.label)}</td>
         </tr>
         <tr>
           <td style="padding: 12px; border: 1px solid #cbd5e1; background-color: #f1f5f9; font-weight: 700; font-size: 11px;">ISOPLETA</td>
-          <td style="padding: 12px; border: 1px solid #cbd5e1; font-size: 11px;">${formatWithDescription(building.isoplethCode, isopleth?.label)}</td>
+          <td style="padding: 12px; border: 1px solid #cbd5e1; font-size: 11px;">${formatWithDescription(isopleth?.code, isopleth?.label)}</td>
         </tr>
         ${noiseClass ? `
         <tr>
