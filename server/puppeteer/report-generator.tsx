@@ -500,24 +500,10 @@ function getPredominantColorInfo(building: Building, predominantColors: Predomin
   const item = predominantColors.find((c) => c.id === building.predominantColorId);
   if (!item) return null;
 
-  const formatAbsorptance = (value: any) => {
-    if (value === null || value === undefined) return null;
-    const num = Number(value);
-    if (Number.isNaN(num)) return null;
-    return num.toFixed(3);
-  };
-
-  const min = formatAbsorptance(item.absorptanceMin);
-  const max = formatAbsorptance(item.absorptanceMax);
-  
-  let range = '';
-  if (min !== null && max !== null) {
-    range = ` (α: ${min} - ${max})`;
-  } else if (min !== null) {
-    range = ` (α: ${min})`;
-  }
-
-  return `${item.code} - ${item.label}${range}`;
+  // Colors no longer have absorptanceMin/Max - they come from color_groups
+  // For now, just return the color code and label without the alpha range
+  // The alpha range is defined by the color group, not the individual color
+  return `${item.code} - ${item.label}`;
 }
 
 function getTechnicianInfo(building: Building, technicians: Technician[]): string | null {

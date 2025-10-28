@@ -1444,11 +1444,11 @@ export class DatabaseStorage implements IStorage {
     return rows as any;
   }
   async createPredominantColor(item: InsertPredominantColor): Promise<PredominantColor> {
+    // Nota: absorptanceMin/Max removidos - agora pertencem ao color_group
     const [row] = await db.insert(predominantColors).values({ 
       code: (item as any).code, 
       label: (item as any).label,
-      absorptanceMin: (item as any).absorptanceMin,
-      absorptanceMax: (item as any).absorptanceMax,
+      colorGroupId: (item as any).colorGroupId,
       isActive: (item as any).isActive ?? true 
     }).returning();
     return row as PredominantColor;
