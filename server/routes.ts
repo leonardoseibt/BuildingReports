@@ -1559,7 +1559,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const table = attr.valueSource; // e.g. 'typologies'
       if (!table) return res.json([]);
       // Basic whitelist to avoid SQL injection; could instead query attributeValueSourceEnum
-      const allowed = new Set(['typologies','noise_classes','aggressiveness_classes','predominant_colors','bioclimatic_zones','isopleths']);
+      const allowed = new Set(['typologies','noise_classes','aggressiveness_classes','predominant_colors','bioclimatic_zones','isopleths','color_groups']);
       if (!allowed.has(table)) return res.status(400).json({ message: 'Fonte não suportada' });
       // Validate identifier names against information_schema
       const identRe = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
