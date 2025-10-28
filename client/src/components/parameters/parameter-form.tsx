@@ -28,6 +28,8 @@ const formSchema = z.object({
   notes: z.string().optional().nullable().transform(v => v === null ? '' : (v ?? '')),
   attributeId: z.union([z.string(), z.number()]).optional().nullable(),
   attributeValueId: z.union([z.string(), z.number()]).optional().nullable(),
+  attribute2Id: z.union([z.string(), z.number()]).optional().nullable(),
+  attributeValue2Id: z.union([z.string(), z.number()]).optional().nullable(),
   isActive: z.boolean().optional().default(true),
 });
 
@@ -58,6 +60,8 @@ export default function ParameterForm({ onSuccess, onCancel, initialItem }: { on
       notes: (initialItem as any)?.notes || '',
   attributeId: (initialItem as any)?.attributeId ?? '',
   attributeValueId: (initialItem as any)?.attributeValueId ?? '',
+  attribute2Id: (initialItem as any)?.attribute2Id ?? '',
+  attributeValue2Id: (initialItem as any)?.attributeValue2Id ?? '',
       isActive: initialItem?.isActive ?? true,
     }
   });
@@ -80,6 +84,10 @@ export default function ParameterForm({ onSuccess, onCancel, initialItem }: { on
     if (initialItem && (initialItem as any).attributeId) {
       form.setValue('attributeId', String((initialItem as any).attributeId) as any);
       if ((initialItem as any).attributeValueId != null) form.setValue('attributeValueId', String((initialItem as any).attributeValueId) as any);
+    }
+    if (initialItem && (initialItem as any).attribute2Id) {
+      form.setValue('attribute2Id', String((initialItem as any).attribute2Id) as any);
+      if ((initialItem as any).attributeValue2Id != null) form.setValue('attributeValue2Id', String((initialItem as any).attributeValue2Id) as any);
     }
   }, [initialItem]);
 
@@ -115,6 +123,12 @@ export default function ParameterForm({ onSuccess, onCancel, initialItem }: { on
     return attributes.find(a => String(a.id) === String(id)) || null;
   }, [attributes, form.watch('attributeId')]);
 
+  const selectedAttribute2 = useMemo(()=> {
+    const id = form.watch('attribute2Id');
+    if (!id) return null;
+    return attributes.find(a => String(a.id) === String(id)) || null;
+  }, [attributes, form.watch('attribute2Id')]);
+
   // Pré-carrega dados das fontes de referência
   const { data: attributeValues = [], isLoading: loadingAttributeValues } = useQuery({
     queryKey: ['attribute-values', form.watch('attributeId')],
@@ -128,7 +142,20 @@ export default function ParameterForm({ onSuccess, onCancel, initialItem }: { on
     }
   });
 
+  const { data: attributeValues2 = [], isLoading: loadingAttributeValues2 } = useQuery({
+    queryKey: ['attribute-values-2', form.watch('attribute2Id')],
+    enabled: !!selectedAttribute2 && selectedAttribute2.dataKind === 'reference',
+    queryFn: async () => {
+      const id = form.watch('attribute2Id');
+      if (!id) return [];
+      const r = await fetch(`/api/attributes/${id}/values`, { credentials: 'include' });
+      if (!r.ok) return [];
+      return r.json();
+    }
+  });
+
   function getAttributeSourceRows(): any[] { return attributeValues; }
+  function getAttributeSourceRows2(): any[] { return attributeValues2; }
 
   async function onSubmit(values: ParameterFormData) {
     // Basic validation: ensure numeric ordering if both provided
@@ -156,6 +183,8 @@ export default function ParameterForm({ onSuccess, onCancel, initialItem }: { on
         notes: values.notes === '' ? null : values.notes,
   attributeId: values.attributeId ? Number(values.attributeId) : null,
         attributeValueId: values.attributeValueId ? Number(values.attributeValueId) : null,
+        attribute2Id: values.attribute2Id ? Number(values.attribute2Id) : null,
+        attributeValue2Id: values.attributeValue2Id ? Number(values.attributeValue2Id) : null,
         isActive: values.isActive,
       };
       const method = isEdit ? 'PUT' : 'POST';
@@ -178,14 +207,14 @@ export default function ParameterForm({ onSuccess, onCancel, initialItem }: { on
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6" autoComplete="off">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3" autoComplete="off">
         <FormHeader
           title={isEdit ? 'Editar Parâmetro' : 'Novo Parâmetro'}
           subtitle={isEdit ? 'Atualize os dados do parâmetro.' : 'Cadastre um novo parâmetro para uma análise.'}
           initials={form.getValues('label')?.substring(0,2) || null}
         />
         {/* Linha 1: Requisito & Critério */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div>
             <NotchedField label="Requisito" requiredMark>
               <select
@@ -220,7 +249,7 @@ export default function ParameterForm({ onSuccess, onCancel, initialItem }: { on
           </div>
         </div>
         {/* Linha 2: Análise (linha isolada) */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <FormField name="analysisId" control={form.control} render={({ field }) => (
             <FormItem className="md:col-span-2">
               <FormControl>
@@ -240,7 +269,7 @@ export default function ParameterForm({ onSuccess, onCancel, initialItem }: { on
           )} />
         </div>
         {/* Linha 3 nova: Atributo + dependentes */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-start">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-3 items-start">
           <div className="md:col-span-2">
             <NotchedField label="Atributo">
               <select
@@ -302,7 +331,7 @@ export default function ParameterForm({ onSuccess, onCancel, initialItem }: { on
               )} />
             )}
             {selectedAttribute && selectedAttribute.dataKind === 'numeric' && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <FormField name="minLimit" control={form.control} render={({ field }) => (
                   <FormItem>
                     <FormControl>
@@ -333,8 +362,77 @@ export default function ParameterForm({ onSuccess, onCancel, initialItem }: { on
             )}
           </div>
         </div>
-        {/* Linha 3: Descrição & Unidade */}
-        <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+        {/* Linha 4 nova: Segundo Atributo (condicional) */}
+        {form.watch('attributeId') && (
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-3 items-start border-t pt-3">
+            <div className="md:col-span-2">
+              <NotchedField label="Atributo 2 (opcional)">
+                <select
+                  value={form.watch('attribute2Id') || ''}
+                  onChange={(e)=> {
+                    const id = e.target.value;
+                    form.setValue('attribute2Id', id as any);
+                    form.setValue('attributeValue2Id', '' as any);
+                  }}
+                  className="bg-transparent border-0 shadow-none focus:outline-none focus:ring-0 focus:ring-offset-0 w-full h-9 text-sm"
+                >
+                  <option value="">Selecione...</option>
+                  {attributes.slice().sort((a:any,b:any)=> a.friendlyName.localeCompare(b.friendlyName,'pt-BR')).map(a => (
+                    <option key={a.id} value={a.id}>{a.friendlyName} ({a.dataKind})</option>
+                  ))}
+                </select>
+              </NotchedField>
+              {selectedAttribute2 && (
+                <p className="text-[11px] text-slate-500 mt-1">
+                  Origem: {selectedAttribute2.sourceTable}.{selectedAttribute2.sourceColumn}{selectedAttribute2.valueSource ? ` • Fonte Valor: ${selectedAttribute2.valueSource}` : ''}
+                </p>
+              )}
+            </div>
+            <div className="md:col-span-2">
+              {selectedAttribute2 && selectedAttribute2.dataKind === 'reference' && (
+                <FormField name="attributeValue2Id" control={form.control} render={({ field }) => (
+                  <FormItem>
+                    <FormControl>
+                      <NotchedField label="Valor do Atributo 2">
+                        <select
+                          {...field}
+                          value={field.value || ''}
+                          onChange={(e)=> field.onChange(e.target.value)}
+                          className="bg-transparent border-0 shadow-none focus:outline-none focus:ring-0 focus:ring-offset-0 w-full h-9 text-sm"
+                        >
+                          <option value="">Selecione...</option>
+                          {loadingAttributeValues2 && <option value="" disabled>Carregando...</option>}
+                          {getAttributeSourceRows2().map((row: any) => {
+                            const idField = selectedAttribute2.valueIdField || 'id';
+                            const labelField = selectedAttribute2.valueLabelField || 'label';
+                            const optionId = row[idField];
+                            const code = row.code ?? optionId;
+                            const description = row.label ?? row[labelField] ?? row.description ?? row.name ?? '';
+                            const combined = description ? `${code} - ${description}` : String(code);
+                            const truncated = combined.length > 55 ? combined.slice(0, 55) + '…' : combined;
+                            return (
+                              <option key={optionId} value={optionId} title={combined}>
+                                {truncated}
+                              </option>
+                            );
+                          })}
+                        </select>
+                      </NotchedField>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+              )}
+              {selectedAttribute2 && selectedAttribute2.dataKind === 'numeric' && (
+                <p className="text-sm text-slate-500 mt-2">
+                  Atributos numéricos como segundo atributo usam os mesmos limites do primeiro atributo.
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+        {/* Linha 5: Descrição & Unidade */}
+        <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
           <FormField name="label" control={form.control} render={({ field }) => (
             <FormItem className="md:col-span-5">
               <FormControl>
@@ -342,8 +440,8 @@ export default function ParameterForm({ onSuccess, onCancel, initialItem }: { on
                   <SmartTextarea
                     {...field}
                     placeholder="Descrição"
-                    rows={3}
-                    className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 resize-y min-h-[80px] text-sm w-full"
+                    rows={2}
+                    className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 resize-y min-h-[60px] text-sm w-full"
                   />
                 </NotchedField>
               </FormControl>
@@ -362,7 +460,7 @@ export default function ParameterForm({ onSuccess, onCancel, initialItem }: { on
           )} />
         </div>
         {/* Linha 4: Mínimo, Intermediário, Superior */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <FormField name="minimumValue" control={form.control} render={({ field }) => (
             <FormItem>
               <FormControl>
@@ -420,8 +518,8 @@ export default function ParameterForm({ onSuccess, onCancel, initialItem }: { on
                 <SmartTextarea
                   {...field}
                   placeholder="Notas adicionais"
-                  rows={3}
-                  className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 resize-y min-h-[64px] text-sm w-full"
+                  rows={2}
+                  className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 resize-y min-h-[50px] text-sm w-full"
                   onChange={e => field.onChange(smartReplace(e.target.value))}
                 />
               </NotchedField>

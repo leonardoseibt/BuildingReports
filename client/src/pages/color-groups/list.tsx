@@ -11,29 +11,35 @@ import { showSuccess, showError } from "@/lib/toast-messages";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Palette, Plus, Loader2, Pencil, Trash2, Search, ArrowUp, ArrowDown } from "lucide-react";
+import { Layers, Plus, Loader2, Pencil, Trash2, Search, ArrowUp, ArrowDown } from "lucide-react";
 import { ActiveToggleButton } from "@/components/common/active-toggle-button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PaginationSimple as Pagination } from "@/components/ui/pagination";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import type { PredominantColor } from "@shared/schema";
+import type { ColorGroup } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
-import PredominantColorForm from "@/components/predominant-colors/predominant-color-form";
+import ColorGroupForm from "@/components/color-groups/color-group-form";
 
-export default function PredominantColorsList() {
+export default function ColorGroupsList() {
   const { isAuthenticated, isLoading } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [formKey, setFormKey] = useState(0);
-  const [editItem, setEditItem] = useState<PredominantColor | null>(null);
+  const [editItem, setEditItem] = useState<ColorGroup | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const [selectedItem, setSelectedItem] = useState<PredominantColor | null>(null);
+  const [selectedItem, setSelectedItem] = useState<ColorGroup | null>(null);
   const [search, setSearch] = useState("");
-  const [sortBy, setSortBy] = useState<"code" | "label" | "isActive" | "createdAt" | null>('code');
+  const [sortBy, setSortBy] = useState<"code" | "label" | "minAlpha" | "isActive" | "createdAt" | null>('minAlpha');
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const pageSize = usePageSize(isAuthenticated);
   const [page, setPage] = useState(1);
+
+  const formatAlphaRange = (min: any, max: any) => {
+    const minStr = min != null ? Number(min).toFixed(2) : "0.00";
+    const maxStr = max != null ? Number(max).toFixed(2) : "1.00";
+    return `${minStr} – ${maxStr}`;
+  };
 
   useAuthRedirect();
 
@@ -41,7 +47,7 @@ export default function PredominantColorsList() {
     setPage(1);
   }, [pageSize]);
 
-  const { data: items = [], isFetching, isLoading: isLoadingItems } = useQuery<PredominantColor[]>({ queryKey: ["/api/predominant-colors"], enabled: isAuthenticated });
+  const { data: items = [], isFetching, isLoading: isLoadingItems } = useQuery<ColorGroup[]>({ queryKey: ["/api/color-groups"], enabled: isAuthenticated });
   const normText = (v: any) => String(v ?? "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]+/g, "");
   const filtered = useMemo(() => {
     const q = normText(search);
@@ -49,7 +55,7 @@ export default function PredominantColorsList() {
     return items.filter((t) =>
       normText(t.code).includes(q) ||
       normText(t.label).includes(q) ||
-      normText((t as any).createdAt).includes(q)
+      normText((t as any).description).includes(q)
     );
   }, [items, search]);
   const sorted = useMemo(() => {
@@ -65,6 +71,8 @@ export default function PredominantColorsList() {
         cmp = ad - bd;
       } else if (sortBy === 'isActive') {
         cmp = Number((a as any).isActive) - Number((b as any).isActive);
+      } else if (sortBy === 'minAlpha') {
+        cmp = Number(av ?? 0) - Number(bv ?? 0);
       } else {
         cmp = comparePt(av, bv);
       }
@@ -90,26 +98,26 @@ export default function PredominantColorsList() {
   };
 
   async function deleteRequest(id: number) {
-    await apiRequest('DELETE', `/api/predominant-colors/${id}`);
+    await apiRequest('DELETE', `/api/color-groups/${id}`);
     return true;
   }
   const deleteMutation = useMutation({
-    mutationFn: async (t: PredominantColor) => deleteRequest(t.id),
+    mutationFn: async (t: ColorGroup) => deleteRequest(t.id),
     onMutate: async (t) => {
-      await queryClient.cancelQueries({ queryKey: ["/api/predominant-colors"] });
-      const prev = queryClient.getQueryData<PredominantColor[]>(["/api/predominant-colors"]) || [];
-      queryClient.setQueryData<PredominantColor[]>(["/api/predominant-colors"], prev.filter(x => x.id !== t.id));
+      await queryClient.cancelQueries({ queryKey: ["/api/color-groups"] });
+      const prev = queryClient.getQueryData<ColorGroup[]>(["/api/color-groups"]) || [];
+      queryClient.setQueryData<ColorGroup[]>(["/api/color-groups"], prev.filter(x => x.id !== t.id));
       return { prev };
     },
     onError: (err, _t, ctx) => {
-      if (ctx?.prev) queryClient.setQueryData(["/api/predominant-colors"], ctx.prev);
+      if (ctx?.prev) queryClient.setQueryData(["/api/color-groups"], ctx.prev);
       showError(toast, `Erro ao excluir: ${String(err)}`);
     },
-    onSuccess: (_data, t) => { showSuccess(toast, `${t.label} foi removida.`); },
-    onSettled: () => { queryClient.invalidateQueries({ queryKey: ["/api/predominant-colors"], refetchType: 'inactive' }); queryClient.invalidateQueries({ queryKey: ['/api/dashboard/extended-stats'] }); }
+    onSuccess: (_data, t) => { showSuccess(toast, `${t.label} foi removido.`); },
+    onSettled: () => { queryClient.invalidateQueries({ queryKey: ["/api/color-groups"], refetchType: 'inactive' }); }
   });
 
-  function askDelete(t: PredominantColor) { setSelectedItem(t); setConfirmOpen(true); }
+  function askDelete(t: ColorGroup) { setSelectedItem(t); setConfirmOpen(true); }
   function confirmDelete() { if (!selectedItem) return; deleteMutation.mutate(selectedItem); setConfirmOpen(false); setSelectedItem(null); }
 
   if (isLoading || !isAuthenticated) return null;
@@ -119,13 +127,13 @@ export default function PredominantColorsList() {
       <Sidebar />
       <div className="flex-1 flex flex-col overflow-hidden">
         <Header
-          title="Cores"
-          description="Gerencie as cores com absortância térmica definida por grupos"
+          title="Grupos de Cores"
+          description="Gerencie os grupos de absortância térmica"
           action={
             <div className="flex items-center gap-2">
               {isFetching && <Loader2 className="h-4 w-4 animate-spin text-slate-400" aria-label="Atualizando" />}
               <Button onClick={() => { setEditItem(null); setFormKey(k => k + 1); setOpen(true); }}>
-                <Plus className="w-4 h-4 mr-2" /> Nova Cor
+                <Plus className="w-4 h-4 mr-2" /> Novo Grupo
               </Button>
             </div>
           }
@@ -139,7 +147,7 @@ export default function PredominantColorsList() {
                   type="text"
                   value={search}
                   onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-                  placeholder="Buscar cores (código, descrição, data)"
+                  placeholder="Buscar grupos (código, descrição)"
                   className="h-9 pl-9"
                 />
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
@@ -147,14 +155,14 @@ export default function PredominantColorsList() {
             </div>
           </div>
           {isLoadingItems ? (
-            <div className="text-center py-12"><Palette className="w-16 h-16 text-slate-300 mx-auto mb-4" /><p className="text-slate-500">Carregando...</p></div>
+            <div className="text-center py-12"><Layers className="w-16 h-16 text-slate-300 mx-auto mb-4" /><p className="text-slate-500">Carregando...</p></div>
           ) : items.length === 0 ? (
             <div className="text-center py-12">
-              <Palette className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-slate-900 mb-2">Nenhuma cor cadastrada</h3>
-              <p className="text-slate-500 mb-6">Cadastre a primeira para utilizá-la nas edificações.</p>
+              <Layers className="w-16 h-16 text-slate-300 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-slate-900 mb-2">Nenhum grupo cadastrado</h3>
+              <p className="text-slate-500 mb-6">Cadastre o primeiro grupo de absortância térmica.</p>
               <Button size="lg" onClick={() => { setEditItem(null); setFormKey(k => k + 1); setOpen(true); }}>
-                <Plus className="w-4 h-4 mr-2" /> Cadastrar Cor
+                <Plus className="w-4 h-4 mr-2" /> Cadastrar Grupo
               </Button>
             </div>
           ) : (
@@ -162,24 +170,28 @@ export default function PredominantColorsList() {
               <Table className="table-fixed">
                 <TableHeader>
                   <TableRow className="bg-slate-100/60">
-                    <TableHead onClick={() => toggleSort('code')} aria-sort={sortBy === 'code' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} className="w-[12%] cursor-pointer select-none">Código {sortBy === 'code' && (sortDir === 'asc' ? <ArrowUp className="inline-block w-3 h-3 ml-1 opacity-70" /> : <ArrowDown className="inline-block w-3 h-3 ml-1 opacity-70" />)}</TableHead>
-                    <TableHead onClick={() => toggleSort('label')} aria-sort={sortBy === 'label' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} className="w-[55%] cursor-pointer select-none">Descrição {sortBy === 'label' && (sortDir === 'asc' ? <ArrowUp className="inline-block w-3 h-3 ml-1 opacity-70" /> : <ArrowDown className="inline-block w-3 h-3 ml-1 opacity-70" />)}</TableHead>
-                    <TableHead onClick={() => toggleSort('isActive')} aria-sort={sortBy === 'isActive' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} className="w-[10%] cursor-pointer select-none">Ativa {sortBy === 'isActive' && (sortDir === 'asc' ? <ArrowUp className="inline-block w-3 h-3 ml-1 opacity-70" /> : <ArrowDown className="inline-block w-3 h-3 ml-1 opacity-70" />)}</TableHead>
-                    <TableHead className="w-[23%] text-right">Ações</TableHead>
+                    <TableHead onClick={() => toggleSort('code')} aria-sort={sortBy === 'code' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} className="w-[15%] cursor-pointer select-none">Código {sortBy === 'code' && (sortDir === 'asc' ? <ArrowUp className="inline-block w-3 h-3 ml-1 opacity-70" /> : <ArrowDown className="inline-block w-3 h-3 ml-1 opacity-70" />)}</TableHead>
+                    <TableHead onClick={() => toggleSort('label')} aria-sort={sortBy === 'label' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} className="w-[30%] cursor-pointer select-none">Descrição {sortBy === 'label' && (sortDir === 'asc' ? <ArrowUp className="inline-block w-3 h-3 ml-1 opacity-70" /> : <ArrowDown className="inline-block w-3 h-3 ml-1 opacity-70" />)}</TableHead>
+                    <TableHead onClick={() => toggleSort('minAlpha')} aria-sort={sortBy === 'minAlpha' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} className="w-[20%] cursor-pointer select-none">Faixa α {sortBy === 'minAlpha' && (sortDir === 'asc' ? <ArrowUp className="inline-block w-3 h-3 ml-1 opacity-70" /> : <ArrowDown className="inline-block w-3 h-3 ml-1 opacity-70" />)}</TableHead>
+                    <TableHead onClick={() => toggleSort('isActive')} aria-sort={sortBy === 'isActive' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} className="w-[10%] cursor-pointer select-none">Ativo {sortBy === 'isActive' && (sortDir === 'asc' ? <ArrowUp className="inline-block w-3 h-3 ml-1 opacity-70" /> : <ArrowDown className="inline-block w-3 h-3 ml-1 opacity-70" />)}</TableHead>
+                    <TableHead className="w-[25%] text-right">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {pagedItems.map((t: PredominantColor) => (
+                  {pagedItems.map((t: ColorGroup) => (
                     <TableRow key={t.id}>
                       <TableCell className="font-medium">{t.code}</TableCell>
                       <TableCell>{t.label}</TableCell>
+                      <TableCell>
+                        {formatAlphaRange((t as any).minAlpha, (t as any).maxAlpha)}
+                      </TableCell>
                       <TableCell>{(t as any).isActive ? 'Sim' : 'Não'}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1.5">
                           <Button variant="ghost" size="icon" onClick={() => { setEditItem(t); setFormKey(k => k + 1); setOpen(true); }}>
                             <Pencil className="h-4 w-4" />
                           </Button>
-                          <ActiveToggleButton id={t.id} resource="predominant-colors" isActive={(t as any).isActive} queryKey={["/api/predominant-colors"]} entityLabel="Cor" />
+                          <ActiveToggleButton id={t.id} resource="color-groups" isActive={(t as any).isActive} queryKey={["/api/color-groups"]} entityLabel="Grupo" />
                           <Button variant="ghost" size="icon" className="text-rose-600 hover:bg-rose-50 hover:text-rose-700" onClick={() => askDelete(t)} disabled={deleteMutation.isPending && selectedItem?.id === t.id}>
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -192,7 +204,7 @@ export default function PredominantColorsList() {
               <div className="flex items-center justify-between gap-4 border-t px-4 py-3 text-sm text-slate-600">
                 <p>
                   Mostrando <span className="font-semibold">{pagedItems.length}</span> de {" "}
-                  <span className="font-semibold">{filtered.length}</span> cores
+                  <span className="font-semibold">{filtered.length}</span> grupos
                 </p>
                 <Pagination totalPages={totalPages} page={pageSafe} onPageChange={(p: number) => setPage(p)} />
               </div>
@@ -204,7 +216,7 @@ export default function PredominantColorsList() {
       <Dialog open={open} onOpenChange={(v) => { if (v) setFormKey(k => k + 1); if (!v) setEditItem(null); setOpen(v); }}>
         <DialogContent className="max-w-2xl max-h-[90vh] p-0 overflow-hidden">
           <div className="max-h-[calc(90vh-1rem)] overflow-y-auto my-7 px-7">
-            <PredominantColorForm key={formKey} initialItem={editItem} onSuccess={() => { queryClient.invalidateQueries({ queryKey: ["/api/predominant-colors"] }); if (editItem) { setEditItem(null); setOpen(false); } }} onCancel={() => setOpen(false)} />
+            <ColorGroupForm key={formKey} initialItem={editItem} onSuccess={() => { queryClient.invalidateQueries({ queryKey: ["/api/color-groups"] }); if (editItem) { setEditItem(null); setOpen(false); } }} onCancel={() => setOpen(false)} />
           </div>
         </DialogContent>
       </Dialog>
@@ -212,9 +224,9 @@ export default function PredominantColorsList() {
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Excluir cor</AlertDialogTitle>
+            <AlertDialogTitle>Excluir grupo</AlertDialogTitle>
             <AlertDialogDescription>
-              Tem certeza que deseja excluir {selectedItem ? (<strong>{` ${selectedItem.label} `}</strong>) : ("esta cor")}?
+              Tem certeza que deseja excluir {selectedItem ? (<strong>{` ${selectedItem.label} `}</strong>) : ("este grupo")}?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

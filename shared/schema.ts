@@ -248,17 +248,36 @@ export const aggressivenessClasses = pgTable("aggressiveness_classes", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// Predominant Colors (Cores Predominantes) - para absortância térmica
-export const predominantColors = pgTable("predominant_colors", {
+// Color Groups (Grupos de Cores) - agrupamento por faixa de absortância térmica
+export const colorGroups = pgTable("color_groups", {
   id: integer("id").generatedAlwaysAsIdentity().primaryKey(),
-  code: varchar("code", { length: 64 }).notNull().unique(),
+  code: varchar("code", { length: 50 }).notNull().unique(),
   label: varchar("label", { length: 255 }).notNull(),
-  absorptanceMin: decimal("absorptance_min", { precision: 5, scale: 3 }),
-  absorptanceMax: decimal("absorptance_max", { precision: 5, scale: 3 }),
+  minAlpha: decimal("min_alpha", { precision: 3, scale: 2 }).notNull(),
+  maxAlpha: decimal("max_alpha", { precision: 3, scale: 2 }).notNull(),
+  description: text("description"),
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => [
+  index("idx_color_groups_code").on(table.code),
+]);
+
+// Colors (Cores) - catálogo de cores (absortância definida pelo grupo)
+export const colors = pgTable("colors", {
+  id: integer("id").generatedAlwaysAsIdentity().primaryKey(),
+  code: varchar("code", { length: 64 }).notNull().unique(),
+  label: varchar("label", { length: 50 }).notNull(),
+  colorGroupId: integer("color_group_id").references(() => colorGroups.id, { onDelete: 'restrict' }).notNull(),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_colors_color_group_id").on(table.colorGroupId),
+]);
+
+// Manter export como predominantColors para compatibilidade temporária
+export const predominantColors = colors;
 
 // Constructive Systems (Sistemas Construtivos)
 export const constructiveSystems = pgTable("constructive_systems", {
@@ -322,16 +341,21 @@ export const parameters = pgTable("parameters", {
   // Associação com atributo definido em attribute_definitions
   attributeValueId: integer("attribute_value_id"), // id do item (quando atributo reference)
   attributeId: integer('attribute_id').references(()=> attributeDefinitions.id, { onDelete: 'restrict' }),
+  // Segundo atributo opcional (para filtros compostos)
+  attribute2Id: integer('attribute2_id').references(()=> attributeDefinitions.id, { onDelete: 'set null' }),
+  attributeValue2Id: integer("attribute_value2_id"), // id do item do segundo atributo (quando reference)
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => [
   index("idx_parameters_analysis").on(table.analysisId),
+  index("idx_parameters_attribute2_id").on(table.attribute2Id),
+  index("idx_parameters_attribute_value2_id").on(table.attributeValue2Id),
 ]);
 
 // Attribute Definitions (metadados de atributos de edificações / parâmetros)
 export const attributeDataKindEnum = [ 'numeric', 'reference', 'text', 'boolean', 'date' ] as const;
-export const attributeValueSourceEnum = [ 'typologies', 'noise_classes', 'aggressiveness_classes', 'bioclimatic_zones', 'isopleths', 'predominant_colors' ] as const; // extensível depois
+export const attributeValueSourceEnum = [ 'typologies', 'noise_classes', 'aggressiveness_classes', 'bioclimatic_zones', 'isopleths', 'colors', 'color_groups' ] as const; // extensível depois
 
 export const attributeDefinitions = pgTable('attribute_definitions', {
   id: integer('id').generatedAlwaysAsIdentity().primaryKey(),
@@ -636,11 +660,17 @@ export const insertTechnicianSchema = createInsertSchema(technicians)
 export const insertTypologySchema = createInsertSchema(typologies);
 export const insertNoiseClassSchema = createInsertSchema(noiseClasses);
 export const insertAggressivenessClassSchema = createInsertSchema(aggressivenessClasses);
-export const insertPredominantColorSchema = createInsertSchema(predominantColors)
+export const insertColorGroupSchema = createInsertSchema(colorGroups)
   .extend({
-    absorptanceMin: decimalInput.optional(),
-    absorptanceMax: decimalInput.optional(),
+    minAlpha: decimalInput,
+    maxAlpha: decimalInput,
   });
+export const insertColorSchema = createInsertSchema(colors)
+  .extend({
+    colorGroupId: z.coerce.number().int().min(1, 'Grupo de cores é obrigatório'),
+  });
+// Manter para compatibilidade temporária
+export const insertPredominantColorSchema = insertColorSchema;
 export const insertConstructiveSystemSchema = createInsertSchema(constructiveSystems);
 export const insertRequirementSchema = createInsertSchema(requirements);
 export const insertCriterionSchema = createInsertSchema(criteria);
@@ -670,6 +700,8 @@ export const insertParameterSchema = createInsertSchema(parameters)
     notes: z.string().optional().nullable(),
     attributeId: z.coerce.number().int().optional().nullable(),
     attributeValueId: z.coerce.number().int().optional().nullable(),
+    attribute2Id: z.coerce.number().int().optional().nullable(),
+    attributeValue2Id: z.coerce.number().int().optional().nullable(),
   });
 
 export const insertBioclimaticZoneSchema = createInsertSchema(bioclimaticZones);
@@ -718,6 +750,11 @@ export type NoiseClass = typeof noiseClasses.$inferSelect;
 export type InsertNoiseClass = z.infer<typeof insertNoiseClassSchema>;
 export type AggressivenessClass = typeof aggressivenessClasses.$inferSelect;
 export type InsertAggressivenessClass = z.infer<typeof insertAggressivenessClassSchema>;
+export type ColorGroup = typeof colorGroups.$inferSelect;
+export type InsertColorGroup = z.infer<typeof insertColorGroupSchema>;
+export type Color = typeof colors.$inferSelect;
+export type InsertColor = z.infer<typeof insertColorSchema>;
+// Manter para compatibilidade temporária
 export type PredominantColor = typeof predominantColors.$inferSelect;
 export type InsertPredominantColor = z.infer<typeof insertPredominantColorSchema>;
 export type ConstructiveSystem = typeof constructiveSystems.$inferSelect;

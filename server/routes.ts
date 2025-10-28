@@ -2,7 +2,7 @@ import express, { type Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated, refreshSession, requireModuleAccess } from "./auth";
-import { insertBuildingSchema, updateBuildingSchema, insertStructuralSystemSchema, insertReportSchema, insertTechnicianSchema, updateTechnicianSchema, insertUserSchema, updateUserSchema, insertTypologySchema, insertNoiseClassSchema, insertAggressivenessClassSchema, insertPredominantColorSchema, insertBioclimaticZoneSchema, insertBioclimaticZoneCoverageSchema, insertStateSchema, insertCitySchema, insertConstructiveSystemSchema, insertRequirementSchema, insertCriterionSchema, insertAnalysisSchema, insertIsoplethSchema } from "@shared/schema";
+import { insertBuildingSchema, updateBuildingSchema, insertStructuralSystemSchema, insertReportSchema, insertTechnicianSchema, updateTechnicianSchema, insertUserSchema, updateUserSchema, insertTypologySchema, insertNoiseClassSchema, insertAggressivenessClassSchema, insertColorGroupSchema, insertColorSchema, insertPredominantColorSchema, insertBioclimaticZoneSchema, insertBioclimaticZoneCoverageSchema, insertStateSchema, insertCitySchema, insertConstructiveSystemSchema, insertRequirementSchema, insertCriterionSchema, insertAnalysisSchema, insertIsoplethSchema } from "@shared/schema";
 import { insertParameterSchema, attributeDefinitions } from '@shared/schema';
 import { generateReportPdf, generateReportJson } from './puppeteer/report-generator';
 import { generateReportPdfJsreport } from './jsreport/report-generator';
@@ -1233,6 +1233,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       const status = (error as any)?.status || 500;
       const message = (error as any)?.message || 'Falha ao excluir cor predominante';
+      res.status(status).json({ message });
+    }
+  });
+
+  // Master tables: Color Groups
+  app.get('/api/color-groups', isAuthenticated, async (_req, res) => {
+    try { res.json(await storage.listColorGroups()); } catch (e) { res.status(500).json({ message: 'Failed to fetch color groups' }); }
+  });
+  app.post('/api/color-groups', isAuthenticated, requireModuleAccess('color-groups'), express.json(), async (req, res) => {
+    try { const data = insertColorGroupSchema.parse(req.body); const row = await storage.createColorGroup(data as any); res.json(row); }
+    catch (error) { if (error instanceof z.ZodError) return res.status(400).json({ message: 'Validation error', errors: error.errors }); if ((error as any)?.code === '23505') return res.status(409).json({ message: 'Código já cadastrado.' }); res.status(500).json({ message: 'Failed to create color group' }); }
+  });
+  app.put('/api/color-groups/:id', isAuthenticated, requireModuleAccess('color-groups'), express.json(), async (req, res) => {
+    try { const id = Number(req.params.id); if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' }); const data = insertColorGroupSchema.partial().parse(req.body); const row = await storage.updateColorGroup(id, data as any); res.json(row); }
+    catch (error) { if (error instanceof z.ZodError) return res.status(400).json({ message: 'Validation error', errors: error.errors }); if ((error as any)?.code === '23505') return res.status(409).json({ message: 'Código já cadastrado.' }); res.status(500).json({ message: 'Failed to update color group' }); }
+  });
+  app.delete('/api/color-groups/:id', isAuthenticated, requireModuleAccess('color-groups'), async (req: any, res) => {
+    try {
+      const id = Number(req.params.id);
+      if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' });
+      const ok = await storage.deleteColorGroup(id);
+      res.json({ ok });
+    } catch (error: any) {
+      const status = (error as any)?.status || 500;
+      const message = (error as any)?.message || 'Falha ao excluir grupo de cores';
+      res.status(status).json({ message });
+    }
+  });
+
+  // Master tables: Colors
+  app.get('/api/colors', isAuthenticated, async (_req, res) => {
+    try { res.json(await storage.listColors()); } catch (e) { res.status(500).json({ message: 'Failed to fetch colors' }); }
+  });
+  app.post('/api/colors', isAuthenticated, requireModuleAccess('colors'), express.json(), async (req, res) => {
+    try { const data = insertColorSchema.parse(req.body); const row = await storage.createColor(data as any); res.json(row); }
+    catch (error) { if (error instanceof z.ZodError) return res.status(400).json({ message: 'Validation error', errors: error.errors }); if ((error as any)?.code === '23505') return res.status(409).json({ message: 'Código já cadastrado.' }); res.status(500).json({ message: 'Failed to create color' }); }
+  });
+  app.put('/api/colors/:id', isAuthenticated, requireModuleAccess('colors'), express.json(), async (req, res) => {
+    try { const id = Number(req.params.id); if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' }); const data = insertColorSchema.partial().parse(req.body); const row = await storage.updateColor(id, data as any); res.json(row); }
+    catch (error) { if (error instanceof z.ZodError) return res.status(400).json({ message: 'Validation error', errors: error.errors }); if ((error as any)?.code === '23505') return res.status(409).json({ message: 'Código já cadastrado.' }); res.status(500).json({ message: 'Failed to update color' }); }
+  });
+  app.delete('/api/colors/:id', isAuthenticated, requireModuleAccess('colors'), async (req: any, res) => {
+    try {
+      const id = Number(req.params.id);
+      if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' });
+      const ok = await storage.deleteColor(id);
+      res.json({ ok });
+    } catch (error: any) {
+      const status = (error as any)?.status || 500;
+      const message = (error as any)?.message || 'Falha ao excluir cor';
       res.status(status).json({ message });
     }
   });

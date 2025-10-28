@@ -3,33 +3,21 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { NotchedField } from "@/components/ui/notched-field";
 import { Button } from "@/components/ui/button";
 import FormHeader from "@/components/ui/form-header";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { showSuccess } from "@/lib/toast-messages";
 import { apiRequest } from "@/lib/queryClient";
 import { handleCodeUniquenessError } from "@/lib/form-error-handlers";
-import type { PredominantColor } from "@shared/schema";
+import type { PredominantColor, ColorGroup } from "@shared/schema";
 
 const schema = z.object({
   code: z.string().min(1, 'Código é obrigatório'),
-  label: z.string().min(1, 'Descrição é obrigatória').max(255, 'Descrição deve ter no máximo 255 caracteres'),
-  absorptanceMin: z
-    .union([z.literal(''), z.null(), z.coerce.number().min(0).max(1)])
-    .optional()
-    .transform((v) => (v === '' ? null : (v as any))),
-  absorptanceMax: z
-    .union([z.literal(''), z.null(), z.coerce.number().min(0).max(1)])
-    .optional()
-    .transform((v) => (v === '' ? null : (v as any))),
+  label: z.string().min(1, 'Descrição é obrigatória').max(50, 'Descrição deve ter no máximo 50 caracteres'),
+  colorGroupId: z.coerce.number().int().min(1, 'Grupo de cores é obrigatório'),
   isActive: z.boolean().optional(),
-}).superRefine((data, ctx) => {
-  if (data.absorptanceMin != null && data.absorptanceMax != null && data.absorptanceMax < data.absorptanceMin) {
-    ctx.addIssue({ code: 'custom', message: 'Máx deve ser >= Mín', path: ['absorptanceMax'] });
-  }
 });
 
 type FormData = z.infer<typeof schema>;
@@ -37,17 +25,19 @@ type FormData = z.infer<typeof schema>;
 export default function PredominantColorForm({ initialItem, onSuccess, onCancel }: { initialItem: PredominantColor | null; onSuccess?: () => void; onCancel?: () => void; }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  
+  const { data: colorGroups = [] } = useQuery<ColorGroup[]>({ queryKey: ["/api/color-groups"] });
+  
   const form = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: initialItem
       ? {
           code: initialItem.code,
           label: initialItem.label,
-          absorptanceMin: (initialItem as any).absorptanceMin ?? null,
-          absorptanceMax: (initialItem as any).absorptanceMax ?? null,
+          colorGroupId: (initialItem as any).colorGroupId ?? null as any,
           isActive: (initialItem as any).isActive ?? true,
         }
-      : { code: '', label: '', absorptanceMin: null, absorptanceMax: null, isActive: true },
+      : { code: '', label: '', colorGroupId: null as any, isActive: true },
     mode: 'onSubmit',
   });
 
@@ -69,8 +59,8 @@ export default function PredominantColorForm({ initialItem, onSuccess, onCancel 
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit((data) => mutation.mutate(data))} className="space-y-6" autoComplete="off">
-        <FormHeader title={initialItem ? 'Editar Cor Predominante' : 'Nova Cor Predominante'} subtitle={initialItem ? 'Atualize os dados da cor predominante.' : 'Cadastre uma nova cor predominante.'} initials={initialItem?.code ?? null} />
+      <form onSubmit={form.handleSubmit((data) => mutation.mutate(data))} className="space-y-4" autoComplete="off">
+        <FormHeader title={initialItem ? 'Editar Cor' : 'Nova Cor'} subtitle={initialItem ? 'Atualize os dados da cor.' : 'Cadastre uma nova cor.'} initials={initialItem?.code ?? null} />
 
         {/* Linha 1: Código & Descrição */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -78,7 +68,7 @@ export default function PredominantColorForm({ initialItem, onSuccess, onCancel 
             <FormItem className="md:col-span-1">
               <FormControl>
                 <NotchedField label="Código" requiredMark>
-                  <Input placeholder="BRANCA" {...field} className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0" />
+                  <Input placeholder="BR" {...field} className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 uppercase" onChange={(e) => field.onChange(e.target.value.toUpperCase())} />
                 </NotchedField>
               </FormControl>
               <FormMessage />
@@ -88,12 +78,11 @@ export default function PredominantColorForm({ initialItem, onSuccess, onCancel 
             <FormItem className="md:col-span-3">
               <FormControl>
                 <NotchedField label="Descrição" requiredMark>
-                  <Textarea
-                    placeholder="Branca ou clara"
+                  <Input
+                    placeholder="Branca"
                     {...field}
-                    rows={3}
-                    maxLength={255}
-                    className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 resize-none min-h-0"
+                    maxLength={50}
+                    className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
                   />
                 </NotchedField>
               </FormControl>
@@ -102,55 +91,32 @@ export default function PredominantColorForm({ initialItem, onSuccess, onCancel 
           )} />
         </div>
 
-        {/* Linha 2: Faixa de Absortância */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <FormField
-            name="absorptanceMin"
-            control={form.control}
-            render={({ field }) => (
-              <FormItem className="md:col-span-2">
-                <FormControl>
-                  <NotchedField label="Absortância Mínima">
-                    <Input
-                      type="number"
-                      min={0}
-                      max={1}
-                      step={0.001}
-                      value={field.value ?? ''}
-                      onChange={(e) => field.onChange(e.target.value)}
-                      placeholder="0.000"
-                      className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
-                    />
-                  </NotchedField>
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            name="absorptanceMax"
-            control={form.control}
-            render={({ field }) => (
-              <FormItem className="md:col-span-2">
-                <FormControl>
-                  <NotchedField label="Absortância Máxima">
-                    <Input
-                      type="number"
-                      min={0}
-                      max={1}
-                      step={0.001}
-                      value={field.value ?? ''}
-                      onChange={(e) => field.onChange(e.target.value)}
-                      placeholder="1.000"
-                      className="bg-transparent border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
-                    />
-                  </NotchedField>
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
+        {/* Linha 2: Grupo de Cores */}
+        <FormField
+          name="colorGroupId"
+          control={form.control}
+          render={({ field }) => (
+            <FormItem>
+              <FormControl>
+                <NotchedField label="Grupo de Absortância" requiredMark>
+                  <select
+                    value={field.value ?? ''}
+                    onChange={(e) => field.onChange(e.target.value)}
+                    className="bg-transparent border-0 shadow-none focus:outline-none focus:ring-0 focus:ring-offset-0 w-full h-9 text-sm"
+                  >
+                    <option value="">Selecione...</option>
+                    {colorGroups.map((g) => (
+                      <option key={g.id} value={g.id}>
+                        {g.label} ({Number((g as any).minAlpha).toFixed(2)} – {Number((g as any).maxAlpha).toFixed(2)})
+                      </option>
+                    ))}
+                  </select>
+                </NotchedField>
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
         <div className="flex justify-end gap-2">
           <Button type="button" variant="outline" onClick={onCancel}>Cancelar</Button>

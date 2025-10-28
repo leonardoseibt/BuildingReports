@@ -125,9 +125,38 @@ function shouldShowParameter(
   building: Building | undefined,
   tableDataByName: Map<string, any[]>
 ): boolean {
-  if (!parameter.attributeId) return true;
-  const attribute = attributeDefs.get(parameter.attributeId);
-  if (!attribute) return true;
+  // Verifica primeiro atributo
+  if (parameter.attributeId) {
+    const attribute = attributeDefs.get(parameter.attributeId);
+    if (attribute) {
+      if (!checkAttributeMatch(parameter, attribute, parameter.attributeValueId, parameter.minLimit, parameter.maxLimit, building, tableDataByName)) {
+        return false;
+      }
+    }
+  }
+
+  // Verifica segundo atributo (se definido)
+  if ((parameter as any).attribute2Id) {
+    const attribute2 = attributeDefs.get((parameter as any).attribute2Id);
+    if (attribute2) {
+      if (!checkAttributeMatch(parameter, attribute2, (parameter as any).attributeValue2Id, null, null, building, tableDataByName)) {
+        return false;
+      }
+    }
+  }
+
+  return true;
+}
+
+function checkAttributeMatch(
+  parameter: Parameter,
+  attribute: AttributeDefinition,
+  attributeValueId: number | null | undefined,
+  minLimit: string | null | undefined,
+  maxLimit: string | null | undefined,
+  building: Building | undefined,
+  tableDataByName: Map<string, any[]>
+): boolean {
   let sourceData: any = null;
 
   if (attribute.sourceTable === 'buildings') {
@@ -143,20 +172,20 @@ function shouldShowParameter(
 
   if (attributeValue === null || attributeValue === undefined) return false;
 
-  if (parameter.attributeValueId !== null && parameter.attributeValueId !== undefined) {
-    if (String(parameter.attributeValueId) !== String(attributeValue)) return false;
+  if (attributeValueId !== null && attributeValueId !== undefined) {
+    if (String(attributeValueId) !== String(attributeValue)) return false;
   }
 
   const numericValue = Number(attributeValue);
 
   if (!Number.isNaN(numericValue)) {
-    if (parameter.minLimit !== null && parameter.minLimit !== undefined) {
-      const minLimit = Number(parameter.minLimit);
-      if (!Number.isNaN(minLimit) && numericValue <= minLimit) return false;
+    if (minLimit !== null && minLimit !== undefined) {
+      const minLimitNum = Number(minLimit);
+      if (!Number.isNaN(minLimitNum) && numericValue <= minLimitNum) return false;
     }
-    if (parameter.maxLimit !== null && parameter.maxLimit !== undefined) {
-      const maxLimit = Number(parameter.maxLimit);
-      if (!Number.isNaN(maxLimit) && numericValue > maxLimit) return false;
+    if (maxLimit !== null && maxLimit !== undefined) {
+      const maxLimitNum = Number(maxLimit);
+      if (!Number.isNaN(maxLimitNum) && numericValue > maxLimitNum) return false;
     }
   }
   return true;

@@ -31,6 +31,12 @@ import {
   type InsertNoiseClass,
   type AggressivenessClass,
   type InsertAggressivenessClass,
+  colorGroups,
+  type ColorGroup,
+  type InsertColorGroup,
+  colors,
+  type Color,
+  type InsertColor,
   predominantColors,
   type PredominantColor,
   type InsertPredominantColor,
@@ -187,6 +193,18 @@ export interface IStorage {
   createPredominantColor(item: InsertPredominantColor): Promise<PredominantColor>;
   updatePredominantColor(id: number, item: Partial<InsertPredominantColor>): Promise<PredominantColor>;
   deletePredominantColor(id: number): Promise<boolean>;
+
+  // Color groups
+  listColorGroups(): Promise<ColorGroup[]>;
+  createColorGroup(item: InsertColorGroup): Promise<ColorGroup>;
+  updateColorGroup(id: number, item: Partial<InsertColorGroup>): Promise<ColorGroup>;
+  deleteColorGroup(id: number): Promise<boolean>;
+
+  // Colors
+  listColors(): Promise<Color[]>;
+  createColor(item: InsertColor): Promise<Color>;
+  updateColor(id: number, item: Partial<InsertColor>): Promise<Color>;
+  deleteColor(id: number): Promise<boolean>;
 
   // Constructive systems
   listConstructiveSystems(): Promise<ConstructiveSystem[]>;
@@ -1459,6 +1477,93 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
+  // Color groups
+  async listColorGroups(): Promise<ColorGroup[]> {
+    const rows = await db
+      .select()
+      .from(colorGroups)
+      .orderBy(colorGroups.minAlpha);
+    return rows as any;
+  }
+  async createColorGroup(item: InsertColorGroup): Promise<ColorGroup> {
+    const [row] = await db.insert(colorGroups).values({ 
+      code: (item as any).code, 
+      label: (item as any).label,
+      minAlpha: (item as any).minAlpha,
+      maxAlpha: (item as any).maxAlpha,
+      description: (item as any).description ?? null,
+      isActive: (item as any).isActive ?? true 
+    }).returning();
+    return row as ColorGroup;
+  }
+  async updateColorGroup(id: number, item: Partial<InsertColorGroup>): Promise<ColorGroup> {
+    const [row] = await db.update(colorGroups).set({ ...(item as any), updatedAt: new Date() }).where(eq(colorGroups.id, id)).returning();
+    return row as ColorGroup;
+  }
+  async deleteColorGroup(id: number): Promise<boolean> {
+    try {
+      return await db.transaction(async (tx) => {
+        const countRes = await tx.select({ value: count() }).from(colors).where(eq(colors.colorGroupId, id));
+        const c = Number(countRes[0]?.value ?? 0);
+        if (c > 0) {
+          const e: any = new Error(`Não é possível excluir: existem ${c} cor(es) vinculadas a este grupo.`);
+          e.status = 409;
+          throw e;
+        }
+        const deleted = await tx.delete(colorGroups).where(eq(colorGroups.id, id)).returning({ id: colorGroups.id });
+        return deleted.length > 0;
+      });
+    } catch (err: any) {
+      if (err?.status === 409) throw err;
+      if (err?.code === '23503') { const e: any = new Error('Não é possível excluir: existem registros relacionados.'); e.status = 409; throw e; }
+      throw err;
+    }
+  }
+
+  // Colors
+  async listColors(): Promise<Color[]> {
+    const rows = await db
+      .select()
+      .from(colors)
+      .orderBy(
+        sql`length(${colors.code})`,
+        sql`${colors.code} collate "pt-BR-x-icu"`
+      );
+    return rows as any;
+  }
+  async createColor(item: InsertColor): Promise<Color> {
+    const [row] = await db.insert(colors).values({ 
+      code: (item as any).code, 
+      label: (item as any).label,
+      colorGroupId: (item as any).colorGroupId,
+      isActive: (item as any).isActive ?? true 
+    }).returning();
+    return row as Color;
+  }
+  async updateColor(id: number, item: Partial<InsertColor>): Promise<Color> {
+    const [row] = await db.update(colors).set({ ...(item as any), updatedAt: new Date() }).where(eq(colors.id, id)).returning();
+    return row as Color;
+  }
+  async deleteColor(id: number): Promise<boolean> {
+    try {
+      return await db.transaction(async (tx) => {
+        const countRes = await tx.select({ value: count() }).from(buildings).where(eq(buildings.predominantColorId, id));
+        const c = Number(countRes[0]?.value ?? 0);
+        if (c > 0) {
+          const e: any = new Error(`Não é possível excluir: existem ${c} edificação(ões) vinculadas a esta cor.`);
+          e.status = 409;
+          throw e;
+        }
+        const deleted = await tx.delete(colors).where(eq(colors.id, id)).returning({ id: colors.id });
+        return deleted.length > 0;
+      });
+    } catch (err: any) {
+      if (err?.status === 409) throw err;
+      if (err?.code === '23503') { const e: any = new Error('Não é possível excluir: existem registros relacionados.'); e.status = 409; throw e; }
+      throw err;
+    }
+  }
+
   // Constructive systems
   async listConstructiveSystems(): Promise<ConstructiveSystem[]> {
     const rows = await db
@@ -1819,6 +1924,8 @@ export class DatabaseStorage implements IStorage {
       notes: parameters.notes,
       attributeId: parameters.attributeId,
       attributeValueId: parameters.attributeValueId,
+      attribute2Id: parameters.attribute2Id,
+      attributeValue2Id: parameters.attributeValue2Id,
       isActive: parameters.isActive,
       createdAt: parameters.createdAt,
       updatedAt: parameters.updatedAt,
@@ -1847,6 +1954,8 @@ export class DatabaseStorage implements IStorage {
       notes: parameters.notes,
       attributeId: parameters.attributeId,
       attributeValueId: parameters.attributeValueId,
+      attribute2Id: parameters.attribute2Id,
+      attributeValue2Id: parameters.attributeValue2Id,
       isActive: parameters.isActive,
       createdAt: parameters.createdAt,
       updatedAt: parameters.updatedAt,
@@ -1903,6 +2012,8 @@ export class DatabaseStorage implements IStorage {
       notes: (item as any).notes ?? null,
       attributeId: (item as any).attributeId ?? null,
       attributeValueId: (item as any).attributeValueId ?? null,
+      attribute2Id: (item as any).attribute2Id ?? null,
+      attributeValue2Id: (item as any).attributeValue2Id ?? null,
       isActive: (item as any).isActive ?? true,
     }).returning();
     return row as Parameter;
@@ -1912,7 +2023,8 @@ export class DatabaseStorage implements IStorage {
     // Apenas inclui campos presentes; permite enviar null para limpar
     const keys: (keyof InsertParameter | 'isActive')[] = [
       'analysisId','label','minimumValue','intermediateValue','superiorValue',
-      'minLimit','maxLimit','unit','notes','attributeId','attributeValueId','isActive'
+      'minLimit','maxLimit','unit','notes','attributeId','attributeValueId',
+      'attribute2Id','attributeValue2Id','isActive'
     ] as any;
     for (const k of keys) {
       if (k in item) {

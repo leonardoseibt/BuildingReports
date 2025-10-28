@@ -16,6 +16,7 @@ import {
   AlertTriangle,
   Hammer,
   Palette,
+  Layers,
   ListChecks,
   Target,
   Map,
@@ -424,13 +425,22 @@ export default function Sidebar() {
                             />
                           )}
                           {canPredominantColors && (
-                            <NavLink
-                              href="/predominant-colors"
-                              icon={Palette}
-                              label="Cores Predominantes"
-                              isActive={location === '/predominant-colors'}
-                              testId="nav-cores-predominantes"
-                            />
+                            <>
+                              <NavLink
+                                href="/predominant-colors"
+                                icon={Palette}
+                                label="Cores"
+                                isActive={location === '/predominant-colors'}
+                                testId="nav-cores"
+                              />
+                              <NavLink
+                                href="/color-groups"
+                                icon={Layers}
+                                label="Grupos de Cores"
+                                isActive={location === '/color-groups'}
+                                testId="nav-grupos-de-cores"
+                              />
+                            </>
                           )}
                           {canConstructiveSystems && (
                             <NavLink
