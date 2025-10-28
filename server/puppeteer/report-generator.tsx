@@ -125,33 +125,56 @@ function findRelatedRecord(tableData: any[], attribute: AttributeDefinition, bui
   return null;
 }
 
-function shouldShowParameter(
+/**
+ * Check if a single attribute matches the parameter's filter criteria
+ */
+function checkAttributeMatch(
   parameter: Parameter,
-  attributeDefs: Map<number, AttributeDefinition>,
+  attributeId: number | null | undefined,
+  attributeValueId: number | null | undefined,
+  attributeDef: AttributeDefinition | undefined,
   building: Building | undefined,
-  tableDataByName: Map<string, any[]>
+  tableDataByName: Map<string, any[]>,
+  colorGroupsMap?: Map<number, any>
 ): boolean {
-  if (!parameter.attributeId) return true;
-  const attribute = attributeDefs.get(parameter.attributeId);
-  if (!attribute) return true;
-  let sourceData: any = null;
+  // No attribute filter = always match
+  if (!attributeId) return true;
+  
+  if (!attributeDef) return true;
 
-  if (attribute.sourceTable === 'buildings') {
+  // Get source data for this attribute
+  let sourceData: any = null;
+  if (attributeDef.sourceTable === 'buildings') {
     sourceData = building;
   } else {
-    const tableData = tableDataByName.get(attribute.sourceTable) ?? [];
-    sourceData = findRelatedRecord(tableData, attribute, building);
+    const tableData = tableDataByName.get(attributeDef.sourceTable) ?? [];
+    sourceData = findRelatedRecord(tableData, attributeDef, building);
   }
 
   if (!sourceData) return true;
 
-  const attributeValue = getAttributeValue(sourceData, attribute);
+  let attributeValue = getAttributeValue(sourceData, attributeDef);
 
-  // CRITICAL FIX: If attribute value is null/undefined, only filter out if there's a specific value requirement
-  // Otherwise, show the parameter (it's a general parameter not filtered by attribute value)
+  // SPECIAL CASE: If this is a color_groups attribute, we need to lookup the color's group
+  if (attributeDef.sourceTable === 'color_groups' && attributeValueId && colorGroupsMap) {
+    // The building has a predominantColorId, we need to find that color's colorGroupId
+    const buildingColorId = building?.predominantColorId;
+    if (buildingColorId) {
+      const colorsData = tableDataByName.get('colors') ?? [];
+      const buildingColor = colorsData.find((c: any) => c.id === buildingColorId);
+      if (buildingColor && buildingColor.colorGroupId) {
+        // Compare the color's group with the required group
+        return buildingColor.colorGroupId === attributeValueId;
+      }
+    }
+    // If we can't find the color or its group, don't match
+    return false;
+  }
+
+  // Handle null/undefined attribute values
   if (attributeValue === null || attributeValue === undefined) {
     // If parameter requires a specific attribute value, don't show (building doesn't have that attribute)
-    if (parameter.attributeValueId !== null && parameter.attributeValueId !== undefined) {
+    if (attributeValueId !== null && attributeValueId !== undefined) {
       return false;
     }
     // If parameter only has range limits (min/max), don't show (can't evaluate ranges on null)
@@ -165,22 +188,78 @@ function shouldShowParameter(
     return true;
   }
 
-  if (parameter.attributeValueId !== null && parameter.attributeValueId !== undefined) {
-    if (String(parameter.attributeValueId) !== String(attributeValue)) return false;
+  // Check specific value match
+  if (attributeValueId !== null && attributeValueId !== undefined) {
+    if (String(attributeValueId) !== String(attributeValue)) {
+      return false;
+    }
   }
 
+  // Check numeric range limits
   const numericValue = Number(attributeValue);
-
   if (!Number.isNaN(numericValue)) {
     if (parameter.minLimit !== null && parameter.minLimit !== undefined) {
       const minLimit = Number(parameter.minLimit);
-      if (!Number.isNaN(minLimit) && numericValue <= minLimit) return false;
+      if (!Number.isNaN(minLimit) && numericValue <= minLimit) {
+        return false;
+      }
     }
     if (parameter.maxLimit !== null && parameter.maxLimit !== undefined) {
       const maxLimit = Number(parameter.maxLimit);
-      if (!Number.isNaN(maxLimit) && numericValue > maxLimit) return false;
+      if (!Number.isNaN(maxLimit) && numericValue > maxLimit) {
+        return false;
+      }
     }
   }
+
+  return true;
+}
+
+/**
+ * Determine if a parameter should be shown based on building attributes
+ * Supports filtering by up to 2 attributes with AND logic
+ */
+function shouldShowParameter(
+  parameter: Parameter,
+  attributeDefs: Map<number, AttributeDefinition>,
+  building: Building | undefined,
+  tableDataByName: Map<string, any[]>,
+  colorGroupsMap?: Map<number, any>
+): boolean {
+  // Get attribute definitions
+  const attribute1 = parameter.attributeId ? attributeDefs.get(parameter.attributeId) : undefined;
+  const attribute2 = (parameter as any).attribute2Id ? attributeDefs.get((parameter as any).attribute2Id) : undefined;
+
+  // Check first attribute
+  const attr1Match = checkAttributeMatch(
+    parameter,
+    parameter.attributeId,
+    parameter.attributeValueId,
+    attribute1,
+    building,
+    tableDataByName,
+    colorGroupsMap
+  );
+
+  // If first attribute doesn't match, parameter is filtered out
+  if (!attr1Match) return false;
+
+  // Check second attribute (if exists)
+  if ((parameter as any).attribute2Id) {
+    const attr2Match = checkAttributeMatch(
+      parameter,
+      (parameter as any).attribute2Id,
+      (parameter as any).attributeValue2Id,
+      attribute2,
+      building,
+      tableDataByName,
+      colorGroupsMap
+    );
+    
+    // Both attributes must match (AND logic)
+    if (!attr2Match) return false;
+  }
+
   return true;
 }
 
@@ -1150,6 +1229,8 @@ async function loadReportContext(reportId: number, userId: number): Promise<Repo
     noiseClasses,
     aggressivenessClasses,
     predominantColors,
+    colorGroups,
+    colors,
     techniciansWrapper,
     bioclimaticZones,
     isopleths
@@ -1163,6 +1244,8 @@ async function loadReportContext(reportId: number, userId: number): Promise<Repo
     storage.listNoiseClasses(),
     storage.listAggressivenessClasses(),
     storage.listPredominantColors(),
+    storage.listColorGroups(),
+    storage.listColors(),
     storage.listTechnicians(building.userId, undefined, undefined),
     storage.listBioclimaticZones(),
     storage.listIsopleths()
@@ -1177,11 +1260,19 @@ async function loadReportContext(reportId: number, userId: number): Promise<Repo
     attributeMap.set(attribute.id, attribute);
   }
 
+  // Build colorGroupsMap for efficient lookup
+  const colorGroupsMap = new Map<number, any>();
+  for (const group of colorGroups) {
+    colorGroupsMap.set(group.id, group);
+  }
+
   const tableDataByName = new Map<string, any[]>();
   tableDataByName.set('buildings', [building]);
+  tableDataByName.set('colors', colors);
+  tableDataByName.set('color_groups', colorGroups);
   const extraTables = Array.from(new Set(attributeDefinitions
     .map((attribute) => attribute.sourceTable)
-    .filter((name) => name && name !== 'buildings')));
+    .filter((name) => name && name !== 'buildings' && name !== 'colors' && name !== 'color_groups')));
   for (const table of extraTables) {
     const data = await loadTableData(table, building, building.userId);
     tableDataByName.set(table, data);
@@ -1199,7 +1290,7 @@ async function loadReportContext(reportId: number, userId: number): Promise<Repo
             .map((analysis) => {
               const params = parametersRaw
                 .filter((parameter) => parameter.analysisId === analysis.id && parameter.isActive !== false)
-                .filter((parameter) => shouldShowParameter(parameter, attributeMap, building, tableDataByName));
+                .filter((parameter) => shouldShowParameter(parameter, attributeMap, building, tableDataByName, colorGroupsMap));
               const sortedParams = sortParameters(params);
               if (sortedParams.length === 0) return null;
               return { ...analysis, parameters: sortedParams };
