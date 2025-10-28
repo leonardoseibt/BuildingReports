@@ -1292,17 +1292,16 @@ async function loadReportContext(reportId: number, userId: number): Promise<Repo
                 .filter((parameter) => parameter.analysisId === analysis.id && parameter.isActive !== false)
                 .filter((parameter) => shouldShowParameter(parameter, attributeMap, building, tableDataByName, colorGroupsMap));
               const sortedParams = sortParameters(params);
-              if (sortedParams.length === 0) return null;
+              // IMPORTANT: Keep analysis even if no parameters match
+              // This allows showing "Not applicable" message in the report
               return { ...analysis, parameters: sortedParams };
-            })
-            .filter((analysis) => Boolean(analysis)) as (Analysis & { parameters: Parameter[] })[];
-          if (analysesForCriterion.length === 0) return null;
+            });
+          // Keep criterion even if no analyses - may have been filtered by attributes
           return { ...criterion, analyses: analysesForCriterion };
         })
         .filter((criterion) => Boolean(criterion)) as (Criterion & { analyses: (Analysis & { parameters: Parameter[] })[] })[];
 
-      if (criteriaForRequirement.length === 0) return null;
-
+      // Keep requirement even if no criteria - maintain report structure
       return { ...requirement, criteria: criteriaForRequirement };
     })
     .filter((requirement) => Boolean(requirement)) as (Requirement & { criteria: (Criterion & { analyses: (Analysis & { parameters: Parameter[] })[] })[] })[];
@@ -1330,7 +1329,8 @@ async function loadReportContext(reportId: number, userId: number): Promise<Repo
               const filteredParameters = analysis.parameters.filter((parameter) =>
                 hasValuesForSelectedLevels(parameter, selectedLevels)
               );
-              if (filteredParameters.length === 0) return null;
+              // IMPORTANT: Keep analysis even if no parameters have values for selected levels
+              // This ensures all selected analyses appear in the report
               return {
                 ...analysis,
                 selectedLevels,
@@ -1338,11 +1338,13 @@ async function loadReportContext(reportId: number, userId: number): Promise<Repo
               } as AnalysisRender;
             })
             .filter((analysis) => Boolean(analysis)) as AnalysisRender[];
-          if (analysesWithLevels.length === 0) return null;
+          // IMPORTANT: Keep criterion even if no analyses have levels selected
+          // User may want to see the criterion structure even without parameters
           return { ...criterion, analyses: analysesWithLevels };
         })
         .filter((criterion) => Boolean(criterion)) as CriterionRender[];
-      if (mappedCriteria.length === 0) return null;
+      // IMPORTANT: Keep requirement even if no criteria have analyses
+      // This ensures the report structure matches user's selection
       return { ...requirement, criteria: mappedCriteria };
     })
     .filter((requirement) => Boolean(requirement)) as RequirementRender[];
