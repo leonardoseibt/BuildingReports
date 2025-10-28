@@ -1120,6 +1120,14 @@ async function loadReportContext(reportId: number, userId: number): Promise<Repo
     }
   }
 
+  // Build set of enabled criterion IDs (only criteria actually in the report structure)
+  const enabledCriterionIds = new Set<number>();
+  for (const crit of reportStructure.criteria) {
+    if (crit.id) {
+      enabledCriterionIds.add(crit.id);
+    }
+  }
+
   // Build selectedEvaluations map - only include analyses that are actually in the report structure
   const selectedEvaluations = new Map<string, string[]>();
   for (const analysis of reportStructure.analyses) {
@@ -1215,6 +1223,11 @@ async function loadReportContext(reportId: number, userId: number): Promise<Repo
       
       const mappedCriteria = requirement.criteria
         .map((criterion) => {
+          // Skip criteria that are not in the report structure
+          if (!enabledCriterionIds.has(criterion.id)) {
+            return null;
+          }
+          
           const analysesWithLevels = criterion.analyses
             .map((analysis) => {
               // Get selected levels from map. If not in map, analysis is not selected - return null.
