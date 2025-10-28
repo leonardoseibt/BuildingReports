@@ -1487,7 +1487,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/parameters', isAuthenticated, requireModuleAccess('parameters'), express.json(), async (req, res) => {
     try {
       const data = insertParameterSchema.parse(req.body);
-      // Nova validação baseada em attributeId
+      
+      // Validação para atributo 1
       if ((data as any).attributeId) {
         const attrId = Number((data as any).attributeId);
         const attr = await db.query.attributeDefinitions.findFirst({ where: eq(attributeDefinitions.id, attrId) });
@@ -1507,6 +1508,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if ((data as any).attributeValueId != null) return res.status(400).json({ message: 'Este tipo de atributo não aceita valor selecionado.' });
         }
       }
+      
+      // Validação para atributo 2
+      if ((data as any).attribute2Id) {
+        const attr2Id = Number((data as any).attribute2Id);
+        const attr2 = await db.query.attributeDefinitions.findFirst({ where: eq(attributeDefinitions.id, attr2Id) });
+        if (!attr2) return res.status(400).json({ message: 'Atributo 2 inválido' });
+        if (attr2.dataKind === 'reference') {
+          // Atributo de referência deve ter valor selecionado
+          if ((data as any).attributeValue2Id == null) return res.status(400).json({ message: 'Valor do atributo 2 de referência obrigatório.' });
+        } else if (attr2.dataKind === 'numeric') {
+          if ((data as any).attributeValue2Id != null) return res.status(400).json({ message: 'Atributo 2 numérico não deve ter valor de item selecionado.' });
+        } else {
+          // text / boolean / date -> não aceita attributeValue2Id
+          if ((data as any).attributeValue2Id != null) return res.status(400).json({ message: 'Este tipo de atributo 2 não aceita valor selecionado.' });
+        }
+      }
+      
       const row = await storage.createParameter(data as any);
       res.json(row);
     } catch (error) {
@@ -1519,6 +1537,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const id = Number(req.params.id);
       if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID inválido' });
       const data = insertParameterSchema.partial().parse(req.body);
+      
+      // Validação para atributo 1
       if ((data as any).attributeId) {
         const attrId = Number((data as any).attributeId);
         const attr = await db.query.attributeDefinitions.findFirst({ where: eq(attributeDefinitions.id, attrId) });
@@ -1526,6 +1546,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const hasLimits = (data as any).minLimit != null || (data as any).maxLimit != null;
         if (attr.dataKind === 'reference') {
           if (hasLimits) return res.status(400).json({ message: 'Atributo de referência não deve ter limites numéricos.' });
+          // Note: Para update, não exigimos attributeValueId (pode estar limpando)
         } else if (attr.dataKind === 'numeric') {
           if ((data as any).attributeValueId != null) return res.status(400).json({ message: 'Atributo numérico não deve ter valor de item selecionado.' });
           if ((data as any).minLimit != null && (data as any).maxLimit != null) {
@@ -1536,6 +1557,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if ((data as any).attributeValueId != null) return res.status(400).json({ message: 'Este tipo de atributo não aceita valor selecionado.' });
         }
       }
+      
+      // Validação para atributo 2 (mesma lógica)
+      if ((data as any).attribute2Id) {
+        const attr2Id = Number((data as any).attribute2Id);
+        const attr2 = await db.query.attributeDefinitions.findFirst({ where: eq(attributeDefinitions.id, attr2Id) });
+        if (!attr2) return res.status(400).json({ message: 'Atributo 2 inválido' });
+        if (attr2.dataKind === 'reference') {
+          // Atributo de referência não aceita limites, mas aceita attributeValue2Id
+        } else if (attr2.dataKind === 'numeric') {
+          if ((data as any).attributeValue2Id != null) return res.status(400).json({ message: 'Atributo 2 numérico não deve ter valor de item selecionado.' });
+        } else {
+          // text / boolean / date -> não aceita attributeValue2Id
+          if ((data as any).attributeValue2Id != null) return res.status(400).json({ message: 'Este tipo de atributo 2 não aceita valor selecionado.' });
+        }
+      }
+      
       const row = await storage.updateParameter(id, data as any);
       res.json(row);
     } catch (error) {
