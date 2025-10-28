@@ -147,7 +147,23 @@ function shouldShowParameter(
 
   const attributeValue = getAttributeValue(sourceData, attribute);
 
-  if (attributeValue === null || attributeValue === undefined) return false;
+  // CRITICAL FIX: If attribute value is null/undefined, only filter out if there's a specific value requirement
+  // Otherwise, show the parameter (it's a general parameter not filtered by attribute value)
+  if (attributeValue === null || attributeValue === undefined) {
+    // If parameter requires a specific attribute value, don't show (building doesn't have that attribute)
+    if (parameter.attributeValueId !== null && parameter.attributeValueId !== undefined) {
+      return false;
+    }
+    // If parameter only has range limits (min/max), don't show (can't evaluate ranges on null)
+    if (parameter.minLimit !== null && parameter.minLimit !== undefined) {
+      return false;
+    }
+    if (parameter.maxLimit !== null && parameter.maxLimit !== undefined) {
+      return false;
+    }
+    // Otherwise, it's a general parameter for this attribute type, show it
+    return true;
+  }
 
   if (parameter.attributeValueId !== null && parameter.attributeValueId !== undefined) {
     if (String(parameter.attributeValueId) !== String(attributeValue)) return false;
