@@ -427,18 +427,18 @@ export default function Sidebar() {
                           {canPredominantColors && (
                             <>
                               <NavLink
-                                href="/predominant-colors"
-                                icon={Palette}
-                                label="Cores"
-                                isActive={location === '/predominant-colors'}
-                                testId="nav-cores"
-                              />
-                              <NavLink
                                 href="/color-groups"
                                 icon={Layers}
                                 label="Grupos de Cores"
                                 isActive={location === '/color-groups'}
                                 testId="nav-grupos-de-cores"
+                              />
+                              <NavLink
+                                href="/predominant-colors"
+                                icon={Palette}
+                                label="Cores"
+                                isActive={location === '/predominant-colors'}
+                                testId="nav-cores"
                               />
                             </>
                           )}
