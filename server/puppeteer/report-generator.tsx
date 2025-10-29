@@ -155,6 +155,23 @@ function checkAttributeMatch(
 
   let attributeValue = getAttributeValue(sourceData, attributeDef);
 
+  // DEBUG: Log para zona bioclimática
+  if (attributeDef.friendlyName?.toLowerCase().includes('zona') && attributeDef.friendlyName?.toLowerCase().includes('bioclim')) {
+    console.log(`[DEBUG] Zona Bioclimática Check:`, {
+      paramId: parameter.id,
+      paramLabel: parameter.label?.substring(0, 50),
+      attributeDefId: attributeDef.id,
+      attributeDefName: attributeDef.friendlyName,
+      sourceTable: attributeDef.sourceTable,
+      sourceColumn: attributeDef.sourceColumn,
+      dataKind: attributeDef.dataKind,
+      buildingBioclimaticZoneId: building?.bioclimaticZoneId,
+      attributeValue,
+      parameterAttributeValueId: attributeValueId,
+      willMatch: String(attributeValueId) === String(attributeValue)
+    });
+  }
+
   // SPECIAL CASE: If this is a color_groups attribute, we need to lookup the color's group
   if (attributeDef.sourceTable === 'color_groups' && attributeValueId && colorGroupsMap) {
     // The building has a predominantColorId, we need to find that color's colorGroupId
