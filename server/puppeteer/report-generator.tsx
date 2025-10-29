@@ -48,6 +48,9 @@ const snakeToCamelOverrides: Record<string, string> = {
   isopleth_id: 'isoplethId'
 };
 
+import fs from 'fs';
+import path from 'path';
+
 const snakeToCamelMap: Record<string, string> = { ...technicalFieldMap, ...snakeToCamelOverrides };
 
 function normalizeText(value: unknown): string {
@@ -79,16 +82,19 @@ function hasValuesForSelectedLevels(parameter: Parameter, selectedLevels: string
 function getAttributeValue(sourceData: any, attribute: AttributeDefinition | undefined): any {
   if (!sourceData || !attribute) return null;
 
-  if (sourceData[attribute.sourceColumn] !== undefined && sourceData[attribute.sourceColumn] !== null) {
-    return sourceData[attribute.sourceColumn];
-  }
-
+  // Para buildings, tentar primeiro camelCase (como vem do Drizzle ORM)
   if (attribute.sourceTable === 'buildings') {
     const camel = snakeToCamelMap[attribute.sourceColumn];
     if (camel && sourceData[camel] !== undefined && sourceData[camel] !== null) {
       return sourceData[camel];
     }
   }
+
+  // Fallback: tentar snake_case direto (para compatibilidade com queries SQL raw)
+  if (sourceData[attribute.sourceColumn] !== undefined && sourceData[attribute.sourceColumn] !== null) {
+    return sourceData[attribute.sourceColumn];
+  }
+
   return null;
 }
 
@@ -155,23 +161,6 @@ function checkAttributeMatch(
 
   let attributeValue = getAttributeValue(sourceData, attributeDef);
 
-  // DEBUG: Log para zona bioclimática
-  if (attributeDef.friendlyName?.toLowerCase().includes('zona') && attributeDef.friendlyName?.toLowerCase().includes('bioclim')) {
-    console.log(`[DEBUG] Zona Bioclimática Check:`, {
-      paramId: parameter.id,
-      paramLabel: parameter.label?.substring(0, 50),
-      attributeDefId: attributeDef.id,
-      attributeDefName: attributeDef.friendlyName,
-      sourceTable: attributeDef.sourceTable,
-      sourceColumn: attributeDef.sourceColumn,
-      dataKind: attributeDef.dataKind,
-      buildingBioclimaticZoneId: building?.bioclimaticZoneId,
-      attributeValue,
-      parameterAttributeValueId: attributeValueId,
-      willMatch: String(attributeValueId) === String(attributeValue)
-    });
-  }
-
   // SPECIAL CASE: If this is a color_groups attribute, we need to lookup the color's group
   if (attributeDef.sourceTable === 'color_groups' && attributeValueId && colorGroupsMap) {
     // The building has a predominantColorId, we need to find that color's colorGroupId
@@ -207,7 +196,9 @@ function checkAttributeMatch(
 
   // Check specific value match
   if (attributeValueId !== null && attributeValueId !== undefined) {
-    if (String(attributeValueId) !== String(attributeValue)) {
+    const matches = String(attributeValueId) === String(attributeValue);
+    
+    if (!matches) {
       return false;
     }
   }
@@ -257,6 +248,11 @@ function shouldShowParameter(
     tableDataByName,
     colorGroupsMap
   );
+
+  // DEBUG: Log resultado do match do atributo 1
+  if (isZoneParam) {
+    console.log(`[DEBUG shouldShowParameter] Resultado attr1Match:`, attr1Match);
+  }
 
   // If first attribute doesn't match, parameter is filtered out
   if (!attr1Match) return false;
@@ -1308,6 +1304,7 @@ async function loadReportContext(reportId: number, userId: number): Promise<Repo
               const params = parametersRaw
                 .filter((parameter) => parameter.analysisId === analysis.id && parameter.isActive !== false)
                 .filter((parameter) => shouldShowParameter(parameter, attributeMap, building, tableDataByName, colorGroupsMap));
+              
               const sortedParams = sortParameters(params);
               // IMPORTANT: Keep analysis even if no parameters match
               // This allows showing "Not applicable" message in the report
@@ -1343,9 +1340,6 @@ async function loadReportContext(reportId: number, userId: number): Promise<Repo
               const selectedLevels = selectedEvaluations.get(`analysis-${analysis.id}`);
               if (!selectedLevels || selectedLevels.length === 0) return null;
               
-              const filteredParameters = analysis.parameters.filter((parameter) =>
-                hasValuesForSelectedLevels(parameter, selectedLevels)
-              );
               // IMPORTANT: Keep analysis even if no parameters have values for selected levels
               // This ensures all selected analyses appear in the report
               return {

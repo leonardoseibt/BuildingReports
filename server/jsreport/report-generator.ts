@@ -38,6 +38,9 @@ const snakeToCamelOverrides: Record<string, string> = {
   typology_id: 'typologyId',
   noise_class_id: 'noiseClassId',
   aggressiveness_class_id: 'aggressivenessClassId',
+  predominant_color_id: 'predominantColorId',
+  bioclimatic_zone_id: 'bioclimaticZoneId',
+  isopleth_id: 'isoplethId',
   bioclimatic_zone: 'bioclimaticZone',
   isopleth_code: 'isoplethCode'
 };
@@ -73,16 +76,19 @@ function hasValuesForSelectedLevels(parameter: Parameter, selectedLevels: string
 function getAttributeValue(sourceData: any, attribute: AttributeDefinition | undefined): any {
   if (!sourceData || !attribute) return null;
 
-  if (sourceData[attribute.sourceColumn] !== undefined && sourceData[attribute.sourceColumn] !== null) {
-    return sourceData[attribute.sourceColumn];
-  }
-
+  // CORRIGIDO: Tentar camelCase PRIMEIRO (Drizzle ORM retorna camelCase)
   if (attribute.sourceTable === 'buildings') {
     const camel = snakeToCamelMap[attribute.sourceColumn];
     if (camel && sourceData[camel] !== undefined && sourceData[camel] !== null) {
       return sourceData[camel];
     }
   }
+
+  // Fallback: snake_case (compatibilidade com SQL direto)
+  if (sourceData[attribute.sourceColumn] !== undefined && sourceData[attribute.sourceColumn] !== null) {
+    return sourceData[attribute.sourceColumn];
+  }
+
   return null;
 }
 
