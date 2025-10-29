@@ -325,6 +325,18 @@ function escapeHtml(value: unknown): string {
     .replace(/'/g, '&#39;');
 }
 
+function escapeHtmlPreserveUnicode(value: unknown): string {
+  const str = String(value ?? '');
+  // Replace common Unicode symbols with HTML entities
+  if (str === '—') return '&mdash;';
+  if (str === '≤') return '&le;';
+  if (str === '≥') return '&ge;';
+  if (str === '≠') return '&ne;';
+  if (str === '±') return '&plusmn;';
+  // For mixed content, do standard escape
+  return escapeHtml(str);
+}
+
 type AnalysisRender = Analysis & {
   selectedLevels: string[];
   parameters: Parameter[];
@@ -746,7 +758,7 @@ function buildReportHtml(context: ReportRenderContext): string {
           const levelCells = analysis.selectedLevels.map((level) => {
             const value = resolveParameterLevelValue(parameter, level);
             const displayValue = normalizeDisplayValue(value);
-            return `<td style="text-align: center; padding: 6px 8px; border: 1px solid #94a3b8; font-size: 10px; width: 60px; min-width: 60px; white-space: nowrap;">${escapeHtml(displayValue)}</td>`;
+            return `<td style="text-align: center; padding: 6px 8px; border: 1px solid #94a3b8; font-size: 10px; width: 60px; min-width: 60px; white-space: nowrap;">${escapeHtmlPreserveUnicode(displayValue)}</td>`;
           }).join('');
           
           return `
