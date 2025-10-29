@@ -4,10 +4,7 @@ import { storage } from "./storage";
 import { setupAuth, isAuthenticated, refreshSession, requireModuleAccess } from "./auth";
 import { insertBuildingSchema, updateBuildingSchema, insertStructuralSystemSchema, insertReportSchema, insertTechnicianSchema, updateTechnicianSchema, insertUserSchema, updateUserSchema, insertTypologySchema, insertNoiseClassSchema, insertAggressivenessClassSchema, insertColorGroupSchema, insertColorSchema, insertPredominantColorSchema, insertBioclimaticZoneSchema, insertBioclimaticZoneCoverageSchema, insertStateSchema, insertCitySchema, insertConstructiveSystemSchema, insertRequirementSchema, insertCriterionSchema, insertAnalysisSchema, insertIsoplethSchema } from "@shared/schema";
 import { insertParameterSchema, attributeDefinitions } from '@shared/schema';
-import { generateReportPdf, generateReportJson } from './puppeteer/report-generator';
 import { generateReportPdfJsreport } from './jsreport/report-generator';
-import { generateReportPDF } from './puppeteer/report-generator-pdf';
-import { renderToBuffer } from '@react-pdf/renderer';
 import { db } from './db';
 import { eq } from 'drizzle-orm';
 import bcrypt from "bcryptjs";
@@ -776,72 +773,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error fetching report definitions:', error);
       res.status(500).json({ message: 'Failed to fetch report definitions' });
-    }
-  });
-
-  app.get('/api/reports/:id/puppeteer', isAuthenticated, validateNumericId(), heavyOperationLimiter, async (req: any, res) => {
-    try {
-      const id = (req as any).validatedId;
-      const userId = Number(req.user.claims.sub);
-      const { filename, pdf } = await generateReportPdf(id, userId);
-      const safeName = encodeURIComponent(filename);
-      res.status(200);
-      res.setHeader('Content-Type', 'application/pdf');
-      const inline = req.query?.inline === '1' || req.query?.inline === 'true';
-      const dispositionType = inline ? 'inline' : 'attachment';
-      res.setHeader('Content-Disposition', `${dispositionType}; filename="${filename}"; filename*=UTF-8''${safeName}`);
-      res.setHeader('Content-Length', String(pdf.length));
-      res.send(pdf);
-    } catch (error) {
-      console.error('Error generating puppeteer report:', error);
-      const status = (error as any)?.statusCode ?? 500;
-      const message = status === 403 ? 'Access denied' : status === 404 ? 'Report not found' : 'Failed to generate report';
-      res.status(status).json({ message });
-    }
-  });
-
-
-  app.get('/api/reports/:id/json', isAuthenticated, async (req: any, res) => {
-    try {
-      const id = Number(req.params.id);
-      if (!Number.isFinite(id)) return res.status(400).json({ message: 'ID invalido' });
-      const userId = Number(req.user.claims.sub);
-      const { filename, json } = await generateReportJson(id, userId);
-      const safeName = encodeURIComponent(filename);
-      const inline = req.query?.inline === '1' || req.query?.inline === 'true';
-      const dispositionType = inline ? 'inline' : 'attachment';
-      res.status(200);
-      res.setHeader('Content-Type', 'application/json; charset=utf-8');
-      res.setHeader('Content-Disposition', `${dispositionType}; filename="${filename}"; filename*=UTF-8''${safeName}`);
-      res.setHeader('Content-Length', Buffer.byteLength(json, 'utf8').toString());
-      res.send(json);
-    } catch (error) {
-      console.error('Error generating report JSON:', error);
-      const status = (error as any)?.statusCode ?? 500;
-      const message = status === 403 ? 'Access denied' : status === 404 ? 'Report not found' : 'Failed to generate report JSON';
-      res.status(status).json({ message });
-    }
-  });
-
-  app.get('/api/reports/:id/react-pdf', isAuthenticated, validateNumericId(), heavyOperationLimiter, async (req: any, res) => {
-    try {
-      const id = (req as any).validatedId;
-      const userId = Number(req.user.claims.sub);
-      const { document, filename } = await generateReportPDF(id, userId);
-      const pdfBuffer = await renderToBuffer(document);
-      const safeName = encodeURIComponent(filename);
-      res.status(200);
-      res.setHeader('Content-Type', 'application/pdf');
-      const inline = req.query?.inline === '1' || req.query?.inline === 'true';
-      const dispositionType = inline ? 'inline' : 'attachment';
-      res.setHeader('Content-Disposition', `${dispositionType}; filename="${filename}"; filename*=UTF-8''${safeName}`);
-      res.setHeader('Content-Length', String(pdfBuffer.length));
-      res.send(pdfBuffer);
-    } catch (error) {
-      console.error('Error generating react-pdf report:', error);
-      const status = (error as any)?.statusCode ?? 500;
-      const message = status === 403 ? 'Access denied' : status === 404 ? 'Report not found' : 'Failed to generate report';
-      res.status(status).json({ message });
     }
   });
 

@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { PaginationSimple as Pagination } from '@/components/ui/pagination';
-import { Plus, Pencil, Trash2, MapPin, Search, Printer, FileText, FileDown, Braces, FilePlus2 } from 'lucide-react';
+import { Plus, Pencil, Trash2, MapPin, Search, FileDown } from 'lucide-react';
 import ReportForm from '@/components/reports/report-form';
 import type { Report } from '@shared/schema';
 import { apiRequest } from '@/lib/queryClient';
@@ -107,37 +107,7 @@ export default function ReportsList() {
   }
 
   function openReportPdf(item: ReportItem) {
-    const pdfUrl = `/api/reports/${item.id}/puppeteer?inline=1`;
-    const popup = window.open('', '_blank');
-    if (popup) {
-      try {
-        popup.opener = null;
-      } catch {
-        /* noop */
-      }
-      popup.location.href = pdfUrl;
-    } else {
-      window.location.href = pdfUrl;
-    }
-  }
-
-  function openReportPdfJs(item: ReportItem) {
     const pdfUrl = `/api/reports/${item.id}/jsreport?inline=1`;
-    const popup = window.open('', '_blank');
-    if (popup) {
-      try {
-        popup.opener = null;
-      } catch {
-        /* noop */
-      }
-      popup.location.href = pdfUrl;
-    } else {
-      window.location.href = pdfUrl;
-    }
-  }
-
-  function openReportReactPdf(item: ReportItem) {
-    const pdfUrl = `/api/reports/${item.id}/react-pdf?inline=1`;
     const popup = window.open('', '_blank');
     if (popup) {
       try {
@@ -263,23 +233,8 @@ export default function ReportsList() {
                             <Pencil className="h-4 w-4" />
                           </Button>
                           
-                          {/* BOTÕES TEMPORARIAMENTE OCULTOS - Para reativar, descomente as linhas abaixo */}
-                          {false && (
-                            <>
-                              <Button variant="ghost" size="icon" onClick={() => openReportPdf(r)} title="Gerar PDF (Puppeteer)">
-                                <Printer className="h-4 w-4" />
-                              </Button>
-                              <Button variant="ghost" size="icon" onClick={() => openReportReactPdf(r)} title="Gerar PDF (React-PDF)" className="text-green-600 hover:bg-green-50 hover:text-green-700">
-                                <FilePlus2 className="h-4 w-4" />
-                              </Button>
-                              <Button variant="ghost" size="icon" onClick={() => openReportJson(r)} title="Gerar JSON">
-                                <Braces className="h-4 w-4" />
-                              </Button>
-                            </>
-                          )}
-                          
-                          {/* Botão Gerar PDF (jsreport) */}
-                          <Button variant="ghost" size="icon" onClick={() => openReportPdfJs(r)} title="Gerar PDF (jsreport)">
+                          {/* Botão Gerar PDF */}
+                          <Button variant="ghost" size="icon" onClick={() => openReportPdf(r)} title="Gerar PDF">
                             <FileDown className="h-4 w-4" />
                           </Button>
                           
