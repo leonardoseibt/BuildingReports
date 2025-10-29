@@ -57,6 +57,11 @@ function formatWithSeparators(value: string | null | undefined): string {
   return normalizeText(value).replace(/\r?\n/g, ' \u2022 ');
 }
 
+function sortLevels(levels: string[]): string[] {
+  const order: Record<string, number> = { 'minimum': 0, 'intermediate': 1, 'superior': 2 };
+  return [...levels].sort((a, b) => (order[a] ?? 999) - (order[b] ?? 999));
+}
+
 function hasValuesForSelectedLevels(parameter: Parameter, selectedLevels: string[]): boolean {
   if (!selectedLevels || selectedLevels.length === 0) return true;
   const valueMap: Record<string, unknown> = {
@@ -502,8 +507,11 @@ async function loadReportContext(reportId: number, userId: number): Promise<Repo
           const analysesWithLevels = criterion.analyses
             .map((analysis) => {
               // Get selected levels from map. If not in map, analysis is not selected - return null.
-              const selectedLevels = selectedEvaluations.get(`analysis-${analysis.id}`);
-              if (!selectedLevels || selectedLevels.length === 0) return null;
+              const rawSelectedLevels = selectedEvaluations.get(`analysis-${analysis.id}`);
+              if (!rawSelectedLevels || rawSelectedLevels.length === 0) return null;
+              
+              // Sort levels to ensure correct order: MIN, INT, SUP
+              const selectedLevels = sortLevels(rawSelectedLevels);
 
               const filteredParameters = analysis.parameters.filter((parameter) =>
                 hasValuesForSelectedLevels(parameter, selectedLevels)
