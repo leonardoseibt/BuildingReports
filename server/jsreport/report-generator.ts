@@ -165,6 +165,30 @@ function checkAttributeMatch(
   tableDataByName: Map<string, any[]>,
   colorToGroupMap: Map<number, number>
 ): boolean {
+  // CASO ESPECIAL: color_groups
+  // O atributo aponta para color_groups, mas building tem predominant_color_id
+  // Precisamos mapear: building.predominant_color_id -> color_group_id
+  if (attribute.sourceTable === 'color_groups' && building) {
+    const predominantColorId = building.predominantColorId;
+    
+    // Se não tem cor definida, não filtra
+    if (!predominantColorId) return true;
+    
+    // Mapeia cor -> grupo de cores
+    const colorGroupId = colorToGroupMap.get(predominantColorId);
+    
+    // Se não encontrou o mapeamento, não filtra
+    if (colorGroupId === undefined) return true;
+    
+    // Compara o color_group_id do building com o attributeValueId do parâmetro
+    if (attributeValueId !== null && attributeValueId !== undefined) {
+      if (String(attributeValueId) !== String(colorGroupId)) return false;
+    }
+    
+    return true;
+  }
+
+  // Lógica normal para outros atributos
   let sourceData: any = null;
 
   if (attribute.sourceTable === 'buildings') {
@@ -176,18 +200,9 @@ function checkAttributeMatch(
 
   if (!sourceData) return true;
 
-  let attributeValue = getAttributeValue(sourceData, attribute);
+  const attributeValue = getAttributeValue(sourceData, attribute);
 
   if (attributeValue === null || attributeValue === undefined) return false;
-
-  // CASO ESPECIAL: Se o atributo aponta para color_groups mas o building tem predominant_color_id
-  // Precisamos fazer o mapeamento: predominant_color_id -> color_group_id
-  if (attribute.sourceTable === 'color_groups' && building) {
-    const predominantColorId = building.predominantColorId;
-    if (predominantColorId && colorToGroupMap.has(predominantColorId)) {
-      attributeValue = colorToGroupMap.get(predominantColorId);
-    }
-  }
 
   if (attributeValueId !== null && attributeValueId !== undefined) {
     if (String(attributeValueId) !== String(attributeValue)) return false;
