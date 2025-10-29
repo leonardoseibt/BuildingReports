@@ -738,7 +738,7 @@ function buildReportHtml(context: ReportRenderContext): string {
           const levelCells = analysis.selectedLevels.map((level) => {
             const value = resolveParameterLevelValue(parameter, level);
             const displayValue = normalizeDisplayValue(value);
-            return `<td style="text-align: center; padding: 6px 8px; border: 1px solid #94a3b8; font-size: 10px; width: 50px; min-width: 50px; white-space: nowrap;">${escapeHtml(displayValue)}</td>`;
+            return `<td style="text-align: center; padding: 6px 8px; border: 1px solid #94a3b8; font-size: 10px; width: 60px; min-width: 60px; white-space: nowrap;">${escapeHtml(displayValue)}</td>`;
           }).join('');
           
           return `
@@ -755,7 +755,7 @@ function buildReportHtml(context: ReportRenderContext): string {
 
         // Build header cells for selected levels
         const levelHeaders = analysis.selectedLevels.map((level) => {
-          return `<th style="text-align: center; padding: 6px 8px; background-color: #e2e8f0; border: 1px solid #94a3b8; font-weight: 700; text-transform: uppercase; font-size: 10px; width: 50px; min-width: 50px;">${escapeHtml(levelLabels[level])}</th>`;
+          return `<th style="text-align: center; padding: 6px 8px; background-color: #e2e8f0; border: 1px solid #94a3b8; font-weight: 700; text-transform: uppercase; font-size: 10px; width: 60px; min-width: 60px;">${escapeHtml(levelLabels[level])}</th>`;
         }).join('');
 
         const tableHtml = analysis.parameters.length > 0
