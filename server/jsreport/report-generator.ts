@@ -777,7 +777,7 @@ function buildReportHtml(context: ReportRenderContext): string {
 
         return `
           <div style="margin: 12px 0;">
-            <div style="background-color: #dbeafe; padding: 6px 10px; font-weight: 600; text-transform: uppercase; font-size: 10px; color: #1e40af; letter-spacing: 0.3px;">
+            <div style="background-color: #dbeafe; padding: 6px 10px; font-weight: 600; text-transform: uppercase; font-size: 10px; color: #1e40af; letter-spacing: 0.3px; page-break-after: avoid;">
               ANÁLISE: ${escapeHtml(formatWithSeparators(analysis.label ?? ''))}
             </div>
             ${tableHtml}
@@ -787,7 +787,7 @@ function buildReportHtml(context: ReportRenderContext): string {
 
       return `
         <div style="margin: 16px 0;">
-          <div style="background-color: #dbeafe; padding: 7px 12px; font-weight: 700; text-transform: uppercase; font-size: 11px; color: #1e3a8a; letter-spacing: 0.4px; border-bottom: 2px solid #3b82f6;">
+          <div style="background-color: #dbeafe; padding: 7px 12px; font-weight: 700; text-transform: uppercase; font-size: 11px; color: #1e3a8a; letter-spacing: 0.4px; border-bottom: 2px solid #3b82f6; page-break-after: avoid;">
             CRITÉRIO: ${escapeHtml(formatWithSeparators(criterion.label ?? ''))}
           </div>
           ${analysesHtml}
@@ -797,7 +797,7 @@ function buildReportHtml(context: ReportRenderContext): string {
 
     return `
       <div style="page-break-after: auto; margin: 24px 0 32px 0;">
-        <h2 style="font-size: 16px; font-weight: 700; color: #1e3a8a; text-transform: uppercase; padding-bottom: 6px; border-bottom: 3px solid #1e40af; margin: 0 0 12px 0; letter-spacing: 0.5px;">
+        <h2 style="font-size: 16px; font-weight: 700; color: #1e3a8a; text-transform: uppercase; padding-bottom: 6px; border-bottom: 3px solid #1e40af; margin: 0 0 12px 0; letter-spacing: 0.5px; page-break-after: avoid;">
           REQUISITO: ${escapeHtml(formatWithSeparators(requirement.label ?? ''))}
         </h2>
         ${criteriaHtml}
@@ -827,16 +827,27 @@ function buildReportHtml(context: ReportRenderContext): string {
       }
       table {
         page-break-inside: auto;
+        orphans: 2;
+        widows: 2;
       }
       tr {
         page-break-inside: avoid;
         page-break-after: auto;
+      }
+      tbody tr:first-child {
+        page-break-before: avoid;
       }
       thead {
         display: table-header-group;
       }
       h1, h2 {
         page-break-after: avoid;
+      }
+      [style*="background-color: #dbeafe"] {
+        page-break-after: avoid;
+      }
+      h2 + div {
+        page-break-before: avoid;
       }
     </style>
   </head>
