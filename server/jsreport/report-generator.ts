@@ -136,7 +136,9 @@ function shouldShowParameter(
   if (parameter.attributeId) {
     const attribute = attributeDefs.get(parameter.attributeId);
     if (attribute) {
-      if (!checkAttributeMatch(parameter, attribute, parameter.attributeValueId, parameter.minLimit, parameter.maxLimit, building, tableDataByName, colorToGroupMap)) {
+      const matchResult = checkAttributeMatch(parameter, attribute, parameter.attributeValueId, parameter.minLimit, parameter.maxLimit, building, tableDataByName, colorToGroupMap);
+
+      if (!matchResult) {
         return false;
       }
     }
@@ -146,7 +148,9 @@ function shouldShowParameter(
   if ((parameter as any).attribute2Id) {
     const attribute2 = attributeDefs.get((parameter as any).attribute2Id);
     if (attribute2) {
-      if (!checkAttributeMatch(parameter, attribute2, (parameter as any).attributeValue2Id, null, null, building, tableDataByName, colorToGroupMap)) {
+      const matchResult = checkAttributeMatch(parameter, attribute2, (parameter as any).attributeValue2Id, null, null, building, tableDataByName, colorToGroupMap);
+
+      if (!matchResult) {
         return false;
       }
     }
@@ -166,21 +170,25 @@ function checkAttributeMatch(
   colorToGroupMap: Map<number, number>
 ): boolean {
   // CASO ESPECIAL: color_groups
-  // O atributo aponta para color_groups, mas building tem predominant_color_id
+  // O atributo aponta para color_groups como valueSource, mas building tem predominant_color_id
   // Precisamos mapear: building.predominant_color_id -> color_group_id
-  if (attribute.sourceTable === 'color_groups') {
+  if (attribute.valueSource === 'color_groups') {
     if (!building) return true;
     
     const predominantColorId = building.predominantColorId;
     
     // Se não tem cor definida na edificação, rejeita o parâmetro
-    if (!predominantColorId) return false;
+    if (!predominantColorId) {
+      return false;
+    }
     
     // Mapeia cor -> grupo de cores
     const colorGroupId = colorToGroupMap.get(predominantColorId);
     
     // Se não encontrou o mapeamento, rejeita o parâmetro
-    if (colorGroupId === undefined || colorGroupId === null) return false;
+    if (colorGroupId === undefined || colorGroupId === null) {
+      return false;
+    }
     
     // Se o parâmetro não especifica um color_group_id, aceita qualquer
     if (attributeValueId === null || attributeValueId === undefined) return true;
@@ -335,6 +343,7 @@ interface ReportRenderContext {
   aggressivenessClass?: any;
   bioclimaticZone?: any;
   isopleth?: any;
+  predominantColor?: any;
 }
 
 async function loadTableData(
@@ -556,6 +565,10 @@ async function loadReportContext(reportId: number, userId: number): Promise<Repo
   const isopleth = building.isoplethId 
     ? isopleths.find((i: any) => i.id === building.isoplethId) 
     : undefined;
+  
+  const predominantColor = building.predominantColorId 
+    ? predominantColors.find((c: any) => c.id === building.predominantColorId) 
+    : undefined;
 
   return {
     report,
@@ -566,7 +579,8 @@ async function loadReportContext(reportId: number, userId: number): Promise<Repo
     noiseClass,
     aggressivenessClass,
     bioclimaticZone,
-    isopleth
+    isopleth,
+    predominantColor
   };
 }
 
@@ -579,7 +593,7 @@ function buildFilename(building: Building, report: Report): string {
 }
 
 function buildBuildingInfoPage(context: ReportRenderContext): string {
-  const { building, technician, typology, noiseClass, aggressivenessClass, bioclimaticZone, isopleth } = context;
+  const { building, technician, typology, noiseClass, aggressivenessClass, bioclimaticZone, isopleth, predominantColor } = context;
 
   const formatValue = (value: any): string => {
     if (value === null || value === undefined || value === '') return '—';
@@ -600,99 +614,105 @@ function buildBuildingInfoPage(context: ReportRenderContext): string {
 
   return `
     <div style="page-break-after: always; padding: 40px 20px;">
-      <h1 style="font-size: 24px; font-weight: 700; color: #1e3a8a; text-align: center; margin-bottom: 40px; text-transform: uppercase; letter-spacing: 1px; border-bottom: 4px solid #1e40af; padding-bottom: 16px;">
+      <h1 style="font-size: 24px; font-weight: 700; color: #1e3a8a; text-align: center; margin-bottom: 32px; text-transform: uppercase; letter-spacing: 1px; border-bottom: 4px solid #1e40af; padding-bottom: 16px;">
         PERFIL DE DESEMPENHO DA EDIFICAÇÃO - PDE
       </h1>
 
-      <h2 style="font-size: 16px; font-weight: 700; color: #1e3a8a; margin-bottom: 16px; text-transform: uppercase; border-bottom: 2px solid #3b82f6; padding-bottom: 8px;">
+      <h2 style="font-size: 16px; font-weight: 700; color: #1e3a8a; margin-bottom: 12px; text-transform: uppercase; border-bottom: 2px solid #3b82f6; padding-bottom: 8px;">
         IDENTIFICAÇÃO
       </h2>
 
-      <table style="width: 100%; border-collapse: collapse; margin-bottom: 24px;">
+      <table style="width: 100%; border-collapse: collapse; margin-bottom: 16px;">
         <tr>
-          <td style="padding: 12px; border: 1px solid #cbd5e1; background-color: #f1f5f9; font-weight: 700; width: 35%; font-size: 11px;">NOME DA EDIFICAÇÃO</td>
-          <td style="padding: 12px; border: 1px solid #cbd5e1; font-size: 11px;">${formatValue(building.name)}</td>
+          <td style="padding: 8px; border: 1px solid #cbd5e1; background-color: #f1f5f9; font-weight: 700; width: 35%; font-size: 11px;">NOME DA EDIFICAÇÃO</td>
+          <td style="padding: 8px; border: 1px solid #cbd5e1; font-size: 11px;">${formatValue(building.name)}</td>
         </tr>
         ${technician ? `
         <tr>
-          <td style="padding: 12px; border: 1px solid #cbd5e1; background-color: #f1f5f9; font-weight: 700; font-size: 11px;">RESPONSÁVEL TÉCNICO</td>
-          <td style="padding: 12px; border: 1px solid #cbd5e1; font-size: 11px;">${formatValue(technician.fullName)}</td>
+          <td style="padding: 8px; border: 1px solid #cbd5e1; background-color: #f1f5f9; font-weight: 700; font-size: 11px;">RESPONSÁVEL TÉCNICO</td>
+          <td style="padding: 8px; border: 1px solid #cbd5e1; font-size: 11px;">${formatValue(technician.fullName)}</td>
         </tr>
         ` : ''}
         <tr>
-          <td style="padding: 12px; border: 1px solid #cbd5e1; background-color: #f1f5f9; font-weight: 700; font-size: 11px;">ENDEREÇO</td>
-          <td style="padding: 12px; border: 1px solid #cbd5e1; font-size: 11px;">${formatValue(building.street)}${building.addressNumber ? ', ' + formatValue(building.addressNumber) : ''}</td>
+          <td style="padding: 8px; border: 1px solid #cbd5e1; background-color: #f1f5f9; font-weight: 700; font-size: 11px;">ENDEREÇO</td>
+          <td style="padding: 8px; border: 1px solid #cbd5e1; font-size: 11px;">${formatValue(building.street)}${building.addressNumber ? ', ' + formatValue(building.addressNumber) : ''}</td>
         </tr>
         <tr>
-          <td style="padding: 12px; border: 1px solid #cbd5e1; background-color: #f1f5f9; font-weight: 700; font-size: 11px;">BAIRRO</td>
-          <td style="padding: 12px; border: 1px solid #cbd5e1; font-size: 11px;">${formatValue(building.neighborhood)}</td>
+          <td style="padding: 8px; border: 1px solid #cbd5e1; background-color: #f1f5f9; font-weight: 700; font-size: 11px;">BAIRRO</td>
+          <td style="padding: 8px; border: 1px solid #cbd5e1; font-size: 11px;">${formatValue(building.neighborhood)}</td>
         </tr>
         <tr>
-          <td style="padding: 12px; border: 1px solid #cbd5e1; background-color: #f1f5f9; font-weight: 700; font-size: 11px;">CIDADE / ESTADO</td>
-          <td style="padding: 12px; border: 1px solid #cbd5e1; font-size: 11px;">${formatValue(building.city)} / ${formatValue(building.state)}</td>
+          <td style="padding: 8px; border: 1px solid #cbd5e1; background-color: #f1f5f9; font-weight: 700; font-size: 11px;">CIDADE / ESTADO</td>
+          <td style="padding: 8px; border: 1px solid #cbd5e1; font-size: 11px;">${formatValue(building.city)} / ${formatValue(building.state)}</td>
         </tr>
         <tr>
-          <td style="padding: 12px; border: 1px solid #cbd5e1; background-color: #f1f5f9; font-weight: 700; font-size: 11px;">CEP</td>
-          <td style="padding: 12px; border: 1px solid #cbd5e1; font-size: 11px;">${formatValue(building.cep)}</td>
+          <td style="padding: 8px; border: 1px solid #cbd5e1; background-color: #f1f5f9; font-weight: 700; font-size: 11px;">CEP</td>
+          <td style="padding: 8px; border: 1px solid #cbd5e1; font-size: 11px;">${formatValue(building.cep)}</td>
         </tr>
       </table>
 
-      <h2 style="font-size: 16px; font-weight: 700; color: #1e3a8a; margin-top: 32px; margin-bottom: 16px; text-transform: uppercase; border-bottom: 2px solid #3b82f6; padding-bottom: 8px;">
+      <h2 style="font-size: 16px; font-weight: 700; color: #1e3a8a; margin-top: 20px; margin-bottom: 12px; text-transform: uppercase; border-bottom: 2px solid #3b82f6; padding-bottom: 8px;">
         CARACTERÍSTICAS TÉCNICAS
       </h2>
 
-      <table style="width: 100%; border-collapse: collapse; margin-bottom: 24px;">
+      <table style="width: 100%; border-collapse: collapse; margin-bottom: 16px;">
         ${typology ? `
         <tr>
-          <td style="padding: 12px; border: 1px solid #cbd5e1; background-color: #f1f5f9; font-weight: 700; width: 35%; font-size: 11px;">TIPOLOGIA</td>
-          <td style="padding: 12px; border: 1px solid #cbd5e1; font-size: 11px;">${formatValue(typology.label)}</td>
+          <td style="padding: 8px; border: 1px solid #cbd5e1; background-color: #f1f5f9; font-weight: 700; width: 35%; font-size: 11px;">TIPOLOGIA</td>
+          <td style="padding: 8px; border: 1px solid #cbd5e1; font-size: 11px;">${formatValue(typology.label)}</td>
         </tr>
         ` : ''}
         <tr>
-          <td style="padding: 12px; border: 1px solid #cbd5e1; background-color: #f1f5f9; font-weight: 700; width: 35%; font-size: 11px;">ÁREA TOTAL</td>
-          <td style="padding: 12px; border: 1px solid #cbd5e1; font-size: 11px;">${formatDecimal(building.totalArea, 'm²')}</td>
+          <td style="padding: 8px; border: 1px solid #cbd5e1; background-color: #f1f5f9; font-weight: 700; width: 35%; font-size: 11px;">ÁREA TOTAL</td>
+          <td style="padding: 8px; border: 1px solid #cbd5e1; font-size: 11px;">${formatDecimal(building.totalArea, 'm²')}</td>
         </tr>
         <tr>
-          <td style="padding: 12px; border: 1px solid #cbd5e1; background-color: #f1f5f9; font-weight: 700; font-size: 11px;">ALTURA DA EDIFICAÇÃO</td>
-          <td style="padding: 12px; border: 1px solid #cbd5e1; font-size: 11px;">${formatDecimal(building.buildingHeight, 'm')}</td>
+          <td style="padding: 8px; border: 1px solid #cbd5e1; background-color: #f1f5f9; font-weight: 700; font-size: 11px;">ALTURA DA EDIFICAÇÃO</td>
+          <td style="padding: 8px; border: 1px solid #cbd5e1; font-size: 11px;">${formatDecimal(building.buildingHeight, 'm')}</td>
         </tr>
         <tr>
-          <td style="padding: 12px; border: 1px solid #cbd5e1; background-color: #f1f5f9; font-weight: 700; font-size: 11px;">PROFUNDIDADE DE SUBSOLO</td>
-          <td style="padding: 12px; border: 1px solid #cbd5e1; font-size: 11px;">${formatDecimal(building.basementDepth, 'm')}</td>
+          <td style="padding: 8px; border: 1px solid #cbd5e1; background-color: #f1f5f9; font-weight: 700; font-size: 11px;">PROFUNDIDADE DE SUBSOLO</td>
+          <td style="padding: 8px; border: 1px solid #cbd5e1; font-size: 11px;">${formatDecimal(building.basementDepth, 'm')}</td>
         </tr>
         <tr>
-          <td style="padding: 12px; border: 1px solid #cbd5e1; background-color: #f1f5f9; font-weight: 700; font-size: 11px;">NÚMERO DE PAVIMENTOS</td>
-          <td style="padding: 12px; border: 1px solid #cbd5e1; font-size: 11px;">${formatValue(building.floors)}</td>
+          <td style="padding: 8px; border: 1px solid #cbd5e1; background-color: #f1f5f9; font-weight: 700; font-size: 11px;">NÚMERO DE PAVIMENTOS</td>
+          <td style="padding: 8px; border: 1px solid #cbd5e1; font-size: 11px;">${formatValue(building.floors)}</td>
         </tr>
         <tr>
-          <td style="padding: 12px; border: 1px solid #cbd5e1; background-color: #f1f5f9; font-weight: 700; font-size: 11px;">NÚMERO DE UNIDADES</td>
-          <td style="padding: 12px; border: 1px solid #cbd5e1; font-size: 11px;">${formatValue(building.units)}</td>
+          <td style="padding: 8px; border: 1px solid #cbd5e1; background-color: #f1f5f9; font-weight: 700; font-size: 11px;">NÚMERO DE UNIDADES</td>
+          <td style="padding: 8px; border: 1px solid #cbd5e1; font-size: 11px;">${formatValue(building.units)}</td>
         </tr>
+        ${predominantColor ? `
+        <tr>
+          <td style="padding: 8px; border: 1px solid #cbd5e1; background-color: #f1f5f9; font-weight: 700; font-size: 11px;">COR PREDOMINANTE</td>
+          <td style="padding: 8px; border: 1px solid #cbd5e1; font-size: 11px;">${formatValue(predominantColor.label)}</td>
+        </tr>
+        ` : ''}
       </table>
 
-      <h2 style="font-size: 16px; font-weight: 700; color: #1e3a8a; margin-top: 32px; margin-bottom: 16px; text-transform: uppercase; border-bottom: 2px solid #3b82f6; padding-bottom: 8px;">
+      <h2 style="font-size: 16px; font-weight: 700; color: #1e3a8a; margin-top: 20px; margin-bottom: 12px; text-transform: uppercase; border-bottom: 2px solid #3b82f6; padding-bottom: 8px;">
         CLASSIFICAÇÕES AMBIENTAIS
       </h2>
 
       <table style="width: 100%; border-collapse: collapse;">
         <tr>
-          <td style="padding: 12px; border: 1px solid #cbd5e1; background-color: #f1f5f9; font-weight: 700; width: 35%; font-size: 11px;">ZONA BIOCLIMÁTICA</td>
-          <td style="padding: 12px; border: 1px solid #cbd5e1; font-size: 11px;">${formatWithDescription(bioclimaticZone?.code, bioclimaticZone?.label)}</td>
+          <td style="padding: 8px; border: 1px solid #cbd5e1; background-color: #f1f5f9; font-weight: 700; width: 35%; font-size: 11px;">ZONA BIOCLIMÁTICA</td>
+          <td style="padding: 8px; border: 1px solid #cbd5e1; font-size: 11px;">${formatWithDescription(bioclimaticZone?.code, bioclimaticZone?.label)}</td>
         </tr>
         <tr>
-          <td style="padding: 12px; border: 1px solid #cbd5e1; background-color: #f1f5f9; font-weight: 700; font-size: 11px;">ISOPLETA</td>
-          <td style="padding: 12px; border: 1px solid #cbd5e1; font-size: 11px;">${formatWithDescription(isopleth?.code, isopleth?.label)}</td>
+          <td style="padding: 8px; border: 1px solid #cbd5e1; background-color: #f1f5f9; font-weight: 700; font-size: 11px;">ISOPLETA DE VENTOS</td>
+          <td style="padding: 8px; border: 1px solid #cbd5e1; font-size: 11px;">${formatWithDescription(isopleth?.code, isopleth?.label)}</td>
         </tr>
         ${noiseClass ? `
         <tr>
-          <td style="padding: 12px; border: 1px solid #cbd5e1; background-color: #f1f5f9; font-weight: 700; font-size: 11px;">CLASSE DE RUÍDO</td>
-          <td style="padding: 12px; border: 1px solid #cbd5e1; font-size: 11px;">${formatValue(noiseClass.label)}</td>
+          <td style="padding: 8px; border: 1px solid #cbd5e1; background-color: #f1f5f9; font-weight: 700; font-size: 11px;">CLASSE DE RUÍDO</td>
+          <td style="padding: 8px; border: 1px solid #cbd5e1; font-size: 11px;">${formatValue(noiseClass.label)}</td>
         </tr>
         ` : ''}
         ${aggressivenessClass ? `
         <tr>
-          <td style="padding: 12px; border: 1px solid #cbd5e1; background-color: #f1f5f9; font-weight: 700; font-size: 11px;">CLASSE DE AGRESSIVIDADE</td>
-          <td style="padding: 12px; border: 1px solid #cbd5e1; font-size: 11px;">${formatValue(aggressivenessClass.label)}</td>
+          <td style="padding: 8px; border: 1px solid #cbd5e1; background-color: #f1f5f9; font-weight: 700; font-size: 11px;">CLASSE DE AGRESSIVIDADE</td>
+          <td style="padding: 8px; border: 1px solid #cbd5e1; font-size: 11px;">${formatValue(aggressivenessClass.label)}</td>
         </tr>
         ` : ''}
       </table>
