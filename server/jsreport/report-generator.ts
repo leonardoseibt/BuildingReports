@@ -381,14 +381,14 @@ async function loadTableData(
   }
 }
 
-async function loadReportContext(reportId: number, userId: number): Promise<ReportRenderContext> {
+async function loadReportContext(reportId: number, userId: number, canManageBuildings: boolean = false): Promise<ReportRenderContext> {
   const report = await storage.getReport(reportId);
   if (!report || report.isActive === false) {
     throw Object.assign(new Error('Report not found'), { statusCode: 404 });
   }
 
   const building = await storage.getBuilding(report.buildingId);
-  if (!building || building.userId !== userId) {
+  if (!building || (building.userId !== userId && !canManageBuildings)) {
     throw Object.assign(new Error('Access denied'), { statusCode: 403 });
   }
 
@@ -929,8 +929,8 @@ async function streamToBuffer(stream: Readable): Promise<Buffer> {
   return Buffer.concat(chunks);
 }
 
-export async function generateReportPdfJsreport(reportId: number, userId: number): Promise<{ filename: string; pdf: Buffer }> {
-  const context = await loadReportContext(reportId, userId);
+export async function generateReportPdfJsreport(reportId: number, userId: number, canManageBuildings: boolean = false): Promise<{ filename: string; pdf: Buffer }> {
+  const context = await loadReportContext(reportId, userId, canManageBuildings);
   const html = buildReportHtml(context);
   const filename = buildFilename(context.building, context.report);
   const instance = await getJsReportInstance();

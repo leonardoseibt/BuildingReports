@@ -780,7 +780,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const id = (req as any).validatedId;
       const userId = Number(req.user.claims.sub);
-      const { filename, pdf } = await generateReportPdfJsreport(id, userId);
+      const me = await storage.getUser(userId);
+      const canManageBuildings = !!(me && ((me as any).isAdmin || ((me as any).allowedModules || []).includes('buildings')));
+      const { filename, pdf } = await generateReportPdfJsreport(id, userId, canManageBuildings);
       const safeName = encodeURIComponent(filename);
       res.status(200);
       res.setHeader('Content-Type', 'application/pdf');
