@@ -129,13 +129,14 @@ function shouldShowParameter(
   parameter: Parameter,
   attributeDefs: Map<number, AttributeDefinition>,
   building: Building | undefined,
-  tableDataByName: Map<string, any[]>
+  tableDataByName: Map<string, any[]>,
+  colorToGroupMap: Map<number, number>
 ): boolean {
   // Verifica primeiro atributo
   if (parameter.attributeId) {
     const attribute = attributeDefs.get(parameter.attributeId);
     if (attribute) {
-      if (!checkAttributeMatch(parameter, attribute, parameter.attributeValueId, parameter.minLimit, parameter.maxLimit, building, tableDataByName)) {
+      if (!checkAttributeMatch(parameter, attribute, parameter.attributeValueId, parameter.minLimit, parameter.maxLimit, building, tableDataByName, colorToGroupMap)) {
         return false;
       }
     }
@@ -145,7 +146,7 @@ function shouldShowParameter(
   if ((parameter as any).attribute2Id) {
     const attribute2 = attributeDefs.get((parameter as any).attribute2Id);
     if (attribute2) {
-      if (!checkAttributeMatch(parameter, attribute2, (parameter as any).attributeValue2Id, null, null, building, tableDataByName)) {
+      if (!checkAttributeMatch(parameter, attribute2, (parameter as any).attributeValue2Id, null, null, building, tableDataByName, colorToGroupMap)) {
         return false;
       }
     }
@@ -161,7 +162,8 @@ function checkAttributeMatch(
   minLimit: string | null | undefined,
   maxLimit: string | null | undefined,
   building: Building | undefined,
-  tableDataByName: Map<string, any[]>
+  tableDataByName: Map<string, any[]>,
+  colorToGroupMap: Map<number, number>
 ): boolean {
   let sourceData: any = null;
 
@@ -174,9 +176,18 @@ function checkAttributeMatch(
 
   if (!sourceData) return true;
 
-  const attributeValue = getAttributeValue(sourceData, attribute);
+  let attributeValue = getAttributeValue(sourceData, attribute);
 
   if (attributeValue === null || attributeValue === undefined) return false;
+
+  // CASO ESPECIAL: Se o atributo aponta para color_groups mas o building tem predominant_color_id
+  // Precisamos fazer o mapeamento: predominant_color_id -> color_group_id
+  if (attribute.sourceTable === 'color_groups' && building) {
+    const predominantColorId = building.predominantColorId;
+    if (predominantColorId && colorToGroupMap.has(predominantColorId)) {
+      attributeValue = colorToGroupMap.get(predominantColorId);
+    }
+  }
 
   if (attributeValueId !== null && attributeValueId !== undefined) {
     if (String(attributeValueId) !== String(attributeValue)) return false;
@@ -383,7 +394,9 @@ async function loadReportContext(reportId: number, userId: number): Promise<Repo
     noiseClasses,
     aggressivenessClasses,
     bioclimaticZones,
-    isopleths
+    isopleths,
+    predominantColors,
+    colorGroups
   ] = await Promise.all([
     storage.listRequirements(),
     storage.listCriteria(),
@@ -395,12 +408,22 @@ async function loadReportContext(reportId: number, userId: number): Promise<Repo
     storage.listNoiseClasses(),
     storage.listAggressivenessClasses(),
     storage.listBioclimaticZones(),
-    storage.listIsopleths()
+    storage.listIsopleths(),
+    storage.listPredominantColors(),
+    storage.listColorGroups()
   ]);
 
   const attributeMap = new Map<number, AttributeDefinition>();
   for (const attribute of attributeDefinitions) {
     attributeMap.set(attribute.id, attribute);
+  }
+
+  // Criar mapa de predominant_color_id -> color_group_id
+  const colorToGroupMap = new Map<number, number>();
+  for (const color of predominantColors) {
+    if (color.colorGroupId) {
+      colorToGroupMap.set(color.id, color.colorGroupId);
+    }
   }
 
   const tableDataByName = new Map<string, any[]>();
@@ -425,7 +448,7 @@ async function loadReportContext(reportId: number, userId: number): Promise<Repo
             .map((analysis) => {
               const params = parametersRaw
                 .filter((parameter) => parameter.analysisId === analysis.id && parameter.isActive !== false)
-                .filter((parameter) => shouldShowParameter(parameter, attributeMap, building, tableDataByName));
+                .filter((parameter) => shouldShowParameter(parameter, attributeMap, building, tableDataByName, colorToGroupMap));
               const sortedParams = sortParameters(params);
               if (sortedParams.length === 0) return null;
               return { ...analysis, parameters: sortedParams };
