@@ -168,24 +168,25 @@ function checkAttributeMatch(
   // CASO ESPECIAL: color_groups
   // O atributo aponta para color_groups, mas building tem predominant_color_id
   // Precisamos mapear: building.predominant_color_id -> color_group_id
-  if (attribute.sourceTable === 'color_groups' && building) {
+  if (attribute.sourceTable === 'color_groups') {
+    if (!building) return true;
+    
     const predominantColorId = building.predominantColorId;
     
-    // Se não tem cor definida, não filtra
-    if (!predominantColorId) return true;
+    // Se não tem cor definida na edificação, rejeita o parâmetro
+    if (!predominantColorId) return false;
     
     // Mapeia cor -> grupo de cores
     const colorGroupId = colorToGroupMap.get(predominantColorId);
     
-    // Se não encontrou o mapeamento, não filtra
-    if (colorGroupId === undefined) return true;
+    // Se não encontrou o mapeamento, rejeita o parâmetro
+    if (colorGroupId === undefined || colorGroupId === null) return false;
+    
+    // Se o parâmetro não especifica um color_group_id, aceita qualquer
+    if (attributeValueId === null || attributeValueId === undefined) return true;
     
     // Compara o color_group_id do building com o attributeValueId do parâmetro
-    if (attributeValueId !== null && attributeValueId !== undefined) {
-      if (String(attributeValueId) !== String(colorGroupId)) return false;
-    }
-    
-    return true;
+    return String(attributeValueId) === String(colorGroupId);
   }
 
   // Lógica normal para outros atributos
