@@ -363,6 +363,7 @@ interface ReportRenderContext {
   bioclimaticZone?: any;
   isopleth?: any;
   predominantColor?: any;
+  colorGroup?: any;
 }
 
 async function loadTableData(
@@ -591,6 +592,10 @@ async function loadReportContext(reportId: number, userId: number, canManageBuil
   const predominantColor = building.predominantColorId 
     ? predominantColors.find((c: any) => c.id === building.predominantColorId) 
     : undefined;
+  
+  const colorGroup = predominantColor?.colorGroupId
+    ? colorGroups.find((cg: any) => cg.id === predominantColor.colorGroupId)
+    : undefined;
 
   return {
     report,
@@ -602,7 +607,8 @@ async function loadReportContext(reportId: number, userId: number, canManageBuil
     aggressivenessClass,
     bioclimaticZone,
     isopleth,
-    predominantColor
+    predominantColor,
+    colorGroup
   };
 }
 
@@ -615,7 +621,7 @@ function buildFilename(building: Building, report: Report): string {
 }
 
 function buildBuildingInfoPage(context: ReportRenderContext): string {
-  const { building, technician, typology, noiseClass, aggressivenessClass, bioclimaticZone, isopleth, predominantColor } = context;
+  const { building, technician, typology, noiseClass, aggressivenessClass, bioclimaticZone, isopleth, predominantColor, colorGroup } = context;
 
   const formatValue = (value: any): string => {
     if (value === null || value === undefined || value === '') return '—';
@@ -707,7 +713,7 @@ function buildBuildingInfoPage(context: ReportRenderContext): string {
         ${predominantColor ? `
         <tr>
           <td style="padding: 8px; border: 1px solid #cbd5e1; background-color: #f1f5f9; font-weight: 700; font-size: 11px;">COR PREDOMINANTE</td>
-          <td style="padding: 8px; border: 1px solid #cbd5e1; font-size: 11px;">${formatValue(predominantColor.label)}</td>
+          <td style="padding: 8px; border: 1px solid #cbd5e1; font-size: 11px;">${formatValue(predominantColor.label)}${colorGroup ? ` - ${formatValue(colorGroup.label)} (${formatValue(colorGroup.description)})` : ''}</td>
         </tr>
         ` : ''}
       </table>
