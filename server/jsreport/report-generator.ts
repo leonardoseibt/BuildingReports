@@ -333,6 +333,8 @@ function escapeHtmlPreserveUnicode(value: unknown): string {
   if (str === '≥') return '&ge;';
   if (str === '≠') return '&ne;';
   if (str === '±') return '&plusmn;';
+  // Heavy check mark has better PDF support than light check mark
+  if (str === '✓') return '&#10004;';
   // For mixed content, do standard escape
   return escapeHtml(str);
 }
