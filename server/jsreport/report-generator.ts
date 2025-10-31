@@ -845,6 +845,17 @@ function buildReportHtml(context: ReportRenderContext): string {
       @page {
         size: A4;
         margin: 18mm 10mm 15mm 10mm;
+        @bottom-right {
+          content: counter(page);
+          font-size: 10px;
+          color: #64748b;
+          font-family: 'Arial', sans-serif;
+        }
+      }
+      @page :first {
+        @bottom-right {
+          content: none;
+        }
       }
       body {
         font-family: 'Arial', sans-serif;
