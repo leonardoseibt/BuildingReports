@@ -729,7 +729,7 @@ function buildBuildingInfoPage(context: ReportRenderContext): string {
         </tr>
         <tr>
           <td style="padding: 8px; border: 1px solid #cbd5e1; background-color: #f1f5f9; font-weight: 700; font-size: 11px;">ISOPLETA DE VENTOS</td>
-          <td style="padding: 8px; border: 1px solid #cbd5e1; font-size: 11px;">${formatWithDescription(isopleth?.code, isopleth?.label)}${isopleth?.minSpeed && isopleth?.maxSpeed ? ` (${formatValue(isopleth.minSpeed)} - ${formatValue(isopleth.maxSpeed)} m/s)` : ''}</td>
+          <td style="padding: 8px; border: 1px solid #cbd5e1; font-size: 11px;">${formatWithDescription(isopleth?.code, isopleth?.label)}${isopleth?.windMinMS && isopleth?.windMaxMS ? ` (${formatValue(isopleth.windMinMS)} - ${formatValue(isopleth.windMaxMS)} m/s)` : ''}</td>
         </tr>
         ${noiseClass ? `
         <tr>
