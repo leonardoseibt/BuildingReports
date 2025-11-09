@@ -1435,8 +1435,22 @@ export class DatabaseStorage implements IStorage {
   }
   async listPredominantColors(): Promise<PredominantColor[]> {
     const rows = await db
-      .select()
+      .select({
+        id: predominantColors.id,
+        code: predominantColors.code,
+        label: predominantColors.label,
+        colorGroupId: predominantColors.colorGroupId,
+        isActive: predominantColors.isActive,
+        createdAt: predominantColors.createdAt,
+        updatedAt: predominantColors.updatedAt,
+        colorGroup: {
+          id: colorGroups.id,
+          code: colorGroups.code,
+          label: colorGroups.label,
+        }
+      })
       .from(predominantColors)
+      .leftJoin(colorGroups, eq(predominantColors.colorGroupId, colorGroups.id))
       .orderBy(
         sql`length(${predominantColors.code})`,
         sql`${predominantColors.code} collate "pt-BR-x-icu"`

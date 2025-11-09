@@ -30,7 +30,7 @@ export default function PredominantColorsList() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<PredominantColor | null>(null);
   const [search, setSearch] = useState("");
-  const [sortBy, setSortBy] = useState<"code" | "label" | "isActive" | "createdAt" | null>('code');
+  const [sortBy, setSortBy] = useState<"code" | "label" | "colorGroup" | "isActive" | "createdAt" | null>('code');
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const pageSize = usePageSize(isAuthenticated);
   const [page, setPage] = useState(1);
@@ -56,8 +56,14 @@ export default function PredominantColorsList() {
     if (!sortBy) return filtered;
     const arr = [...filtered];
     arr.sort((a, b) => {
-      const av = (a as any)[sortBy];
-      const bv = (b as any)[sortBy];
+      let av, bv;
+      if (sortBy === 'colorGroup') {
+        av = (a as any).colorGroup?.label ?? '';
+        bv = (b as any).colorGroup?.label ?? '';
+      } else {
+        av = (a as any)[sortBy];
+        bv = (b as any)[sortBy];
+      }
       let cmp = 0;
       if (sortBy === 'createdAt') {
         const ad = av ? new Date(av).getTime() : 0;
@@ -163,7 +169,8 @@ export default function PredominantColorsList() {
                 <TableHeader>
                   <TableRow className="bg-slate-100/60">
                     <TableHead onClick={() => toggleSort('code')} aria-sort={sortBy === 'code' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} className="w-[12%] cursor-pointer select-none">Código {sortBy === 'code' && (sortDir === 'asc' ? <ArrowUp className="inline-block w-3 h-3 ml-1 opacity-70" /> : <ArrowDown className="inline-block w-3 h-3 ml-1 opacity-70" />)}</TableHead>
-                    <TableHead onClick={() => toggleSort('label')} aria-sort={sortBy === 'label' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} className="w-[55%] cursor-pointer select-none">Descrição {sortBy === 'label' && (sortDir === 'asc' ? <ArrowUp className="inline-block w-3 h-3 ml-1 opacity-70" /> : <ArrowDown className="inline-block w-3 h-3 ml-1 opacity-70" />)}</TableHead>
+                    <TableHead onClick={() => toggleSort('label')} aria-sort={sortBy === 'label' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} className="w-[30%] cursor-pointer select-none">Descrição {sortBy === 'label' && (sortDir === 'asc' ? <ArrowUp className="inline-block w-3 h-3 ml-1 opacity-70" /> : <ArrowDown className="inline-block w-3 h-3 ml-1 opacity-70" />)}</TableHead>
+                    <TableHead onClick={() => toggleSort('colorGroup')} aria-sort={sortBy === 'colorGroup' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} className="w-[25%] cursor-pointer select-none">Grupo {sortBy === 'colorGroup' && (sortDir === 'asc' ? <ArrowUp className="inline-block w-3 h-3 ml-1 opacity-70" /> : <ArrowDown className="inline-block w-3 h-3 ml-1 opacity-70" />)}</TableHead>
                     <TableHead onClick={() => toggleSort('isActive')} aria-sort={sortBy === 'isActive' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} className="w-[10%] cursor-pointer select-none">Ativa {sortBy === 'isActive' && (sortDir === 'asc' ? <ArrowUp className="inline-block w-3 h-3 ml-1 opacity-70" /> : <ArrowDown className="inline-block w-3 h-3 ml-1 opacity-70" />)}</TableHead>
                     <TableHead className="w-[23%] text-right">Ações</TableHead>
                   </TableRow>
@@ -173,6 +180,9 @@ export default function PredominantColorsList() {
                     <TableRow key={t.id}>
                       <TableCell className="font-medium">{t.code}</TableCell>
                       <TableCell>{t.label}</TableCell>
+                      <TableCell className="text-sm text-slate-600">
+                        {(t as any).colorGroup ? (t as any).colorGroup.label : '—'}
+                      </TableCell>
                       <TableCell>{(t as any).isActive ? 'Sim' : 'Não'}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1.5">
