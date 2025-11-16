@@ -30,7 +30,7 @@ export default function StatesList() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<StateRow | null>(null);
   const [search, setSearch] = useState("");
-  const [sortBy, setSortBy] = useState<"code" | "name" | null>(null);
+  const [sortBy, setSortBy] = useState<"code" | "name" | "region" | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const pageSize = usePageSize(isAuthenticated);
   const [page, setPage] = useState(1);
@@ -176,7 +176,7 @@ export default function StatesList() {
                   <TableRow className="bg-slate-100/60">
                     <TableHead onClick={() => toggleSort('code')} aria-sort={sortBy === 'code' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} className="w-[18%] cursor-pointer select-none">Código {sortBy === 'code' && (sortDir === 'asc' ? <ArrowUp className="inline-block w-3 h-3 ml-1 opacity-70" /> : <ArrowDown className="inline-block w-3 h-3 ml-1 opacity-70" />)}</TableHead>
                     <TableHead onClick={() => toggleSort('name')} aria-sort={sortBy === 'name' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} className="w-[46%] cursor-pointer select-none">Nome {sortBy === 'name' && (sortDir === 'asc' ? <ArrowUp className="inline-block w-3 h-3 ml-1 opacity-70" /> : <ArrowDown className="inline-block w-3 h-3 ml-1 opacity-70" />)}</TableHead>
-                    <TableHead className="w-[18%]">Região</TableHead>
+                    <TableHead onClick={() => toggleSort('region')} aria-sort={sortBy === 'region' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} className="w-[18%] cursor-pointer select-none">Região {sortBy === 'region' && (sortDir === 'asc' ? <ArrowUp className="inline-block w-3 h-3 ml-1 opacity-70" /> : <ArrowDown className="inline-block w-3 h-3 ml-1 opacity-70" />)}</TableHead>
                     <TableHead className="w-[18%] text-right">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
