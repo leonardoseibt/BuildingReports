@@ -1,4 +1,4 @@
-﻿MUNICÍPIO,ESTADO,ISOPLETA
+MUNICÍPIO,ESTADO,ISOPLETA
 Acrelândia,Acre,30
 Assis Brasil,Acre,30
 Brasiléia,Acre,30
@@ -1487,14 +1487,14 @@ Vila Bela da Santíssima Trindade,Mato Grosso,30
 Vila Rica,Mato Grosso,30
 Água Clara,Mato Grosso do Sul,40
 Alcinópolis,Mato Grosso do Sul,40
-Amambai,Mato Grosso do Sul,
+Amambai,Mato Grosso do Sul,50
 Anastácio,Mato Grosso do Sul,45
 Anaurilândia,Mato Grosso do Sul,45
 Angélica,Mato Grosso do Sul,45
 Antônio João,Mato Grosso do Sul,45
 Aparecida do Taboado,Mato Grosso do Sul,40
 Aquidauana,Mato Grosso do Sul,45
-Aral Moreira,Mato Grosso do Sul,
+Aral Moreira,Mato Grosso do Sul,50
 Bandeirantes,Mato Grosso do Sul,40
 Bataguassu,Mato Grosso do Sul,45
 Batayporã,Mato Grosso do Sul,45
@@ -1502,14 +1502,14 @@ Bela Vista,Mato Grosso do Sul,45
 Bodoquena,Mato Grosso do Sul,45
 Bonito,Mato Grosso do Sul,45
 Brasilândia,Mato Grosso do Sul,40
-Caarapó,Mato Grosso do Sul,
+Caarapó,Mato Grosso do Sul,50
 Camapuã,Mato Grosso do Sul,40
 Campo Grande,Mato Grosso do Sul,45
 Caracol,Mato Grosso do Sul,45
 Cassilândia,Mato Grosso do Sul,40
 Chapadão do Sul,Mato Grosso do Sul,40
 Corguinho,Mato Grosso do Sul,45
-Coronel Sapucaia,Mato Grosso do Sul,
+Coronel Sapucaia,Mato Grosso do Sul,50
 Corumbá,Mato Grosso do Sul,40
 Costa Rica,Mato Grosso do Sul,40
 Coxim,Mato Grosso do Sul,40
@@ -1517,36 +1517,36 @@ Deodápolis,Mato Grosso do Sul,45
 Dois Irmãos do Buriti,Mato Grosso do Sul,45
 Douradina,Mato Grosso do Sul,45
 Dourados,Mato Grosso do Sul,45
-Eldorado,Mato Grosso do Sul,
+Eldorado,Mato Grosso do Sul,50
 Fátima do Sul,Mato Grosso do Sul,45
 Figueirão,Mato Grosso do Sul,40
 Glória de Dourados,Mato Grosso do Sul,45
 Guia Lopes da Laguna,Mato Grosso do Sul,45
-Iguatemi,Mato Grosso do Sul,
+Iguatemi,Mato Grosso do Sul,50
 Inocência,Mato Grosso do Sul,40
 Itaporã,Mato Grosso do Sul,45
-Itaquiraí,Mato Grosso do Sul,
+Itaquiraí,Mato Grosso do Sul,50
 Ivinhema,Mato Grosso do Sul,45
-Japorã,Mato Grosso do Sul,
+Japorã,Mato Grosso do Sul,50
 Jaraguari,Mato Grosso do Sul,40
 Jardim,Mato Grosso do Sul,45
 Jateí,Mato Grosso do Sul,45
-Juti,Mato Grosso do Sul,
+Juti,Mato Grosso do Sul,50
 Ladário,Mato Grosso do Sul,40
-Laguna Carapã,Mato Grosso do Sul,
+Laguna Carapã,Mato Grosso do Sul,50
 Maracaju,Mato Grosso do Sul,45
 Miranda,Mato Grosso do Sul,45
-Mundo Novo,Mato Grosso do Sul,
-Naviraí,Mato Grosso do Sul,
+Mundo Novo,Mato Grosso do Sul,50
+Naviraí,Mato Grosso do Sul,50
 Nioaque,Mato Grosso do Sul,45
 Nova Alvorada do Sul,Mato Grosso do Sul,45
 Nova Andradina,Mato Grosso do Sul,45
-Novo Horizonte do Sul,Mato Grosso do Sul,
+Novo Horizonte do Sul,Mato Grosso do Sul,50
 Paraiso das Aguas,Mato Grosso do Sul,40
 Paranaíba,Mato Grosso do Sul,40
-Paranhos,Mato Grosso do Sul,
+Paranhos,Mato Grosso do Sul,50
 Pedro Gomes,Mato Grosso do Sul,40
-Ponta Porã,Mato Grosso do Sul,
+Ponta Porã,Mato Grosso do Sul,50
 Porto Murtinho,Mato Grosso do Sul,45
 Ribas do Rio Pardo,Mato Grosso do Sul,40
 Rio Brilhante,Mato Grosso do Sul,45
@@ -1556,10 +1556,10 @@ Rochedo,Mato Grosso do Sul,40
 Santa Rita do Pardo,Mato Grosso do Sul,45
 São Gabriel do Oeste,Mato Grosso do Sul,40
 Selvíria,Mato Grosso do Sul,40
-Sete Quedas,Mato Grosso do Sul,
+Sete Quedas,Mato Grosso do Sul,50
 Sidrolândia,Mato Grosso do Sul,45
 Sonora,Mato Grosso do Sul,40
-Tacuru,Mato Grosso do Sul,
+Tacuru,Mato Grosso do Sul,50
 Taquarussu,Mato Grosso do Sul,45
 Terenos,Mato Grosso do Sul,45
 Três Lagoas,Mato Grosso do Sul,40
@@ -2789,10 +2789,10 @@ Adrianópolis,Paraná,40
 Agudos do Sul,Paraná,40
 Almirante Tamandaré,Paraná,40
 Altamira do Paraná,Paraná,45
-Alto Paraíso,Paraná,
+Alto Paraíso,Paraná,50
 Alto Paraná,Paraná,45
 Alto Piquiri,Paraná,45
-Altônia,Paraná,
+Altônia,Paraná,50
 Alvorada do Sul,Paraná,45
 Amaporã,Paraná,45
 Ampére,Paraná,45
@@ -2809,15 +2809,15 @@ Araruna,Paraná,45
 Araucária,Paraná,40
 Ariranha do Ivaí,Paraná,45
 Assaí,Paraná,45
-Assis Chateaubriand,Paraná,
+Assis Chateaubriand,Paraná,50
 Astorga,Paraná,45
 Atalaia,Paraná,45
 Balsa Nova,Paraná,45
 Bandeirantes,Paraná,40
 Barbosa Ferraz,Paraná,45
 Barra do Jacaré,Paraná,40
-Barracão,Paraná,
-Bela Vista da Caroba,Paraná,
+Barracão,Paraná,50
+Bela Vista da Caroba,Paraná,50
 Bela Vista do Paraíso,Paraná,45
 Bituruna,Paraná,45
 Boa Esperança,Paraná,45
@@ -2825,15 +2825,15 @@ Boa Esperança do Iguaçu,Paraná,45
 Boa Ventura de São Roque,Paraná,45
 Boa Vista da Aparecida,Paraná,45
 Bocaiúva do Sul,Paraná,40
-Bom Jesus do Sul,Paraná,
+Bom Jesus do Sul,Paraná,50
 Bom Sucesso,Paraná,45
 Bom Sucesso do Sul,Paraná,45
 Borrazópolis,Paraná,45
 Braganey,Paraná,45
-Brasilândia do Sul,Paraná,
+Brasilândia do Sul,Paraná,50
 Cafeara,Paraná,45
 Cafelândia,Paraná,45
-Cafezal do Sul,Paraná,
+Cafezal do Sul,Paraná,50
 Califórnia,Paraná,45
 Cambará,Paraná,40
 Cambé,Paraná,45
@@ -2849,8 +2849,8 @@ Campo Mourão,Paraná,45
 Cândido de Abreu,Paraná,45
 Candói,Paraná,45
 Cantagalo,Paraná,45
-Capanema,Paraná,
-Capitão Leônidas Marques,Paraná,
+Capanema,Paraná,50
+Capitão Leônidas Marques,Paraná,50
 Carambeí,Paraná,45
 Carlópolis,Paraná,40
 Cascavel,Paraná,45
@@ -2858,7 +2858,7 @@ Castro,Paraná,45
 Catanduvas,Paraná,45
 Centenário do Sul,Paraná,45
 Cerro Azul,Paraná,40
-Céu Azul,Paraná,
+Céu Azul,Paraná,50
 Chopinzinho,Paraná,45
 Cianorte,Paraná,45
 Cidade Gaúcha,Paraná,45
@@ -2882,15 +2882,15 @@ Curitiba,Paraná,40
 Curiúva,Paraná,40
 Diamante do Norte,Paraná,45
 Diamante do Sul,Paraná,45
-Diamante D'oeste,Paraná,
+Diamante D'oeste,Paraná,50
 Dois Vizinhos,Paraná,45
 Douradina,Paraná,45
 Doutor Camargo,Paraná,45
 Doutor Ulysses,Paraná,40
 Enéas Marques,Paraná,45
 Engenheiro Beltrão,Paraná,45
-Entre Rios do Oeste,Paraná,
-Esperança Nova,Paraná,
+Entre Rios do Oeste,Paraná,50
+Esperança Nova,Paraná,50
 Espigão Alto do Iguaçu,Paraná,45
 Farol,Paraná,45
 Faxinal,Paraná,45
@@ -2904,16 +2904,16 @@ Floresta,Paraná,45
 Florestópolis,Paraná,45
 Flórida,Paraná,45
 Formosa do Oeste,Paraná,45
-Foz do Iguaçu,Paraná,
+Foz do Iguaçu,Paraná,50
 Foz do Jordão,Paraná,45
-Francisco Alves,Paraná,
+Francisco Alves,Paraná,50
 Francisco Beltrão,Paraná,45
 General Carneiro,Paraná,45
 Godoy Moreira,Paraná,45
 Goioerê,Paraná,45
 Goioxim,Paraná,45
 Grandes Rios,Paraná,45
-Guaíra,Paraná,
+Guaíra,Paraná,50
 Guairaçá,Paraná,45
 Guamiranga,Paraná,45
 Guapirama,Paraná,40
@@ -2927,7 +2927,7 @@ Honório Serpa,Paraná,45
 Ibaiti,Paraná,40
 Ibema,Paraná,45
 Ibiporã,Paraná,45
-Icaraíma,Paraná,
+Icaraíma,Paraná,50
 Iguaraçu,Paraná,45
 Iguatu,Paraná,45
 Imbaú,Paraná,45
@@ -2936,12 +2936,12 @@ Inácio Martins,Paraná,45
 Inajá,Paraná,45
 Indianópolis,Paraná,45
 Ipiranga,Paraná,45
-Iporã,Paraná,
+Iporã,Paraná,50
 Iracema do Oeste,Paraná,45
 Irati,Paraná,45
 Iretama,Paraná,45
 Itaguajé,Paraná,45
-Itaipulândia,Paraná,
+Itaipulândia,Paraná,50
 Itambaracá,Paraná,40
 Itambé,Paraná,45
 Itapejara D'oeste,Paraná,45
@@ -2973,7 +2973,7 @@ Laranjal,Paraná,45
 Laranjeiras do Sul,Paraná,45
 Leópolis,Paraná,45
 Lidianópolis,Paraná,45
-Lindoeste,Paraná,
+Lindoeste,Paraná,50
 Loanda,Paraná,45
 Lobato,Paraná,45
 Londrina,Paraná,45
@@ -2988,7 +2988,7 @@ Mandirituba,Paraná,40
 Manfrinópolis,Paraná,45
 Mangueirinha,Paraná,45
 Manoel Ribas,Paraná,45
-Marechal Cândido Rondon,Paraná,
+Marechal Cândido Rondon,Paraná,50
 Maria Helena,Paraná,45
 Marialva,Paraná,45
 Marilândia do Sul,Paraná,45
@@ -2996,19 +2996,19 @@ Marilena,Paraná,45
 Mariluz,Paraná,45
 Maringá,Paraná,45
 Mariópolis,Paraná,45
-Maripá,Paraná,
+Maripá,Paraná,50
 Marmeleiro,Paraná,45
 Marquinho,Paraná,45
 Marumbi,Paraná,45
-Matelândia,Paraná,
+Matelândia,Paraná,50
 Matinhos,Paraná,40
 Mato Rico,Paraná,45
 Mauá da Serra,Paraná,45
-Medianeira,Paraná,
-Mercedes,Paraná,
+Medianeira,Paraná,50
+Mercedes,Paraná,50
 Mirador,Paraná,45
 Miraselva,Paraná,45
-Missal,Paraná,
+Missal,Paraná,50
 Moreira Sales,Paraná,45
 Morretes,Paraná,40
 Munhoz de Melo,Paraná,45
@@ -3025,30 +3025,30 @@ Nova Londrina,Paraná,45
 Nova Olímpia,Paraná,45
 Nova Prata do Iguaçu,Paraná,45
 Nova Santa Bárbara,Paraná,45
-Nova Santa Rosa,Paraná,
+Nova Santa Rosa,Paraná,50
 Nova Tebas,Paraná,45
 Novo Itacolomi,Paraná,45
 Ortigueira,Paraná,45
 Ourizona,Paraná,45
-Ouro Verde do Oeste,Paraná,
+Ouro Verde do Oeste,Paraná,50
 Paiçandu,Paraná,45
 Palmas,Paraná,45
 Palmeira,Paraná,45
 Palmital,Paraná,45
-Palotina,Paraná,
+Palotina,Paraná,50
 Paraíso do Norte,Paraná,45
 Paranacity,Paraná,45
 Paranaguá,Paraná,40
 Paranapoema,Paraná,45
 Paranavaí,Paraná,45
-Pato Bragado,Paraná,
+Pato Bragado,Paraná,50
 Pato Branco,Paraná,45
 Paula Freitas,Paraná,45
 Paulo Frontin,Paraná,45
 Peabiru,Paraná,45
 Perobal,Paraná,45
-Pérola,Paraná,
-Pérola D'oeste,Paraná,
+Pérola,Paraná,50
+Pérola D'oeste,Paraná,50
 Piên,Paraná,40
 Pinhais,Paraná,40
 Pinhal de São Bento,Paraná,45
@@ -3059,7 +3059,7 @@ Piraquara,Paraná,40
 Pitanga,Paraná,45
 Pitangueiras,Paraná,45
 Planaltina do Paraná,Paraná,45
-Planalto,Paraná,
+Planalto,Paraná,50
 Ponta Grossa,Paraná,45
 Pontal do Paraná,Paraná,40
 Porecatu,Paraná,45
@@ -3068,22 +3068,22 @@ Porto Barreiro,Paraná,45
 Porto Rico,Paraná,45
 Porto Vitória,Paraná,45
 Prado Ferreira,Paraná,45
-Pranchita,Paraná,
+Pranchita,Paraná,50
 Presidente Castelo Branco,Paraná,45
 Primeiro de Maio,Paraná,45
 Prudentópolis,Paraná,45
 Quarto Centenário,Paraná,45
 Quatiguá,Paraná,40
 Quatro Barras,Paraná,40
-Quatro Pontes,Paraná,
+Quatro Pontes,Paraná,50
 Quedas do Iguaçu,Paraná,45
 Querência do Norte,Paraná,45
 Quinta do Sol,Paraná,45
 Quitandinha,Paraná,40
-Ramilândia,Paraná,
+Ramilândia,Paraná,50
 Rancho Alegre,Paraná,45
 Rancho Alegre D'oeste,Paraná,45
-Realeza,Paraná,
+Realeza,Paraná,50
 Rebouças,Paraná,45
 Renascença,Paraná,45
 Reserva,Paraná,45
@@ -3108,21 +3108,21 @@ Santa Amélia,Paraná,40
 Santa Cecília do Pavão,Paraná,45
 Santa Cruz de Monte Castelo,Paraná,45
 Santa Fé,Paraná,45
-Santa Helena,Paraná,
+Santa Helena,Paraná,50
 Santa Inês,Paraná,45
 Santa Isabel do Ivaí,Paraná,45
 Santa Izabel do Oeste,Paraná,45
-Santa Lúcia,Paraná,
+Santa Lúcia,Paraná,50
 Santa Maria do Oeste,Paraná,45
 Santa Mariana,Paraná,45
 Santa Mônica,Paraná,45
-Santa Tereza do Oeste,Paraná,
-Santa Terezinha de Itaipu,Paraná,
+Santa Tereza do Oeste,Paraná,50
+Santa Terezinha de Itaipu,Paraná,50
 Santana do Itararé,Paraná,40
 Santo Antônio da Platina,Paraná,40
 Santo Antônio do Caiuá,Paraná,45
 Santo Antônio do Paraíso,Paraná,45
-Santo Antônio do Sudoeste,Paraná,
+Santo Antônio do Sudoeste,Paraná,50
 Santo Inácio,Paraná,45
 São Carlos do Ivaí,Paraná,45
 São Jerônimo da Serra,Paraná,45
@@ -3131,15 +3131,15 @@ São João do Caiuá,Paraná,45
 São João do Ivaí,Paraná,45
 São João do Triunfo,Paraná,45
 São Jorge do Ivaí,Paraná,45
-São Jorge do Patrocínio,Paraná,
+São Jorge do Patrocínio,Paraná,50
 São Jorge D'oeste,Paraná,45
 São José da Boa Vista,Paraná,40
-São José das Palmeiras,Paraná,
+São José das Palmeiras,Paraná,50
 São José dos Pinhais,Paraná,40
 São Manoel do Paraná,Paraná,45
 São Mateus do Sul,Paraná,45
-São Miguel do Iguaçu,Paraná,
-São Pedro do Iguaçu,Paraná,
+São Miguel do Iguaçu,Paraná,50
+São Pedro do Iguaçu,Paraná,50
 São Pedro do Ivaí,Paraná,45
 São Pedro do Paraná,Paraná,45
 São Sebastião da Amoreira,Paraná,45
@@ -3148,7 +3148,7 @@ Sapopema,Paraná,45
 Sarandi,Paraná,45
 Saudade do Iguaçu,Paraná,45
 Sengés,Paraná,40
-Serranópolis do Iguaçu,Paraná,
+Serranópolis do Iguaçu,Paraná,50
 Sertaneja,Paraná,45
 Sertanópolis,Paraná,45
 Siqueira Campos,Paraná,40
@@ -3161,15 +3161,15 @@ Teixeira Soares,Paraná,45
 Telêmaco Borba,Paraná,45
 Terra Boa,Paraná,45
 Terra Rica,Paraná,45
-Terra Roxa,Paraná,
+Terra Roxa,Paraná,50
 Tibagi,Paraná,45
 Tijucas do Sul,Paraná,40
-Toledo,Paraná,
+Toledo,Paraná,50
 Tomazina,Paraná,40
 Três Barras do Paraná,Paraná,45
 Tunas do Paraná,Paraná,40
 Tuneiras do Oeste,Paraná,45
-Tupãssi,Paraná,
+Tupãssi,Paraná,50
 Turvo,Paraná,45
 Ubiratã,Paraná,45
 Umuarama,Paraná,45
@@ -3177,7 +3177,7 @@ União da Vitória,Paraná,45
 Uniflor,Paraná,45
 Uraí,Paraná,45
 Ventania,Paraná,40
-Vera Cruz do Oeste,Paraná,
+Vera Cruz do Oeste,Paraná,50
 Verê,Paraná,45
 Virmond,Paraná,45
 Vitorino,Paraná,45
@@ -3856,7 +3856,7 @@ Aceguá,Rio Grande do Sul,45
 Agudo,Rio Grande do Sul,45
 Ajuricaba,Rio Grande do Sul,45
 Alecrim,Rio Grande do Sul,45
-Alegrete,Rio Grande do Sul,
+Alegrete,Rio Grande do Sul,50
 Alegria,Rio Grande do Sul,45
 Almirante Tamandaré do Sul,Rio Grande do Sul,45
 Alpestre,Rio Grande do Sul,45
@@ -3885,8 +3885,8 @@ Balneário Pinhal,Rio Grande do Sul,45
 Barão,Rio Grande do Sul,45
 Barão de Cotegipe,Rio Grande do Sul,45
 Barão do Triunfo,Rio Grande do Sul,45
-Barra do Guarita,Rio Grande do Sul,
-Barra do Quaraí,Rio Grande do Sul,
+Barra do Guarita,Rio Grande do Sul,50
+Barra do Quaraí,Rio Grande do Sul,50
 Barra do Ribeiro,Rio Grande do Sul,45
 Barra do Rio Azul,Rio Grande do Sul,45
 Barra Funda,Rio Grande do Sul,45
@@ -3957,7 +3957,7 @@ Chapada,Rio Grande do Sul,45
 Charqueadas,Rio Grande do Sul,45
 Charrua,Rio Grande do Sul,45
 Chiapetta,Rio Grande do Sul,45
-Chuí,Rio Grande do Sul,
+Chuí,Rio Grande do Sul,50
 Chuvisca,Rio Grande do Sul,45
 Cidreira,Rio Grande do Sul,45
 Ciríaco,Rio Grande do Sul,45
@@ -3979,7 +3979,7 @@ Cruz Alta,Rio Grande do Sul,45
 Cruzaltense,Rio Grande do Sul,45
 Cruzeiro do Sul,Rio Grande do Sul,45
 David Canabarro,Rio Grande do Sul,45
-Derrubadas,Rio Grande do Sul,
+Derrubadas,Rio Grande do Sul,50
 Dezesseis de Novembro,Rio Grande do Sul,45
 Dilermando de Aguiar,Rio Grande do Sul,45
 Dois Irmãos,Rio Grande do Sul,45
@@ -4003,7 +4003,7 @@ Ernestina,Rio Grande do Sul,45
 Erval Grande,Rio Grande do Sul,45
 Erval Seco,Rio Grande do Sul,45
 Esmeralda,Rio Grande do Sul,45
-Esperança do Sul,Rio Grande do Sul,
+Esperança do Sul,Rio Grande do Sul,50
 Espumoso,Rio Grande do Sul,45
 Estação,Rio Grande do Sul,45
 Estância Velha,Rio Grande do Sul,45
@@ -4025,7 +4025,7 @@ Forquetinha,Rio Grande do Sul,45
 Fortaleza dos Valos,Rio Grande do Sul,45
 Frederico Westphalen,Rio Grande do Sul,45
 Garibaldi,Rio Grande do Sul,45
-Garruchos,Rio Grande do Sul,
+Garruchos,Rio Grande do Sul,50
 Gaurama,Rio Grande do Sul,45
 General Câmara,Rio Grande do Sul,45
 Gentil,Rio Grande do Sul,45
@@ -4064,7 +4064,7 @@ Iraí,Rio Grande do Sul,45
 Itaara,Rio Grande do Sul,45
 Itacurubi,Rio Grande do Sul,45
 Itapuca,Rio Grande do Sul,45
-Itaqui,Rio Grande do Sul,
+Itaqui,Rio Grande do Sul,50
 Itati,Rio Grande do Sul,45
 Itatiba do Sul,Rio Grande do Sul,45
 Ivorá,Rio Grande do Sul,45
@@ -4072,7 +4072,7 @@ Ivoti,Rio Grande do Sul,45
 Jaboticaba,Rio Grande do Sul,45
 Jacuizinho,Rio Grande do Sul,45
 Jacutinga,Rio Grande do Sul,45
-Jaguarão,Rio Grande do Sul,
+Jaguarão,Rio Grande do Sul,50
 Jaguari,Rio Grande do Sul,45
 Jaquirana,Rio Grande do Sul,45
 Jari,Rio Grande do Sul,45
@@ -4105,7 +4105,7 @@ Mato Leitão,Rio Grande do Sul,45
 Mato Queimado,Rio Grande do Sul,45
 Maximiliano de Almeida,Rio Grande do Sul,45
 Minas do Leão,Rio Grande do Sul,45
-Miraguaí,Rio Grande do Sul,
+Miraguaí,Rio Grande do Sul,50
 Montauri,Rio Grande do Sul,45
 Monte Alegre dos Campos,Rio Grande do Sul,45
 Monte Belo do Sul,Rio Grande do Sul,45
@@ -4146,7 +4146,7 @@ Osório,Rio Grande do Sul,45
 Paim Filho,Rio Grande do Sul,45
 Palmares do Sul,Rio Grande do Sul,45
 Palmeira das Missões,Rio Grande do Sul,45
-Palmitinho,Rio Grande do Sul,
+Palmitinho,Rio Grande do Sul,50
 Panambi,Rio Grande do Sul,45
 Pantano Grande,Rio Grande do Sul,45
 Paraí,Rio Grande do Sul,45
@@ -4166,7 +4166,7 @@ Picada Café,Rio Grande do Sul,45
 Pinhal,Rio Grande do Sul,45
 Pinhal da Serra,Rio Grande do Sul,45
 Pinhal Grande,Rio Grande do Sul,45
-Pinheirinho do Vale,Rio Grande do Sul,
+Pinheirinho do Vale,Rio Grande do Sul,50
 Pinheiro Machado,Rio Grande do Sul,45
 Pinto Bandeira,Rio Grande do Sul,45
 Pirapó,Rio Grande do Sul,45
@@ -4186,7 +4186,7 @@ Presidente Lucena,Rio Grande do Sul,45
 Progresso,Rio Grande do Sul,45
 Protásio Alves,Rio Grande do Sul,45
 Putinga,Rio Grande do Sul,45
-Quaraí,Rio Grande do Sul,
+Quaraí,Rio Grande do Sul,50
 Quatro Irmãos,Rio Grande do Sul,45
 Quevedos,Rio Grande do Sul,45
 Quinze de Novembro,Rio Grande do Sul,45
@@ -4220,7 +4220,7 @@ Santa Maria,Rio Grande do Sul,45
 Santa Maria do Herval,Rio Grande do Sul,45
 Santa Rosa,Rio Grande do Sul,45
 Santa Tereza,Rio Grande do Sul,45
-Santa Vitória do Palmar,Rio Grande do Sul,
+Santa Vitória do Palmar,Rio Grande do Sul,50
 Santana da Boa Vista,Rio Grande do Sul,45
 Sant'ana do Livramento,Rio Grande do Sul,45
 Santiago,Rio Grande do Sul,45
@@ -4296,11 +4296,11 @@ Taquara,Rio Grande do Sul,45
 Taquari,Rio Grande do Sul,45
 Taquaruçu do Sul,Rio Grande do Sul,45
 Tavares,Rio Grande do Sul,45
-Tenente Portela,Rio Grande do Sul,
+Tenente Portela,Rio Grande do Sul,50
 Terra de Areia,Rio Grande do Sul,45
 Teutônia,Rio Grande do Sul,45
 Tio Hugo,Rio Grande do Sul,45
-Tiradentes do Sul,Rio Grande do Sul,
+Tiradentes do Sul,Rio Grande do Sul,50
 Toropi,Rio Grande do Sul,45
 Torres,Rio Grande do Sul,45
 Tramandaí,Rio Grande do Sul,45
@@ -4311,7 +4311,7 @@ Três Coroas,Rio Grande do Sul,45
 Três de Maio,Rio Grande do Sul,45
 Três Forquilhas,Rio Grande do Sul,45
 Três Palmeiras,Rio Grande do Sul,45
-Três Passos,Rio Grande do Sul,
+Três Passos,Rio Grande do Sul,50
 Trindade do Sul,Rio Grande do Sul,45
 Triunfo,Rio Grande do Sul,45
 Tucunduva,Rio Grande do Sul,45
@@ -4324,7 +4324,7 @@ Turuçu,Rio Grande do Sul,45
 Ubiretama,Rio Grande do Sul,45
 União da Serra,Rio Grande do Sul,45
 Unistalda,Rio Grande do Sul,45
-Uruguaiana,Rio Grande do Sul,
+Uruguaiana,Rio Grande do Sul,50
 Vacaria,Rio Grande do Sul,45
 Vale do Sol,Rio Grande do Sul,45
 Vale Real,Rio Grande do Sul,45
@@ -4344,7 +4344,7 @@ Vila Maria,Rio Grande do Sul,45
 Vila Nova do Sul,Rio Grande do Sul,45
 Vista Alegre,Rio Grande do Sul,45
 Vista Alegre do Prata,Rio Grande do Sul,45
-Vista Gaúcha,Rio Grande do Sul,
+Vista Gaúcha,Rio Grande do Sul,50
 Vitória das Missões,Rio Grande do Sul,45
 Westfalia,Rio Grande do Sul,45
 Xangri-lá,Rio Grande do Sul,45
@@ -4738,7 +4738,7 @@ Angatuba,São Paulo,45
 Anhembi,São Paulo,45
 Anhumas,São Paulo,40
 Aparecida,São Paulo,35
-Aparecida D'oeste,São Paulo,40n/s
+Aparecida D'oeste,São Paulo,40
 Apiaí,São Paulo,40
 Araçariguama,São Paulo,45
 Araçatuba,São Paulo,40
@@ -4755,7 +4755,7 @@ Areiópolis,São Paulo,40
 Ariranha,São Paulo,35
 Artur Nogueira,São Paulo,45
 Arujá,São Paulo,40
-Aspásia,São Paulo,40n/s
+Aspásia,São Paulo,40
 Assis,São Paulo,40
 Atibaia,São Paulo,45
 Auriflama,São Paulo,40
@@ -4864,11 +4864,11 @@ Cubatão,São Paulo,35
 Cunha,São Paulo,35
 Descalvado,São Paulo,45
 Diadema,São Paulo,40
-Dirce Reis,São Paulo,40n/s
+Dirce Reis,São Paulo,40
 Divinolândia,São Paulo,45
 Dobrada,São Paulo,45
 Dois Córregos,São Paulo,45
-Dolcinópolis,São Paulo,40n/s
+Dolcinópolis,São Paulo,40
 Dourado,São Paulo,45
 Dracena,São Paulo,40
 Duartina,São Paulo,40
@@ -4945,7 +4945,7 @@ Igarapava,São Paulo,35
 Igaratá,São Paulo,40
 Iguape,São Paulo,40
 Ilha Comprida,São Paulo,40
-Ilha Solteira,São Paulo,40n/s
+Ilha Solteira,São Paulo,40
 Ilhabela,São Paulo,35
 Indaiatuba,São Paulo,45
 Indiana,São Paulo,40
@@ -4993,7 +4993,7 @@ Jacareí,São Paulo,40
 Jaci,São Paulo,40
 Jacupiranga,São Paulo,40
 Jaguariúna,São Paulo,45
-Jales,São Paulo,40n/s
+Jales,São Paulo,40
 Jambeiro,São Paulo,40
 Jandira,São Paulo,40
 Jardinópolis,São Paulo,35
@@ -5039,13 +5039,13 @@ Maracaí,São Paulo,45
 Marapoama,São Paulo,35
 Mariápolis,São Paulo,40
 Marília,São Paulo,40
-Marinópolis,São Paulo,40n/s
+Marinópolis,São Paulo,40
 Martinópolis,São Paulo,40
 Matão,São Paulo,45
 Mauá,São Paulo,35
 Mendonça,São Paulo,40
 Meridiano,São Paulo,35
-Mesópolis,São Paulo,40n/s
+Mesópolis,São Paulo,40
 Miguelópolis,São Paulo,35
 Mineiros do Tietê,São Paulo,45
 Mira Estrela,São Paulo,35
@@ -5081,7 +5081,7 @@ Nhandeara,São Paulo,40
 Nipoã,São Paulo,40
 Nova Aliança,São Paulo,35
 Nova Campina,São Paulo,40
-Nova Canaã Paulista,São Paulo,40n/s
+Nova Canaã Paulista,São Paulo,40
 Nova Castilho,São Paulo,40
 Nova Europa,São Paulo,40
 Nova Granada,São Paulo,35
@@ -5108,14 +5108,14 @@ Ouroeste,São Paulo,35
 Pacaembu,São Paulo,40
 Palestina,São Paulo,35
 Palmares Paulista,São Paulo,35
-Palmeira D'oeste,São Paulo,40n/s
+Palmeira D'oeste,São Paulo,40
 Palmital,São Paulo,40
 Panorama,São Paulo,40
 Paraguaçu Paulista,São Paulo,40
 Paraibuna,São Paulo,40
 Paraíso,São Paulo,35
 Paranapanema,São Paulo,40
-Paranapuã,São Paulo,40n/s
+Paranapuã,São Paulo,40
 Parapuã,São Paulo,40
 Pardinho,São Paulo,45
 Pariquera-açu,São Paulo,40
@@ -5161,9 +5161,9 @@ Poloni,São Paulo,40
 Pompéia,São Paulo,40
 Pongaí,São Paulo,40
 Pontal,São Paulo,35
-Pontalinda,São Paulo,40n/s
+Pontalinda,São Paulo,40
 Pontes Gestal,São Paulo,35
-Populina,São Paulo,40n/s
+Populina,São Paulo,40
 Porangaba,São Paulo,45
 Porto Feliz,São Paulo,45
 Porto Ferreira,São Paulo,45
@@ -5211,7 +5211,7 @@ Riversul,São Paulo,40
 Rosana,São Paulo,45
 Roseira,São Paulo,35
 Rubiácea,São Paulo,40
-Rubinéia,São Paulo,40n/s
+Rubinéia,São Paulo,40
 Sabino,São Paulo,40
 Sagres,São Paulo,40
 Sales,São Paulo,35
@@ -5224,26 +5224,26 @@ Salto de Pirapora,São Paulo,40
 Salto Grande,São Paulo,40
 Sandovalina,São Paulo,45
 Santa Adélia,São Paulo,35
-Santa Albertina,São Paulo,40n/s
+Santa Albertina,São Paulo,40
 Santa Bárbara D'oeste,São Paulo,45
 Santa Branca,São Paulo,40
-Santa Clara D'oeste,São Paulo,40n/s
+Santa Clara D'oeste,São Paulo,40
 Santa Cruz da Conceição,São Paulo,45
 Santa Cruz da Esperança,São Paulo,35
 Santa Cruz das Palmeiras,São Paulo,45
 Santa Cruz do Rio Pardo,São Paulo,40
 Santa Ernestina,São Paulo,35
-Santa Fé do Sul,São Paulo,40n/s
+Santa Fé do Sul,São Paulo,40
 Santa Gertrudes,São Paulo,45
 Santa Isabel,São Paulo,40
 Santa Lúcia,São Paulo,45
 Santa Maria da Serra,São Paulo,45
 Santa Mercedes,São Paulo,40
 Santa Rita do Passa Quatro,São Paulo,45
-Santa Rita D'oeste,São Paulo,40n/s
+Santa Rita D'oeste,São Paulo,40
 Santa Rosa de Viterbo,São Paulo,35
-Santa Salete,São Paulo,40n/s
-Santana da Ponte Pensa,São Paulo,40n/s
+Santa Salete,São Paulo,40
+Santana da Ponte Pensa,São Paulo,40
 Santana de Parnaíba,São Paulo,45
 Santo Anastácio,São Paulo,45
 Santo André,São Paulo,40
@@ -5259,7 +5259,7 @@ São Bento do Sapucaí,São Paulo,40
 São Bernardo do Campo,São Paulo,40
 São Caetano do Sul,São Paulo,40
 São Carlos,São Paulo,45
-São Francisco,São Paulo,40n/s
+São Francisco,São Paulo,40
 São João da Boa Vista,São Paulo,45
 São João das Duas Pontes,São Paulo,35
 São João de Iracema,São Paulo,40
@@ -5326,7 +5326,7 @@ Torre de Pedra,São Paulo,45
 Torrinha,São Paulo,45
 Trabiju,São Paulo,45
 Tremembé,São Paulo,40
-Três Fronteiras,São Paulo,40n/s
+Três Fronteiras,São Paulo,40
 Tuiuti,São Paulo,45
 Tupã,São Paulo,40
 Tupi Paulista,São Paulo,40
@@ -5337,7 +5337,7 @@ Ubatuba,São Paulo,35
 Ubirajara,São Paulo,40
 Uchoa,São Paulo,35
 União Paulista,São Paulo,40
-Urânia,São Paulo,40n/s
+Urânia,São Paulo,40
 Uru,São Paulo,40
 Urupês,São Paulo,35
 Valentim Gentil,São Paulo,35
