@@ -9,9 +9,17 @@ interface DashboardStats {
   recentBuildings: any[];
 }
 
+interface ExtendedStats {
+  avgReportLeadTimeHours: number;
+}
+
 export default function StatsCards() {
   const { data: stats, isLoading } = useQuery<DashboardStats>({
     queryKey: ['/api/dashboard/stats'],
+  });
+
+  const { data: extendedStats } = useQuery<ExtendedStats>({
+    queryKey: ['/api/dashboard/extended-stats'],
   });
 
   const cards = [
@@ -37,7 +45,9 @@ export default function StatsCards() {
     },
     {
       title: "Tempo Médio/Relatório",
-      value: "2.5h",
+      value: extendedStats?.avgReportLeadTimeHours 
+        ? `${extendedStats.avgReportLeadTimeHours.toFixed(1)}h`
+        : "--",
       change: "-70% vs manual",
       trend: "down",
       icon: Clock,

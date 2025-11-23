@@ -2,7 +2,6 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Building2, Pencil, FileText } from "lucide-react";
 import { useLocation } from "wouter";
@@ -12,22 +11,6 @@ export default function RecentProjects() {
   const { data: buildings, isLoading } = useQuery<Building[]>({
     queryKey: ['/api/buildings'],
   });
-
-  const getStatusColor = (createdAt: string | Date) => {
-    const ts = typeof createdAt === 'string' ? new Date(createdAt).getTime() : createdAt.getTime();
-    const daysSinceCreated = Math.floor((Date.now() - ts) / (1000 * 60 * 60 * 24));
-    if (daysSinceCreated < 7) return "bg-green-100 text-green-700";
-    if (daysSinceCreated < 30) return "bg-yellow-100 text-yellow-700";
-    return "bg-blue-100 text-blue-700";
-  };
-
-  const getStatusText = (createdAt: string | Date) => {
-    const ts = typeof createdAt === 'string' ? new Date(createdAt).getTime() : createdAt.getTime();
-    const daysSinceCreated = Math.floor((Date.now() - ts) / (1000 * 60 * 60 * 24));
-    if (daysSinceCreated < 7) return "Completo";
-    if (daysSinceCreated < 30) return "Em análise";
-    return "Cadastro";
-  };
 
   const getRelativeTime = (createdAt: string | Date) => {
     const ts = typeof createdAt === 'string' ? new Date(createdAt).getTime() : createdAt.getTime();
@@ -68,7 +51,6 @@ export default function RecentProjects() {
                   </div>
                 </div>
                 <div className="flex items-center space-x-3">
-                  <Skeleton className="h-6 w-16 rounded-full" />
                   <Skeleton className="h-6 w-6" />
                 </div>
               </div>
@@ -109,13 +91,6 @@ export default function RecentProjects() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Badge 
-                    variant="secondary" 
-                    className={getStatusColor(building.createdAt!)}
-                    data-testid={`badge-project-status-${building.id}`}
-                  >
-                    {getStatusText(building.createdAt!)}
-                  </Badge>
                   <Button
                     variant="ghost"
                     size="icon"
