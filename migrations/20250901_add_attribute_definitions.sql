@@ -47,7 +47,7 @@ VALUES
   ('Tipologia', 'buildings', 'typology_id', 'reference', 'typologies'),
   ('Classe de Ruído', 'buildings', 'noise_class_id', 'reference', 'noise_classes'),
   ('Classe de Agressividade', 'buildings', 'aggressiveness_class_id', 'reference', 'aggressiveness_classes'),
-  ('Zona Bioclimática Código', 'buildings', 'bioclimatic_zone_code', 'reference', 'bioclimatic_zones'),
+  ('Zona Bioclimática Código', 'buildings', 'bioclimatic_zone', 'reference', 'bioclimatic_zones'),
   ('Isopleta Código', 'buildings', 'isopleth_code', 'reference', 'isopleths'),
   ('Altura da Edificação', 'buildings', 'building_height', 'numeric', NULL)
 ON CONFLICT (source_table, source_column) DO NOTHING;
